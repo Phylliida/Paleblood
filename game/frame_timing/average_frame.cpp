@@ -39,10 +39,12 @@
 // the value at 0x54, second operand = the value at 0x58) and, as MAXSS always has, returns its
 // *second* operand on a tie and whenever either operand is NaN. So a NaN at 0x58 is written back
 // over itself -- the store executes but the bytes do not move -- while a NaN at 0x54 is discarded in
-// favour of 0x58. A C `low > high ? low : high` test looks equivalent and is not: on an unordered
-// pair it yields the *low*, so it writes the value from 0x54 into 0x58 where the original wrote the
-// NaN. engine::max_of is that same relation and is what the project uses for it, and the cases carry
-// a NaN in each position separately for exactly this reason.
+// favour of 0x58. `low > high ? low : high` does match that, because the comparison is false when
+// the pair is unordered and so the result is the high operand; it is the reversed test
+// `high >= low ? high : low` that yields the *low* operand there and writes 0x54's NaN over 0x58's.
+// engine::max_of is the same relation the original uses, so the cases carry a NaN in each position
+// separately -- on both, only the top half of the float moves, and only in the slot the hardware
+// would rewrite.
 #include <cstddef>
 #include <cstdint>
 #include <cstring>

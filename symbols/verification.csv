@@ -77,6 +77,9 @@ frame_timing_semaphore_delete,edge,,4,4,0,0,833610a51d0c3f41,2026-10-12
 frame_timing_semaphore_signal,edge,,4,4,0,0,833610a51d0c3f41,2026-10-12
 frame_timing_semaphore_wait,edge,,4,4,0,0,833610a51d0c3f41,2026-10-12
 frame_timing_sleep,edge,,10,10,0,0,7a9ef1731029af59,2026-10-11
+frame_timing_static_guard_014405b0,edge,,5,5,0,0,28110f0542692e90,2026-10-12
+frame_timing_static_guard_014405e0,edge,,5,5,0,0,28110f0542692e90,2026-10-12
+frame_timing_static_guard_01440610,edge,,5,5,0,0,28110f0542692e90,2026-10-12
 frame_timing_stop_and_accumulate_01448620,edge,,24,24,0,0,1cd9aa6ad1c51f37,2026-10-11
 frame_timing_task_013d3520,recorded,,208,208,0,0,c52608f510993456,2026-10-07
 frame_timing_task_013d3520,recorded,uncapped,208,208,0,0,c52608f510993456,2026-10-07
