@@ -11,7 +11,9 @@ The guard and the pointer are separate fields of one object (guard at +0, pointe
 cases set them independently. The interesting one is `guard_high_bytes`: the guard's low byte is
 zero while the rest of its eight bytes are not, which the original -- reading a single byte with
 CMP BYTE PTR [rax], 0x0 -- treats as uninitialized. An implementation that tests the whole qword
-takes the early return there instead, and that is the only case that catches it.
+takes the early return there instead, and that is the only case that catches it. The same case also
+pins the *write* width: the guard is written with a full MOV QWORD PTR [rax], 0x1, so the seven junk
+bytes are cleared by the store, and an implementation that stores one byte leaves them.
 """
 import json
 import os
