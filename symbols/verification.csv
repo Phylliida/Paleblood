@@ -24,6 +24,7 @@ event_emk_add,recorded,60,150,150,0,0,937b4dca128ba863,2026-10-07
 event_emk_add,edge,,18,18,0,0,937b4dca128ba863,2026-10-07
 event_emk_add,edge,60,18,18,0,0,937b4dca128ba863,2026-10-07
 event_flag_write,edge,,14,14,0,0,6aefc6e7432f84b0,2026-10-11
+frame_timing_average_frame_014486d0,edge,,30,30,0,0,3aca516a08424aa8,2026-10-12
 frame_timing_close_0111a6b0,edge,,7,7,0,0,39c02008f1f323d7,2026-10-12
 frame_timing_elapsed_seconds_01448580,edge,,22,22,0,0,c27b44301efef532,2026-10-11
 frame_timing_failed_read,edge,,13,13,0,0,e458efec7385acca,2026-10-11

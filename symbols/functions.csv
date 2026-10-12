@@ -29,6 +29,7 @@ address,size,name,system,status,notes
 0x014400a0,180,frame_timing_task_workers_step_014400a0,frame_timing,verified,"task manager workers: three rounds over the worker queues +0x58, +0x68, +0x60"
 0x01448580,149,frame_timing_elapsed_seconds_01448580,frame_timing,edge-verified,"latches seconds since the base 0x05940660 into the float at +0x38 and bumps the +0x44 and +0x4c counters; a value that is not exactly zero returns without writing, so NaN returns and -0.0 does not"
 0x01448620,168,frame_timing_stop_and_accumulate_01448620,frame_timing,edge-verified,"differences wall clock seconds since base 0x05940660 against the float mark at 0x38, zeroes the mark and adds the delta into floats at 0x3c and 0x54; JBE guard: only a mark > 0"
+0x014486d0,111,frame_timing_average_frame_014486d0,frame_timing,edge-verified,"per-frame timer tick: bumps 0x5c, and every 30th call divides a float and a signed int32 by the new count; folds the peaks at 0x4c/0x54 into 0x50/0x58, VMAXSS taking its second operand when unordered"
 0x016efd00,368,event_emk_add,event,verified,SprjEmkSystem: find or add an event entry in two keyed lists; first advance with the 1/30 s step (1/60 s in the 60 FPS patches)
 0x017cfcc0,177,event_flag_write,event,edge-verified,finds an exact event-flag group in a tree and sets or clears one bit
 0x01972900,426,input_pad_step_01972900,input,verified,"FD4PadManager map: marks two entries, advances an owner by the frame-time step (patched to 1/15 or 1/240 s; the advance branch is idle in the clinic)"
