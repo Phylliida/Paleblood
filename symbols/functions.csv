@@ -1,7 +1,24 @@
 address,size,name,system,status,notes
 0x004632d0,67,frame_timing_get_time_us,frame_timing,original,dead in the stock game: only unwind entries refer to it; the community frame-rate patches overwrite it as a code cave (gettimeofday in microseconds)
+0x004663f0,18,kernel_pending_code,kernel,edge-verified,"Reads the signed count at +0x34 of its argument: returns 2 while it is above zero, otherwise bit 0 of the word at +0x30"
+0x004664e0,25,kernel_index_code,kernel,edge-verified,Bounds-checked lookup of a code word in the seven-entry table at 0x02fc5480; an index above 6 returns 0x2bc
+0x00466810,19,kernel_usleep,kernel,edge-verified,Sleeps for its argument in microseconds via libc usleep (argument*1000 ns) and returns 1; called with a constant 10 by 0x007199f0
 0x00fbc3e0,670,render_yebis_get_recursive_sample_parameters,render,verified,"YEBIS GPUTexUtil_GetRecursiveSampleParameters: blur pass count, last-pass samples and scale; the FPS patches drop its first assertion"
+0x01088550,83,engine_time_over_period,engine,edge-verified,Divides the wall clock in microseconds by the 64-bit period at offset 0x1d8 of its argument and returns the truncated quotient; the division is unsigned while the count it divides is built signed
+0x0111a620,129,frame_timing_open_and_stat,frame_timing,edge-verified,"Opens a path, fstats the descriptor; hands back the stat status word and the descriptor; returns 0x17 if the open or 0x21 if the fstat fails, writing neither out parameter"
+0x0111a6b0,23,frame_timing_close_0111a6b0,frame_timing,original,"Calls the executable import 0x02fbf438, which the harness reports as NID UK2Tl2DWUns, and maps a zero result to 0x13; the loader index is not readable from the stub"
+0x0111a6e0,60,frame_timing_failed_read,frame_timing,edge-verified,"Reads up to count bytes and reports the byte count in *out; returns 0x13 on a failed read (and zeroes *out), 0x16 on a short read, 0 otherwise"
+0x0111a720,22,frame_timing_seek_0111a720,frame_timing,original,"Calls the executable import 0x02fbf428 with (fd, offset, 0) and maps a negative result to 0x13. Unconfirmed: the harness reports this NID but the import name itself is not decoded yet"
+0x0111a740,20,frame_timing_yield_0111a740,frame_timing,original,"Loads the pointer at 0x057e40c0 as a second argument and calls the executable import 0x02fbf1e8, returning 0 unconditionally. Unconfirmed: the harness reports this NID but the name is not decoded"
+0x0111a760,131,frame_timing_get_monotonic_us,frame_timing,edge-verified,Microseconds since its first call from CLOCK_MONOTONIC; keeps the first seconds in the clock state object the millisecond clock uses
 0x0111a7f0,131,frame_timing_get_monotonic_ms,frame_timing,verified,Milliseconds since its first call from CLOCK_MONOTONIC; keeps the first seconds in the clock state object
+0x0111a880,19,frame_timing_sleep,frame_timing,edge-verified,Sleeps for its argument in microseconds via sceKernelUsleep (argument*1000 ns) and returns 0 regardless of the kernel result
+0x0111a8a0,26,frame_timing_thread_self,frame_timing,edge-verified,"Calls scePthreadSelf and stores the 64-bit handle through its out pointer, then returns zero; the store is eight bytes wide"
+0x0111acd0,30,frame_timing_mutex_lock,frame_timing,edge-verified,"Takes the middleware mutex. Null pointer returns 0 without calling the kernel; a zero kernel result reports 0; any nonzero result is replaced by the fixed 0x21, discarding the kernel error."
+0x0111acf0,30,frame_timing_mutex_unlock,frame_timing,edge-verified,Releases the middleware mutex with the lock's convention. Null pointer returns 0 without calling the kernel; a zero kernel result reports 0; any nonzero result is replaced by the fixed 0x21.
+0x0111ad80,23,frame_timing_semaphore_delete,frame_timing,edge-verified,"Wrapper over sceKernelDeleteSema. No handle test: a zero handle still reaches the kernel. Zero stays zero; any nonzero result becomes the fixed 0x21, not the kernel error."
+0x0111ada0,30,frame_timing_semaphore_wait,frame_timing,edge-verified,"Wrapper over sceKernelWaitSema asking for one unit. No handle test. Zero stays zero; any nonzero result becomes the fixed 0x21, not the kernel error."
+0x0111adc0,28,frame_timing_semaphore_signal,frame_timing,edge-verified,"Wrapper over sceKernelSignalSema posting one unit. No handle test. Zero stays zero; any nonzero result becomes the fixed 0x21, not the kernel error."
 0x01388c60,16,frame_timing_task_run_all_01388c60,frame_timing,verified,task manager: run the tasks of every group (0x01388c70 with -1)
 0x01388c70,171,frame_timing_task_run_01388c70,frame_timing,verified,"task manager run: prepare the frame, dispatch through +0x40 (virtual +0x30) with +0x38 set, finish"
 0x0138a370,330,frame_timing_task_dispatch_0138a370,frame_timing,verified,"task dispatcher (virtual +0x30): wakes registered tasks, updates the group record, runs the job like the worker step"
@@ -9,6 +26,8 @@ address,size,name,system,status,notes
 0x0143e490,174,frame_timing_task_flush_queue_0143e490,frame_timing,verified,"task manager queue flush: lock, run, destroy and free every queued object, empty the list, unlock"
 0x0143f9f0,18,frame_timing_task_set_frame_value_0143f9f0,frame_timing,verified,task manager: copies the float at +0x8 of the frame information to the global 0x058b7e08
 0x014400a0,180,frame_timing_task_workers_step_014400a0,frame_timing,verified,"task manager workers: three rounds over the worker queues +0x58, +0x68, +0x60"
+0x01448580,149,frame_timing_elapsed_seconds_01448580,frame_timing,edge-verified,"latches seconds since the base 0x05940660 into the float at +0x38 and bumps the +0x44 and +0x4c counters; a value that is not exactly zero returns without writing, so NaN returns and -0.0 does not"
+0x01448620,168,frame_timing_stop_and_accumulate_01448620,frame_timing,edge-verified,"differences wall clock seconds since base 0x05940660 against the float mark at 0x38, zeroes the mark and adds the delta into floats at 0x3c and 0x54; JBE guard: only a mark > 0"
 0x016efd00,368,event_emk_add,event,verified,SprjEmkSystem: find or add an event entry in two keyed lists; first advance with the 1/30 s step (1/60 s in the 60 FPS patches)
 0x017cfcc0,177,event_flag_write,event,edge-verified,finds an exact event-flag group in a tree and sets or clears one bit
 0x01972900,426,input_pad_step_01972900,input,verified,"FD4PadManager map: marks two entries, advances an owner by the frame-time step (patched to 1/15 or 1/240 s; the advance branch is idle in the clinic)"
@@ -30,4 +49,10 @@ address,size,name,system,status,notes
 0x02434770,2077,frame_timing_pace_frame,frame_timing,verified,Frame limiter: target interval at +0x18 (1/30 or 1/60 s); sleeps then spins; 32-frame ring; every FPS patch edits it
 0x024512a0,78,frame_timing_task_frame_024512a0,frame_timing,verified,"task manager frame entry from the frame step: FD4TaskManager singleton, then 0x01388c60"
 0x02483e80,204,kernel_condition_wait,kernel,verified,Dantelion2 PthreadCondition wait (untimed when timeout is -1); the FPS patches put a ret on the timed path
+0x024bd150,216,kernel_wait_for_release_024bd150,kernel,edge-verified,"lock global 0x05aa4578 (its word is the vtable); modes 0/1 lock, test bit 0 of +0x31, mode 1 waits for +0x10 to read 2; advance bumps +0x30, walks +0x18 or twice via +0x80 when +0x88 is set"
+0x024bdd40,36,kernel_wait_for_state_024bdd40,kernel,original,"Polls the word at 0x10 of its argument until it reads 2, sleeping 1000 us per poll; the test runs first, so a ready field returns without sleeping. Unreplaced: no case can change the polled word yet"
 0x025b2fb0,768,render_swap_chain_present,render,verified,"GXSwapChainCtrl present: waits for the present interval in 60 Hz vblanks, maps it to a flip mode, presents (Uncap: mode 0)"
+0x02e61140,67,frame_timing_get_wall_time_us,frame_timing,edge-verified,"Microseconds since the Unix epoch from gettimeofday as one 64-bit value; no base and no state, unlike the monotonic clocks"
+0x02e61280,101,engine_time_id,engine,edge-verified,"Wall clock as 128 bits: RAX usec|sec, RDX usec+counter+1|sec+counter as 32-bit sums, counter at 0x0570d83c read once and bumped by 2"
+0x02e613c0,23,engine_crc32_update_byte,engine,edge-verified,Folds one byte into a running reflected CRC-32 through the table at 0x04cdcf50; the caller owns the initial value and the final XOR
+0x02e613e0,44,engine_crc32_update,engine,edge-verified,Folds a buffer of length bytes into the same running CRC-32 in one pass; a zero length leaves the state untouched

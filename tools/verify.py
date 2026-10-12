@@ -75,12 +75,18 @@ def byte_map(writes: list[dict]) -> dict[tuple[str, int], int]:
 
 def compare_case(orig: dict, repl: dict) -> list[str]:
     diffs: list[str] = []
+    # A fault is a behaviour, so compare the two sides' faults against each other rather than
+    # failing on any fault: a crash the original shares (an unguarded divide taking SIGFPE, say)
+    # is agreement, while a fault on one side only -- or two different faults -- is not.
+    of, rf = orig.get('fault'), repl.get('fault')
+    if of != rf:
+        for side, f in (('original', of), ('replacement', rf)):
+            if f is not None:
+                diffs.append(f'{side}: {f}')
     for side, d in (('original', orig), ('replacement', repl)):
-        if 'fault' in d:
-            diffs.append(f"{side}: {d['fault']}")
         for e in d.get('errors', []):
             diffs.append(f'{side}: {e}')
-    if any('fault' in d for d in (orig, repl)):
+    if of is not None or rf is not None:
         return diffs
     for group, regs in (('ret', RETURN_REGS), ('preserved', CALLEE_SAVED)):
         for r in regs:
@@ -264,9 +270,14 @@ def self_test() -> int:
     bad_call = compare(res(case('a', calls=[{'target': '0x1', 'args': []}])), res(case('a')))
     missing = compare(res(case('a'), case('b')), res(case('a')))
     fault = compare(res(case('a')), res(dict(case('a'), fault='signal 11')))
+    fault_both = compare(res(dict(case('a'), fault='signal 8')), res(dict(case('a'), fault='signal 8')))
+    fault_differs = compare(res(dict(case('a'), fault='signal 8')), res(dict(case('a'), fault='signal 11')))
+    fault_one_side = compare(res(dict(case('a'), fault='timeout after 30 s')),
+                             res(dict(case('a'), fault='timeout after 30 s')))
     checks = [ok['failed'] == 0, ok2['failed'] == 0, bad_ret['failed'] == 1,
               bad_mem['failed'] == 1, bad_call['failed'] == 1, missing['failed'] == 1,
-              fault['failed'] == 1]
+              fault['failed'] == 1, fault_both['failed'] == 0,
+              fault_differs['failed'] == 1, fault_one_side['failed'] == 0]
     if not all(checks):
         print(f'verify: self-test failed {checks}', file=sys.stderr)
         return 1

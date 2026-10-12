@@ -44,8 +44,26 @@ not replaced.
 (`0x0111a7f0`), its microsecond twin `0x0111a760` and the sleep wrapper `0x0111a880` are not on
 the limiter's path. All 52 of their callers sit in one region (`0x0110e...`-`0x0121b...`) that
 shares its own helpers, and no frame-rate patch touches any of them: they look like the timing
-layer of a separate subsystem (unidentified; possibly middleware). Their system label may move
-once that subsystem is known.
+layer of a separate subsystem (unidentified; possibly middleware; issue #1 asks which). Their
+system label may move once that subsystem is known. The twin is replaced too (issue #1): both
+clocks are the same function at two scales, share the clock state object at `0x056d6ae8`, and
+agree on the base, so whichever of the two runs first fixes it for both.
+
+**Same region, file I/O (2026-10-11).** Two more replaced wrappers sit between the clocks and
+the sleep: `frame_timing_open_and_stat` (`0x0111a620`, `sceKernelOpen` then `sceKernelFstat`)
+and `frame_timing_failed_read` (`0x0111a6e0`, `sceKernelRead`), both returning a status word
+(`0x17`, `0x21`, `0x13`, `0x16`) instead of the descriptor. A direct-call scan over the image
+(guest address = file offset + `0x3fc000`) gives 73 call sites in 54 functions for the five
+wrappers together: 18 in 8 for the microsecond clock, 30 in 24 for the millisecond clock, 23 in
+20 for the sleep, one each for the two I/O wrappers. Every caller falls in
+`0x0110e280`-`0x0121b030`, which is the same region as before.
+
+The scan is direct calls only, so it misses indirect callers and does not prove a region is one
+subsystem. What it does show is that no single function calls both an I/O wrapper and a clock
+or the sleep, so the region is not one flat helper bundle: the two I/O wrappers pair with each
+other (`0x011a40b0` opens and `0x011a41a0` reads) and sit next to the clocks without sharing
+them. Issue #1 still asks which subsystem that is; the file I/O should not be read as part of
+the frame timing layer just because the addresses are adjacent.
 
 ### The task manager's frame
 
@@ -72,7 +90,11 @@ piece of the game's own per-frame work, the next layer to map.
 | Address | Size | Name | Status | Notes |
 |---|---:|---|---|---|
 | `0x004632d0` | 67 | `frame_timing_get_time_us` | original | dead in the stock game: only unwind entries refer to it; the community frame-rate patches overwrite it as a code cave (gettimeofday in microseconds) |
+| `0x0111a620` | 129 | `frame_timing_open_and_stat` | edge-verified | Region helper, file I/O: `sceKernelOpen` then `sceKernelFstat`, returns `0x17`/`0x21` on failure and the stat field at offset `0x48` plus the descriptor on success; pairs with the read wrapper |
+| `0x0111a6e0` | 60 | `frame_timing_failed_read` | edge-verified | Region helper, file I/O: `sceKernelRead` with a status word (`0` complete, `0x16` short, `0x13` error) instead of the count |
+| `0x0111a760` | 131 | `frame_timing_get_monotonic_us` | edge-verified | Microseconds since its first call from CLOCK_MONOTONIC; its nanoseconds are divided by 1000, truncating, and it shares the clock state object the millisecond clock uses |
 | `0x0111a7f0` | 131 | `frame_timing_get_monotonic_ms` | verified | Milliseconds since its first call from CLOCK_MONOTONIC; keeps the first seconds in the clock state object |
+| `0x0111a880` | 19 | `frame_timing_sleep` | edge-verified | Region helper: multiplies its millisecond argument by 1000 and calls `sceKernelUsleep`, returning 0 whatever the kernel answers |
 | `0x01388c60` | 16 | `frame_timing_task_run_all_01388c60` | verified | task manager: run the tasks of every group (0x01388c70 with -1) |
 | `0x01388c70` | 171 | `frame_timing_task_run_01388c70` | verified | task manager run: prepare the frame, dispatch through +0x40 (virtual +0x30) with +0x38 set, finish |
 | `0x0138a370` | 330 | `frame_timing_task_dispatch_0138a370` | verified | task dispatcher (virtual +0x30): wakes registered tasks, updates the group record, runs the job like the worker step |
@@ -80,6 +102,8 @@ piece of the game's own per-frame work, the next layer to map.
 | `0x0143e490` | 174 | `frame_timing_task_flush_queue_0143e490` | verified | task manager queue flush: lock, run, destroy and free every queued object, empty the list, unlock |
 | `0x0143f9f0` | 18 | `frame_timing_task_set_frame_value_0143f9f0` | verified | task manager: copies the float at +0x8 of the frame information to the global 0x058b7e08 |
 | `0x014400a0` | 180 | `frame_timing_task_workers_step_014400a0` | verified | task manager workers: three rounds over the worker queues +0x58, +0x68, +0x60 |
+| `0x01448580` | 149 | `frame_timing_elapsed_seconds_01448580` | edge-verified | latches seconds since the global base `0x05940660` into the float at `+0x38` and bumps the counters at `+0x44` and `+0x4c`; the guard is `JNZ` then `JP`, so a value that is not exactly zero returns without writing — every NaN returns, while a negative zero compares equal to zero and does not |
+| `0x01448620` | 168 | `frame_timing_stop_and_accumulate_01448620` | edge-verified | ends the measurement `0x01448580` starts: differences the wall clock in seconds since the base `0x05940660` against the float mark at `+0x38`, zeroes the mark and adds the same delta into the floats at `+0x3c` and `+0x54`; the guard is a `JBE` on `VUCOMISS`, so it accumulates only for a mark strictly greater than zero |
 | `0x01f6a9f0` | 121 | `frame_timing_until_idle_01f6a9f0` | edge-verified | state method: advance the owner one fixed step while busy (1/30 s; 1/60 s in the 60 FPS patches) (a Chalice Dungeon state machine: built next to SprjHolygrail; not reached by the routes yet) |
 | `0x0200d8a0` | 137 | `frame_timing_until_idle_0200d8a0` | edge-verified | state method: advance the owner one fixed step while busy (1/30 s; 1/60 s in the 60 FPS patches) (a Chalice Dungeon state machine: built next to SprjHolygrail; not reached by the routes yet) |
 | `0x0200e100` | 121 | `frame_timing_until_idle_0200e100` | edge-verified | state method: advance the owner one fixed step while busy (1/30 s; 1/60 s in the 60 FPS patches) (a Chalice Dungeon state machine: built next to SprjHolygrail; not reached by the routes yet) |
@@ -98,6 +122,10 @@ piece of the game's own per-frame work, the next layer to map.
 - Clock state object, reached through the pointer at `0x056d6ae8`. Field `+0x10`: the
   seconds of the first clock call (32-bit), written once by the first call of either clock
   wrapper and read by every later call. The rest of the object is not documented.
+- `0x05940660`: a 64-bit microsecond base subtracted from the raw `gettimeofday` count by
+  `0x01448580` and its sibling `0x01448620`. The shipped image holds 8; nothing found so far
+  establishes what sets it at runtime, so the replacements read it as it stands rather than
+  assuming the shipped value.
 
 ## Patch points
 
@@ -151,5 +179,7 @@ rest, so a fast machine does not keep a core busy waiting.
 
 - What `+0x14` and the counters at `+0x268` / `+0x26c` mean (the latter set how many recent
   late frames the catch-up sums).
-- Which subsystem the `0x0111a...` clock layer belongs to.
+- Which subsystem the `0x0111a...` clock layer belongs to. The five replaced wrappers there span
+  clocks, sleeps and file I/O and share no callers, so it is a region rather than one helper
+  bundle; the file I/O is the least timing-like part of it.
 - What each live function the 60 FPS patches edit belongs to, and which run in gameplay.

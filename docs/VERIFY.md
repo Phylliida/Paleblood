@@ -40,6 +40,34 @@ or a hang loses only that case. It runs at low priority (`BB_NICE`, default 10).
 Both sides see the same memory and the same library behavior, so any difference is the
 replacement's.
 
+## What it compares, and what it cannot
+
+The comparison is behavioural: return registers, callee-saved sentinels, every written byte, and
+the sequence of external calls with their arguments. It is not an instruction comparison, and no
+compiler setting makes one possible — clang folds `x != 0.0f` into a sign-masked integer test
+(`testl $0x7fffffff, 0x38(%rdi)`) where the original uses `vucomiss`, and reaches a global through
+a different sequence than the in-image `mov rax, [rip+...]` does. Changing the compiler changes
+which of those differences you get, never whether you get them.
+
+Building the way the game was built is still worth doing, because it removes a class of *type*
+mistakes: clang lowers an unsigned 64-bit `x / 1000000.0` to the original's `punpckldq`/`subpd`/
+`addsd` sequence, where gcc emits a sign test clang never emits. A replacement whose arithmetic
+flips from unsigned to signed shows up as a codegen difference there, and as nothing at all in a
+passing suite. CI builds both gcc and clang, both Release, so neither is wrong; pass the
+`libbbgame.so` you actually rebuilt, and see the generated `.json` under `--out` for what ran.
+
+Two things a passing suite does not cover:
+
+- **Your own stack canary.** A replacement compiled here checks `%fs:0x28`, the host's guard; the
+  original saves the game's cookie, read through the pointer at `0x057e3be0`, and compares a
+  single copy of it on the one path that returns — an early-exit branch skips the check in both
+  versions. Both are real canaries and they read different memory, so a replacement cannot
+  reproduce the original's behaviour under an actual stack overflow. Only a function that overflows
+  the stack distinguishes them, and no case does.
+- **A green count.** `passed: 22, failed: 0` is also what a suite reports when both sides fault on
+  every case, because a matching fault counts as agreement. Before recording, check the results
+  for `ret` and `writes` rather than `fault`.
+
 ## Where inputs come from
 
 Case files hold inputs from your own dump and never go into the repository, an issue or a pull

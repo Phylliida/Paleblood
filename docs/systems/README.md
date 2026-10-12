@@ -8,6 +8,7 @@ One page per game system: summary, key functions, structs and globals, patch poi
 - [Audio](audio.md)
 - [Camera](camera.md)
 - [Character](character.md)
+- [Engine](engine.md)
 - [Event](event.md)
 - [Frame timing](frame_timing.md)
 - [Input](input.md)
@@ -21,8 +22,8 @@ One page per game system: summary, key functions, structs and globals, patch poi
 | | Functions (of target) | Bytes (of target) |
 |---|---:|---:|
 | Target (Ghidra export) | 157,757 | 42,487,347 |
-| Replaced | 31 (0.02%) | 15,353 (0.04%) |
-| Edge-verified (includes verified) | 31 (0.02%) | 15,353 (0.04%) |
+| Replaced | 38 (0.02%) | 15,861 (0.04%) |
+| Edge-verified (includes verified) | 38 (0.02%) | 15,861 (0.04%) |
 | Verified | 21 (0.01%) | 14,010 (0.03%) |
 
 Counts are cumulative: verified functions are included in edge-verified and replaced totals.
@@ -33,10 +34,11 @@ Counts are cumulative: verified functions are included in edge-verified and repl
 | audio | 0 | 0 | 0 | 0 | 0 |
 | camera | 0 | 0 | 0 | 0 | 0 |
 | character | 1 | 1 | 1 | 1 | 979 |
+| engine | 1 | 1 | 1 | 0 | 83 |
 | event | 2 | 2 | 2 | 1 | 545 |
-| frame_timing | 22 | 21 | 21 | 12 | 5,447 |
+| frame_timing | 27 | 26 | 26 | 12 | 5,853 |
 | input | 1 | 1 | 1 | 1 | 426 |
-| kernel | 1 | 1 | 1 | 1 | 204 |
+| kernel | 3 | 2 | 2 | 1 | 223 |
 | loading | 0 | 0 | 0 | 0 | 0 |
 | physics | 1 | 1 | 1 | 1 | 3,222 |
 | render | 3 | 3 | 3 | 3 | 1,837 |
