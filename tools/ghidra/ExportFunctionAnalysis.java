@@ -51,7 +51,18 @@ public class ExportFunctionAnalysis extends GhidraScript {
             throw new IllegalStateException("program image base must be 0x400000; see docs/QUIRKS.md");
         }
         MemoryBlock text = currentProgram.getMemory().getBlock(".text");
-        if (text == null) throw new IllegalStateException("no .text block: import with the Orbis loader");
+        if (text == null) {
+            // The Orbis loader names the executable block segment_0 rather than .text, so fall back
+            // to the executable block holding the image base before giving up.
+            for (MemoryBlock block : currentProgram.getMemory().getBlocks()) {
+                if (block.isExecute() && block.isInitialized()
+                        && block.contains(currentProgram.getImageBase())) {
+                    text = block;
+                    break;
+                }
+            }
+        }
+        if (text == null) throw new IllegalStateException("no executable block at the image base: import with the Orbis loader");
         FunctionManager manager = currentProgram.getFunctionManager();
         List<Function> functions = new ArrayList<>();
         for (Function function : manager.getFunctions(true)) {

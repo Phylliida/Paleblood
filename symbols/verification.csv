@@ -25,6 +25,7 @@ event_emk_add,edge,,18,18,0,0,937b4dca128ba863,2026-10-07
 event_emk_add,edge,60,18,18,0,0,937b4dca128ba863,2026-10-07
 event_flag_write,edge,,14,14,0,0,6aefc6e7432f84b0,2026-10-11
 frame_timing_average_frame_014486d0,edge,,30,30,0,0,3aca516a08424aa8,2026-10-12
+frame_timing_bulk_init_01440640,edge,,3,3,0,0,10e6af0af84f3425,2026-10-12
 frame_timing_close_0111a6b0,edge,,7,7,0,0,39c02008f1f323d7,2026-10-12
 frame_timing_elapsed_seconds_01448580,edge,,22,22,0,0,c27b44301efef532,2026-10-11
 frame_timing_failed_read,edge,,13,13,0,0,e458efec7385acca,2026-10-11
@@ -55,6 +56,7 @@ frame_timing_get_monotonic_us,edge,,14,14,0,0,ce1bb32b4f6c7842,2026-10-11
 frame_timing_get_wall_time_us,edge,,13,13,0,0,388c414a87245148,2026-10-11
 frame_timing_mutex_lock,edge,,5,5,0,0,7898e498b360d3a8,2026-10-12
 frame_timing_mutex_unlock,edge,,5,5,0,0,7898e498b360d3a8,2026-10-12
+frame_timing_object_ctor_01440680,edge,,3,3,0,0,10e6af0af84f3425,2026-10-12
 frame_timing_open_and_stat,edge,,13,13,0,0,3b699a359aff284c,2026-10-11
 frame_timing_pace_frame,recorded,,585,585,0,0,a3d44cba82dab3c2,2026-10-09
 frame_timing_pace_frame,recorded,30,585,585,0,0,a3d44cba82dab3c2,2026-10-07
