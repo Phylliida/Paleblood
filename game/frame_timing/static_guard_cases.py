@@ -7,8 +7,10 @@ usage: static_guard_cases.py OUT_DIR
 Each writes one JSON per case into OUT_DIR/0x<address>/, the layout tools/preflight.py and
 tools/verify.py expect.
 
-The guard and the pointer are separate fields of one object (guard at +0, pointer at +8), so the
-cases set them independently. The interesting one is `guard_high_bytes`: the guard's low byte is
+The guard and the pointer are separate fields of one object. The pointer sits at +0 -- its eight
+bytes are 0x05ac59b0, the object base the ADD RCX, 0x10 at 0x05ac59c0 addresses -- and the guard is
+the eight bytes at 0x05ac59b8, so the guard is the higher address and odd shapes of it are what the
+cases vary. The interesting one is `guard_high_bytes`: the guard's low byte is
 zero while the rest of its eight bytes are not, which the original -- reading a single byte with
 CMP BYTE PTR [rax], 0x0 -- treats as uninitialized. An implementation that tests the whole qword
 takes the early return there instead, and that is the only case that catches it. The same case also
