@@ -17,6 +17,10 @@ character_frame_update_01cbdb20,edge,60,39,39,0,0,b243fddb1ca6589a,2026-10-07
 character_frame_update_01cbdb20,edge,uncapped,39,39,0,0,b243fddb1ca6589a,2026-10-07
 engine_crc32_update,edge,,9,9,0,0,dca1fa8adf405f00,2026-10-12
 engine_crc32_update_byte,edge,,8,8,0,0,dca1fa8adf405f00,2026-10-12
+engine_sse_copy_rdi_to_rsi_00842ba0,edge,,7,7,0,0,df7f3b8cca3ea525,2026-10-12
+engine_sse_copy_rsi_to_rdi_00842bd0,edge,,7,7,0,0,df7f3b8cca3ea525,2026-10-12
+engine_sse_copy_rsi_to_rdi_02577f80,edge,,7,7,0,0,df7f3b8cca3ea525,2026-10-12
+engine_sse_copy_rsi_to_rdi_025aa050,edge,,7,7,0,0,df7f3b8cca3ea525,2026-10-12
 engine_time_id,edge,,19,19,0,0,3fef7afcd6d7091d,2026-10-11
 engine_time_over_period,edge,,23,23,0,0,eda852e73926ceee,2026-10-11
 event_emk_add,recorded,,150,150,0,0,937b4dca128ba863,2026-10-07

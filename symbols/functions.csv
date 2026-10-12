@@ -3,6 +3,8 @@ address,size,name,system,status,notes
 0x004663f0,18,kernel_pending_code,kernel,edge-verified,"Reads the signed count at +0x34 of its argument: returns 2 while it is above zero, otherwise bit 0 of the word at +0x30"
 0x004664e0,25,kernel_index_code,kernel,edge-verified,Bounds-checked lookup of a code word in the seven-entry table at 0x02fc5480; an index above 6 returns 0x2bc
 0x00466810,19,kernel_usleep,kernel,edge-verified,Sleeps for its argument in microseconds via libc usleep (argument*1000 ns) and returns 1; called with a constant 10 by 0x007199f0
+0x00842ba0,39,engine_sse_copy_rdi_to_rsi_00842ba0,engine,edge-verified,Copies four 16-byte slots from [rdi..+0x30] to [rsi..+0x30] one slot at a time through xmm0; rdi holds the SOURCE here and rsi the destination
+0x00842bd0,39,engine_sse_copy_rsi_to_rdi_00842bd0,engine,edge-verified,Copies four 16-byte slots from [rsi..+0x30] to [rdi..+0x30] one slot at a time through xmm0; interleaved load and store like 0x00842ba0 with the operands exchanged
 0x00fbc3e0,670,render_yebis_get_recursive_sample_parameters,render,verified,"YEBIS GPUTexUtil_GetRecursiveSampleParameters: blur pass count, last-pass samples and scale; the FPS patches drop its first assertion"
 0x01088550,83,engine_time_over_period,engine,edge-verified,Divides the wall clock in microseconds by the 64-bit period at offset 0x1d8 of its argument and returns the truncated quotient; the division is unsigned while the count it divides is built signed
 0x0111a600,8,frame_timing_realloc_thunk_0111a600,frame_timing,original,"MOVSXD RSI,ESI then a tail call to realloc (import 0x02fbfe38, NID Y7aJ1uydPMo): a 32-bit signed size is sign-extended. 8 bytes, so the 14-byte hook does not fit (QUIRKS.md)"
@@ -58,6 +60,8 @@ address,size,name,system,status,notes
 0x02483e80,204,kernel_condition_wait,kernel,verified,Dantelion2 PthreadCondition wait (untimed when timeout is -1); the FPS patches put a ret on the timed path
 0x024bd150,216,kernel_wait_for_release_024bd150,kernel,edge-verified,"lock global 0x05aa4578 (its word is the vtable); modes 0/1 lock, test bit 0 of +0x31, mode 1 waits for +0x10 to read 2; advance bumps +0x30, walks +0x18 or twice via +0x80 when +0x88 is set"
 0x024bdd40,36,kernel_wait_for_state_024bdd40,kernel,original,"Polls the word at 0x10 of its argument until it reads 2, sleeping 1000 us per poll; the test runs first, so a ready field returns without sleeping. Unreplaced: no case can change the polled word yet"
+0x02577f80,39,engine_sse_copy_rsi_to_rdi_02577f80,engine,edge-verified,"Copies four 16-byte slots from [rsi..+0x30] to [rdi..+0x30]; unlike its neighbours it loads all four into xmm0-xmm3 first, then stores 1,0,3,2, so an overlapping copy reads pristine bytes"
+0x025aa050,39,engine_sse_copy_rsi_to_rdi_025aa050,engine,edge-verified,Copies four 16-byte slots from [rsi..+0x30] to [rdi..+0x30] one slot at a time through xmm0; a second copy of 0x00842bd0's interleaved form
 0x025b2fb0,768,render_swap_chain_present,render,verified,"GXSwapChainCtrl present: waits for the present interval in 60 Hz vblanks, maps it to a flip mode, presents (Uncap: mode 0)"
 0x02e61140,67,frame_timing_get_wall_time_us,frame_timing,edge-verified,"Microseconds since the Unix epoch from gettimeofday as one 64-bit value; no base and no state, unlike the monotonic clocks"
 0x02e61280,101,engine_time_id,engine,edge-verified,"Wall clock as 128 bits: RAX usec|sec, RDX usec+counter+1|sec+counter as 32-bit sums, counter at 0x0570d83c read once and bumped by 2"
