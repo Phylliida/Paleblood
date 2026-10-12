@@ -24,6 +24,7 @@ event_emk_add,recorded,60,150,150,0,0,937b4dca128ba863,2026-10-07
 event_emk_add,edge,,18,18,0,0,937b4dca128ba863,2026-10-07
 event_emk_add,edge,60,18,18,0,0,937b4dca128ba863,2026-10-07
 event_flag_write,edge,,14,14,0,0,6aefc6e7432f84b0,2026-10-11
+frame_timing_close_0111a6b0,edge,,7,7,0,0,39c02008f1f323d7,2026-10-12
 frame_timing_elapsed_seconds_01448580,edge,,22,22,0,0,c27b44301efef532,2026-10-11
 frame_timing_failed_read,edge,,13,13,0,0,e458efec7385acca,2026-10-11
 frame_timing_flipper_init,recorded,,13,13,0,0,29a2f7c09f92f53d,2026-10-07
@@ -70,6 +71,7 @@ frame_timing_request_7_0200e270,edge,,12,12,0,0,6e78f71421f3aa94,2026-10-07
 frame_timing_request_7_0200e270,edge,60,12,12,0,0,6e78f71421f3aa94,2026-10-07
 frame_timing_request_7_02012a60,edge,,12,12,0,0,6e78f71421f3aa94,2026-10-07
 frame_timing_request_7_02012a60,edge,60,12,12,0,0,6e78f71421f3aa94,2026-10-07
+frame_timing_seek_0111a720,edge,,10,10,0,0,39c02008f1f323d7,2026-10-12
 frame_timing_semaphore_delete,edge,,4,4,0,0,833610a51d0c3f41,2026-10-12
 frame_timing_semaphore_signal,edge,,4,4,0,0,833610a51d0c3f41,2026-10-12
 frame_timing_semaphore_wait,edge,,4,4,0,0,833610a51d0c3f41,2026-10-12
@@ -106,6 +108,7 @@ frame_timing_until_idle_020128f0,edge,,5,5,0,0,6e78f71421f3aa94,2026-10-07
 frame_timing_until_idle_020128f0,edge,60,5,5,0,0,6e78f71421f3aa94,2026-10-07
 frame_timing_until_idle_02012bf0,edge,,5,5,0,0,6e78f71421f3aa94,2026-10-07
 frame_timing_until_idle_02012bf0,edge,60,5,5,0,0,6e78f71421f3aa94,2026-10-07
+frame_timing_yield_0111a740,edge,,5,5,0,0,5f82617fdf2f6700,2026-10-12
 input_pad_step_01972900,recorded,,202,202,0,0,33cd4f4b94e06d58,2026-10-07
 input_pad_step_01972900,recorded,30,202,202,0,0,33cd4f4b94e06d58,2026-10-07
 input_pad_step_01972900,recorded,60,202,202,0,0,33cd4f4b94e06d58,2026-10-07
