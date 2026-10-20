@@ -32,11 +32,11 @@ PERIOD_OFFSET = 0x1D8
 OBJECT_SIZE = 0x200
 
 
-def case(cid, seconds, microseconds, period, note=''):
+def case(cid, seconds, microseconds, period, note='', fault=''):
     tv = struct.pack('<qq', seconds, microseconds)
     obj = bytearray(OBJECT_SIZE)
     obj[PERIOD_OFFSET:PERIOD_OFFSET + 8] = struct.pack('<Q', period & 0xFFFFFFFFFFFFFFFF)
-    return {
+    doc = {
         'schema': 1, 'address': ADDRESS, 'id': cid,
         'returns': 'i64',                    # DIV: a full 64-bit unsigned quotient
         'args': {'rdi': 'buf:object'},
@@ -46,6 +46,11 @@ def case(cid, seconds, microseconds, period, note=''):
                      'writes': [{'arg': 0, 'offset': 0, 'size': 16, 'bytes': tv.hex()}]}],
         'note': note,
     }
+    if fault:
+        # A case that faults declares it: a shared fault otherwise compares nothing, so tools/verify.py
+        # refuses an undeclared one instead of counting it as a pass.
+        doc['expected_fault'] = fault
+    return doc
 
 
 CASES = [
@@ -88,7 +93,7 @@ CASES = [
     case('period_max_exact', 9223372036854, 775807, 0xFFFFFFFFFFFFFFFF),
     # A zero period faults on both sides. The original divides before it reads its stack canary,
     # so no canary report can appear on either side.
-    case('period_zero', 1, 0, 0, 'division by zero: SIGFPE on both sides'),
+    case('period_zero', 1, 0, 0, 'division by zero: SIGFPE on both sides', fault='signal 8'),
 ]
 
 
