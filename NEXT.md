@@ -173,6 +173,63 @@ labelled `runtime`.
 
 ## Decompilation track
 
+### The export turn: what the call graph can and cannot tell us (measured 2026-10-20)
+
+`data/exports/metrics.csv` and `edges.csv` (81 MB, dated Oct 12) have never been joined to the
+catalog. They describe the same bytes, and two of their columns carry no signal at all.
+
+**Identity holds.** `metrics.csv` has exactly the catalog's 157,757 addresses, one row each, all
+`Ghidra ExportFunctionAnalysis/1`, all `analysis_complete=true`. Sizes agree with Capstone on all
+five controls (`0x00400020` 102, `0x024bdd40` 36, `0x02f714d0` 126, `0x004632d0` 67, `0x01652440` 126).
+Of 500 randomly sampled `direct` edges, **489 decode to exactly the reported callee (97.8%)**; all
+eleven misses are import-thunk resolution -- the encoded target sits in the `0x2fbe5xx`-`0x2fbfxxx`
+PLT region and Ghidra reports the function it believes the stub stands for (e.g. call at
+`0x024bdd55` encodes `0x2fbfe68` which `jmp`s through the GOT; Ghidra says `0x0248bac0`). So
+`edges.csv` is a **thunk-resolved graph, not an encoding dump**: 2.2% of edges cannot be checked
+against bytes by construction, and any join inherits that.
+
+**`boundary_confidence` is a constant, and so is `fixture_difficulty`.** Every one of 157,757 rows
+says `boundary_confidence = "ghidra-function-body"` and `fixture_difficulty = "unknown"`. The column
+named confidence carries no confidence. So the boundary question was answered by decoding instead,
+on every entry, with two independent tests -- does the body decode to exactly its declared size, and
+does the last instruction transfer control:
+
+| decodes | ending        | callers    | count  | %     |
+|---------|---------------|------------|--------|-------|
+| yes     | terminates    | callerless | 113790 | 72.13 |
+| yes     | terminates    | called     |  27902 | 17.69 |
+| no      | falls through | called     |   4889 |  3.10 |
+| no      | falls through | callerless |   3329 |  2.11 |
+| yes     | falls through | called     |   2599 |  1.65 |
+| yes     | falls through | callerless |   1960 |  1.24 |
+| no      | terminates    | called     |   1726 |  1.09 |
+| no      | terminates    | callerless |   1562 |  0.99 |
+
+**89.8% pass both tests; 10.2% (16,065) fail at least one; 5.2% (8,218) fail both** and are the
+suspected non-function set. So 157,757 is not a number about the program: it is Ghidra's partition,
+plausibly about 150,000 real functions plus a tail of fragments and data that could be five to ten
+percent. Any report saying "157,757 functions" must carry that.
+
+**Reachability is blocked, and the blocker is named.** 164,953 of 608,251 edges (27%) are
+`unresolved_indirect`. Code pointers in the file's data are absent by design: of 398,183 eight-byte
+values in the RW segment, 319,662 are zero, 27,021 are small integers, and **exactly one** points at
+a catalogued function; the init array at guest `0x57e5b38` is zeros. This image is relocated at
+load through the proprietary `PT_SCE_RELA` segment (`p_type 0x61000000`, `p_filesz 0x569d78` at
+file offset `0x53e9b40`), which nothing in this tree parses. Three candidate numbers, none of them a
+measurement of what executes: 842 reachable from the ELF entry (0.5%), 3,225 from the best single
+node, and a 37.6% union over callerless nodes -- and a node with 1,051 out-edges reaches only 94
+functions, so the graph is a shallow skeleton rather than an execution structure. Parsing
+`PT_SCE_RELA` to recover code-pointer roots is a bounded piece of work and it is the prerequisite
+for any reachability claim; until then the in-game track cannot be bounded from below or above.
+
+**The number that does survive, and it inverts the reason to want it: 120,641 functions (76.5%) have
+no in-catalog direct caller.** For three quarters of the catalog no static call-graph argument can
+establish that a function executes -- only running the game, or a traced differential, can. So
+capture is not a fallback for a minority; it is the only witness class for most of the tree. The
+converse is equally true and equally invisible: a function that never runs produces no evidence, so
+"not observed" is not "not executed". Both are unresolvable without the relocation roots.
+
+
 ### The decompiler runs headless, and it is not the bottleneck (measured 2026-10-20)
 
 `tools/ghidra/Decompile.java` drives the analyzed project through the existing shim:
