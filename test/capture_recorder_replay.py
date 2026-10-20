@@ -132,8 +132,48 @@ int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
         # guarantee two independent provenances. promote.py now refuses that copy, and the honest
         # statement of what this test proves is narrower: the recorder's output replays through the
         # comparison engine; it cannot, by itself, promote anything.
-        assert not os.path.isdir(os.path.join(cases, 'edge')), 'the replay must not fabricate an edge set'
         assert promote.cases(cases) == 1, promote.cases(cases)
+
+        # The other half of the gate has no author in this tree: the recorder observes whatever the
+        # game did, so it cannot invent the boundary case a promotion needs beside it. This writes
+        # one the way such a case is actually authored -- take a recorded input and move it
+        # somewhere the recording never went -- and then shows the gate both refusing a copy and
+        # accepting the perturbation. Without this, promote.py's content comparison has no live
+        # caller: the previous assertions only reach it through a directory with no edge set at
+        # all, which is the branch that skips it.
+        edge = os.path.join(cases, 'edge')
+        os.makedirs(edge)
+        perturbed = json.loads(json.dumps(case))
+        perturbed['id'] = 'perturbed_input_0001'
+        # No `capture` block: the game never made this call, and claiming it did would report the
+        # edge set as gameplay in promote.provenance.
+        del perturbed['capture']
+        perturbed['memory'] = [{'addr': 'buf:b0+0x14', 'bytes': '44332211'},
+                               {'addr': 'buf:b1+0x0', 'bytes': '09000000'}]
+        with open(os.path.join(edge, 'perturbed_input_0001.json'), 'w', encoding='utf-8') as stream:
+            json.dump(perturbed, stream, sort_keys=True)
+
+        # case_contents reads one directory's own *.json, so the recorded set is still the single
+        # recorder case and the edge set is the single perturbed one.
+        recorded_contents = promote.case_contents(cases)
+        edge_contents = promote.case_contents(edge)
+        assert len(recorded_contents) == len(edge_contents) == 1, (recorded_contents, edge_contents)
+        assert promote.duplicate_sets(recorded_contents, recorded_contents) is not None, \
+            'a copy of the recorded set must still be refused'
+        assert promote.duplicate_sets(recorded_contents, edge_contents) is None, \
+            'a perturbed input is a second provenance'
+
+        # And the perturbation is a real one: the guest reads 9, not 7, so the case cannot agree
+        # with the original for the reason the recorded case does.
+        edge_sides = verify.run_cases(boot, edge, '0x00400000', 'replacement', library,
+                                      function=case['capture']['function'])
+        edge_report = verify.compare(
+            {'schema': 1, 'address': '0x00400000', 'cases': edge_sides['original']},
+            {'schema': 1, 'address': '0x00400000', 'cases': edge_sides['replacement']})
+        assert (edge_report['cases'], edge_report['passed'], edge_report['failed']) == (1, 1, 0), edge_report
+        assert edge_sides['original'][0]['ret'] == {'rax': '0x36'}, edge_sides['original'][0]['ret']
+        assert edge_sides['original'][0]['writes'] == [{'addr': 'buf:b0+0x14', 'bytes': '36000000'}], \
+            edge_sides['original'][0]['writes']
 
     print('recorder case replayed: 1/1 passed')
     return 0

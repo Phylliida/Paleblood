@@ -47,9 +47,19 @@ Needs the maintainer (cannot be done from the sandbox):
   so a body that writes nothing satisfies them, and the second two start from state 0 with zero
   data, which is a fixed point of the table at `0x04cdcf50` since its first entry is `0x00000000`
   -- the correct result equals the input and a same-value store is invisible to a before/after
-  snapshot. The fix is poisoned presets (nonzero seed, nonzero payload, destination pre-filled
-  with a value no copy would produce), which needs no expectation rewritten because a case is
-  input only. The same machinery is what a real edge case set needs, so it is one change.
+  snapshot. Three of `crc32`'s four are now closed and the fourth is documented: `range_all_zero_
+  byte` is kept as the identity property it is (it catches a body that writes the wrong value) and
+  `range_zero_data_set_state` sits beside it with a seed that is not a fixed point, which the
+  dropped-body mutant does catch; `byte_zero_byte_zero` cannot be made sensitive without ceasing to
+  be the identity, so the reason is written into `game/engine/crc32_cases.py` instead of being
+  silently omitted. Both `range_empty_*` stay correctly insensitive -- their contract is to write
+  nothing. `test/capture_recorder_replay.py` now authors the edge half of a promotion the way such
+  a case is actually written (a recorded input moved somewhere the recording never went), and
+  mutation showed the guard that catches a perturbed-to-identical copy is the executed result, not
+  `promote.duplicate_sets` -- which compares file contents and would accept a copy that also renamed
+  its id. Remaining: the eight `slot_copy` identity maps, where the fix is poisoned destinations
+  (nonzero payload, destination pre-filled with a value no copy would produce); no expectation is
+  rewritten, because a case is input only. That is the same machinery a real edge set needs.
 
 ## Runtime track
 

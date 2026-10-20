@@ -114,6 +114,15 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
   backfilled after checking, not assuming: no commit since 2026-10-07 touched any of their
   defining files, so the approved source is the current source. `unavailable` is accepted in
   either pin, the way the ledger accepts it -- an absence someone stated, not an empty field.
+- A case that cannot fail is now classified rather than counted. Mutation showed four `crc32` cases
+  surviving a replacement whose body does nothing, and reading the generator said why: two contract
+  to write nothing (so a body that writes nothing is right), and two take a zero seed with zero
+  data, which is a fixed point of the table at `0x04cdcf50` -- the correct result equals the input.
+  `range_zero_data_set_state` was added beside `range_all_zero_byte` with a seed that is not a fixed
+  point; the second mutation run fails `7 of 10`, with exactly the three documented-insensitive
+  cases surviving, so the classification is measured rather than asserted. `byte_zero_byte_zero`
+  stays because it is the identity by construction and still catches a body that writes the wrong
+  value; the reasoning lives in the generator, where the next reader of the case will be.
 
 - None of the 622 edge-verified functions has a recorded case, so `tools/promote.py` cannot move
   one of them to verified: it needs `$BB_CAPTURES/<function>/*.json` from a real run, and nothing

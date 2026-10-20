@@ -20,6 +20,20 @@ would satisfy neither.
 The range loop is a do/while in the original, so a zero length must leave the state untouched; a
 null pointer is only reachable with a zero length, and that pair is here because it is the one input
 where the loop condition is what stands between the function and a dereference it does not guard.
+
+Three of these cases cannot fail against a replacement whose body does nothing, and the reason is in
+the input rather than in the comparison, so it is written down here rather than fixed:
+
+  range_empty_from_zero, range_empty_from_garbage   The contract is to write nothing, and a body
+      that writes nothing is right. Their power is over-writing, which is all it can ever be.
+  range_all_zero_byte, byte_zero_byte_zero          The state is zero and the data folds to zero, so
+      the correct store writes the value already there. A before/after snapshot cannot see it. Both
+      are genuine properties worth pinning -- they catch a body that writes the wrong value -- but
+      not a body that writes nothing.
+
+range_zero_data_set_state is the same shape as range_all_zero_byte with a seed that is not a fixed
+point, so the fold moves even though the data is still zeros. It exists because a zero seed and zero
+data are the one combination where the correct answer equals the input.
 """
 import json
 import os
@@ -95,6 +109,8 @@ CASES = [
     case_range('range_two_bytes', 0, b'AB', 'two iterations'),
     case_range('range_four_bytes', 0, b'\x00\x01\x02\x03', 'ascending bytes'),
     case_range('range_all_zero_byte', 0, b'\x00' * 16, 'sixteen zero bytes: the index stays untested'),
+    case_range('range_zero_data_set_state', 0xDEADBEEF, b'\x00' * 16,
+               'zero data from a set state: the index is the seed\'s low byte, so the fold moves'),
 
     # --- the range kernel, against published CRC-32 values ---
     case_range('range_check_123456789', REFERENCE_INIT, CHECK_DATA,
