@@ -25,8 +25,50 @@ static std::string read_file(const std::string &path)
     return {std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
 }
 
-int main()
+/* The case the recorder writes for a function shaped like the arithmetic fixture in
+   test/test_capture_poc.cpp: one in/out buffer, one input buffer, one scalar, an i32 return.
+   `--emit` prints that case so test/capture_recorder_replay.py can replay it through the same
+   verifier tools/promote.py calls; the physical address, buffer contents and factor are what that
+   script's synthetic executable computes. */
+static int emit_case()
 {
+    auto temp = (std::filesystem::temp_directory_path() / "pb-capture-emit.XXXXXX").string();
+    char *root = mkdtemp(temp.data());
+    if (!root) return 1;
+    setenv("BB_CAPTURE_DIR", root, 1);
+    setenv("BB_CAPTURE_RUN", "synthetic_run_1", 1);
+
+    auto *out = static_cast<char *>(std::calloc(16, 1));
+    auto *input = static_cast<char *>(std::calloc(16, 1));
+    if (!out || !input) return 1;
+    // Initial bytes: *out = 0x11223344, *input = 7. Both live outside the image, so the recorder
+    // names them b0 and b1 and states their initial bytes rather than a guest address.
+    const unsigned char out_bytes[4] = {0x44, 0x33, 0x22, 0x11}, in_bytes[4] = {0x07, 0x00, 0x00, 0x00};
+    std::memcpy(out, out_bytes, 4);
+    std::memcpy(input, in_bytes, 4);
+    rt_image = nullptr;
+
+    rt::Recorder recorder;
+    if (!recorder.begin("capture_recorder_replay")) return 1;
+    recorder.bytes(out, 0, 4);
+    recorder.bytes(input, 0, 4);
+    recorder.write("0x00400000",
+                   "\"rdi\": \"buf:b0\", \"rsi\": \"buf:b1\", \"rdx\": \"0x00000006\"", "i32");
+    const std::string path = std::string(root) + "/capture_recorder_replay/synthetic_run_1_0000.json";
+    const std::string json = read_file(path);
+    if (json.empty()) return 1;
+    std::fwrite(json.data(), 1, json.size(), stdout);
+    std::free(out);
+    std::free(input);
+    std::error_code ec;
+    std::filesystem::remove_all(root, ec);
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    if (argc > 1 && std::strcmp(argv[1], "--emit") == 0) return emit_case();
+
     auto temp = (std::filesystem::temp_directory_path() / "pb-capture-test.XXXXXX").string();
     char *root = mkdtemp(temp.data());
     CHECK(root != nullptr);
