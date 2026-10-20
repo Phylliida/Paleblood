@@ -879,6 +879,38 @@ class Harness(unittest.TestCase):
         self.assertIn('errors', self.side())
 
 
+@unittest.skipUnless(shutil.which("cc"), "needs a C compiler to build a stand-in library")
+class ReplacementLibrary(unittest.TestCase):
+    """A library that initialises but does not export the replacement is a build problem, and it
+    must say so. Before this, the missing symbol reached the child as a bare AttributeError and
+    the run ended `exit 1`, which reads exactly like the replacement faulting."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.TemporaryDirectory()
+        cls.lib = os.path.join(cls.dir.name, "libnomatch.so")
+        source = os.path.join(cls.dir.name, "nomatch.c")
+        with open(source, "w") as f:
+            f.write("int bbgame_init(void *host) { (void)host; return 0; }\n"
+                    "int bb_unrelated_symbol(void) { return 1; }\n")
+        subprocess.run(["cc", "-shared", "-fPIC", "-o", cls.lib, source], check=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.dir.cleanup()
+
+    def test_a_missing_symbol_names_the_library_and_the_symbol(self):
+        with self.assertRaises(harness.BadInput) as caught:
+            harness.load_replacement(self.lib, "bb_not_here", 0x1000)
+        message = str(caught.exception)
+        self.assertIn("does not export bb_not_here", message)
+        self.assertIn(os.path.basename(self.lib), message)
+
+    def test_a_present_symbol_resolves(self):
+        address = harness.load_replacement(self.lib, "bb_unrelated_symbol", 0x1000)
+        self.assertTrue(address)
+
+
 class RegionValidation(unittest.TestCase):
     """check_memory decides which addresses a case may name, and on what terms.
 

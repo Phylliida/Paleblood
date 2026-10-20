@@ -629,7 +629,14 @@ def load_replacement(lib_path: str, symbol: str, size: int) -> int:
     host = Host(1, IMAGE, size, ctypes.cast(hook, ctypes.c_void_p).value)
     if lib.bbgame_init(ctypes.byref(host)):
         raise BadInput('bbgame_init failed')
-    return ctypes.cast(getattr(lib, symbol), ctypes.c_void_p).value
+    try:
+        return ctypes.cast(getattr(lib, symbol), ctypes.c_void_p).value
+    except AttributeError:
+        # Without this, a library that does not export SYMBOL surfaces as an opaque `exit 1` from
+        # the child process, which reads as a fault rather than as a build that is missing the
+        # replacement. Name it: a wrong --lib or a stale build should never look like behaviour.
+        raise BadInput(f'{os.path.basename(lib_path)} does not export {symbol}: the replacement is '
+                       'not in this library (build the repository, or pass the right --lib)')
 
 
 def run_case(machine: Machine, case: dict, address: str, target: int | None) -> dict:
@@ -705,7 +712,18 @@ def _run_isolated(machine: Machine, case: dict, address: str, target: int | None
         _, status = os.waitpid(pid, 0)
     if os.WIFSIGNALED(status):
         sig = os.WTERMSIG(status)
-        result = {'fault': f'timeout after {timeout} s' if sig == signal.SIGALRM else f'signal {sig}'}
+        stop_reason = (trace_result or {}).get('stop_reason')
+        if sig == signal.SIGALRM:
+            result = {'fault': f'timeout after {timeout} s'}
+        elif trace_result is not None and stop_reason and not str(stop_reason).startswith('instruction_signal_'):
+            # The tracer PTRACE_KILLs the tracee when it stops on an instruction it cannot decode or
+            # an event limit, so the signal is an artifact of tracing, not behaviour -- we killed it.
+            # Reporting a guest fault here would put our own hand in the evidence: an unsupported
+            # decode became "signal 9" on both sides, which then compared clean. The stop reason is
+            # recorded as a gap and an incomplete trace already fails closed in verify.compare.
+            result = {}
+        else:
+            result = {'fault': f'signal {sig}'}
     elif os.WEXITSTATUS(status) == 3:
         raise BadInput(json.loads(data)['bad_input'])
     elif os.WEXITSTATUS(status) != 0 or not data:

@@ -24,6 +24,7 @@ Exit codes: 0 all cases match, 1 mismatch, 3 bad input.
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import glob
 import json
@@ -77,16 +78,30 @@ def byte_map(writes: list[dict]) -> dict[tuple[str, int], int]:
     return m
 
 
-def compare_case(orig: dict, repl: dict) -> list[str]:
+def compare_case(orig: dict, repl: dict, case: dict | None = None) -> list[str]:
     diffs: list[str] = []
     # A fault is a behaviour, so compare the two sides' faults against each other rather than
     # failing on any fault: a crash the original shares (an unguarded divide taking SIGFPE, say)
     # is agreement, while a fault on one side only -- or two different faults -- is not.
+    #
+    # A shared fault is not evidence, though. When both sides fault, nothing below this point runs:
+    # the registers, writes and calls the case exists to compare are never looked at, so a
+    # replacement that crashes in the same place for a different reason compares clean. That is
+    # how a harness that segfaulted every case still reported 4/4 passed. So a shared fault has to
+    # be declared by the case: `expected_fault` in the case file says "faulting here is the
+    # behaviour", and the run reports it separately from a pass. Undeclared, it is a failure.
     of, rf = orig.get('fault'), repl.get('fault')
     if of != rf:
         for side, f in (('original', of), ('replacement', rf)):
             if f is not None:
                 diffs.append(f'{side}: {f}')
+    elif of is not None:
+        declared = (case or {}).get('expected_fault')
+        if declared is None:
+            diffs.append(f'both sides faulted with {of}: the case does not declare expected_fault, '
+                         'and a shared fault compares nothing the case sets up')
+        elif str(declared) != str(of):
+            diffs.append(f'both sides faulted with {of}, but the case declares expected_fault {declared}')
     for side, d in (('original', orig), ('replacement', repl)):
         trace = d.get('instruction_trace')
         if trace and (trace.get('skipped_host_calls') or trace.get('external_transitions') or
@@ -158,7 +173,7 @@ def compare_case(orig: dict, repl: dict) -> list[str]:
     return diffs
 
 
-def compare(orig: dict, repl: dict) -> dict:
+def compare(orig: dict, repl: dict, cases: dict | None = None) -> dict:
     for name, d in (('original', orig), ('replacement', repl)):
         if d.get('schema') != SCHEMA or 'cases' not in d:
             raise BadInput(f'{name}: not a schema {SCHEMA} result file')
@@ -168,11 +183,17 @@ def compare(orig: dict, repl: dict) -> dict:
     rc = {c['id']: c for c in repl['cases']}
     failures = []
     diagnostics = []
+    faults = []
     for cid in sorted(set(oc) | set(rc)):
         if cid not in oc or cid not in rc:
             failures.append({'case': cid, 'diffs': ['case missing from one side']})
             continue
-        d = compare_case(oc[cid], rc[cid])
+        case = (cases or {}).get(cid)
+        d = compare_case(oc[cid], rc[cid], case)
+        if oc[cid].get('fault') is not None and oc[cid].get('fault') == rc[cid].get('fault'):
+            faults.append({'case': cid, 'fault': oc[cid]['fault'],
+                           'declared': (case or {}).get('expected_fault') == oc[cid]['fault'],
+                           'compared': False})
         original_trace = oc[cid].get('instruction_trace')
         replacement_trace = rc[cid].get('instruction_trace')
         if original_trace or replacement_trace:
@@ -206,7 +227,90 @@ def compare(orig: dict, repl: dict) -> dict:
     n = len(set(oc) | set(rc))
     return {'schema': SCHEMA, 'address': orig.get('address'), 'cases': n,
             'passed': n - len(failures), 'failed': len(failures), 'failures': failures,
+            'fault_agreement': faults,
             'instruction_diagnostics': diagnostics}
+
+
+def falsification_report(original: dict, replacement: dict, cases: dict | None = None) -> dict:
+    """Perturb the replacement and require the comparison to notice each perturbation.
+
+    A comparison that passes everything is indistinguishable from one that checks nothing: a
+    harness bug that made every case crash on both sides once reported 4/4 passed, because a
+    matching fault was taken as agreement. Green is only worth something if the same machinery
+    goes red on a real difference, so corrupt the replacement where the cases must be able to
+    see it -- a return value, a written byte, a callee-saved register -- and require a failure
+    for each. A perturbation nothing notices is a case set that could not have caught a mistake.
+
+    Runs in-process on the two result files already written, so it costs no extra executions.
+    """
+    checks: list[dict] = []
+
+    def first(mutated: dict, field: str):
+        for cid in sorted(mutated):
+            if mutated[cid].get(field):
+                return cid, mutated[cid]
+        return None, None
+
+    def perturb(label, mutate):
+        doc = copy.deepcopy(replacement)
+        mutated = {c['id']: c for c in doc.get('cases', []) if isinstance(c.get('id'), str)}
+        if not mutate(mutated):
+            return
+        summary = compare(original, doc, cases)
+        checks.append({'perturbation': label, 'noticed': summary['failed'] > 0,
+                       'failed': summary['failed']})
+
+    def bump_ret(mutated):
+        cid, c = first(mutated, 'ret')
+        if c is None:
+            return False
+        reg = sorted(c['ret'])[0]
+        try:
+            c['ret'][reg] = f'0x{int(str(c["ret"][reg]), 0) + 1:x}'
+        except ValueError:
+            return False
+        return True
+
+    def flip_written_byte(mutated):
+        cid, c = first(mutated, 'writes')
+        if c is None or not c['writes'][0].get('bytes'):
+            return False
+        b = bytearray.fromhex(c['writes'][0]['bytes'])
+        b[0] ^= 0x01
+        c['writes'][0]['bytes'] = b.hex()
+        return True
+
+    def clobber_callee_saved(mutated):
+        # preserved values are the verdict strings 'kept', not numbers: an int() here raised and
+        # silently disabled this check for every function in the tree.
+        cid, c = first(mutated, 'preserved')
+        if c is None:
+            return False
+        reg = sorted(c['preserved'])[0]
+        c['preserved'][reg] = 'clobbered'
+        return True
+
+    perturb('return value', bump_ret)
+    perturb('written byte', flip_written_byte)
+    perturb('callee-saved register', clobber_callee_saved)
+    missed = [c['perturbation'] for c in checks if not c['noticed']]
+    return {'checked': len(checks), 'noticed': len(checks) - len(missed), 'missed': missed,
+            'checks': checks}
+
+
+def case_expectations(captures: str) -> dict:
+    """{id: case} for the cases in CAPTURES, so compare can see what a case declares about
+    itself. Only `expected_fault` is read today; the whole file is kept so a later declaration
+    does not have to thread a new argument through."""
+    out = {}
+    for path in sorted(glob.glob(os.path.join(captures, '*.json'))):
+        if os.path.basename(path) == 'abi.json':
+            continue
+        with open(path) as f:
+            case = json.load(f)
+        if isinstance(case.get('id'), str):
+            out[case['id']] = case
+    return out
 
 
 def load(path: str) -> dict:
@@ -314,7 +418,10 @@ def run_cases(boot: str, captures: str, address: str, symbol: str, lib: str,
 def run(name: str, captures: str, boot: str | None, lib: str | None, out: str | None,
         patch: str | None = None, env: list | None = None, record: str | None = None,
         option: str = '', timeout: int = CASE_TIMEOUT, trace_instructions: bool = False,
-        trace_limit: int = 100_000) -> int:
+        trace_limit: int = 100_000, canary: bool = False) -> int:
+    # A recorded row is evidence, so it may not come from a comparison that was never shown to be
+    # able to fail: --record implies the canary.
+    canary = canary or bool(record)
     boot = boot or os.environ.get('BB_ELF') or default_elf()
     lib = lib or os.environ.get('BB_GAME_LIB') or os.path.join(ROOT, 'build', 'game', 'libbbgame.so')
     if not boot or not os.path.isfile(boot):
@@ -333,8 +440,14 @@ def run(name: str, captures: str, boot: str | None, lib: str | None, out: str | 
         files[side] = os.path.join(out, f'{side}.json')
         with open(files[side], 'w') as f:
             json.dump(doc, f, indent=1, sort_keys=True)
-    summary = compare(load(files['original']), load(files['replacement']))
+    original_doc, replacement_doc = load(files['original']), load(files['replacement'])
+    expectations = case_expectations(captures)
+    summary = compare(original_doc, replacement_doc, expectations)
     summary['function'] = name
+    if canary:
+        # Before trusting the green, require the same comparison to go red on a corrupted
+        # replacement: green that cannot go red is not evidence.
+        summary['falsification'] = falsification_report(original_doc, replacement_doc, expectations)
     if record:
         names = [os.path.basename(p)[:-len('.json')] for p in sorted(glob.glob(os.path.join(captures, '*.json')))
                  if os.path.basename(p) != 'abi.json']
@@ -342,6 +455,14 @@ def run(name: str, captures: str, boot: str | None, lib: str | None, out: str | 
         row = verification.record(ROOT, name, record, option, names, failing)
         summary['recorded'] = {k: row[k] for k in ('cases', 'option', 'failed', 'quarantined', 'source')}
     print(json.dumps(summary, indent=2, sort_keys=True))
+    if canary:
+        falsification = summary['falsification']
+        if falsification['missed'] or not falsification['checked']:
+            print('verify: the comparison did not go red where it must: '
+                  + (', '.join(falsification['missed']) if falsification['missed']
+                     else 'no perturbation was applicable, so nothing was falsified'),
+                  file=sys.stderr)
+            return 1
     if record:
         # quarantined cases (listed with their reason) do not fail a recorded run
         return 1 if int(row['failed']) else 0
@@ -368,13 +489,22 @@ def self_test() -> int:
     missing = compare(res(case('a'), case('b')), res(case('a')))
     fault = compare(res(case('a')), res(dict(case('a'), fault='signal 11')))
     fault_both = compare(res(dict(case('a'), fault='signal 8')), res(dict(case('a'), fault='signal 8')))
+    fault_declared = compare(res(dict(case('a'), fault='signal 8')), res(dict(case('a'), fault='signal 8')),
+                             {'a': {'id': 'a', 'expected_fault': 'signal 8'}})
+    fault_declared_wrong = compare(res(dict(case('a'), fault='signal 8')), res(dict(case('a'), fault='signal 8')),
+                                   {'a': {'id': 'a', 'expected_fault': 'signal 11'}})
     fault_differs = compare(res(dict(case('a'), fault='signal 8')), res(dict(case('a'), fault='signal 11')))
-    fault_one_side = compare(res(dict(case('a'), fault='timeout after 30 s')),
-                             res(dict(case('a'), fault='timeout after 30 s')))
+    # A shared timeout is not agreement: nothing ran to completion on either side, so the case
+    # compares nothing. It used to be a copy of fault_both under a misleading name.
+    fault_timeout_shared = compare(res(dict(case('a'), fault='timeout after 30 s')),
+                                   res(dict(case('a'), fault='timeout after 30 s')))
     checks = [ok['failed'] == 0, ok2['failed'] == 0, bad_ret['failed'] == 1,
               bad_mem['failed'] == 1, bad_call['failed'] == 1, missing['failed'] == 1,
-              fault['failed'] == 1, fault_both['failed'] == 0,
-              fault_differs['failed'] == 1, fault_one_side['failed'] == 0]
+              fault['failed'] == 1, fault_both['failed'] == 1,
+              fault_declared['failed'] == 0, fault_declared['fault_agreement'][0]['declared'] is True,
+              fault_both['fault_agreement'][0]['declared'] is False,
+              fault_declared_wrong['failed'] == 1,
+              fault_differs['failed'] == 1, fault_timeout_shared['failed'] == 1]
     if not all(checks):
         print(f'verify: self-test failed {checks}', file=sys.stderr)
         return 1
@@ -402,6 +532,9 @@ def main() -> int:
                    help='bounded single-step instruction limit per fixture')
     r.add_argument('--patch', metavar='FILE:NAME',
                    help='run both sides on an image with this community patch applied (checks an option against it)')
+    r.add_argument('--canary', action='store_true',
+                   help='perturb the replacement and require the comparison to fail, so a run that '
+                        'passes everything cannot be a run that checks nothing')
     r.add_argument('--env', action='append', metavar='KEY=VALUE', help='environment for the replacement side')
     r.add_argument('--record', choices=verification.CASE_SETS,
                    help='write the counts to symbols/verification.csv as this case set')
@@ -427,7 +560,7 @@ def main() -> int:
             if a.trace_instruction_limit < 1 or a.trace_instruction_limit > 10_000_000:
                 raise BadInput('--trace-instruction-limit must be between 1 and 10000000')
             return run(a.function, a.captures, a.boot, a.lib, a.out, a.patch, a.env, a.record,
-                       a.option, a.timeout, a.trace_instructions, a.trace_instruction_limit)
+                       a.option, a.timeout, a.trace_instructions, a.trace_instruction_limit, a.canary)
         except (BadInput, OSError, json.JSONDecodeError) as e:
             print(f'verify: {e}', file=sys.stderr)
             return 3

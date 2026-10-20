@@ -172,6 +172,72 @@ class Differential(unittest.TestCase):
         replacement["cases"][0].pop("instruction_trace")
         self.assertEqual(verify.compare(original, replacement)["failed"], 1)
 
+    def test_the_canary_notices_every_perturbation_it_can_apply(self):
+        """Green is only evidence if the same comparison goes red on a corrupted replacement.
+        The canary exists because a matching fault once hid a harness that crashed every case."""
+        def side(rax="0x1"):
+            return {"schema": 1, "address": "0x400000", "cases": [{
+                "id": "x", "ret": {"rax": rax},
+                "preserved": {"rbx": "kept"},
+                "writes": [{"addr": "0x100", "bytes": "0102"}], "calls": []}]}
+        report = verify.falsification_report(side(), side(), None)
+        self.assertEqual(report["checked"], 3)
+        self.assertEqual(report["missed"], [])
+        self.assertEqual([c["noticed"] for c in report["checks"]], [True, True, True])
+
+    def test_the_canary_reports_a_comparison_that_cannot_go_red(self):
+        """If the comparison misses every perturbation, the canary must say so rather than
+        report a clean bill of health -- a check that cannot fail is not a check."""
+        def side():
+            return {"schema": 1, "address": "0x400000", "cases": [{
+                "id": "x", "ret": {"rax": "0x1"}, "preserved": {"rbx": "kept"},
+                "writes": [{"addr": "0x100", "bytes": "0102"}], "calls": []}]}
+        blind = lambda a, b, c=None: {"schema": 1, "failed": 0, "failures": []}
+        real = verify.compare
+        verify.compare = blind
+        try:
+            report = verify.falsification_report(side(), side(), None)
+        finally:
+            verify.compare = real
+        self.assertEqual(report["checked"], 3)
+        self.assertEqual(len(report["missed"]), 3)
+
+    def test_the_canary_reports_when_nothing_can_be_perturbed(self):
+        """A result with no return value, no write and no register verdict offers nothing to
+        corrupt, so the run proves nothing and the canary must not read as a pass."""
+        def side():
+            return {"schema": 1, "address": "0x400000", "cases": [{"id": "x"}]}
+        report = verify.falsification_report(side(), side(), None)
+        self.assertEqual(report["checked"], 0)
+        self.assertEqual(report["noticed"], 0)
+
+    def test_a_shared_fault_is_refused_unless_the_case_declares_it(self):
+        """Both sides faulting used to count as a pass, which meant nothing was compared: the
+        registers, writes and calls the case exists to check were never looked at. That is how a
+        harness that segfaulted every case still reported 4/4 passed. A case now has to say
+        `expected_fault`, and a declared one is reported separately instead of merging into pass."""
+        def side(fault, rax="0x1"):
+            return {"schema": 1, "address": "0x400000",
+                    "cases": [{"id": "z", "fault": fault, "ret": {}, "writes": []}]}
+        undeclared = verify.compare(side("signal 8"), side("signal 8"))
+        self.assertEqual(undeclared["failed"], 1)
+        self.assertIn("does not declare expected_fault", undeclared["failures"][0]["diffs"][0])
+        self.assertEqual(undeclared["fault_agreement"],
+                         [{"case": "z", "fault": "signal 8", "declared": False, "compared": False}])
+        declared = verify.compare(side("signal 8"), side("signal 8"),
+                                  {"z": {"id": "z", "expected_fault": "signal 8"}})
+        self.assertEqual(declared["failed"], 0)
+        self.assertTrue(declared["fault_agreement"][0]["declared"])
+        self.assertFalse(declared["fault_agreement"][0]["compared"])
+        wrong = verify.compare(side("signal 8"), side("signal 8"),
+                               {"z": {"id": "z", "expected_fault": "signal 11"}})
+        self.assertEqual(wrong["failed"], 1)
+        self.assertIn("declares expected_fault signal 11", wrong["failures"][0]["diffs"][0])
+        # A shared timeout is absence of comparison, not agreement, so it is refused too.
+        self.assertEqual(verify.compare(side("timeout after 30 s"), side("timeout after 30 s"))["failed"], 1)
+        # And one side faulting alone stays a failure, declared or not.
+        self.assertEqual(verify.compare(side(None), side("signal 8"))["failed"], 1)
+
     def test_instruction_trace_bounds_violations_fail_closed(self):
         event = {"access": "write", "region": "unmapped_or_undeclared", "region_offset": "0x900000000",
                  "width": 1, "valid_region": False, "before": "00", "after": "00"}

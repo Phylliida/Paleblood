@@ -64,9 +64,14 @@ Two things a passing suite does not cover:
   versions. Both are real canaries and they read different memory, so a replacement cannot
   reproduce the original's behaviour under an actual stack overflow. Only a function that overflows
   the stack distinguishes them, and no case does.
-- **A green count.** `passed: 22, failed: 0` is also what a suite reports when both sides fault on
-  every case, because a matching fault counts as agreement. Before recording, check the results
-  for `ret` and `writes` rather than `fault`.
+- **A green count.** `passed: 22, failed: 0` used to be what a suite reported when both sides faulted
+  on every case, because a matching fault counted as agreement — a harness bug once made every case
+  segfault and `verify` still said 4/4. A shared fault now compares nothing the case sets up, so it
+  is a failure unless the case declares `expected_fault`, and a declared one is reported in
+  `fault_agreement` with `compared: false` rather than folding into the pass count. `--canary`
+  closes the remaining gap: it perturbs the replacement (a return value, a written byte, a
+  callee-saved register) and fails the run if the comparison does not notice, and `--record` implies
+  it — evidence may not come from a comparison that was never shown able to fail.
 
 ## Where inputs come from
 
@@ -139,6 +144,10 @@ reused run ID and case number cannot silently replace an existing recording.
   the value the function is entered with — a case that omits it enters with 0, which is what the
   trampoline used to force unconditionally, and that made an original which clears `eax` (most
   functions that return an `int`) indistinguishable from a replacement that leaves it alone.
+  The trampoline used to make this call with `xor eax, eax` in front of it, because `al` is the
+  SysV vector-argument count for a variadic callee. It now loads the case's entry `rax` instead, so
+  a case that sets `rax` nonzero against a target that makes variadic calls would corrupt that
+  count — none does, because every scripted import here is called with an explicit argument list.
   `observe_registers: ["rax"]` compares what the function left there; `writes` stores what the real function stored through an argument
   (`bytes`, `pointer` to a buffer, or `guest` address), like library writes.
 - `stack`: stack arguments, in order (the 7th integer argument first), as numbers, `buf:` or
