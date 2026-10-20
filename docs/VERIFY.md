@@ -149,7 +149,16 @@ reused run ID and case number cannot silently replace an existing recording.
   a case that sets `rax` nonzero against a target that makes variadic calls would corrupt that
   count — none does, because every scripted import here is called with an explicit argument list.
   `observe_registers: ["rax"]` compares what the function left there; `writes` stores what the real function stored through an argument
-  (`bytes`, `pointer` to a buffer, or `guest` address), like library writes.
+  (`bytes`, `pointer` to a buffer, or `guest` address), like library writes. A write lands at
+  `args[arg] + offset` unless it names a `target` (`"target": "buf:NAME+off"` or
+  `"target": "guest:0x..."`), for a function that changes state it receives no pointer to, such
+  as a sleep whose only argument is a count. A register is never a target: which register holds a
+  pointer is the compiler's choice, so a case naming one would describe one implementation and
+  not the other. A scripted write outside every declared region, or a target that is neither
+  `buf:` nor `guest:`, stops the run with a message and exit status 3. The harness turns an
+  exception raised inside a scripted call into that status because ctypes does not propagate one:
+  it prints "Exception ignored on calling ctypes callback function", hands the caller zero, and
+  lets the run finish looking clean.
 - `stack`: stack arguments, in order (the 7th integer argument first), as numbers, `buf:` or
   `guest:` values; the harness pushes them before the call and pops them after.
 - `gs`: the guest thread pointer (`buf:NAME+off`), for code that uses thread-local storage. As

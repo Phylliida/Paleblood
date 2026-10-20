@@ -668,7 +668,8 @@ class Harness(unittest.TestCase):
 
     def test_original_runs(self):
         r = self.side()
-        self.assertEqual(r['calls'], [{'import': 'testImport', 'args': ['0x7', 'stack']}])
+        self.assertEqual(r['calls'], [{'import': 'testImport', 'args': ['0x7', 'stack'],
+                                       'scripted_write_targets': ['stack']}])
         self.assertIn({'addr': 'buf:out+0x0', 'bytes': '3413'}, r['writes'])
         self.assertIn({'addr': '0x00401018', 'bytes': '3413'}, r['writes'])
         self.assertTrue(all(v == 'kept' for v in r['preserved'].values()))
@@ -859,6 +860,59 @@ class Harness(unittest.TestCase):
         r = self.side()
         self.assertIn({'addr': 'buf:out+0x0', 'bytes': '3413'}, r['writes'])
         self.assertNotIn('errors', r)
+
+    def test_scripted_write_can_name_its_target(self):
+        # The shape ../data/cases/wait/*.json specified and never ran: a write that lands at an
+        # address the case names, because the import receives no pointer to write through. The
+        # target is a buffer the fixture's own code never touches: `out` is written by the guest
+        # after the call returns, so a write there would be clobbered before the snapshot.
+        case = dict(CASE, buffers={'out': {'size': 8}, 'side': {'size': 8}},
+                    imports=[{'name': 'testImport', 'argc': 1, 'ret': 0,
+                              'writes': [{'target': 'buf:side+0x0', 'bytes': '0200000000000000'}]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        r = self.side()
+        # The observed write diff reports the bytes that changed, so a store of 2 over a zeroed
+        # buffer is one byte: `writes` is a diff, not a transcription of what was written.
+        self.assertIn({'addr': 'buf:side+0x0', 'bytes': '02'}, r['writes'])
+        self.assertEqual(r['calls'][0]['scripted_write_targets'], ['buf:side+0x0'])
+        self.assertNotIn('errors', r)
+
+    def test_scripted_write_target_applies_to_a_stub(self):
+        case = dict(CASE, stubs=[{'address': '0x00400000', 'argc': 1, 'ret': 5,
+                                  'writes': [{'target': 'buf:out+0x0', 'bytes': '05000000'}]}],
+                    returns='i64', imports=[])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        r = self.side()
+        self.assertEqual(r['ret'], {'rax': '0x5'})
+        self.assertIn({'addr': 'buf:out+0x0', 'bytes': '05'}, r['writes'])
+        self.assertEqual(r['calls'][0]['scripted_write_targets'], ['buf:out+0x0'])
+
+    def test_a_register_is_not_a_write_target(self):
+        case = dict(CASE, imports=[{'name': 'testImport', 'argc': 2, 'ret': 0,
+                                    'writes': [{'target': 'rdi', 'bytes': '00'}]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        cmd = [sys.executable, os.path.join(TOOLS, 'harness.py'), '--elf', self.boot,
+               '--case', self.case, '--address', '0x00400000']
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 3, r.stdout)
+        self.assertIn('a register is not a target', r.stderr)
+
+    def test_a_scripted_write_outside_every_writable_region_is_refused(self):
+        # 0x00400100 is inside the read+execute segment: nameable, so the case is legal-looking,
+        # and refused for a write rather than silently scribbling on the image.
+        case = dict(CASE, imports=[{'name': 'testImport', 'argc': 2, 'ret': 0,
+                                    'writes': [{'target': 'guest:0x00400100', 'bytes': '00'}]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        cmd = [sys.executable, os.path.join(TOOLS, 'harness.py'), '--elf', self.boot,
+               '--case', self.case, '--address', '0x00400000']
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 3, r.stdout)
+        self.assertIn('0x00400100', r.stderr)
+        self.assertIn('outside declared readable/writable regions', r.stderr)
 
     def test_stack_arguments(self):
         case = dict(CASE, address='0x00400800', args={}, stack=['0x1', '0x20', '0x300'], returns='i64', imports=[])

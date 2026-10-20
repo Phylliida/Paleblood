@@ -18,6 +18,16 @@ packet compares each run's identity against the current files and reports the di
 stale row cannot be mistaken for a fresh one.
 
     python3 tools/make_review_packet.py --prefix engine_zero_init_ --out ../data/review/packet.md
+
+The packet committed for this tree was written with one more argument. The corpus holds exactly one
+case whose two sides fault on purpose -- `period_zero` of `engine_time_over_period`, declared in
+`game/engine/time_over_period_cases.py` -- and the paragraph that says so is supplied at the call
+site. Omit it and the paragraph disappears at exit status 0, which is why the invocation is here:
+
+    python3 tools/make_review_packet.py --out ../data/review/engine_zero_init_review.md --caveat \
+        'One instance in this tree: `period_zero` of `engine_time_over_period` (unsigned divide by a \
+period of zero, `signal 8` on both sides), declared in `game/engine/time_over_period_cases.py` so the \
+case file says what it expects.'
 """
 import argparse
 import collections

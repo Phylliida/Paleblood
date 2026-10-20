@@ -216,7 +216,8 @@ class Machine:
         self.proto = ctypes.CFUNCTYPE(ctypes.c_uint64, *[ctypes.c_uint64] * 6)
         mmap_fixed(IMPSTUB, max(1, len(names)) * IMPSTUB_SIZE)
         for i in range(len(names)):
-            cb = self.proto(lambda a, b_, c, d, e, f, i=i: self.current.dispatch(i, (a, b_, c, d, e, f)))
+            cb = self.proto(lambda a, b_, c, d, e, f, i=i:
+                            self.current.guarded(self.current.dispatch, i, (a, b_, c, d, e, f)))
             self.callbacks.append(cb)
             wrapper = IMPSTUB + IMPSTUB_SIZE * i
             save = wrapper + 64
@@ -313,7 +314,7 @@ class Run:
         for i, address in enumerate(sorted(self.stub_scripts)):
             save = XSTUB + XSTUB_SIZE * i + 64
             cb = proto(lambda a, b_, c, d, e, f, address=address, save=save:
-                       self.dispatch_stub(address, (a, b_, c, d, e, f), save))
+                       self.guarded(self.dispatch_stub, address, (a, b_, c, d, e, f), save))
             self.callbacks.append(cb)
             code = XSTUB + XSTUB_SIZE * i
             # movabs r11, save; movdqu [r11], xmm0; movdqu [r11+16], xmm1; sub rsp, 8;
@@ -431,6 +432,23 @@ class Run:
             ctypes.c_uint64.from_address(n['state']).value = 0
             n['record'] = None
 
+    def guarded(self, call, *args) -> int:
+        """Run a scripted call, turning an exception into an exit status.
+
+        ctypes does not propagate an exception out of a callback: it prints "Exception ignored on
+        calling ctypes callback function" and hands the caller zero. So a BadInput raised inside
+        a scripted write or a series entry -- a write target outside every declared region, a
+        register named as a target, a malformed series -- used to leave a clean-looking result
+        and exit status 0, and the comparison then covered two runs that never made the write.
+        The message is the evidence, so it goes to stderr with the status main() gives a BadInput
+        raised anywhere else.
+        """
+        try:
+            return call(*args)
+        except BaseException as exception:          # ctypes would swallow this and return zero
+            print(f'harness: {exception}', file=sys.stderr)
+            os._exit(3)
+
     def dispatch(self, index: int, args: tuple) -> int:
         self.finish_series(index)
         raw = self.boot['names'][index]
@@ -480,12 +498,7 @@ class Run:
                     queue.pop(0)
             return ret
         for w in entry.get('writes', []):
-            data = bytes.fromhex(w['bytes'])
-            if 'size' in w and len(data) != int(w['size']):
-                self.errors.append(f"{entry['name']}: write of {len(data)} bytes, the case says {w['size']}")
-            address = args[int(w['arg'])] + int(w.get('offset', 0))
-            self.check_memory(address, len(data), write=True, source="import_write")
-            ctypes.memmove(address, data, len(data))
+            self.scripted_write(w, args, "import_write", entry['name'])
         return hexint(entry.get('ret', 0)) & 0xffffffffffffffff
 
     def dispatch_stub(self, address: int, args: tuple, save: int = 0) -> int:
@@ -507,17 +520,49 @@ class Run:
             record.setdefault('argmem', []).append(ctypes.string_at(at, int(m['size'])).hex())
         self.calls.append(record)
         for w in entry.get('writes', []):
-            # What the real function stored through a pointer argument (e.g. a constructor).
-            if 'pointer' in w:
-                data = struct.pack('<Q', self.value(f"buf:{w['pointer']}"))
-            elif 'guest' in w:
-                data = struct.pack('<Q', self.guest(hexint(w['guest'])))
-            else:
-                data = bytes.fromhex(w['bytes'])
-            address = args[int(w['arg'])] + int(w.get('offset', 0))
-            self.check_memory(address, len(data), write=True, source="stub_write")
-            ctypes.memmove(address, data, len(data))
+            # What the real function stored through a pointer argument (e.g. a constructor), or,
+            # when the case names a target, at an address it is not handed a pointer to.
+            self.scripted_write(w, args, "stub_write", name)
         return self.value(entry.get('ret', 0))
+
+    def scripted_write(self, w: dict, args: tuple, source: str, who: str) -> None:
+        """One scripted write, addressed either through a pointer argument or by the case.
+
+        `target` names memory the case laid out ('buf:NAME+0x10' or 'guest:0x...'), for a
+        function that changes state it receives no pointer to -- a sleep whose only argument is
+        a count. Without it the write goes through `args[arg] + offset`, which is how a store
+        through a caller's pointer is scripted.
+
+        A register is never a target: which register holds a pointer is the compiler's choice,
+        so a case naming one would describe one implementation and not the other. The address a
+        write resolved to is recorded per call (`scripted_write_targets`) instead of being
+        folded into the observed write diff, because two faithful implementations may reach the
+        same address by different arithmetic and that is a thing to report, not a byte-level
+        disagreement to hide in. It is named with describe(), so a write through a stack pointer
+        reads as 'stack' rather than as an offset: the absolute address differs between the two
+        sides by construction, and a wrong stack target is caught where it lands, not here.
+        """
+        if 'pointer' in w:
+            data = struct.pack('<Q', self.value(f"buf:{w['pointer']}"))
+        elif 'guest' in w:
+            data = struct.pack('<Q', self.guest(hexint(w['guest'])))
+        else:
+            data = bytes.fromhex(w['bytes'])
+        if 'size' in w and len(data) != int(w['size']):
+            self.errors.append(f"{who}: write of {len(data)} bytes, the case says {w['size']}")
+        if 'target' in w:
+            text = str(w['target'])
+            if not text.startswith(('buf:', 'guest:')):
+                raise BadInput(f"scripted write target {text!r} must be 'buf:NAME+OFF' or "
+                               f"'guest:0xADDR': a register is not a target, because which register "
+                               f"holds a pointer is the compiler's choice and two faithful "
+                               f"implementations may differ")
+            address = self.value(text)
+        else:
+            address = args[int(w['arg'])] + int(w.get('offset', 0))
+        self.check_memory(address, len(data), write=True, source=source)
+        ctypes.memmove(address, data, len(data))
+        self.calls[-1].setdefault('scripted_write_targets', []).append(self.describe(address))
 
     # execution -------------------------------------------------------------------------
     def snapshot(self) -> dict[int, bytes]:
