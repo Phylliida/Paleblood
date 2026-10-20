@@ -23,12 +23,15 @@ struct StateObject {
     int32_t pending;    // +0x34, signed: tested with JG, so a negative count falls through
 };
 
+// The code returned while the object still has work in flight.
+constexpr std::int32_t pending_code_in_flight = 2;
+
 }  // namespace
 
 extern "C" uint64_t bb_kernel_pending_code(const StateObject *object)
 {
     if (object->pending > 0) {
-        return 2;
+        return pending_code_in_flight;
     }
     return object->identity & 1u;
 }

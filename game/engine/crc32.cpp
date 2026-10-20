@@ -23,14 +23,18 @@ namespace {
 // little-endian word per index.
 constexpr uint32_t crc_table_address = 0x04cdcf50;
 
+// One byte is eight bits, and the table index is the low byte of the state.
+constexpr unsigned crc_byte_bits = 8;
+constexpr uint32_t crc_byte_mask = 0xff;
+
 }  // namespace
 
 extern "C" void bb_engine_crc32_update_byte(uint32_t *crc, uint32_t byte)
 {
     // Byte-at-a-time reflected step: index by (low byte of the CRC) XOR (the new byte), shift the
     // CRC down, then XOR in the table entry.
-    const uint32_t index = (*crc ^ byte) & 0xff;
-    *crc = (*crc >> 8) ^ rt::ptr<const uint32_t>(crc_table_address)[index];
+    const uint32_t index = (*crc ^ byte) & crc_byte_mask;
+    *crc = (*crc >> crc_byte_bits) ^ rt::ptr<const uint32_t>(crc_table_address)[index];
 }
 
 extern "C" void bb_engine_crc32_update(uint32_t *crc, const uint8_t *data, uint64_t length)
@@ -38,7 +42,7 @@ extern "C" void bb_engine_crc32_update(uint32_t *crc, const uint8_t *data, uint6
     const uint32_t *table = rt::ptr<const uint32_t>(crc_table_address);
     uint32_t state = *crc;
     while (length != 0) {
-        state = (state >> 8) ^ table[(state ^ *data) & 0xff];
+        state = (state >> crc_byte_bits) ^ table[(state ^ *data) & crc_byte_mask];
         ++data;
         --length;
     }

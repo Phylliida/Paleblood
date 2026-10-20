@@ -34,11 +34,15 @@ namespace {
 // offsets 0x00, 0x10, 0x20, 0x30.
 constexpr unsigned slot_offsets[4] = {0x00, 0x10, 0x20, 0x30};
 
+// The family always has four slots; the staged body names the last two by index.
+constexpr unsigned slot_count = 4;
+enum slot_index : unsigned { slot_first, slot_second, slot_third, slot_fourth };
+
 // Load slot N of FROM and store it to slot N of TO, one slot at a time. The store of slot 0
 // happens before the load of slot 1, which is what an overlapping pair of objects sees.
 inline void copy_slots_interleaved(const unsigned char *from, unsigned char *to)
 {
-    for (unsigned i = 0; i < 4; ++i) {
+    for (unsigned i = 0; i < slot_count; ++i) {
         const __m128 slot = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[i]));
         _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[i]), slot);
     }
@@ -50,12 +54,12 @@ inline void copy_slots_staged(const unsigned char *from, unsigned char *to)
 {
     const __m128 slot0 = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[0]));
     const __m128 slot1 = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[1]));
-    const __m128 slot2 = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[2]));
-    const __m128 slot3 = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[3]));
+    const __m128 slot2 = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[slot_third]));
+    const __m128 slot3 = _mm_load_ps(reinterpret_cast<const float *>(from + slot_offsets[slot_fourth]));
     _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[0]), slot0);
     _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[1]), slot1);
-    _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[2]), slot2);
-    _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[3]), slot3);
+    _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[slot_third]), slot2);
+    _mm_store_ps(reinterpret_cast<float *>(to + slot_offsets[slot_fourth]), slot3);
 }
 
 }  // namespace

@@ -93,17 +93,20 @@ static_assert(offsetof(registry, head) == 0x8);
 constexpr uint32_t lock_wait_forever = 0xffffffff;
 constexpr uint32_t state_ready = 2;
 constexpr uint32_t mode_no_wait = 2;
+// The global whose own word is the lock's vtable, and the offset of the node inside a chain guard.
+constexpr std::uintptr_t lock_registry_address = 0x05aa4578;
+constexpr std::uintptr_t chain_node_offset = 0x10;
 
 void take_lock()
 {
-    lockable_vtable *vtable = *rt::ptr<lockable_vtable *>(0x05aa4578);
-    vtable->lock(rt_guest(0x05aa4578), lock_wait_forever);
+    lockable_vtable *vtable = *rt::ptr<lockable_vtable *>(lock_registry_address);
+    vtable->lock(rt_guest(lock_registry_address), lock_wait_forever);
 }
 
 void release_lock()
 {
-    lockable_vtable *vtable = *rt::ptr<lockable_vtable *>(0x05aa4578);
-    vtable->unlock(rt_guest(0x05aa4578));
+    lockable_vtable *vtable = *rt::ptr<lockable_vtable *>(lock_registry_address);
+    vtable->unlock(rt_guest(lock_registry_address));
 }
 
 extern "C" node *bb_kernel_wait_for_release_024bd150(registry *self, uint32_t mode)
@@ -137,7 +140,7 @@ extern "C" node *bb_kernel_wait_for_release_024bd150(registry *self, uint32_t mo
     // The chain route dereferences twice: the word at +0x80 is a container whose first field, the
     // node at +0x10, is the one to move to. The direct route is the node at +0x18.
     node *moved = current->chain_guard ? *reinterpret_cast<node **>(
-        reinterpret_cast<uint8_t *>(*current->chain) + 0x10) : current->next;
+        reinterpret_cast<uint8_t *>(*current->chain) + chain_node_offset) : current->next;
     release_lock();
     return moved;
 }

@@ -23,6 +23,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(ROOT, 'tools')
 sys.path.insert(0, TOOLS)
+import harness  # noqa: E402
 import verify  # noqa: E402
 import automation_pipeline  # noqa: E402
 import differential  # noqa: E402
@@ -843,6 +844,106 @@ class Harness(unittest.TestCase):
         with open(self.case, 'w') as f:
             json.dump(case, f)
         self.assertIn('errors', self.side())
+
+
+class RegionValidation(unittest.TestCase):
+    """check_memory decides which addresses a case may name, and on what terms.
+
+    The image is described the way boot['loads'] reports one: (vaddr, memsz, flags) with the
+    vaddr as an offset from the image base. Flags are 1 execute, 2 write, 4 read, so the first
+    segment is read+execute and the second writable, which is the real layout: constants live
+    in the executable segment, mutable state does not.
+    """
+
+    LOADS = [(0x0000, 0x1000, 5), (0x1000, 0x1000, 6)]
+    SIZE = 0x2000
+
+    def region(self, buffers=None, stack_top=0):
+        run = harness.Run({'loads': self.LOADS, 'size': self.SIZE}, {})
+        run.buffers.update(buffers or {})
+        run.block[19] = stack_top
+        return run
+
+    def test_guest_write_into_executable_segment_is_refused(self):
+        run = self.region()
+        with self.assertRaises(harness.BadInput):
+            run.check_memory(harness.IMAGE + 0x20, 0x10, write=True)
+
+    def test_guest_write_into_writable_segment_is_allowed_and_traced(self):
+        run = self.region()
+        run.check_memory(harness.IMAGE + 0x1010, 0x10, write=True)
+        self.assertEqual(run.access_trace[0]['region'], 'guest_image')
+        self.assertEqual(run.access_trace[0]['address'], '0x00401010')
+
+    def test_preset_may_seed_the_executable_segment(self):
+        run = self.region()
+        run.check_memory(harness.IMAGE + 0x20, 0x10, write=True, source='fixture_setup')
+        self.assertEqual(run.access_trace, [])
+
+    def test_preset_outside_every_segment_is_refused(self):
+        run = self.region()
+        with self.assertRaises(harness.BadInput):
+            run.check_memory(harness.IMAGE + self.SIZE + 0x10, 0x10, write=True, source='fixture_setup')
+
+    def test_preset_straddling_a_segment_end_is_refused(self):
+        run = self.region()
+        with self.assertRaises(harness.BadInput):
+            run.check_memory(harness.IMAGE + 0x0ff8, 0x10, write=True, source='fixture_setup')
+
+    def test_preset_inside_a_buffer_is_allowed_and_not_traced(self):
+        run = self.region({'region': (harness.IMAGE + 0x3000, 0xd0)})
+        run.check_memory(harness.IMAGE + 0x3000, 0xd0, write=True, source='fixture_setup')
+        self.assertEqual(run.access_trace, [])
+
+    def test_buffer_access_is_traced_for_the_program(self):
+        run = self.region({'region': (harness.IMAGE + 0x3000, 0xd0)})
+        run.check_memory(harness.IMAGE + 0x3050, 0x10, write=True)
+        self.assertEqual(run.access_trace[0]['region'], 'buf:region+0x0')
+
+    def test_stack_window_is_allowed(self):
+        top = harness.IMAGE + 0x8000
+        run = self.region(stack_top=top)
+        run.check_memory(top - 0x10, 0x8, write=True)
+        self.assertEqual(run.access_trace[0]['region'], 'stack')
+
+
+class SlotCopyRegion(unittest.TestCase):
+    """The overlap case must declare room for the stores the member actually makes.
+
+    The addresses stay in game/engine/slot_copy_cases.py, which is where this repository keeps
+    them; this test only reads the generator's constants and the cases it produced.
+    """
+
+    CASES = Path(ROOT).parent / 'data' / 'cases' / 'slot_copy'
+
+    def overlaps(self):
+        if not self.CASES.is_dir():
+            self.skipTest(f'no generated cases at {self.CASES}')
+        return sorted(self.CASES.glob('*/overlap_*.json'))
+
+    def test_overlap_regions_cover_the_destination_span(self):
+        sys.path.insert(0, os.path.join(ROOT, 'game', 'engine'))
+        import slot_copy_cases
+        found = self.overlaps()
+        self.assertTrue(found)
+        for path in found:
+            case = json.loads(path.read_text())
+            region = case['buffers']['region']['size']
+            destination = int(case['args']['rdi'].split('+')[1], 16)
+            with self.subTest(case=str(path.parent.name)):
+                # The destination is placed OVERLAP_SHIFT past the source and the member stores
+                # across its whole span, so the region has to hold both.
+                self.assertGreaterEqual(region, destination + slot_copy_cases.DEST_SPAN)
+
+    def test_one_store_past_the_region_is_refused(self):
+        for path in self.overlaps():
+            region = json.loads(path.read_text())['buffers']['region']['size']
+            run = harness.Run({'loads': [], 'size': 0x100}, {})
+            run.buffers['region'] = (harness.IMAGE + 0x3000, region)
+            last = harness.IMAGE + 0x3000 + region - 0x10
+            run.check_memory(last, 0x10, write=True)
+            with self.assertRaises(harness.BadInput):
+                run.check_memory(last + 0x10, 0x10, write=True)
 
 
 if __name__ == '__main__':

@@ -53,19 +53,31 @@ void copy_constant()
 
 constexpr std::uintptr_t vtable_bias = 0x10;
 
+// The three constant sources and their destinations, in the order the original copies them.
+constexpr std::uint32_t constant_a_source = 0x04ccbb20;
+constexpr std::uint32_t constant_a_destination = 0x058b7e60;
+constexpr std::uint32_t constant_b_source = 0x04ccbb30;
+constexpr std::uint32_t constant_b_destination = 0x058b7e70;
+constexpr std::uint32_t constant_c_source = 0x04ccbb40;
+constexpr std::uint32_t constant_c_destination = 0x058b7e80;
+
+// The object constructor's vtable base and the word after the handle that holds the mode.
+constexpr std::uint32_t vtable_base = 0x056fe140;
+constexpr std::uintptr_t mode_field_index = 2;
+
 }  // namespace
 
 extern "C" void bb_frame_timing_bulk_init_01440640()
 {
-    copy_constant<0x04ccbb20, 0x058b7e60>();
-    copy_constant<0x04ccbb30, 0x058b7e70>();
-    copy_constant<0x04ccbb40, 0x058b7e80>();
+    copy_constant<constant_a_source, constant_a_destination>();
+    copy_constant<constant_b_source, constant_b_destination>();
+    copy_constant<constant_c_source, constant_c_destination>();
 }
 
 extern "C" void bb_frame_timing_object_ctor_01440680(void *object, std::uint64_t handle, std::uint32_t mode)
 {
     auto *fields = static_cast<std::uint64_t *>(object);
-    fields[0] = reinterpret_cast<std::uintptr_t>(rt::ptr<unsigned char>(0x056fe140)) + vtable_bias;
+    fields[0] = reinterpret_cast<std::uintptr_t>(rt::ptr<unsigned char>(vtable_base)) + vtable_bias;
     fields[1] = handle;
-    *reinterpret_cast<std::uint32_t *>(fields + 2) = mode;
+    *reinterpret_cast<std::uint32_t *>(fields + mode_field_index) = mode;
 }

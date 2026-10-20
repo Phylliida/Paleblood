@@ -39,6 +39,19 @@ namespace {
 
 constexpr std::uintptr_t storage_bias = 0x10;
 
+// The guard, the pointer beside it and the storage object each function binds.
+constexpr std::uint32_t guard_first = 0x05ac59b8;
+constexpr std::uint32_t pointer_first = 0x05ac59b0;
+constexpr std::uint32_t storage_first = 0x056b4840;
+
+constexpr std::uint32_t guard_second = 0x05ac59c8;
+constexpr std::uint32_t pointer_second = 0x05ac59c0;
+constexpr std::uint32_t storage_second = 0x056b4890;
+
+constexpr std::uint32_t guard_third = 0x05ac59d8;
+constexpr std::uint32_t pointer_third = 0x05ac59d0;
+constexpr std::uint32_t storage_third = 0x056b47f0;
+
 // One guard and the pointer beside it. Both fields are eight bytes wide in the original and both
 // are written whole, so both are written whole here.
 template <std::uint32_t Guard, std::uint32_t Pointer, std::uint32_t Storage>
@@ -57,15 +70,15 @@ void bind_static()
 
 extern "C" void bb_frame_timing_static_guard_014405b0()
 {
-    bind_static<0x05ac59b8, 0x05ac59b0, 0x056b4840>();
+    bind_static<guard_first, pointer_first, storage_first>();
 }
 
 extern "C" void bb_frame_timing_static_guard_014405e0()
 {
-    bind_static<0x05ac59c8, 0x05ac59c0, 0x056b4890>();
+    bind_static<guard_second, pointer_second, storage_second>();
 }
 
 extern "C" void bb_frame_timing_static_guard_01440610()
 {
-    bind_static<0x05ac59d8, 0x05ac59d0, 0x056b47f0>();
+    bind_static<guard_third, pointer_third, storage_third>();
 }

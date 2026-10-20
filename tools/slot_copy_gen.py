@@ -129,6 +129,12 @@ inline void *at(void *base, std::uintptr_t offset) {
 
 def render_cpp(members):
     lines = [CPP_HEAD]
+    # Name every byte offset the family uses. The offsets are the family's whole content, so they
+    # get one constant each rather than a literal at every use site.
+    offsets = sorted({offset for member in members for _, _, _, offset, _ in member['sequence']})
+    for offset in offsets:
+        lines.append(f'constexpr std::uintptr_t kOffset{offset:02x} = 0x{offset:02x};')
+    lines.append('')
     for index, member in enumerate(members):
         # The helper takes the source first and the destination second so its body reads in copy
         # order. The argument register each side actually occupies is a property of the wrapper.
@@ -145,11 +151,11 @@ def render_cpp(members):
                 binding = '__m128 ' if register not in declared else ''
                 declared.add(register)
                 lines.append(f'    {binding}{register} = {intrinsic}('
-                             f'reinterpret_cast<const float *>(at(source, 0x{offset:02x})));')
+                             f'reinterpret_cast<const float *>(at(source, kOffset{offset:02x})));')
             else:
                 intrinsic = '_mm_store_ps' if width == 16 else '_mm_store_ss'
                 lines.append(f'    {intrinsic}(reinterpret_cast<float *>(at('
-                             f'destination, 0x{offset:02x})), {register});')
+                             f'destination, kOffset{offset:02x})), {register});')
         lines.append('}')
         lines.append('')
     lines.append('}  // namespace')

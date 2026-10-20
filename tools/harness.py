@@ -370,8 +370,19 @@ class Run:
                                           "source": source, "region": "stack"})
             return
         required_flag = 2 if write else 4
+        # A preset is the harness laying out the case, not an access the program makes, so the
+        # segment's permission bits (which describe what the guest may do) do not constrain it:
+        # a case that scripts the constants at 0x04ccbb20 has to write them into the read+execute
+        # segment. The address must still land inside a loaded segment, so `memory` cannot reach
+        # anywhere the guest could not name.
+        fixture = source == "fixture_setup"
+        # boot['loads'] reports vaddrs as offsets from the image base, not PS4 addresses:
+        # 0x050dc000 + 0x005f70f4 is exactly boot['size'], and 0x04ccbb20 lives in the first
+        # segment's range. So they are used here as offsets into IMAGE, the same space `address`
+        # is already in.
         for vaddr, memsz, flags in self.boot['loads']:
-            if flags & required_flag and IMAGE + vaddr <= address and address + size <= IMAGE + vaddr + memsz:
+            segment = IMAGE + vaddr
+            if (fixture or flags & required_flag) and segment <= address and address + size <= segment + memsz:
                 if source != "fixture_setup":
                     self.access_trace.append({"access": "write" if write else "read",
                                               "address": self.describe(address), "size": size,

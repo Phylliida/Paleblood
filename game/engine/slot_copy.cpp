@@ -22,286 +22,303 @@ inline void *at(void *base, std::uintptr_t offset) {
 }
 
 
+constexpr std::uintptr_t kOffset00 = 0x00;
+constexpr std::uintptr_t kOffset04 = 0x04;
+constexpr std::uintptr_t kOffset08 = 0x08;
+constexpr std::uintptr_t kOffset0c = 0x0c;
+constexpr std::uintptr_t kOffset10 = 0x10;
+constexpr std::uintptr_t kOffset14 = 0x14;
+constexpr std::uintptr_t kOffset1c = 0x1c;
+constexpr std::uintptr_t kOffset20 = 0x20;
+constexpr std::uintptr_t kOffset2c = 0x2c;
+constexpr std::uintptr_t kOffset30 = 0x30;
+constexpr std::uintptr_t kOffset34 = 0x34;
+constexpr std::uintptr_t kOffset40 = 0x40;
+constexpr std::uintptr_t kOffset4c = 0x4c;
+constexpr std::uintptr_t kOffset50 = 0x50;
+constexpr std::uintptr_t kOffset60 = 0x60;
+constexpr std::uintptr_t kOffset70 = 0x70;
+
 // 0x00485c20: 4 move(s), loads at 0x00 0x10, stores at 0x00 0x10.
 inline void copy_00485c20_0(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm1);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm1);
 }
 
 // 0x00499610: 4 move(s), loads at 0x00 0x0c, stores at 0x10 0x14.
 inline void copy_00499610_1(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x0c)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x14)), xmm0);
+    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset0c)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset14)), xmm0);
 }
 
 // 0x004bb970: 4 move(s), loads at 0x04 0x0c, stores at 0x4c 0x50.
 inline void copy_004bb970_2(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x04)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x4c)), xmm0);
-    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x0c)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x50)), xmm0);
+    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset04)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset4c)), xmm0);
+    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset0c)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset50)), xmm0);
 }
 
 // 0x004be730: 4 move(s), loads at 0x04 0x0c, stores at 0x30 0x34.
 inline void copy_004be730_3(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x04)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
-    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x0c)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x34)), xmm0);
+    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset04)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
+    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset0c)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset34)), xmm0);
 }
 
 // 0x0063e8c0: 4 move(s), loads at 0x50 0x40, stores at 0x50 0x40.
 inline void copy_0063e8c0_4(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x50)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x40)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset50)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset40)), xmm0);
 }
 
 // 0x0085c8b0: 8 move(s), loads at 0x10 0x20 0x30 0x40, stores at 0x00 0x10 0x20 0x30.
 inline void copy_0085c8b0_5(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
 }
 
 // 0x0085c8e0: 8 move(s), loads at 0x00 0x10 0x20 0x30, stores at 0x10 0x20 0x30 0x40.
 inline void copy_0085c8e0_6(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x40)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset40)), xmm0);
 }
 
 // 0x009e1b10: 6 move(s), loads at 0x30 0x40 0x50, stores at 0x00 0x10 0x20.
 inline void copy_009e1b10_7(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 // 0x009ee2c0: 6 move(s), loads at 0x30 0x40 0x50, stores at 0x00 0x10 0x20.
 inline void copy_009ee2c0_8(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 // 0x00be2da0: 8 move(s), loads at 0x20 0x30 0x40 0x50, stores at 0x00 0x10 0x20 0x30.
 inline void copy_00be2da0_9(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
 }
 
 // 0x00c07db0: 8 move(s), loads at 0x20 0x30 0x40 0x50, stores at 0x00 0x10 0x20 0x30.
 inline void copy_00c07db0_10(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
 }
 
 // 0x00cbeb60: 4 move(s), loads at 0x50 0x60, stores at 0x00 0x10.
 inline void copy_00cbeb60_11(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x60)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset60)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
 }
 
 // 0x00dd73c0: 4 move(s), loads at 0x60 0x70, stores at 0x10 0x20.
 inline void copy_00dd73c0_12(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x60)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x70)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset60)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset70)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 // 0x00dd73e0: 4 move(s), loads at 0x10 0x20, stores at 0x60 0x70.
 inline void copy_00dd73e0_13(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x60)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x70)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset60)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset70)), xmm0);
 }
 
 // 0x00ddcbe0: 4 move(s), loads at 0x60 0x70, stores at 0x10 0x20.
 inline void copy_00ddcbe0_14(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x60)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x70)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset60)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset70)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 // 0x00ddcc00: 4 move(s), loads at 0x10 0x20, stores at 0x60 0x70.
 inline void copy_00ddcc00_15(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x60)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x70)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset60)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset70)), xmm0);
 }
 
 // 0x00f31070: 6 move(s), loads at 0x00 0x04 0x08, stores at 0x0c 0x1c 0x2c.
 inline void copy_00f31070_16(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x0c)), xmm0);
-    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x04)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x1c)), xmm0);
-    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, 0x08)));
-    _mm_store_ss(reinterpret_cast<float *>(at(destination, 0x2c)), xmm0);
+    __m128 xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset0c)), xmm0);
+    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset04)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset1c)), xmm0);
+    xmm0 = _mm_load_ss(reinterpret_cast<const float *>(at(source, kOffset08)));
+    _mm_store_ss(reinterpret_cast<float *>(at(destination, kOffset2c)), xmm0);
 }
 
 // 0x012c4950: 8 move(s), loads at 0x00 0x10 0x20 0x30, stores at 0x30 0x40 0x50 0x60.
 inline void copy_012c4950_17(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x40)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x50)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x60)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset40)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset50)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset60)), xmm0);
 }
 
 // 0x014c79c0: 8 move(s), loads at 0x20 0x30 0x40 0x50, stores at 0x00 0x10 0x20 0x30.
 inline void copy_014c79c0_18(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x50)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset50)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
 }
 
 // 0x01945ea0: 6 move(s), loads at 0x00 0x10 0x20, stores at 0x00 0x10 0x20.
 inline void copy_01945ea0_19(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 // 0x01e19db0: 6 move(s), loads at 0x00 0x10 0x20, stores at 0x30 0x40 0x50.
 inline void copy_01e19db0_20(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x40)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x50)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset40)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset50)), xmm0);
 }
 
 // 0x02113c30: 8 move(s), loads at 0x10 0x20 0x30 0x40, stores at 0x00 0x10 0x20 0x30.
 inline void copy_02113c30_21(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    __m128 xmm2 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    __m128 xmm3 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm1);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm2);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm3);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    __m128 xmm2 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    __m128 xmm3 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm1);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm2);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm3);
 }
 
 // 0x026837e0: 4 move(s), loads at 0x00 0x10, stores at 0x30 0x20.
 inline void copy_026837e0_22(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm1);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm1);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 // 0x028cd340: 8 move(s), loads at 0x10 0x20 0x30 0x40, stores at 0x00 0x10 0x20 0x30.
 inline void copy_028cd340_23(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x40)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset40)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
 }
 
 // 0x028cd370: 8 move(s), loads at 0x00 0x10 0x20 0x30, stores at 0x10 0x20 0x30 0x40.
 inline void copy_028cd370_24(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x40)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset40)), xmm0);
 }
 
 // 0x02bdfca0: 8 move(s), loads at 0x00 0x10 0x20 0x30, stores at 0x00 0x10 0x20 0x30.
 inline void copy_02bdfca0_25(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x00)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x20)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x30)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x30)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset00)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset20)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset30)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset30)), xmm0);
 }
 
 // 0x02c1b760: 4 move(s), loads at 0x00 0x10, stores at 0x20 0x10.
 inline void copy_02c1b760_26(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm1);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm1);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
 }
 
 // 0x02c1cd10: 4 move(s), loads at 0x00 0x10, stores at 0x20 0x10.
 inline void copy_02c1cd10_27(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm1);
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    __m128 xmm1 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm1);
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
 }
 
 // 0x02f01ed0: 4 move(s), loads at 0x00 0x10, stores at 0x10 0x20.
 inline void copy_02f01ed0_28(const void *source, void *destination) {
-    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x00)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x10)), xmm0);
-    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, 0x10)));
-    _mm_store_ps(reinterpret_cast<float *>(at(destination, 0x20)), xmm0);
+    __m128 xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset00)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset10)), xmm0);
+    xmm0 = _mm_load_ps(reinterpret_cast<const float *>(at(source, kOffset10)));
+    _mm_store_ps(reinterpret_cast<float *>(at(destination, kOffset20)), xmm0);
 }
 
 }  // namespace
