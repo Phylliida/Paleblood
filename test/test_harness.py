@@ -27,7 +27,19 @@ import harness  # noqa: E402
 import verify  # noqa: E402
 import automation_pipeline  # noqa: E402
 import differential  # noqa: E402
+import instruction_trace  # noqa: E402
 from pathlib import Path
+
+# Most of this module's cases need the instruction tracer, so a missing Capstone used to show up as
+# two dozen unrelated failures spread over the trace tests. Ask once, at import, and report the
+# single cause against the class that needs it. Use the project interpreter (docs/ONBOARDING.md, section 0).
+try:
+    instruction_trace.Capstone()
+    TRACE_PROBLEM = None
+except instruction_trace.TraceUnavailable as error:
+    TRACE_PROBLEM = (f'instruction tracing unavailable ({error}); install Capstone 5 for the '
+                     f'interpreter running the tests, e.g. ../.venvs/paleblood/bin/pip install capstone, '
+                     f'and run the suite with that interpreter')
 
 CODE = bytes.fromhex('534889fb4883ec10bf070000004889e6ff15ea0f0000488b0424488b0def0f0000'
                      '4803014889038905eb0f00004883c4105bc3')
@@ -150,6 +162,7 @@ CASE = {
 }
 
 
+@unittest.skipIf(TRACE_PROBLEM is not None, TRACE_PROBLEM or '')
 @unittest.skipUnless(sys.platform == 'linux' and shutil.which(os.environ.get('CC', 'cc')),
                      'needs Linux x86-64 and a C compiler')
 class Harness(unittest.TestCase):

@@ -23,6 +23,19 @@ cargo install orbis-pkg-util --version 0.1.0 --locked     # 12 s
 export PATH=$HOME/.cargo/bin:$PATH
 ```
 
+The instruction tracer needs Capstone 5, which is an optional Python dependency rather than a
+system package. Give the tests their own interpreter next to the checkout so a system python
+without it does not decide the result, and build against the same one:
+
+```
+python3 -m venv ../.venvs/paleblood
+../.venvs/paleblood/bin/pip install capstone      # 5.x, ~2 s; the wheel bundles libcapstone
+python3 -m unittest test.test_harness             # 51 tests; without Capstone the trace class skips
+cmake -S . -B build -DPython3_EXECUTABLE=$PWD/../.venvs/paleblood/bin/python3
+```
+
+Without Capstone the suite reports one skip naming this section instead of two dozen failures.
+
 ## 1. Fork and clone (2 minutes)
 
 Fork `Yharnam-Hunters/Paleblood` on GitHub (your fork is public: never push game files to it), then:

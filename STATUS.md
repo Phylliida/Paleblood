@@ -83,4 +83,13 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
   `symbols/reviews.csv`, is not the binding one. Until then the edge-verified count only grows;
   README carries the live figure.
 
+  What that evidence does cover: `edge` already means "original image against replacement, same
+  case, in two processes" — `verify.py run_cases` executes the executable with no replacement for
+  the original side, so it is differential execution, not an expectation table. The stronger form
+  is `tools/differential.py differential`, which adds instruction-level trace and CFG coverage; it
+  needs an `abi.json` per fixture directory and a Phase 1 catalog (`tools/function_catalog.py
+  --state ... build`). All 528 zero_init members pass it, 4/4 fixtures each, with
+  `--trace-instructions`. It does not move a function up the ladder: the ladder is about where the
+  inputs came from, and these inputs are still generated, not recorded in a run.
+
 Queue: [NEXT.md](NEXT.md).

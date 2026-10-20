@@ -7,6 +7,10 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 
 Last session: runtime
 
+Needs the maintainer (cannot be done from the sandbox): `gh auth login`, so the 23 local commits
+on `main` can be pushed and the two branches opened as pull requests. Everything else here is
+unblocked without it; `../Paleblood-2026-10-19.bundle` (`git bundle --all`) holds the history.
+
 ## Runtime track
 
 How far the executable boots on our own runtime (`runtime/boot.c`, `tools/boot.py`): the boot
