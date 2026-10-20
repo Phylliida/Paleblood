@@ -690,6 +690,7 @@ kernel_index_code,edge,,15,15,0,0,ceede8db03cc0fe4,unavailable,2026-10-11
 kernel_pending_code,edge,,15,15,0,0,c541a237902b432c,9cfe61f0a58a6e85,2026-10-19
 kernel_usleep,edge,,13,13,0,0,afceac41769b8282,c867c6eb7522c8e4,2026-10-19
 kernel_wait_for_release_024bd150,edge,,17,17,0,0,de52e8df7d2dc4f5,9c5311478c91f912,2026-10-19
+kernel_wait_for_state_024bdd40,edge,,13,13,0,0,08865e57204289d9,774469f32dc3ad9b,2026-10-20
 physics_instance_construct_01c0c2b0,recorded,,119,119,0,0,ca3412adb293c909,unavailable,2026-10-07
 physics_instance_construct_01c0c2b0,recorded,30,119,119,0,0,ca3412adb293c909,unavailable,2026-10-07
 physics_instance_construct_01c0c2b0,recorded,60,119,119,0,0,ca3412adb293c909,unavailable,2026-10-07

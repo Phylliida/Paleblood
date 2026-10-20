@@ -493,6 +493,7 @@ address,replacement,system
 0x024a7c10,bb_engine_zero_init_024a7c10,engine
 0x024a7c90,bb_engine_zero_init_024a7c90,engine
 0x024bd150,bb_kernel_wait_for_release_024bd150,kernel
+0x024bdd40,bb_kernel_wait_for_state_024bdd40,kernel
 0x02577f80,bb_engine_sse_copy_rsi_to_rdi_02577f80,engine
 0x025aa050,bb_engine_sse_copy_rsi_to_rdi_025aa050,engine
 0x025b2fb0,bb_render_swap_chain_present,render
