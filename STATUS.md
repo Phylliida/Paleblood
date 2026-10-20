@@ -93,6 +93,14 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
   on three of the five fields (one had been refreshed once); they were re-run against the current
   tools, 528 of 528 clean, and the packet regenerated. A verdict from a run made by an older
   harness describes the same code and a different measurement.
+- `tools/promote.py` now refuses a promotion whose two case sets are one input set. The gate read a
+  path (`<captures>/<name>/` and `<captures>/<name>/edge/`), so copying the recorded cases into
+  `edge/` satisfied it -- which is what `test/capture_recorder_replay.py` did to reach the gate, a
+  single case written into both places. The sets are compared by content, not by path or file name,
+  so a renamed copy is still refused while a genuinely different set passes. Each set's provenance
+  is printed with the verdict (`[recorded gameplay 0/200, edge synthetic 24]`), read from the
+  `capture` block the recorder writes; it is reported rather than required, because no case file in
+  this checkout carries `capture` and requiring it would refuse every promotion in the tree.
 
 - None of the 622 edge-verified functions has a recorded case, so `tools/promote.py` cannot move
   one of them to verified: it needs `$BB_CAPTURES/<function>/*.json` from a real run, and nothing

@@ -8,7 +8,10 @@ For each row of symbols/functions.csv with status edge-verified: if the capture 
 (--captures, default $BB_CAPTURES, then ../captures) holds recorded cases for it (CAPTURES/NAME/*.json),
 runs tools/verify.py on those and on its edge cases (CAPTURES/NAME/edge); when every case passes
 on both and the function's independent review is approved (symbols/reviews.csv, or its code is
-still grandfathered in tools/readable_allowlist.txt), the status becomes verified. Both runs are
+still grandfathered in tools/readable_allowlist.txt), the status becomes verified. The two sets
+have to be two input sets: an edge directory holding copies of the recorded cases is refused,
+because it would satisfy the gate by path while adding no second provenance, and each set's
+provenance (recorded from the game, or written by hand) is printed with the result. Both runs are
 recorded in symbols/verification.csv (verify.py --record; failing cases listed in
 symbols/quarantine.csv with their reason don't count as failures), and the function's whole
 record must then satisfy tools/validate_functions.py's rule for verified: no unexplained
@@ -19,6 +22,7 @@ from __future__ import annotations
 import argparse
 import csv
 import glob
+import hashlib
 import io
 import json
 import os
@@ -28,9 +32,73 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Not a case: it describes the calling convention the catalog uses to build cases (verify.run_cases
+# and verification.cases_hash skip it for the same reason).
+ABI = 'abi.json'
+
 
 def cases(directory: str) -> int:
     return len(glob.glob(os.path.join(directory, '*.json')))
+
+
+def case_contents(directory: str) -> list[str]:
+    """One sha256 per case file, by content, ignoring the file's name, sorted.
+
+    verification.cases_hash (the ledger's pin) includes the name, because the ledger counts case
+    files and a rename is a different set there. This asks a different question -- are these the
+    same inputs? -- and a copy of a set whose files were renamed still holds the same inputs, so
+    the name is left out here.
+    """
+    digests = []
+    for path in sorted(glob.glob(os.path.join(directory, '*.json'))):
+        if os.path.basename(path) == ABI:
+            continue
+        with open(path, 'rb') as f:
+            digests.append(hashlib.sha256(f.read()).hexdigest())
+    return sorted(digests)
+
+
+def duplicate_sets(recorded: list[str], edge: list[str]) -> str | None:
+    """Why the edge set is not a second input set, or None when the two differ.
+
+    The gate is two input provenances: what the game recorded, and cases written to cover
+    boundaries the recording did not. A gate read off a path is satisfied by copying one directory
+    into both places, which is how the recorder replay test first exercised it (one case written to
+    <name>/ and <name>/edge/). Two identical sets agree with the original for the same reason one
+    does, so a promotion resting on them claims more than it has; comparing contents rather than
+    paths is what makes the difference checkable. A renamed copy is still caught, because the
+    comparison ignores names -- though a copy whose contents were edited is a different set by this
+    reading too, and only a reviewer can tell that it is not a second observation.
+    """
+    if not recorded or recorded != edge:
+        return None
+    return (f'the edge case set is a copy of the recorded set ({len(recorded)} case file(s), same '
+            f'contents); one input set counted twice is not two provenances')
+
+
+def provenance(directory: str) -> str:
+    """Where a case set's inputs came from, read from the cases themselves.
+
+    A case written by the recorder carries `capture` (function and run); a case written by hand
+    carries nothing. tools/differential.py records the same reading per family as
+    capture_provenance: "gameplay" when any case has a capture, else "synthetic_or_edge". Reported
+    beside the result rather than gated on: every case in this checkout is synthetic, so requiring
+    gameplay would refuse every promotion and say nothing about the ones that ran.
+    """
+    total = caught = 0
+    for path in sorted(glob.glob(os.path.join(directory, '*.json'))):
+        if os.path.basename(path) == ABI:
+            continue
+        try:
+            with open(path) as f:
+                case = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(case, dict):
+            continue
+        total += 1
+        caught += bool(case.get('capture'))
+    return f'gameplay {caught}/{total}' if caught else f'synthetic {total}'
 
 
 def problems_for(root: str, path: str, name: str, line: int) -> list[str]:
@@ -49,8 +117,8 @@ def problems_for(root: str, path: str, name: str, line: int) -> list[str]:
     return [p for p in verification.check(root, rows) if f'functions.csv:{line}:' in p or name in p]
 
 
-def passes(name: str, directory: str, record: str | None) -> tuple[bool, str]:
-    cmd = [sys.executable, os.path.join(ROOT, 'tools', 'verify.py'), 'run', '--function', name, '--captures', directory]
+def passes(name: str, directory: str, record: str | None, root: str = ROOT) -> tuple[bool, str]:
+    cmd = [sys.executable, os.path.join(root, 'tools', 'verify.py'), 'run', '--function', name, '--captures', directory]
     if record:
         cmd += ['--record', record]
     # verify.py otherwise writes original/replacement result JSON under CAPTURES/results.
@@ -68,15 +136,15 @@ def passes(name: str, directory: str, record: str | None) -> tuple[bool, str]:
     return ok, f"{r['passed']}/{n} passed" + (f', {held} quarantined' if held else '')
 
 
-def main() -> int:
+def main(argv: list[str] | None = None, root: str = ROOT) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('--captures', default=os.environ.get('BB_CAPTURES') or os.path.join(ROOT, '..', 'captures'))
+    ap.add_argument('--captures', default=os.environ.get('BB_CAPTURES') or os.path.join(root, '..', 'captures'))
     ap.add_argument('--dry-run', action='store_true')
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     if not os.path.isdir(a.captures):
         print(f'promote: no capture library at {a.captures}; nothing to do')
         return 0
-    path = os.path.join(ROOT, 'symbols', 'functions.csv')
+    path = os.path.join(root, 'symbols', 'functions.csv')
     with open(path, newline='') as f:
         text = f.read()
     rows = list(csv.reader(io.StringIO(text)))
@@ -94,26 +162,32 @@ def main() -> int:
         if not cases(edge):
             print(f'promote: {name}: recorded cases but no edge cases; left edge-verified')
             continue
-        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        doubled = duplicate_sets(case_contents(recorded), case_contents(edge))
+        if doubled:
+            print(f'promote: {name}: {doubled}; left edge-verified', file=sys.stderr)
+            failed = True
+            continue
+        sys.path.insert(0, os.path.join(root, 'tools'))
         from validate_functions import check_reviews
-        if check_reviews(ROOT, [{'address': row[head.index('address')], 'name': name, 'status': 'verified', '_line': 0}]):
+        if check_reviews(root, [{'address': row[head.index('address')], 'name': name, 'status': 'verified', '_line': 0}]):
             print(f'promote: {name}: recordings exist, but no approved review yet (symbols/reviews.csv); left edge-verified')
             continue
+        where = f'[recorded {provenance(recorded)}, edge {provenance(edge)}]'
         record = None if a.dry_run else 'recorded'
-        ok_r, msg_r = passes(name, recorded, record)
-        ok_e, msg_e = passes(name, edge, record and 'edge') if ok_r else (False, 'not run')
+        ok_r, msg_r = passes(name, recorded, record, root)
+        ok_e, msg_e = passes(name, edge, record and 'edge', root) if ok_r else (False, 'not run')
         if ok_r and ok_e and not a.dry_run:
-            problems = problems_for(ROOT, path, name, line)
+            problems = problems_for(root, path, name, line)
             if problems:
-                print(f'promote: {name}: recorded {msg_r}, edge {msg_e}, but: ' + '; '.join(problems), file=sys.stderr)
+                print(f'promote: {name}: recorded {msg_r}, edge {msg_e} {where}, but: ' + '; '.join(problems), file=sys.stderr)
                 failed = True
                 continue
         if ok_r and ok_e:
-            print(f'promote: {name}: recorded {msg_r}, edge {msg_e}: verified')
+            print(f'promote: {name}: recorded {msg_r}, edge {msg_e} {where}: verified')
             row[status] = 'verified'
             changed.append(name)
         else:
-            print(f'promote: {name}: recorded {msg_r}, edge {msg_e}: stays edge-verified', file=sys.stderr)
+            print(f'promote: {name}: recorded {msg_r}, edge {msg_e} {where}: stays edge-verified', file=sys.stderr)
             failed = True
     if changed and not a.dry_run:
         out = io.StringIO()

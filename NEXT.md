@@ -14,6 +14,15 @@ Needs the maintainer (cannot be done from the sandbox):
 - The affinity constant in target 2 below: `0x3F`, `0xFF`, or a decision to park it. No citable
   source in the tree pins it, and the game's libc bit-counts the mask to size worker threads
   (STATUS.md, "Open questions"), so a wrong guess changes thread topology silently.
+- What `verified` means for a function whose captures are not in the checkout. 20 of the 21
+  `verified` functions have no case directory here (their captures were recorded in a 2026-10-07
+  checkout), so their `symbols/verification.csv` rows carry `cases_sha256` `unavailable` rather than
+  a hash. `tools/verification.py::check` currently accepts that marker as sufficient; the argument
+  for it is that it is a deliberate act by someone who looked, and that a blank is still an error.
+  The argument against, and the reason this is here rather than settled in code: if those inputs
+  cannot be re-run in this tree, "verified" claims more than the tree can show, and the honest
+  status is `edge-verified` until the captures return. Flipping it is one predicate in `check`;
+  what matters is that it is a decision, not a default.
 - Independent review of the 528 `engine_zero_init_*` functions (`symbols/reviews.csv`). They carry
   no approved row, so `tools/promote.py` cannot move them; the nine reviewed `frame_timing_*`
   functions are the ones to prove that path on first. The packet to read is
@@ -35,7 +44,12 @@ what the boot stops at, clean room (CONTRIBUTING.md), then re-runs `tools/boot.p
    e5d65ea dropped `rt_capture_begin`/`rt_capture_write` from
    `game/frame_timing/monotonic_clock.cpp:55,64` (`git log -S rt_capture_begin -- game/`). In-game
    recordings resume once the runtime runs the game, and `tools/promote.py` can then move
-   `edge-verified` functions to `verified`.
+   `edge-verified` functions to `verified`. The same hook is the only thing that would let a case
+   change state while a function runs: `tools/harness.py:623` installs a no-op hook, so
+   `kernel_wait_for_state_024bdd40` (`0x024bdd40`, replacement written and faithful, still
+   `original` in `symbols/functions.csv`) cannot be tested at all -- every case spins on a word that never reaches 2 and the
+   harness's runaway guard ends the run. Its cases sit in `../data/cases/wait/` and no ledger row
+   covers the function.
 2. `scePthreadAttrGetaffinity` (libkernel), called by the game's own libc while it starts: needs
    the main thread's CPU affinity mask on a PS4 (STATUS.md, "Open questions"). Then the next
    import `tools/boot.py` names.

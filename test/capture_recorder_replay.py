@@ -60,11 +60,12 @@ def main() -> int:
             stream.write(ps4elf.build(segments=[(0, image, len(image), 5)], symbols=[],
                                       relocations=[], jump_slots=[]))
 
+        # The recorder writes <BB_CAPTURE_DIR>/<function>/, so this is the recorded set and only
+        # the recorded set; nothing here invents an edge set to sit beside it.
         cases = os.path.join(root, 'captures', case['capture']['function'])
-        os.makedirs(os.path.join(cases, 'edge'))
-        for directory in (cases, os.path.join(cases, 'edge')):
-            with open(os.path.join(directory, 'synthetic_run_1_0000.json'), 'w', encoding='utf-8') as stream:
-                json.dump(case, stream, sort_keys=True)
+        os.makedirs(cases)
+        with open(os.path.join(cases, 'synthetic_run_1_0000.json'), 'w', encoding='utf-8') as stream:
+            json.dump(case, stream, sort_keys=True)
 
         source = os.path.join(root, 'replacement.c')
         with open(source, 'w', encoding='utf-8') as stream:
@@ -125,10 +126,14 @@ int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
         assert '0x14' in json.dumps(failed['failures']), failed
 
         # tools/promote.py reads a capture library as <name>/ (recorded) and <name>/edge/. The
-        # recorder writes <BB_CAPTURE_DIR>/<function>/, so a recorded set lands there directly and
-        # only the edge set has to be added; check the gate promote.py applies, not just the claim.
+        # recorder produces only the first, so the gate promote.py applies is two cases: a recorded
+        # set it can see, and no edge set beside it. This test used to write the same case into both
+        # directories so the gate would pass -- a copy answering a requirement that exists to
+        # guarantee two independent provenances. promote.py now refuses that copy, and the honest
+        # statement of what this test proves is narrower: the recorder's output replays through the
+        # comparison engine; it cannot, by itself, promote anything.
+        assert not os.path.isdir(os.path.join(cases, 'edge')), 'the replay must not fabricate an edge set'
         assert promote.cases(cases) == 1, promote.cases(cases)
-        assert promote.cases(os.path.join(cases, 'edge')) == 1
 
     print('recorder case replayed: 1/1 passed')
     return 0

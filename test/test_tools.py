@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
+import contextlib
 import csv
+import io
 import json
 import os
 import shutil
@@ -949,6 +951,94 @@ class Promotion(unittest.TestCase):
                             trap)
 
             self.assertEqual(promote.problems_for(root, functions, 'sample_function', 2), [])
+
+    def test_a_copy_of_the_recorded_cases_is_not_a_second_provenance(self):
+        """Two case directories are two input sets only when their contents differ.
+
+        promote.py promotes on agreement over two provenances: what the game recorded, and cases
+        written for boundaries the recording missed. A requirement read off the directory layout is
+        satisfied by one case written into both places, and then the promotion claims a second
+        observation it never made. The comparison is over contents, so a renamed copy is still
+        caught; a different input in either set is still permitted.
+        """
+        sys.path.insert(0, TOOLS)
+        import promote
+        with tempfile.TemporaryDirectory(prefix='capture-library-') as captures:
+            recorded = os.path.join(captures, 'sample_function')
+            edge = os.path.join(recorded, 'edge')
+            os.makedirs(edge)
+            case = {'address': '0x00400020', 'args': {'rdi': '0x1'}, 'returns': {'rax': '0x1'}}
+            with open(os.path.join(recorded, 'case_a.json'), 'w') as f:
+                json.dump(case, f)
+            with open(os.path.join(edge, 'renamed.json'), 'w') as f:
+                json.dump(case, f)
+            copied = promote.case_contents(recorded), promote.case_contents(edge)
+            self.assertIn('copy of the recorded set', promote.duplicate_sets(*copied), copied)
+            with open(os.path.join(edge, 'renamed.json'), 'w') as f:
+                json.dump(dict(case, args={'rdi': '0x2'}), f)
+            self.assertIsNone(promote.duplicate_sets(promote.case_contents(recorded),
+                                                    promote.case_contents(edge)))
+            self.assertIsNone(promote.duplicate_sets([], []))
+
+    def test_promotion_refuses_a_copied_case_set_before_running_anything(self):
+        """The refusal is a gate, not a note printed beside a successful run."""
+        from types import SimpleNamespace
+        from unittest import mock
+        sys.path.insert(0, TOOLS)
+        import promote
+        with tempfile.TemporaryDirectory(prefix='promote-root-') as root:
+            symbols = os.path.join(root, 'symbols')
+            os.mkdir(symbols)
+            functions = os.path.join(symbols, 'functions.csv')
+            with open(functions, 'w', newline='') as f:
+                f.write('address,size,name,system,status,description\n')
+                f.write('0x00400020,126,sample_function,engine,edge-verified,being promoted\n')
+            recorded = os.path.join(root, 'captures', 'sample_function')
+            edge = os.path.join(recorded, 'edge')
+            os.makedirs(edge)
+            for directory in (recorded, edge):
+                with open(os.path.join(directory, 'case_a.json'), 'w') as f:
+                    json.dump({'address': '0x00400020'}, f)
+            ran = []
+
+            def verify(cmd, **kwargs):
+                ran.append(cmd)
+                return SimpleNamespace(returncode=0, stdout=json.dumps(
+                    {'cases': 1, 'passed': 1, 'failed': 0, 'recorded': {'failed': 0, 'quarantined': 0}}),
+                    stderr='')
+
+            stderr = io.StringIO()
+            with mock.patch.object(promote.subprocess, 'run', side_effect=verify), \
+                    contextlib.redirect_stderr(stderr):
+                rc = promote.main(['--captures', os.path.join(root, 'captures')], root=root)
+            # rc alone would also be 1 if the review gate refused it, which is a different reason;
+            # the message is what makes this a test of the copy.
+            self.assertIn('copy of the recorded set', stderr.getvalue())
+            self.assertEqual(rc, 1)
+            self.assertEqual(ran, [], 'the copy was refused only after comparisons had run')
+            with open(functions, newline='') as f:
+                self.assertIn('edge-verified', f.read())
+
+    def test_each_case_set_reports_whether_the_game_recorded_it(self):
+        """A reviewer needs to see what the gate accepted, not only that it passed.
+
+        Every case in this checkout is hand-written (no case file carries `capture`), so this is
+        reported rather than required; requiring it would refuse every promotion in the tree. The
+        reading is the same one tools/differential.py records as capture_provenance.
+        """
+        sys.path.insert(0, TOOLS)
+        import promote
+        with tempfile.TemporaryDirectory(prefix='capture-library-') as captures:
+            for name in ('written_by_hand.json', 'from_the_game.json'):
+                with open(os.path.join(captures, name), 'w') as f:
+                    json.dump({'address': '0x00400020'}, f)
+            with open(os.path.join(captures, 'abi.json'), 'w') as f:
+                json.dump({'input_regions': []}, f)
+            self.assertEqual(promote.provenance(captures), 'synthetic 2')
+            with open(os.path.join(captures, 'from_the_game.json'), 'w') as f:
+                json.dump({'address': '0x00400020',
+                           'capture': {'function': 'sample_function', 'run_id': 'run_1'}}, f)
+            self.assertEqual(promote.provenance(captures), 'gameplay 1/2')
 
 
 if __name__ == '__main__':
