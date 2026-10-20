@@ -158,6 +158,12 @@ from the smallest up. New functions go to `main` only verified and readable.
   community patches (`verify.py run --patch`).
 - `0x004632d0` (was frame_timing_get_time_us): dead in the stock game, used by the FPS patches as a
   code cave; hook and replacement removed, back to `original` with a note.
+- Retired a worry that cost several sessions: there is no checked-in generated hook table to go
+  stale. `runtime/hooks.c` is the hand-written installer (`rt_hooks_install`), and the table is
+  written to `build/game/hooks_table.c` by an `add_custom_command` whose `DEPENDS` are the
+  generator, `hooks.csv` and `functions.csv`, so it is regenerated whenever any of them moves.
+  Verified by reading the rule and the built table (623 rows, including the newest hook).
+  `tools/gen_hooks.py` does not want a `diff` against a checked-in file; there is no such file.
 - Harness: an `argf32` index that names no saved register is refused on both scripted paths
   (`saved_xmm`). Both prologues save xmm0 and xmm1 and nothing else, so index 2 read the next
   trampoline slot -- bytes no case sets, equal on both sides by construction, hence a comparison
