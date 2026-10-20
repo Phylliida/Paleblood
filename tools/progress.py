@@ -79,9 +79,13 @@ def compute(root: str) -> dict:
             s['edge_verified'] += 1
         if r['status'] == 'verified':
             s['verified'] += 1
+    statuses = {s: sum(1 for r in funcs if r['status'] == s) for s in
+                {r['status'] for r in funcs}}
     return {
         'schema': 1,
         'slices': slices(export, funcs),
+        'statuses': statuses,
+        'ledger': ledger(root),
         'inputs': {
             'ghidra_functions_sha256': sha256_file(os.path.join(root, 'symbols', 'ghidra_functions.csv')),
             'functions_sha256': sha256_file(os.path.join(root, 'symbols', 'functions.csv')),
@@ -97,6 +101,56 @@ def compute(root: str) -> dict:
         'systems': {k: systems[k] for k in sorted(systems)},
         'runtime': runtime(root),
     }
+
+
+def ledger(root: str) -> dict | None:
+    """Rows and functions in `symbols/verification.csv`, plus the approval count.
+
+    `functions.csv`'s status column is what this tool tallies; the ledger is what proves it.
+    They can disagree -- a status flipped by hand is not a recorded run -- so the burndown
+    line prints both and drift is visible without joining anything."""
+    path = os.path.join(root, 'symbols', 'verification.csv')
+    if not os.path.isfile(path):
+        return None
+    rows = read_csv(path)
+    out = {'rows': len(rows), 'functions': len({r['function'] for r in rows})}
+    rpath = os.path.join(root, 'symbols', 'reviews.csv')
+    if os.path.isfile(rpath):
+        approved = [r for r in read_csv(rpath) if r.get('verdict', '').strip() == 'approved']
+        out['approvals'] = len(approved)
+        out['approved_functions'] = len({r['address'] for r in approved})
+    return out
+
+
+def burndown_line(d: dict) -> str:
+    """The whole project's progress on one line, in functions and in bytes.
+
+    The ladder here is cumulative -- replaced > edge-verified > verified, each row including
+    the next -- so an unlabelled "623 edge-verified" beside "21 verified" reads as two disjoint
+    buckets and never reconciles by hand. Printing the exclusive decomposition next to the
+    cumulative rungs makes both readings true at once. Bytes are permanent, not decoration:
+    the same count is 0.39% of functions and 0.20% of bytes, and only the second is what
+    "how much of the game is done" means."""
+    t, r, e, v = d['total'], d['replaced'], d['edge_verified'], d['verified']
+
+    def rung(name: str, x: dict) -> str:
+        return (f'{name} {x["functions"]} ({fmt_pct(x["functions_pct"])}, '
+                f'{x["bytes"]} B {fmt_pct(x["bytes_pct"])})')
+
+    ex = d.get('statuses') or {}
+    parts = [
+        rung('verified', v),
+        rung('edge-verified incl. verified', e),
+        rung('replaced', r),
+        f'target {t["functions"]} ({t["bytes"]} B)',
+        'exclusive ' + ' + '.join(f'{ex[s]} {s}' for s in sorted(ex)),
+    ]
+    led = d.get('ledger')
+    if led:
+        parts.append(f'ledger {led["rows"]} rows / {led["functions"]} functions')
+        if 'approvals' in led:
+            parts.append(f'{led["approvals"]} approvals on {led["approved_functions"]} functions')
+    return 'burndown: ' + ' | '.join(parts)
 
 
 def runtime(root: str) -> dict | None:
@@ -254,9 +308,13 @@ def main() -> int:
     ap.add_argument('--update-readme', action='store_true')
     ap.add_argument('--check', action='store_true')
     ap.add_argument('--status-line', action='store_true')
+    ap.add_argument('--burndown', action='store_true')
     a = ap.parse_args()
 
     data = compute(a.root)
+    if a.burndown:
+        print(burndown_line(data))
+        return 0
     if a.status_line:
         print(status_sentence(data, False))
         return 0

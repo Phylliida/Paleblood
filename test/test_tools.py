@@ -93,6 +93,31 @@ class Progress(Fixture):
         open(p, 'w').write(txt)
         self.assertEqual(run('progress.py', '--root', self.d, '--check').returncode, 1)
 
+    def test_burndown_reconciles_cumulative_and_exclusive(self):
+        """The ladder is cumulative: 'edge-verified' includes 'verified'. The burndown line prints
+        both readings, and this pins the relation between them -- an edge-only row counts in the
+        cumulative rung and not in the verified one, and the exclusive buckets sum to the tracked
+        total. Reading "623 edge-verified" beside "21 verified" as disjoint buckets is the mistake
+        this test exists to make impossible."""
+        write_csv(f'{self.d}/symbols/ghidra_functions.csv', ['address', 'size'],
+                  [['0x00401000', '100'], ['0x00402000', '50'], ['0x00403000', '10'],
+                   ['0x00404000', '7']])
+        write_csv(f'{self.d}/symbols/functions.csv',
+                  ['address', 'size', 'name', 'system', 'status', 'notes'],
+                  [['0x00401000', '100', 'a', 'frame_timing', 'verified', ''],
+                   ['0x00402000', '50', 'b', 'camera', 'edge-verified', ''],
+                   ['0x00403000', '10', 'c', 'camera', 'original', ''],
+                   ['0x00404000', '7', 'd', 'camera', 'original', '']])
+        d = json.loads(run('progress.py', '--root', self.d).stdout)
+        self.assertEqual(d['verified']['functions'], 1)
+        self.assertEqual(d['edge_verified']['functions'], 2)
+        self.assertEqual(d['edge_verified']['bytes'], 150)
+        self.assertEqual(d['statuses'], {'verified': 1, 'edge-verified': 1, 'original': 2})
+        self.assertEqual(sum(d['statuses'].values()), d['tracked']['functions'])
+        line = run('progress.py', '--root', self.d, '--burndown').stdout
+        self.assertIn('incl. verified', line)
+        self.assertIn('1 edge-verified + 2 original + 1 verified', line)
+
     def test_empty_export(self):
         write_csv(f'{self.d}/symbols/ghidra_functions.csv', ['address', 'size'], [])
         d = json.loads(run('progress.py', '--root', self.d).stdout)
