@@ -75,6 +75,18 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
 
 `tools/smoke.sh` (record, verify and mutation-test the known-good clock function) passes.
 
+- A ledger row now pins the inputs it ran, not just the code: `symbols/verification.csv` carries
+  `cases_sha256`, a hash of the case files by name and content, written by `--record` (which
+  refuses a directory with no cases). `source_hash` already tied a row to the replacement's source,
+  so before this a claim of agreement could silently become a claim about different inputs. 580 of
+  the 723 rows are pinned from captures in this checkout. The other 142, across 42 functions, carry
+  `unavailable`: the cases were indexed from the `address` every case file names, and no directory
+  for those functions holds the row's case count. That includes 20 of the 21 `verified` functions --
+  their captures were recorded in an earlier checkout (2026-10-07) and are not here. The rows are
+  not wrong; they are unpinnable here, and a `verified` function with a blank pin is an error, so
+  the marker has to be a deliberate act and `--record` never writes it. Re-pinning those 20 means
+  re-recording them, which is a new claim rather than the old one made stricter.
+
 - None of the 622 edge-verified functions has a recorded case, so `tools/promote.py` cannot move
   one of them to verified: it needs `$BB_CAPTURES/<function>/*.json` from a real run, and nothing
   in the tree writes those (`../captures` does not exist; the per-function recorders were

@@ -353,8 +353,20 @@ run, so promotion does not add generated files beside the source cases.
 per function, case set (`recorded`, `edge`, or `option-recorded`: recorded in the game with an
 option on) and option (`--option LABEL`, needed with `--patch` or `--env`). The row carries a
 hash of the replacement's source, its defining file and the headers it includes, so a result
-belongs to the code it was run on; after any change, run the sets again. The file holds counts
-only, never case data.
+belongs to the code it was run on; after any change, run the sets again. It also carries
+`cases_sha256`: a hash of the case files themselves, by file name and content, because a count is
+a claim about *how many* inputs agreed and says nothing about *which*. A row that cannot show its
+inputs is not evidence, so `--record` refuses a directory with no case files (`abi.json` is a
+description of the calling convention, not a case, and does not count). Editing, renaming, adding
+or removing a case changes the hash. The row does not say where the capture directory was, so
+`validate_functions.py` cannot recompute the hash; `verification.cases_hash(DIR)` is the
+recomputation when you know the directory.
+
+A row whose captures are not in this checkout carries the literal `unavailable` instead, written
+by hand after looking, never by `--record`. It says "someone checked and the inputs are not here",
+which is a different claim from a blank field ("nobody has answered") and is why a blank is an
+error on a `verified` function and `unavailable` is not. It does not stand in for a hash anywhere
+else: those functions still need their sets re-recorded from a checkout that has the captures.
 
 A case that can't be used goes in `symbols/quarantine.csv` (function, case set, option, case
 file name without `.json`, reason, date), and only when it can't be fixed: for example a

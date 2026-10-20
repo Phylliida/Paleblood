@@ -22,7 +22,7 @@ class CatalogTests(unittest.TestCase):
         (self.root / "symbols").mkdir()
         self.write("symbols/ghidra_functions.csv", "address,size\n0x1000,8\n0x1010,12\n0x1020,20\n0x1030,4\n")
         self.write("symbols/functions.csv", "address,size,name,system,status,notes\n0x1000,8,small,unit,original,\n0x1010,12,cycle_a,unit,original,\n0x1020,20,cycle_b,unit,original,\n0x1030,4,done,unit,verified,\n")
-        self.write("symbols/verification.csv", "function,cases,option,total,passed,failed,quarantined,source,date\ndone,edge,,2,2,0,0,abcd,2026-01-01\n")
+        self.write("symbols/verification.csv", "function,cases,option,total,passed,failed,quarantined,source,cases_sha256,date\ndone,edge,,2,2,0,0,abcd,ef01000000000000,2026-01-01\n")
         self.edges = self.root / "edges.csv"
         self.edges.write_text(
             "caller,callee,kind,reference,source,confidence\n"

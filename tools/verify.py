@@ -452,8 +452,9 @@ def run(name: str, captures: str, boot: str | None, lib: str | None, out: str | 
         names = [os.path.basename(p)[:-len('.json')] for p in sorted(glob.glob(os.path.join(captures, '*.json')))
                  if os.path.basename(p) != 'abi.json']
         failing = [f['case'] for f in summary['failures']]
-        row = verification.record(ROOT, name, record, option, names, failing)
-        summary['recorded'] = {k: row[k] for k in ('cases', 'option', 'failed', 'quarantined', 'source')}
+        row = verification.record(ROOT, name, record, option, names, failing, captures)
+        summary['recorded'] = {k: row[k] for k in ('cases', 'option', 'failed', 'quarantined', 'source',
+                                                  'cases_sha256')}
     print(json.dumps(summary, indent=2, sort_keys=True))
     if canary:
         falsification = summary['falsification']

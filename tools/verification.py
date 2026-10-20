@@ -14,6 +14,18 @@ symbols/verification.csv   one row per function, case set and option: the latest
   source       a hash of the replacement's source (its defining files and every header they
                include from game/ and runtime/include/, recursively): results for other code
                are stale
+  cases_sha256 a hash of the case files the run used (every *.json in the capture directory
+               except abi.json, by name and content): results for other inputs are stale too.
+               A row is the claim "this code agrees with the original on these inputs"; the
+               source hash pins the first half, this pins the second. It cannot be rechecked
+               by tools/validate_functions.py, because the row does not record where the
+               capture directory was; verification.cases_hash(DIR) recomputes it for a
+               directory you supply.
+               A row whose capture directory is not in this checkout carries 'unavailable'
+               instead. That is a statement someone made after looking for the cases -- rows
+               recorded elsewhere (captures kept outside the archive) are the usual reason --
+               not a default: record() never writes it, and check() treats a blank as an error
+               on a verified function so the question cannot be skipped.
   date         the day of the run
 
 symbols/quarantine.csv     cases that cannot be used, each with the reason.
@@ -28,15 +40,21 @@ from __future__ import annotations
 import csv
 import datetime
 import fcntl
+import glob
 import hashlib
 import io
 import os
 import re
 
-VERIFICATION_HEADER = ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source', 'date']
+VERIFICATION_HEADER = ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
+                       'cases_sha256', 'date']
 QUARANTINE_HEADER = ['function', 'cases', 'option', 'case', 'reason', 'date']
 CASE_SETS = ('recorded', 'edge', 'option-recorded')
 SOURCE_HASH_LENGTH = 16
+# A row whose case files are not in this checkout carries this instead of a hash. It says "someone
+# looked and the inputs are not here", which is why record() never writes it: silence and an
+# absence are different claims, and only one of them is worth anything.
+CASES_UNAVAILABLE = 'unavailable'
 INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
 
 
@@ -87,6 +105,25 @@ def source_hash(root: str, name: str) -> str:
     return h.hexdigest()[:SOURCE_HASH_LENGTH]
 
 
+def cases_hash(captures: str) -> str:
+    """A hash of the case files in CAPTURES, which are the inputs a recorded run fed to both
+    sides. Names are hashed with the contents, so adding, removing, renaming or editing a case
+    all change it; a case file's name is part of what it is, since the ledger counts them.
+
+    abi.json is excluded for the same reason tools/verify.py skips it: it describes the
+    function's calling convention for the catalog, it is not a case."""
+    paths = sorted(p for p in glob.glob(os.path.join(captures, '*.json'))
+                   if os.path.basename(p) != 'abi.json')
+    if not paths:
+        return ''
+    h = hashlib.sha256()
+    for path in paths:
+        h.update(os.path.basename(path).encode() + b'\0')
+        with open(path, 'rb') as f:
+            h.update(f.read() + b'\0')
+    return h.hexdigest()[:SOURCE_HASH_LENGTH]
+
+
 def read_csv(path: str, header: list[str]) -> list[dict]:
     if not os.path.isfile(path):
         return []
@@ -114,16 +151,23 @@ def quarantined(root: str, function: str, cases: str, option: str) -> dict[str, 
             if r['function'] == function and r['cases'] == cases and r['option'] == option}
 
 
-def record(root: str, function: str, cases: str, option: str, case_names: list[str], failing: list[str]) -> dict:
-    """Writes the row for one run; returns it."""
+def record(root: str, function: str, cases: str, option: str, case_names: list[str], failing: list[str],
+           captures: str) -> dict:
+    """Writes the row for one run, including a hash of the case files it ran; returns it."""
     if cases not in CASE_SETS:
         raise ValueError(f'case set must be one of {", ".join(CASE_SETS)}')
+    digest = cases_hash(captures)
+    if not digest:
+        # A row claims agreement on a set of inputs. Recording one without being able to see the
+        # inputs would be a claim with nothing behind it -- the same fail-open as a fault that
+        # compares nothing.
+        raise ValueError(f'{captures}: no case files, so there is nothing to record a result about')
     q = quarantined(root, function, cases, option)
     failed = [c for c in failing if c not in q]
     row = {'function': function, 'cases': cases, 'option': option, 'total': str(len(case_names)),
            'passed': str(len(case_names) - len(failing)), 'failed': str(len(failed)),
            'quarantined': str(len(failing) - len(failed)), 'source': source_hash(root, function),
-           'date': datetime.date.today().isoformat()}
+           'cases_sha256': digest, 'date': datetime.date.today().isoformat()}
     path = os.path.join(root, 'symbols', 'verification.csv')
     # Runs may record at the same time (one per function): read, update and write under a lock.
     with open(path + '.lock', 'w') as lock:
@@ -188,6 +232,15 @@ def check(root: str, funcs: list[dict]) -> list[str]:
             if not any(r['cases'] == need and r['option'] == '' for r in fresh):
                 errs.append(f"{where} without a current {need} result in symbols/verification.csv "
                             f"(tools/verify.py run --record {need})")
+        for need in ('recorded', 'edge'):
+            pinned = [r for r in fresh if r['cases'] == need and r['option'] == ''
+                      and (r['cases_sha256'] == CASES_UNAVAILABLE
+                           or re.fullmatch(r'[0-9a-f]{%d}' % SOURCE_HASH_LENGTH, r['cases_sha256']))]
+            if not pinned:
+                errs.append(f"{where} without a current {need} result that pins its case files "
+                            f"(symbols/verification.csv has no cases_sha256 for it, and no "
+                            f"'{CASES_UNAVAILABLE}' either): run it again with --record, or look for "
+                            f"the captures and say so if they are not in this checkout")
         for r in fresh:
             if int(r['failed']) or int(r['total']) == 0:
                 label = r['cases'] + (f" with {r['option']}" if r['option'] else '')

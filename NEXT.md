@@ -8,7 +8,7 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 Last session: runtime
 
 Needs the maintainer (cannot be done from the sandbox):
-- `gh auth login`, so the 28 local commits on `main` can be pushed and the branches opened as pull
+- `gh auth login`, so the local commits on `main` can be pushed and the branches opened as pull
   requests. Everything else here is unblocked without it; `../Paleblood-2026-10-19.bundle`
   (`git bundle --all`) holds the history.
 - The affinity constant in target 2 below: `0x3F`, `0xFF`, or a decision to park it. No citable

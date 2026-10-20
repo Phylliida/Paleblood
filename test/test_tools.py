@@ -43,9 +43,12 @@ class Fixture(unittest.TestCase):
                   [['0x00401000', 'frame_timing_update', '2026-01-01', 'independent session', 'approved', '']])
         # a clean, current verification record (no source file here, so the source hash is empty)
         write_csv(f'{self.d}/symbols/verification.csv',
-                  ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source', 'date'],
-                  [['frame_timing_update', 'recorded', '', '3', '3', '0', '0', '', '2026-01-01'],
-                   ['frame_timing_update', 'edge', '', '2', '2', '0', '0', '', '2026-01-01']])
+                  ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
+                   'cases_sha256', 'date'],
+                  [['frame_timing_update', 'recorded', '', '3', '3', '0', '0', '', 'aa01000000000000',
+                    '2026-01-01'],
+                   ['frame_timing_update', 'edge', '', '2', '2', '0', '0', '', 'aa01000000000000',
+                    '2026-01-01']])
         with open(f'{self.d}/README.md', 'w') as f:
             f.write('<!-- target:start -->\n<!-- target:end -->\n<!-- progress:start -->\n<!-- progress:end -->\n')
 
@@ -749,6 +752,11 @@ class VerificationRecord(unittest.TestCase):
         with open(os.path.join(self.root, 'game', 'x', 'f.cpp'), 'w') as f:
             f.write('#include "helper.h"\nextern "C" void bb_x_f(void) { helper(); }\n')
         self.funcs = [{'name': 'x_f', 'status': 'verified', '_line': 2}]
+        self.cases = os.path.join(self.root, 'cases')
+        os.makedirs(self.cases)
+        for name in ('a', 'b', 'e'):
+            with open(os.path.join(self.cases, name + '.json'), 'w') as f:
+                f.write('{"id": "%s", "address": "0x00400020"}\n' % name)
 
     def tearDown(self):
         shutil.rmtree(self.root)
@@ -759,25 +767,25 @@ class VerificationRecord(unittest.TestCase):
                            'date': '2026-10-07'} for c in cases])
 
     def test_clean_record_allows_verified(self):
-        self.v.record(self.root, 'x_f', 'recorded', '', ['a', 'b'], [])
-        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [])
+        self.v.record(self.root, 'x_f', 'recorded', '', ['a', 'b'], [], self.cases)
+        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
         self.assertEqual(self.v.check(self.root, self.funcs), [])
 
     def test_missing_edge_refuses_verified(self):
-        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [])
+        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], self.cases)
         self.assertTrue(any('current edge result' in e for e in self.v.check(self.root, self.funcs)))
 
     def test_unexplained_failure_refuses_verified(self):
-        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [])
-        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [])
-        self.v.record(self.root, 'x_f', 'edge', '30', ['e', 'g'], ['g'])
+        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], self.cases)
+        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
+        self.v.record(self.root, 'x_f', 'edge', '30', ['e', 'g'], ['g'], self.cases)
         self.assertTrue(any('unexplained failure' in e for e in self.v.check(self.root, self.funcs)))
 
     def test_quarantined_failure_with_reason_is_allowed(self):
         self.quarantine('b')
-        row = self.v.record(self.root, 'x_f', 'recorded', '', ['a', 'b'], ['b'])
+        row = self.v.record(self.root, 'x_f', 'recorded', '', ['a', 'b'], ['b'], self.cases)
         self.assertEqual((row['failed'], row['quarantined']), ('0', '1'))
-        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [])
+        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
         self.assertEqual(self.v.check(self.root, self.funcs), [])
 
     def test_quarantine_needs_a_reason(self):
@@ -786,9 +794,86 @@ class VerificationRecord(unittest.TestCase):
                            'date': '2026-10-07'}])
         self.assertTrue(any('needs its reason' in e for e in self.v.check(self.root, self.funcs)))
 
+    def test_the_row_pins_the_case_files_it_ran(self):
+        """A row is the claim "this code agrees with the original on these inputs". The source
+        hash pins the code; without a hash of the cases nothing pinned the other half, so editing
+        a case silently made the row a claim about inputs nobody had run."""
+        row = self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], self.cases)
+        self.assertEqual(len(row['cases_sha256']), self.v.SOURCE_HASH_LENGTH)
+        self.assertEqual(row['cases_sha256'], self.v.cases_hash(self.cases))
+        with open(os.path.join(self.cases, 'a.json'), 'a') as f:
+            f.write(' ')
+        self.assertNotEqual(self.v.cases_hash(self.cases), row['cases_sha256'])
+
+    def test_every_change_to_a_case_set_changes_its_hash(self):
+        """Editing counts, and so do adding, removing and renaming: the ledger counts case files,
+        so a file's name is part of what it is."""
+        def state():
+            return self.v.cases_hash(self.cases)
+        edits = []
+        with open(os.path.join(self.cases, 'b.json'), 'a') as f:
+            f.write(' ')
+        edits.append(state())
+        os.rename(os.path.join(self.cases, 'b.json'), os.path.join(self.cases, 'c.json'))
+        edits.append(state())
+        os.remove(os.path.join(self.cases, 'c.json'))
+        edits.append(state())
+        with open(os.path.join(self.cases, 'd.json'), 'w') as f:
+            f.write('{}')
+        edits.append(state())
+        self.assertEqual(len(set(edits)), 4, edits)
+
+    def test_a_run_with_no_case_files_records_nothing(self):
+        """Recording without being able to see the inputs would be a claim with nothing behind
+        it -- the same fail-open as a matching fault that compares nothing."""
+        empty = os.path.join(self.root, 'empty')
+        os.makedirs(empty)
+        with self.assertRaises(ValueError):
+            self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], empty)
+        os.makedirs(os.path.join(self.root, 'onlyabi'))
+        with open(os.path.join(self.root, 'onlyabi', 'abi.json'), 'w') as f:
+            f.write('{}')
+        with self.assertRaises(ValueError):
+            self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], os.path.join(self.root, 'onlyabi'))
+
+    def test_a_row_that_does_not_pin_its_cases_cannot_verify(self):
+        """Rows recorded before this field existed carry an empty one; they must be re-recorded
+        rather than read as current."""
+        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], self.cases)
+        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
+        path = os.path.join(self.root, 'symbols', 'verification.csv')
+        rows = self.v.read_csv(path, self.v.VERIFICATION_HEADER)
+        for r in rows:
+            r['cases_sha256'] = ''
+        self.v.write_csv(path, self.v.VERIFICATION_HEADER, rows)
+        self.assertTrue(any('pins its case files' in e for e in self.v.check(self.root, self.funcs)))
+
+    def test_a_row_that_names_the_cases_as_elsewhere_is_not_held_to_a_hash(self):
+        """A row recorded where the captures still existed cannot pin them here, and saying so is
+        a different act from leaving the field blank: silence is an unanswered question, and the
+        check has to be able to tell them apart."""
+        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], self.cases)
+        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
+        path = os.path.join(self.root, 'symbols', 'verification.csv')
+        rows = self.v.read_csv(path, self.v.VERIFICATION_HEADER)
+        for r in rows:
+            r['cases_sha256'] = self.v.CASES_UNAVAILABLE
+        self.v.write_csv(path, self.v.VERIFICATION_HEADER, rows)
+        self.assertEqual(self.v.check(self.root, self.funcs), [])
+        # One of them left blank is still an error: the marker is a claim, not a licence for the
+        # other row to go silent.
+        rows[0]['cases_sha256'] = ''
+        self.v.write_csv(path, self.v.VERIFICATION_HEADER, rows)
+        self.assertTrue(any('pins its case files' in e for e in self.v.check(self.root, self.funcs)))
+
+    def test_record_never_writes_the_marker(self):
+        """Only a person who looked can say the captures are elsewhere."""
+        row = self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
+        self.assertRegex(row['cases_sha256'], r'^[0-9a-f]{%d}$' % self.v.SOURCE_HASH_LENGTH)
+
     def test_changed_header_makes_the_record_stale(self):
-        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [])
-        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [])
+        self.v.record(self.root, 'x_f', 'recorded', '', ['a'], [], self.cases)
+        self.v.record(self.root, 'x_f', 'edge', '', ['e'], [], self.cases)
         with open(os.path.join(self.root, 'game', 'x', 'helper.h'), 'a') as f:
             f.write('// changed\n')
         errs = self.v.check(self.root, self.funcs)
@@ -854,7 +939,7 @@ class Promotion(unittest.TestCase):
                 f.write('function,cases,option,case,reason,date\n')
                 f.write('other_function,option-recorded,uncapped,a_case,recorded before the option changed,2026-10-07\n')
             with open(os.path.join(symbols, 'verification.csv'), 'w', newline='') as f:
-                f.write('function,cases,option,total,passed,failed,quarantined,source,date\n')
+                f.write('function,cases,option,total,passed,failed,quarantined,source,cases_sha256,date\n')
 
             # The trap, so the fix stays a fix: one row in, and the other function's quarantine
             # row is reported as missing from the file it is demonstrably in.
