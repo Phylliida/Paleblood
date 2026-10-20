@@ -34,9 +34,17 @@ Needs the maintainer (cannot be done from the sandbox):
   ready to paste with both computed. Editing the replacement or the cases afterwards makes the
   approval stale rather than grandfathered, so a review of code that then changes is visible
   instead of absorbed. Regenerate the packet under the venv (`capstone` is imported) with
-  `../.venvs/paleblood/bin/python3 -P tools/make_review_packet.py --out ../data/review/engine_zero_init_review.md --caveat '<corpus fact>'`: anything naming a game function or case is
-  passed as `--caveat`, because `tools/` is inside `check_agnostic.py`'s scope and a family name
-  written into the tool turns that gate red.
+  `--caveat`, because `tools/` is inside `check_agnostic.py`'s scope and a family name written
+  into the tool turns that gate red. The committed packet was produced by exactly this line, and
+  the caveat text is literal for that reason -- without the flag its paragraph disappears at
+  exit status 0 and nothing in the packet notices:
+
+      ../.venvs/paleblood/bin/python3 -P tools/make_review_packet.py \
+        --out ../data/review/engine_zero_init_review.md \
+        --caveat 'One instance in this tree: `period_zero` of `engine_time_over_period` (unsigned divide by a period of zero, `signal 8` on both sides), declared in `game/engine/time_over_period_cases.py` so the case file says what it expects.'
+
+  The caveat above is one line of shell (it is only wrapped here for fit); pasted as three lines
+  with embedded newlines it would render differently and stop matching the committed packet.
 - Twelve cases among the already-verified families cannot fail against a dropped body, and the
   reason is in their inputs rather than in the comparison. Eight are `slot_copy` (`overlap_dest_
   below_source` in `0085c8e0`, `028cd370`, `02c1b760`, `02c1cd10`, `02f01ed0`; `overlap_dest_
