@@ -33,6 +33,22 @@ def cases(directory: str) -> int:
     return len(glob.glob(os.path.join(directory, '*.json')))
 
 
+def problems_for(root: str, path: str, name: str, line: int) -> list[str]:
+    """The verify rule's complaints about one function, read against the whole function list.
+
+    verification.check() cross-references every row of symbols/quarantine.csv against the function
+    list it is handed, so passing only the function being promoted reports each other function's
+    quarantined cases as "not in symbols/functions.csv" and refuses every promotion while that
+    file is not empty. Hand it symbols/functions.csv and keep what belongs to this function: its
+    own rows (by line) and anything naming it.
+    """
+    with open(path, newline='') as f:
+        rows = [dict(r, _line=i + 2) for i, r in enumerate(csv.DictReader(f))]
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import verification
+    return [p for p in verification.check(root, rows) if f'functions.csv:{line}:' in p or name in p]
+
+
 def passes(name: str, directory: str, record: str | None) -> tuple[bool, str]:
     cmd = [sys.executable, os.path.join(ROOT, 'tools', 'verify.py'), 'run', '--function', name, '--captures', directory]
     if record:
@@ -67,7 +83,7 @@ def main() -> int:
     head = rows[0]
     status, name_col = head.index('status'), head.index('name')
     changed, failed = [], False
-    for row in rows[1:]:
+    for line, row in enumerate(rows[1:], start=2):
         if row[status] != 'edge-verified':
             continue
         name = row[name_col]
@@ -87,8 +103,7 @@ def main() -> int:
         ok_r, msg_r = passes(name, recorded, record)
         ok_e, msg_e = passes(name, edge, record and 'edge') if ok_r else (False, 'not run')
         if ok_r and ok_e and not a.dry_run:
-            import verification
-            problems = verification.check(ROOT, [{'name': name, 'status': 'verified', '_line': row[0]}])
+            problems = problems_for(ROOT, path, name, line)
             if problems:
                 print(f'promote: {name}: recorded {msg_r}, edge {msg_e}, but: ' + '; '.join(problems), file=sys.stderr)
                 failed = True

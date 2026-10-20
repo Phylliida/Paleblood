@@ -831,6 +831,40 @@ class Promotion(unittest.TestCase):
             self.assertNotEqual(os.path.commonpath([capture_dir, observed['out']]), capture_dir)
             self.assertFalse(os.path.exists(observed['out']))
 
+    def test_another_functions_quarantined_cases_do_not_block_a_promotion(self):
+        """symbols/quarantine.csv is cross-checked against the whole function list, not one row.
+
+        promotion reads this function's complaints out of the rule that validate_functions.py runs.
+        Handing that rule a single function reports every other function's quarantined cases as
+        "is not in symbols/functions.csv", so a non-empty quarantine file refused every promotion.
+        """
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import promote
+        import verification
+
+        with tempfile.TemporaryDirectory(prefix='promote-root-') as root:
+            symbols = os.path.join(root, 'symbols')
+            os.mkdir(symbols)
+            functions = os.path.join(symbols, 'functions.csv')
+            with open(functions, 'w', newline='') as f:
+                f.write('address,size,name,system,status,description\n')
+                f.write('0x00400020,126,sample_function,engine,edge-verified,being promoted\n')
+                f.write('0x00400100,64,other_function,engine,verified,somebody else\n')
+            with open(os.path.join(symbols, 'quarantine.csv'), 'w', newline='') as f:
+                f.write('function,cases,option,case,reason,date\n')
+                f.write('other_function,option-recorded,uncapped,a_case,recorded before the option changed,2026-10-07\n')
+            with open(os.path.join(symbols, 'verification.csv'), 'w', newline='') as f:
+                f.write('function,cases,option,total,passed,failed,quarantined,source,date\n')
+
+            # The trap, so the fix stays a fix: one row in, and the other function's quarantine
+            # row is reported as missing from the file it is demonstrably in.
+            trap = verification.check(root, [{'address': '0x00400020', 'name': 'sample_function',
+                                              'status': 'verified', '_line': 2}])
+            self.assertTrue(any('other_function is not in symbols/functions.csv' in e for e in trap),
+                            trap)
+
+            self.assertEqual(promote.problems_for(root, functions, 'sample_function', 2), [])
+
 
 if __name__ == '__main__':
     unittest.main()
