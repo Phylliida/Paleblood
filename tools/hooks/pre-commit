@@ -8,7 +8,12 @@
 #   4. functions.csv, hooks.csv and the README progress block agree with the staged tree
 #   5. game/ is readable (tools/check_readable.py, STYLE.md); its allowlist only shrinks
 # Installed as commit-msg too: lines matching `git config --get-all bb.refuseMessage` (extended
-# regular expressions, case-insensitive) are refused.
+# regular expressions, case-insensitive) are refused, and every value of
+# `git config --get-all bb.requireMessage` (literal, case-insensitive) must appear in the message.
+# CONTRIBUTING.md, "AI-assisted work", requires a Co-Authored-By trailer naming the tool actually
+# used and says not to rewrite existing commits to add disclosure -- so a clone that always
+# commits with assistance can set the trailer as required and stop relying on remembering it:
+#   git config --add bb.requireMessage 'Co-Authored-By: Claude'
 set -euo pipefail
 
 if [ "${BB_HOOK_NAME:-$(basename "$0")}" = "commit-msg" ]; then
@@ -20,6 +25,18 @@ if [ "${BB_HOOK_NAME:-$(basename "$0")}" = "commit-msg" ]; then
     if [ -n "$hits" ]; then
         echo "commit-msg: refused by bb.refuseMessage:" >&2
         echo "$hits" >&2
+        exit 1
+    fi
+    missing=""
+    while IFS= read -r required; do
+        [ -n "$required" ] || continue
+        if ! grep -v '^#' "$1" | grep -qiF -- "$required"; then
+            missing+="  $required"$'\n'
+        fi
+    done < <(git config --get-all bb.requireMessage || true)
+    if [ -n "$missing" ]; then
+        echo "commit-msg: the message must contain (bb.requireMessage):" >&2
+        printf '%s' "$missing" >&2
         exit 1
     fi
     exit 0

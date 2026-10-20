@@ -220,6 +220,10 @@ maintainer in an issue or privately.
 Allowed if disclosed and verified. Every AI-assisted commit must keep a
 `Co-Authored-By` trailer naming the tool actually used. For Codex, use
 `Co-Authored-By: Codex <noreply@openai.com>`. A pull request note does not replace the trailer.
-Do not rewrite existing commits to add or change disclosure. AI-assisted decompilation is
+Do not rewrite existing commits to add or change disclosure. A clone that always commits with
+assistance can have the trailer enforced instead of remembered: set
+`git config --add bb.requireMessage 'Co-Authored-By: Claude'` (or the tool actually used) and the
+installed `commit-msg` hook refuses a message that lacks it, rather than a reviewer finding it
+later. AI-assisted decompilation is
 verified like any other: `verify.py` output and the independent review are mandatory, and the
 author answers for every line.
