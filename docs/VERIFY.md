@@ -135,7 +135,11 @@ reused run ID and case number cannot silently replace an existing recording.
   argument points at (`"offset"` starts further in); `argf32: [0]` compares the float in xmm0
   (`1`: xmm1) as its bit pattern (for stubs and imports); a function that returns a float is
   scripted with `ret` as the float's bit pattern (`"ret": "0x3f800000"`, for stubs and
-  imports); case `args` may set `xmm0` and `xmm1` (hex bytes) for float arguments; `writes` stores what the real function stored through an argument
+  imports); case `args` may set `xmm0` and `xmm1` (hex bytes) for float arguments, and `rax` for
+  the value the function is entered with — a case that omits it enters with 0, which is what the
+  trampoline used to force unconditionally, and that made an original which clears `eax` (most
+  functions that return an `int`) indistinguishable from a replacement that leaves it alone.
+  `observe_registers: ["rax"]` compares what the function left there; `writes` stores what the real function stored through an argument
   (`bytes`, `pointer` to a buffer, or `guest` address), like library writes.
 - `stack`: stack arguments, in order (the 7th integer argument first), as numbers, `buf:` or
   `guest:` values; the harness pushes them before the call and pops them after.

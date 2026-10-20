@@ -82,7 +82,7 @@ def validate_abi(abi: dict | None) -> list[str]:
         blockers.append("ABI argument and return descriptions are malformed")
     else:
         seen = set()
-        registers = {"rdi", "rsi", "rdx", "rcx", "r8", "r9", "xmm0", "xmm1"}
+        registers = {"rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9", "xmm0", "xmm1"}
         for index, argument in enumerate(abi["arguments"]):
             if not isinstance(argument, dict):
                 blockers.append(f"ABI argument {index} is not an object")
@@ -156,7 +156,7 @@ def load_fixtures(directory: Path, address: str) -> tuple[list[tuple[Path, dict]
         declared = {item.get("register") for item in abi.get("arguments", []) if isinstance(item, dict)}
         for path, case in cases:
             case_args = set(case.get("args", {}))
-            unexpected = case_args - declared - {"xmm0", "xmm1"}
+            unexpected = case_args - declared - {"xmm0", "xmm1", "rax"}
             if unexpected:
                 raise DifferentialError(f"{path.name}: argument registers lack ABI declarations: {sorted(unexpected)}")
             missing_arguments = []

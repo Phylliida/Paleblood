@@ -758,6 +758,26 @@ class Harness(unittest.TestCase):
         original = self.side_case(case_path, address='0x00400930')
         self.assertEqual(original['registers']['rdx'], '0x9')
 
+    def test_case_can_enter_with_a_value_in_rax(self):
+        # The trampoline used to emit `xor eax, eax` immediately before the call, so every case
+        # entered with a clean rax: an original that clears eax (most functions returning an int)
+        # was indistinguishable from a replacement that leaves it alone. All 528
+        # engine_zero_init_* members were exactly that mistake.
+        case = {'schema': 1, 'address': '0x00400920', 'id': 'entry-rax', 'returns': 'void',
+                'observe_registers': ['rax'], 'args': {'rax': '0xdeadbeef'}, 'buffers': {},
+                'memory': [], 'imports': [], 'stubs': []}
+        case_path = os.path.join(self.d, 'entry_rax.json')
+        with open(case_path, 'w') as stream:
+            json.dump(case, stream)
+        # 0x400920 is `mov rdi, 7; ret`: it never touches rax, so what comes back went in.
+        self.assertEqual(self.side_case(case_path, address='0x00400920')['registers']['rax'],
+                         '0xdeadbeef')
+        del case['args']['rax']
+        with open(case_path, 'w') as stream:
+            json.dump(case, stream)
+        # Omitting rax keeps the trampoline's old behaviour, so no existing case changes meaning.
+        self.assertEqual(self.side_case(case_path, address='0x00400920')['registers']['rax'], '0x0')
+
     def test_original_instruction_timeout_is_bounded(self):
         case = {'schema': 1, 'address': '0x00400910', 'id': 'infinite-loop', 'returns': 'void',
                 'args': {}, 'buffers': {}, 'memory': [], 'imports': [], 'stubs': []}

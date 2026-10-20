@@ -54,10 +54,13 @@ MAP_PRIVATE, MAP_ANONYMOUS, MAP_FIXED_NOREPLACE = 0x02, 0x20, 0x100000
 # 64 rdx, 72 xmm0, 88 xmm1, 104 rbx, 112 rbp, 120 r12, 128 r13, 136 r14, 144 r15,
 # 152 rsp before the call, 160 rsp after it. Callee-saved registers hold sentinels. xmm0 and
 # xmm1 are loaded from their slots before the call (float arguments) and stored back after it.
+# rax is loaded from its slot before the call too, so a case can enter with a value in it: an
+# original that clears eax then differs observably from a replacement that does not. A case that
+# does not name rax enters with 0, which is what the trampoline used to force unconditionally.
 TRAMPOLINE = bytes.fromhex(
     '53554154415541564157574989fb48bb111111111111111148bd222222222222222249bc3333333333333333'
     '49bd444444444444444449be555555555555555549bf66666666666666664989a398000000498b7b08498b73'
-    '10498b5318498b4b204d8b43284d8b4b304d8b13f3410f6f4348f3410f6f4b5831c041ffd24c8b1c24498943'
+    '10498b5318498b4b204d8b43284d8b4b304d8b13f3410f6f4348f3410f6f4b58498b433841ffd24c8b1c24498943'
     '3849895340f3410f7f4348f3410f7f4b5849895b6849896b704d8963784d89ab800000004d89b3880000004d'
     '89bb900000004989a3a00000005f415f415e415d415c5d5bc3')
 SENTINELS = {'rbx': 0x1111111111111111, 'rbp': 0x2222222222222222, 'r12': 0x3333333333333333,
@@ -65,12 +68,13 @@ SENTINELS = {'rbx': 0x1111111111111111, 'rbp': 0x2222222222222222, 'r12': 0x3333
 ARG_REGS = ('rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9')
 # Stack arguments (the case's "stack": values for [rsp+8], [rsp+16], ... at the call): the
 # trampoline pushes STACK_COUNT qwords from STACK_POINTER (an even count, so the call stays
-# aligned) and adds STACK_BYTES to rsp after it. The three slots sit in the trampoline's page.
-STACK_SLOTS = 0x800                         # offset in CODE: count, pointer, bytes
+# aligned) and adds STACK_BYTES to rsp after it. The slots sit in the trampoline's page:
+# count, pointer, bytes, entry rax.
+STACK_SLOTS = 0x800                         # offset in CODE: count, pointer, bytes, entry rax
 
 
 def _stack_trampoline(base: bytes) -> bytes:
-    call = bytes.fromhex('31c041ffd2')      # xor eax, eax; call r10
+    call = bytes.fromhex('498b433841ffd2')  # mov rax, [r11+0x38]; call r10 (the base form)
     at = base.index(call)
 
     def rel(insn_end: int, slot: int) -> bytes:
@@ -79,7 +83,10 @@ def _stack_trampoline(base: bytes) -> bytes:
     code += bytes.fromhex('488b05') + rel(len(code) + 7, 0)        # mov rax, [count]
     code += bytes.fromhex('4c8b1d') + rel(len(code) + 7, 8)        # mov r11, [pointer]
     code += bytes.fromhex('4885c0' '7409' '48ffc8' '41ff34c3' 'ebf2')   # push [r11+8*rax], rax..1
-    code += call
+    # The push loop spends rax as its counter and r11 as the stack-argument pointer, so the entry
+    # rax comes from the state block here rather than from the block the base form reads.
+    code += bytes.fromhex('488b05') + rel(len(code) + 7, 24)      # mov rax, [entry rax]
+    code += bytes.fromhex('41ffd2')                               # call r10
     code += bytes.fromhex('480325') + rel(len(code) + 7, 16)       # add rsp, [bytes]
     suffix = base[at + len(call):]
     restore_block = bytes.fromhex('4c8b1c24')
@@ -524,19 +531,19 @@ class Run:
 
     def run(self, target: int) -> dict:
         args = self.case.get('args', {})
-        unknown = set(args) - set(ARG_REGS) - {'xmm0', 'xmm1'}
+        unknown = set(args) - set(ARG_REGS) - {'xmm0', 'xmm1', 'rax'}
         if unknown:
             raise BadInput(f'unknown argument registers {sorted(unknown)}')
         observed = self.case.get('observe_registers', [])
-        allowed = {'rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9', 'r10', 'r11'}
+        allowed = {'rax', 'rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9', 'r10', 'r11'}
         if not isinstance(observed, list) or any(reg not in allowed for reg in observed):
             raise BadInput('observe_registers must list caller-saved GPR names supported by the harness')
         stack = [self.value(v) for v in self.case.get('stack', [])]
         if len(stack) % 2:
             stack.append(0)
         self.stack = (ctypes.c_uint64 * max(1, len(stack)))(*stack)
-        ctypes.memmove(CODE + STACK_SLOTS, struct.pack('<QQQ', len(stack), ctypes.addressof(self.stack),
-                                                       8 * len(stack)), 24)
+        ctypes.memmove(CODE + STACK_SLOTS, struct.pack('<QQQQ', len(stack), ctypes.addressof(self.stack),
+                                                       8 * len(stack), self.value(args.get('rax', 0))), 32)
         self.block[0] = target
         for i, reg in enumerate(ARG_REGS):
             self.block[1 + i] = self.value(args.get(reg, 0))
@@ -575,6 +582,7 @@ class Run:
         out['preserved'] = {r: 'kept' if regs[r] == SENTINELS[r] else f'0x{regs[r]:x}' for r in SENTINELS}
         out['preserved']['rsp'] = 'kept' if self.block[20] == self.block[19] else 'unbalanced'
         register_values = {
+            'rax': f'0x{self.block[7]:x}',
             'rdi': f'0x{self.block[21]:x}', 'rsi': f'0x{self.block[22]:x}',
             'rdx': f'0x{self.block[8]:x}',
             'rcx': f'0x{self.block[23]:x}', 'r8': f'0x{self.block[24]:x}',
