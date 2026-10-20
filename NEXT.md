@@ -7,9 +7,16 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 
 Last session: runtime
 
-Needs the maintainer (cannot be done from the sandbox): `gh auth login`, so the 23 local commits
-on `main` can be pushed and the two branches opened as pull requests. Everything else here is
-unblocked without it; `../Paleblood-2026-10-19.bundle` (`git bundle --all`) holds the history.
+Needs the maintainer (cannot be done from the sandbox):
+- `gh auth login`, so the 28 local commits on `main` can be pushed and the branches opened as pull
+  requests. Everything else here is unblocked without it; `../Paleblood-2026-10-19.bundle`
+  (`git bundle --all`) holds the history.
+- The affinity constant in target 2 below: `0x3F`, `0xFF`, or a decision to park it. No citable
+  source in the tree pins it, and the game's libc bit-counts the mask to size worker threads
+  (STATUS.md, "Open questions"), so a wrong guess changes thread topology silently.
+- Independent review of the 528 `engine_zero_init_*` functions (`symbols/reviews.csv`). They carry
+  no approved row, so `tools/promote.py` cannot move them; the nine reviewed `frame_timing_*`
+  functions are the ones to prove that path on first.
 
 ## Runtime track
 
@@ -20,8 +27,11 @@ what the boot stops at, clean room (CONTRIBUTING.md), then re-runs `tools/boot.p
 1. Generic input capture in the runtime: record a hooked function's inputs (arguments, the
    memory it reads, its calls' results) from the runtime side, with no code in the function
    (STYLE.md forbids recording code under `game/`). This replaces the per-function recorders that
-   were removed, so in-game recordings resume once the runtime runs the game, and
-   `tools/promote.py` can move `edge-verified` functions to `verified`.
+   `tools/check_readable.py` found inline and the readability commits removed -- 21 commits, e.g.
+   e5d65ea dropped `rt_capture_begin`/`rt_capture_write` from
+   `game/frame_timing/monotonic_clock.cpp:55,64` (`git log -S rt_capture_begin -- game/`). In-game
+   recordings resume once the runtime runs the game, and `tools/promote.py` can then move
+   `edge-verified` functions to `verified`.
 2. `scePthreadAttrGetaffinity` (libkernel), called by the game's own libc while it starts: needs
    the main thread's CPU affinity mask on a PS4 (STATUS.md, "Open questions"). Then the next
    import `tools/boot.py` names.
