@@ -16,7 +16,11 @@ Needs the maintainer (cannot be done from the sandbox):
   (STATUS.md, "Open questions"), so a wrong guess changes thread topology silently.
 - Independent review of the 528 `engine_zero_init_*` functions (`symbols/reviews.csv`). They carry
   no approved row, so `tools/promote.py` cannot move them; the nine reviewed `frame_timing_*`
-  functions are the ones to prove that path on first.
+  functions are the ones to prove that path on first. The packet to read is
+  `../data/review/engine_zero_init_review.md`, written by `tools/make_review_packet.py`: the
+  disassembly, the computed byte-identity of all 528 members, the traced differential verdicts, the
+  case pin, the two weaknesses, and the freshness of every run against the tools in the tree
+  (528 of 528 current).
 
 ## Runtime track
 

@@ -86,6 +86,13 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
   not wrong; they are unpinnable here, and a `verified` function with a blank pin is an error, so
   the marker has to be a deliberate act and `--record` never writes it. Re-pinning those 20 means
   re-recording them, which is a new claim rather than the old one made stricter.
+- The traced differential evidence has its own freshness check. `tools/make_review_packet.py`
+  compares each catalog run's recorded `harness_sha256`, `verify_sha256`, `engine_sha256`,
+  `instruction_trace_sha256` and `loader_sha256` against the files in this tree and reports the
+  difference per field. Measured for the first time, all 528 `engine_zero_init_*` runs were stale
+  on three of the five fields (one had been refreshed once); they were re-run against the current
+  tools, 528 of 528 clean, and the packet regenerated. A verdict from a run made by an older
+  harness describes the same code and a different measurement.
 
 - None of the 622 edge-verified functions has a recorded case, so `tools/promote.py` cannot move
   one of them to verified: it needs `$BB_CAPTURES/<function>/*.json` from a real run, and nothing
