@@ -574,12 +574,18 @@ PRE_FILL = 0xFF
 PAYLOAD_FILL = 0xA5
 
 
+# The value every case enters with. The original clears eax, so a wrapper that returns nothing
+# leaves this behind and differs on the `returns` comparison; a quiet entry rax would let that
+# mistake pass, which is exactly how the family passed before the harness could set rax at all.
+ENTRY_RAX = "0xdeadbeef"
+
+
 def doc(address, case_id, args, buffers, note, returns="i32"):
     return {
         "schema": 1,
         "address": f"0x{address:08x}",
         "id": case_id,
-        "args": args,
+        "args": dict(args, rax=ENTRY_RAX),
         "buffers": buffers,
         "memory": [{"addr": f"buf:{name}", "bytes": buf["bytes"]}
                    for name, buf in sorted(buffers.items())],

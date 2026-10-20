@@ -122,6 +122,10 @@ CPP_HEAD = '''// SPDX-License-Identifier: GPL-2.0-or-later
 
 namespace {
 
+// What the original leaves in eax. Every member ends `xor eax, eax; ret`, so the wrapper returns
+// zero rather than nothing; a void wrapper would leave the caller's rax untouched.
+constexpr std::uint64_t kReturnsZero = 0;
+
 // The object every member zeroes before storing its first argument at the end. The fields are named
 // for their offsets because nothing is known about what the object means yet; rename one when a
 // caller shows what it holds.
@@ -134,9 +138,12 @@ __ASSERTS__}  // namespace
 
 CPP_BODY = '''
 // 0x{address:08x}: zeroes at {zeroes}, stores the first argument at +0x{pointer:02x}.
-extern "C" void {name}(void *rdi_argument, void *rsi_argument) {{
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t {name}(void *rdi_argument, void *rsi_argument) {{
     auto *object = static_cast<zero_init_object *>(rsi_argument);
 {stores}    object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }}
 
 '''
@@ -205,7 +212,8 @@ Deliberately NOT pinned:
 * The order of the zero stores. They write to disjoint eight-byte spans, so no permutation of them
   changes a byte of the result.
 * The value left in eax. The original returns a constant zero rather than anything computed, and the
-  cases pin the register, which is the observable part.
+  cases pin it twice over: they enter with a nonzero rax and compare the return, so a wrapper that
+  returns nothing shows up as 0xdeadbeef where the original gives 0.
 """
 
 import json
@@ -228,12 +236,18 @@ PRE_FILL = 0xFF
 PAYLOAD_FILL = 0xA5
 
 
+# The value every case enters with. The original clears eax, so a wrapper that returns nothing
+# leaves this behind and differs on the `returns` comparison; a quiet entry rax would let that
+# mistake pass, which is exactly how the family passed before the harness could set rax at all.
+ENTRY_RAX = "0xdeadbeef"
+
+
 def doc(address, case_id, args, buffers, note, returns="i32"):
     return {
         "schema": 1,
         "address": f"0x{address:08x}",
         "id": case_id,
-        "args": args,
+        "args": dict(args, rax=ENTRY_RAX),
         "buffers": buffers,
         "memory": [{"addr": f"buf:{name}", "bytes": buf["bytes"]}
                    for name, buf in sorted(buffers.items())],

@@ -12,6 +12,10 @@
 
 namespace {
 
+// What the original leaves in eax. Every member ends `xor eax, eax; ret`, so the wrapper returns
+// zero rather than nothing; a void wrapper would leave the caller's rax untouched.
+constexpr std::uint64_t kReturnsZero = 0;
+
 // The object every member zeroes before storing its first argument at the end. The fields are named
 // for their offsets because nothing is known about what the object means yet; rename one when a
 // caller shows what it holds.
@@ -55,7 +59,9 @@ static_assert(sizeof(zero_init_object) == 0x80);
 
 
 // 0x01652440: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01652440(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01652440(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -73,11 +79,14 @@ extern "C" void bb_engine_zero_init_01652440(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016524c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016524c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016524c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -95,11 +104,14 @@ extern "C" void bb_engine_zero_init_016524c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01653d80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01653d80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01653d80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -117,11 +129,14 @@ extern "C" void bb_engine_zero_init_01653d80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01653e00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01653e00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01653e00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -139,11 +154,14 @@ extern "C" void bb_engine_zero_init_01653e00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01661c90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01661c90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01661c90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -161,11 +179,14 @@ extern "C" void bb_engine_zero_init_01661c90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01661d10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01661d10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01661d10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -183,11 +204,14 @@ extern "C" void bb_engine_zero_init_01661d10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01667eb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01667eb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01667eb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -205,11 +229,14 @@ extern "C" void bb_engine_zero_init_01667eb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01667f30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01667f30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01667f30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -227,11 +254,14 @@ extern "C" void bb_engine_zero_init_01667f30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01670300: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01670300(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01670300(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -249,11 +279,14 @@ extern "C" void bb_engine_zero_init_01670300(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01670380: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01670380(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01670380(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -271,11 +304,14 @@ extern "C" void bb_engine_zero_init_01670380(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01670620: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01670620(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01670620(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -293,11 +329,14 @@ extern "C" void bb_engine_zero_init_01670620(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016706a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016706a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016706a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -315,11 +354,14 @@ extern "C" void bb_engine_zero_init_016706a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01670970: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01670970(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01670970(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -337,11 +379,14 @@ extern "C" void bb_engine_zero_init_01670970(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016709f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016709f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016709f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -359,11 +404,14 @@ extern "C" void bb_engine_zero_init_016709f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01670c90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01670c90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01670c90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -381,11 +429,14 @@ extern "C" void bb_engine_zero_init_01670c90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01670d10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01670d10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01670d10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -403,11 +454,14 @@ extern "C" void bb_engine_zero_init_01670d10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01673b70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01673b70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01673b70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -425,11 +479,14 @@ extern "C" void bb_engine_zero_init_01673b70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01673bf0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01673bf0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01673bf0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -447,11 +504,14 @@ extern "C" void bb_engine_zero_init_01673bf0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01674270: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01674270(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01674270(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -469,11 +529,14 @@ extern "C" void bb_engine_zero_init_01674270(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016742f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016742f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016742f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -491,11 +554,14 @@ extern "C" void bb_engine_zero_init_016742f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016809a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016809a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016809a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -513,11 +579,14 @@ extern "C" void bb_engine_zero_init_016809a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01680a20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01680a20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01680a20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -535,11 +604,14 @@ extern "C" void bb_engine_zero_init_01680a20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01680cc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01680cc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01680cc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -557,11 +629,14 @@ extern "C" void bb_engine_zero_init_01680cc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01680d40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01680d40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01680d40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -579,11 +654,14 @@ extern "C" void bb_engine_zero_init_01680d40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01680fe0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01680fe0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01680fe0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -601,11 +679,14 @@ extern "C" void bb_engine_zero_init_01680fe0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01681060: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01681060(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01681060(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -623,11 +704,14 @@ extern "C" void bb_engine_zero_init_01681060(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01681330: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01681330(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01681330(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -645,11 +729,14 @@ extern "C" void bb_engine_zero_init_01681330(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016813b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016813b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016813b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -667,11 +754,14 @@ extern "C" void bb_engine_zero_init_016813b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01683e90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01683e90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01683e90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -689,11 +779,14 @@ extern "C" void bb_engine_zero_init_01683e90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01683f10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01683f10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01683f10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -711,11 +804,14 @@ extern "C" void bb_engine_zero_init_01683f10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016841b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016841b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016841b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -733,11 +829,14 @@ extern "C" void bb_engine_zero_init_016841b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01684230: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01684230(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01684230(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -755,11 +854,14 @@ extern "C" void bb_engine_zero_init_01684230(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016bc590: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016bc590(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016bc590(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -777,11 +879,14 @@ extern "C" void bb_engine_zero_init_016bc590(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016bc610: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016bc610(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016bc610(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -799,11 +904,14 @@ extern "C" void bb_engine_zero_init_016bc610(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016ce9e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016ce9e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016ce9e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -821,11 +929,14 @@ extern "C" void bb_engine_zero_init_016ce9e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x016cea60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_016cea60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_016cea60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -843,11 +954,14 @@ extern "C" void bb_engine_zero_init_016cea60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01745a30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01745a30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01745a30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -865,11 +979,14 @@ extern "C" void bb_engine_zero_init_01745a30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01745ab0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01745ab0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01745ab0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -887,11 +1004,14 @@ extern "C" void bb_engine_zero_init_01745ab0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01745f50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01745f50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01745f50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -909,11 +1029,14 @@ extern "C" void bb_engine_zero_init_01745f50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01745fd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01745fd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01745fd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -931,11 +1054,14 @@ extern "C" void bb_engine_zero_init_01745fd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0176b890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0176b890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0176b890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -953,11 +1079,14 @@ extern "C" void bb_engine_zero_init_0176b890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0176b910: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0176b910(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0176b910(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -975,11 +1104,14 @@ extern "C" void bb_engine_zero_init_0176b910(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0176bbb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0176bbb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0176bbb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -997,11 +1129,14 @@ extern "C" void bb_engine_zero_init_0176bbb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0176bc30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0176bc30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0176bc30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1019,11 +1154,14 @@ extern "C" void bb_engine_zero_init_0176bc30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x017718a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_017718a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_017718a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1041,11 +1179,14 @@ extern "C" void bb_engine_zero_init_017718a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01771920: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01771920(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01771920(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1063,11 +1204,14 @@ extern "C" void bb_engine_zero_init_01771920(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01793b90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01793b90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01793b90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1085,11 +1229,14 @@ extern "C" void bb_engine_zero_init_01793b90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01793c10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01793c10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01793c10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1107,11 +1254,14 @@ extern "C" void bb_engine_zero_init_01793c10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019cc550: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019cc550(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019cc550(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1129,11 +1279,14 @@ extern "C" void bb_engine_zero_init_019cc550(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019cc5d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019cc5d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019cc5d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1151,11 +1304,14 @@ extern "C" void bb_engine_zero_init_019cc5d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019ce390: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019ce390(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019ce390(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1173,11 +1329,14 @@ extern "C" void bb_engine_zero_init_019ce390(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019ce410: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019ce410(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019ce410(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1195,11 +1354,14 @@ extern "C" void bb_engine_zero_init_019ce410(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d0270: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d0270(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d0270(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1217,11 +1379,14 @@ extern "C" void bb_engine_zero_init_019d0270(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d02f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d02f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d02f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1239,11 +1404,14 @@ extern "C" void bb_engine_zero_init_019d02f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d1f80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d1f80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d1f80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1261,11 +1429,14 @@ extern "C" void bb_engine_zero_init_019d1f80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d2000: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d2000(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d2000(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1283,11 +1454,14 @@ extern "C" void bb_engine_zero_init_019d2000(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d4a10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d4a10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d4a10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1305,11 +1479,14 @@ extern "C" void bb_engine_zero_init_019d4a10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d4a90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d4a90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d4a90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1327,11 +1504,14 @@ extern "C" void bb_engine_zero_init_019d4a90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d8260: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d8260(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d8260(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1349,11 +1529,14 @@ extern "C" void bb_engine_zero_init_019d8260(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d82e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d82e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d82e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1371,11 +1554,14 @@ extern "C" void bb_engine_zero_init_019d82e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d99c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d99c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d99c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1393,11 +1579,14 @@ extern "C" void bb_engine_zero_init_019d99c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019d9a40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019d9a40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019d9a40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1415,11 +1604,14 @@ extern "C" void bb_engine_zero_init_019d9a40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019db180: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019db180(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019db180(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1437,11 +1629,14 @@ extern "C" void bb_engine_zero_init_019db180(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019db200: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019db200(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019db200(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1459,11 +1654,14 @@ extern "C" void bb_engine_zero_init_019db200(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e14f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e14f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e14f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1481,11 +1679,14 @@ extern "C" void bb_engine_zero_init_019e14f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e1570: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e1570(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e1570(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1503,11 +1704,14 @@ extern "C" void bb_engine_zero_init_019e1570(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e4210: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e4210(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e4210(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1525,11 +1729,14 @@ extern "C" void bb_engine_zero_init_019e4210(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e4290: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e4290(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e4290(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1547,11 +1754,14 @@ extern "C" void bb_engine_zero_init_019e4290(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e5650: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e5650(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e5650(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1569,11 +1779,14 @@ extern "C" void bb_engine_zero_init_019e5650(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e56d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e56d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e56d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1591,11 +1804,14 @@ extern "C" void bb_engine_zero_init_019e56d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e71b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e71b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e71b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1613,11 +1829,14 @@ extern "C" void bb_engine_zero_init_019e71b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e7230: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e7230(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e7230(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1635,11 +1854,14 @@ extern "C" void bb_engine_zero_init_019e7230(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e91e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e91e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e91e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1657,11 +1879,14 @@ extern "C" void bb_engine_zero_init_019e91e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019e9260: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019e9260(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019e9260(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1679,11 +1904,14 @@ extern "C" void bb_engine_zero_init_019e9260(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019ea500: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019ea500(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019ea500(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1701,11 +1929,14 @@ extern "C" void bb_engine_zero_init_019ea500(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019ea580: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019ea580(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019ea580(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1723,11 +1954,14 @@ extern "C" void bb_engine_zero_init_019ea580(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019ecbd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019ecbd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019ecbd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1745,11 +1979,14 @@ extern "C" void bb_engine_zero_init_019ecbd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019ecc50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019ecc50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019ecc50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1767,11 +2004,14 @@ extern "C" void bb_engine_zero_init_019ecc50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019eec40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019eec40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019eec40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1789,11 +2029,14 @@ extern "C" void bb_engine_zero_init_019eec40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019eecc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019eecc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019eecc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1811,11 +2054,14 @@ extern "C" void bb_engine_zero_init_019eecc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019f1090: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019f1090(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019f1090(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1833,11 +2079,14 @@ extern "C" void bb_engine_zero_init_019f1090(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019f1110: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019f1110(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019f1110(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1855,11 +2104,14 @@ extern "C" void bb_engine_zero_init_019f1110(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019f2ba0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019f2ba0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019f2ba0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1877,11 +2129,14 @@ extern "C" void bb_engine_zero_init_019f2ba0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019f2c20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019f2c20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019f2c20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1899,11 +2154,14 @@ extern "C" void bb_engine_zero_init_019f2c20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019f8940: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019f8940(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019f8940(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1921,11 +2179,14 @@ extern "C" void bb_engine_zero_init_019f8940(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019f89c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019f89c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019f89c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1943,11 +2204,14 @@ extern "C" void bb_engine_zero_init_019f89c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019fa330: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019fa330(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019fa330(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1965,11 +2229,14 @@ extern "C" void bb_engine_zero_init_019fa330(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019fa3b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019fa3b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019fa3b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -1987,11 +2254,14 @@ extern "C" void bb_engine_zero_init_019fa3b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019fbdc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019fbdc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019fbdc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2009,11 +2279,14 @@ extern "C" void bb_engine_zero_init_019fbdc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x019fbe40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_019fbe40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_019fbe40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2031,11 +2304,14 @@ extern "C" void bb_engine_zero_init_019fbe40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a00350: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a00350(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a00350(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2053,11 +2329,14 @@ extern "C" void bb_engine_zero_init_01a00350(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a003d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a003d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a003d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2075,11 +2354,14 @@ extern "C" void bb_engine_zero_init_01a003d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a02250: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a02250(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a02250(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2097,11 +2379,14 @@ extern "C" void bb_engine_zero_init_01a02250(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a022d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a022d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a022d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2119,11 +2404,14 @@ extern "C" void bb_engine_zero_init_01a022d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a05720: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a05720(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a05720(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2141,11 +2429,14 @@ extern "C" void bb_engine_zero_init_01a05720(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a057a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a057a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a057a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2163,11 +2454,14 @@ extern "C" void bb_engine_zero_init_01a057a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a08170: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a08170(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a08170(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2185,11 +2479,14 @@ extern "C" void bb_engine_zero_init_01a08170(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a081f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a081f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a081f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2207,11 +2504,14 @@ extern "C" void bb_engine_zero_init_01a081f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a0dbf0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a0dbf0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a0dbf0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2229,11 +2529,14 @@ extern "C" void bb_engine_zero_init_01a0dbf0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a0dc70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a0dc70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a0dc70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2251,11 +2554,14 @@ extern "C" void bb_engine_zero_init_01a0dc70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a0f1d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a0f1d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a0f1d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2273,11 +2579,14 @@ extern "C" void bb_engine_zero_init_01a0f1d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a0f250: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a0f250(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a0f250(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2295,11 +2604,14 @@ extern "C" void bb_engine_zero_init_01a0f250(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a10620: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a10620(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a10620(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2317,11 +2629,14 @@ extern "C" void bb_engine_zero_init_01a10620(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a106a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a106a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a106a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2339,11 +2654,14 @@ extern "C" void bb_engine_zero_init_01a106a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a121c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a121c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a121c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2361,11 +2679,14 @@ extern "C" void bb_engine_zero_init_01a121c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a12240: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a12240(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a12240(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2383,11 +2704,14 @@ extern "C" void bb_engine_zero_init_01a12240(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a14ed0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a14ed0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a14ed0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2405,11 +2729,14 @@ extern "C" void bb_engine_zero_init_01a14ed0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a14f50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a14f50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a14f50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2427,11 +2754,14 @@ extern "C" void bb_engine_zero_init_01a14f50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a1cb40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a1cb40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a1cb40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2449,11 +2779,14 @@ extern "C" void bb_engine_zero_init_01a1cb40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a1cbc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a1cbc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a1cbc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2471,11 +2804,14 @@ extern "C" void bb_engine_zero_init_01a1cbc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a1f310: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a1f310(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a1f310(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2493,11 +2829,14 @@ extern "C" void bb_engine_zero_init_01a1f310(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a1f390: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a1f390(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a1f390(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2515,11 +2854,14 @@ extern "C" void bb_engine_zero_init_01a1f390(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a209b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a209b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a209b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2537,11 +2879,14 @@ extern "C" void bb_engine_zero_init_01a209b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a20a30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a20a30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a20a30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2559,11 +2904,14 @@ extern "C" void bb_engine_zero_init_01a20a30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a22b80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a22b80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a22b80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2581,11 +2929,14 @@ extern "C" void bb_engine_zero_init_01a22b80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a22c00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a22c00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a22c00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2603,11 +2954,14 @@ extern "C" void bb_engine_zero_init_01a22c00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a251a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a251a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a251a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2625,11 +2979,14 @@ extern "C" void bb_engine_zero_init_01a251a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a25220: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a25220(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a25220(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2647,11 +3004,14 @@ extern "C" void bb_engine_zero_init_01a25220(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a26810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a26810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a26810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2669,11 +3029,14 @@ extern "C" void bb_engine_zero_init_01a26810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a26890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a26890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a26890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2691,11 +3054,14 @@ extern "C" void bb_engine_zero_init_01a26890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a2ca90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a2ca90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a2ca90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2713,11 +3079,14 @@ extern "C" void bb_engine_zero_init_01a2ca90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a2cb10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a2cb10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a2cb10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2735,11 +3104,14 @@ extern "C" void bb_engine_zero_init_01a2cb10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a2f390: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a2f390(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a2f390(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2757,11 +3129,14 @@ extern "C" void bb_engine_zero_init_01a2f390(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a2f410: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a2f410(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a2f410(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2779,11 +3154,14 @@ extern "C" void bb_engine_zero_init_01a2f410(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a30d40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a30d40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a30d40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2801,11 +3179,14 @@ extern "C" void bb_engine_zero_init_01a30d40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a30dc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a30dc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a30dc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2823,11 +3204,14 @@ extern "C" void bb_engine_zero_init_01a30dc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a34750: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a34750(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a34750(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2845,11 +3229,14 @@ extern "C" void bb_engine_zero_init_01a34750(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a347d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a347d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a347d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2867,11 +3254,14 @@ extern "C" void bb_engine_zero_init_01a347d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a36560: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a36560(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a36560(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2889,11 +3279,14 @@ extern "C" void bb_engine_zero_init_01a36560(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a365e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a365e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a365e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2911,11 +3304,14 @@ extern "C" void bb_engine_zero_init_01a365e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a37dd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a37dd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a37dd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2933,11 +3329,14 @@ extern "C" void bb_engine_zero_init_01a37dd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a37e50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a37e50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a37e50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2955,11 +3354,14 @@ extern "C" void bb_engine_zero_init_01a37e50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3a800: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3a800(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3a800(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2977,11 +3379,14 @@ extern "C" void bb_engine_zero_init_01a3a800(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3a880: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3a880(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3a880(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -2999,11 +3404,14 @@ extern "C" void bb_engine_zero_init_01a3a880(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3c580: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3c580(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3c580(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3021,11 +3429,14 @@ extern "C" void bb_engine_zero_init_01a3c580(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3c600: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3c600(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3c600(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3043,11 +3454,14 @@ extern "C" void bb_engine_zero_init_01a3c600(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3d910: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3d910(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3d910(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3065,11 +3479,14 @@ extern "C" void bb_engine_zero_init_01a3d910(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3d990: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3d990(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3d990(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3087,11 +3504,14 @@ extern "C" void bb_engine_zero_init_01a3d990(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3f2f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3f2f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3f2f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3109,11 +3529,14 @@ extern "C" void bb_engine_zero_init_01a3f2f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a3f370: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a3f370(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a3f370(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3131,11 +3554,14 @@ extern "C" void bb_engine_zero_init_01a3f370(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a40700: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a40700(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a40700(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3153,11 +3579,14 @@ extern "C" void bb_engine_zero_init_01a40700(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a40780: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a40780(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a40780(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3175,11 +3604,14 @@ extern "C" void bb_engine_zero_init_01a40780(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a43580: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a43580(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a43580(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3197,11 +3629,14 @@ extern "C" void bb_engine_zero_init_01a43580(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a43600: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a43600(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a43600(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3219,11 +3654,14 @@ extern "C" void bb_engine_zero_init_01a43600(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a47e80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a47e80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a47e80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3241,11 +3679,14 @@ extern "C" void bb_engine_zero_init_01a47e80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a47f00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a47f00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a47f00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3263,11 +3704,14 @@ extern "C" void bb_engine_zero_init_01a47f00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a49a30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a49a30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a49a30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3285,11 +3729,14 @@ extern "C" void bb_engine_zero_init_01a49a30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a49ab0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a49ab0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a49ab0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3307,11 +3754,14 @@ extern "C" void bb_engine_zero_init_01a49ab0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a4b000: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a4b000(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a4b000(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3329,11 +3779,14 @@ extern "C" void bb_engine_zero_init_01a4b000(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a4b080: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a4b080(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a4b080(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3351,11 +3804,14 @@ extern "C" void bb_engine_zero_init_01a4b080(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a4d570: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a4d570(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a4d570(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3373,11 +3829,14 @@ extern "C" void bb_engine_zero_init_01a4d570(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a4d5f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a4d5f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a4d5f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3395,11 +3854,14 @@ extern "C" void bb_engine_zero_init_01a4d5f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a4f5a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a4f5a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a4f5a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3417,11 +3879,14 @@ extern "C" void bb_engine_zero_init_01a4f5a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a4f620: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a4f620(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a4f620(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3439,11 +3904,14 @@ extern "C" void bb_engine_zero_init_01a4f620(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a512b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a512b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a512b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3461,11 +3929,14 @@ extern "C" void bb_engine_zero_init_01a512b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a51330: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a51330(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a51330(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3483,11 +3954,14 @@ extern "C" void bb_engine_zero_init_01a51330(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a52900: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a52900(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a52900(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3505,11 +3979,14 @@ extern "C" void bb_engine_zero_init_01a52900(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a52980: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a52980(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a52980(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3527,11 +4004,14 @@ extern "C" void bb_engine_zero_init_01a52980(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a54180: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a54180(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a54180(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3549,11 +4029,14 @@ extern "C" void bb_engine_zero_init_01a54180(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a54200: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a54200(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a54200(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3571,11 +4054,14 @@ extern "C" void bb_engine_zero_init_01a54200(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a56360: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a56360(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a56360(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3593,11 +4079,14 @@ extern "C" void bb_engine_zero_init_01a56360(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a563e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a563e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a563e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3615,11 +4104,14 @@ extern "C" void bb_engine_zero_init_01a563e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a57dd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a57dd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a57dd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3637,11 +4129,14 @@ extern "C" void bb_engine_zero_init_01a57dd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a57e50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a57e50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a57e50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3659,11 +4154,14 @@ extern "C" void bb_engine_zero_init_01a57e50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a5aa00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a5aa00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a5aa00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3681,11 +4179,14 @@ extern "C" void bb_engine_zero_init_01a5aa00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a5aa80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a5aa80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a5aa80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3703,11 +4204,14 @@ extern "C" void bb_engine_zero_init_01a5aa80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a5b100: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a5b100(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a5b100(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3725,11 +4229,14 @@ extern "C" void bb_engine_zero_init_01a5b100(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a5b180: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a5b180(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a5b180(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3747,11 +4254,14 @@ extern "C" void bb_engine_zero_init_01a5b180(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a5f790: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a5f790(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a5f790(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3769,11 +4279,14 @@ extern "C" void bb_engine_zero_init_01a5f790(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a5f810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a5f810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a5f810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3791,11 +4304,14 @@ extern "C" void bb_engine_zero_init_01a5f810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a611d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a611d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a611d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3813,11 +4329,14 @@ extern "C" void bb_engine_zero_init_01a611d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a61250: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a61250(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a61250(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3835,11 +4354,14 @@ extern "C" void bb_engine_zero_init_01a61250(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a62480: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a62480(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a62480(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3857,11 +4379,14 @@ extern "C" void bb_engine_zero_init_01a62480(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a62500: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a62500(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a62500(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3879,11 +4404,14 @@ extern "C" void bb_engine_zero_init_01a62500(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a638a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a638a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a638a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3901,11 +4429,14 @@ extern "C" void bb_engine_zero_init_01a638a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a63920: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a63920(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a63920(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3923,11 +4454,14 @@ extern "C" void bb_engine_zero_init_01a63920(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a659e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a659e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a659e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3945,11 +4479,14 @@ extern "C" void bb_engine_zero_init_01a659e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a65a60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a65a60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a65a60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3967,11 +4504,14 @@ extern "C" void bb_engine_zero_init_01a65a60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a67450: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a67450(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a67450(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -3989,11 +4529,14 @@ extern "C" void bb_engine_zero_init_01a67450(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a674d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a674d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a674d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4011,11 +4554,14 @@ extern "C" void bb_engine_zero_init_01a674d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a689d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a689d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a689d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4033,11 +4579,14 @@ extern "C" void bb_engine_zero_init_01a689d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a68a50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a68a50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a68a50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4055,11 +4604,14 @@ extern "C" void bb_engine_zero_init_01a68a50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a69e30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a69e30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a69e30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4077,11 +4629,14 @@ extern "C" void bb_engine_zero_init_01a69e30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a69eb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a69eb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a69eb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4099,11 +4654,14 @@ extern "C" void bb_engine_zero_init_01a69eb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6b4b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6b4b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6b4b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4121,11 +4679,14 @@ extern "C" void bb_engine_zero_init_01a6b4b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6b530: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6b530(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6b530(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4143,11 +4704,14 @@ extern "C" void bb_engine_zero_init_01a6b530(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6c890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6c890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6c890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4165,11 +4729,14 @@ extern "C" void bb_engine_zero_init_01a6c890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6c910: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6c910(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6c910(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4187,11 +4754,14 @@ extern "C" void bb_engine_zero_init_01a6c910(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6dc20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6dc20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6dc20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4209,11 +4779,14 @@ extern "C" void bb_engine_zero_init_01a6dc20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6dca0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6dca0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6dca0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4231,11 +4804,14 @@ extern "C" void bb_engine_zero_init_01a6dca0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6f060: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6f060(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6f060(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4253,11 +4829,14 @@ extern "C" void bb_engine_zero_init_01a6f060(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a6f0e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a6f0e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a6f0e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4275,11 +4854,14 @@ extern "C" void bb_engine_zero_init_01a6f0e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a71810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a71810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a71810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4297,11 +4879,14 @@ extern "C" void bb_engine_zero_init_01a71810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a71890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a71890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a71890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4319,11 +4904,14 @@ extern "C" void bb_engine_zero_init_01a71890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a72bb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a72bb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a72bb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4341,11 +4929,14 @@ extern "C" void bb_engine_zero_init_01a72bb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a72c30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a72c30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a72c30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4363,11 +4954,14 @@ extern "C" void bb_engine_zero_init_01a72c30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a741d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a741d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a741d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4385,11 +4979,14 @@ extern "C" void bb_engine_zero_init_01a741d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a74250: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a74250(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a74250(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4407,11 +5004,14 @@ extern "C" void bb_engine_zero_init_01a74250(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a754e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a754e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a754e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4429,11 +5029,14 @@ extern "C" void bb_engine_zero_init_01a754e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a75560: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a75560(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a75560(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4451,11 +5054,14 @@ extern "C" void bb_engine_zero_init_01a75560(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a77810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a77810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a77810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4473,11 +5079,14 @@ extern "C" void bb_engine_zero_init_01a77810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a77890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a77890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a77890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4495,11 +5104,14 @@ extern "C" void bb_engine_zero_init_01a77890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a79010: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a79010(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a79010(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4517,11 +5129,14 @@ extern "C" void bb_engine_zero_init_01a79010(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a79090: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a79090(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a79090(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4539,11 +5154,14 @@ extern "C" void bb_engine_zero_init_01a79090(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a7a4b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a7a4b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a7a4b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4561,11 +5179,14 @@ extern "C" void bb_engine_zero_init_01a7a4b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a7a530: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a7a530(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a7a530(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4583,11 +5204,14 @@ extern "C" void bb_engine_zero_init_01a7a530(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a7b8e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a7b8e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a7b8e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4605,11 +5229,14 @@ extern "C" void bb_engine_zero_init_01a7b8e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a7b960: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a7b960(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a7b960(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4627,11 +5254,14 @@ extern "C" void bb_engine_zero_init_01a7b960(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a7fc80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a7fc80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a7fc80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4649,11 +5279,14 @@ extern "C" void bb_engine_zero_init_01a7fc80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a7fd00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a7fd00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a7fd00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4671,11 +5304,14 @@ extern "C" void bb_engine_zero_init_01a7fd00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a82170: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a82170(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a82170(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4693,11 +5329,14 @@ extern "C" void bb_engine_zero_init_01a82170(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a821f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a821f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a821f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4715,11 +5354,14 @@ extern "C" void bb_engine_zero_init_01a821f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a83aa0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a83aa0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a83aa0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4737,11 +5379,14 @@ extern "C" void bb_engine_zero_init_01a83aa0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a83b20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a83b20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a83b20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4759,11 +5404,14 @@ extern "C" void bb_engine_zero_init_01a83b20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a850b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a850b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a850b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4781,11 +5429,14 @@ extern "C" void bb_engine_zero_init_01a850b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a85130: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a85130(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a85130(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4803,11 +5454,14 @@ extern "C" void bb_engine_zero_init_01a85130(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a87aa0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a87aa0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a87aa0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4825,11 +5479,14 @@ extern "C" void bb_engine_zero_init_01a87aa0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a87b20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a87b20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a87b20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4847,11 +5504,14 @@ extern "C" void bb_engine_zero_init_01a87b20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8afe0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8afe0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8afe0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4869,11 +5529,14 @@ extern "C" void bb_engine_zero_init_01a8afe0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8b060: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8b060(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8b060(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4891,11 +5554,14 @@ extern "C" void bb_engine_zero_init_01a8b060(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8b870: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8b870(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8b870(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4913,11 +5579,14 @@ extern "C" void bb_engine_zero_init_01a8b870(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8b8f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8b8f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8b8f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4935,11 +5604,14 @@ extern "C" void bb_engine_zero_init_01a8b8f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8cf70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8cf70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8cf70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4957,11 +5629,14 @@ extern "C" void bb_engine_zero_init_01a8cf70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8cff0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8cff0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8cff0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -4979,11 +5654,14 @@ extern "C" void bb_engine_zero_init_01a8cff0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8e630: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8e630(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8e630(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5001,11 +5679,14 @@ extern "C" void bb_engine_zero_init_01a8e630(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8e6b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8e6b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8e6b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5023,11 +5704,14 @@ extern "C" void bb_engine_zero_init_01a8e6b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8ff60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8ff60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8ff60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5045,11 +5729,14 @@ extern "C" void bb_engine_zero_init_01a8ff60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a8ffe0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a8ffe0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a8ffe0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5067,11 +5754,14 @@ extern "C" void bb_engine_zero_init_01a8ffe0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a91600: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a91600(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a91600(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5089,11 +5779,14 @@ extern "C" void bb_engine_zero_init_01a91600(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a91680: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a91680(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a91680(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5111,11 +5804,14 @@ extern "C" void bb_engine_zero_init_01a91680(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a92b40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a92b40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a92b40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5133,11 +5829,14 @@ extern "C" void bb_engine_zero_init_01a92b40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a92bc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a92bc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a92bc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5155,11 +5854,14 @@ extern "C" void bb_engine_zero_init_01a92bc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a94d40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a94d40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a94d40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5177,11 +5879,14 @@ extern "C" void bb_engine_zero_init_01a94d40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a94dc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a94dc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a94dc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5199,11 +5904,14 @@ extern "C" void bb_engine_zero_init_01a94dc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a962c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a962c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a962c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5221,11 +5929,14 @@ extern "C" void bb_engine_zero_init_01a962c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a96340: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a96340(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a96340(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5243,11 +5954,14 @@ extern "C" void bb_engine_zero_init_01a96340(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a97de0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a97de0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a97de0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5265,11 +5979,14 @@ extern "C" void bb_engine_zero_init_01a97de0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a97e60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a97e60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a97e60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5287,11 +6004,14 @@ extern "C" void bb_engine_zero_init_01a97e60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a99b40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a99b40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a99b40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5309,11 +6029,14 @@ extern "C" void bb_engine_zero_init_01a99b40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a99bc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a99bc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a99bc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5331,11 +6054,14 @@ extern "C" void bb_engine_zero_init_01a99bc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a9d840: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a9d840(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a9d840(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5353,11 +6079,14 @@ extern "C" void bb_engine_zero_init_01a9d840(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a9d8c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a9d8c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a9d8c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5375,11 +6104,14 @@ extern "C" void bb_engine_zero_init_01a9d8c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a9eda0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a9eda0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a9eda0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5397,11 +6129,14 @@ extern "C" void bb_engine_zero_init_01a9eda0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01a9ee20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01a9ee20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01a9ee20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5419,11 +6154,14 @@ extern "C" void bb_engine_zero_init_01a9ee20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa18f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa18f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa18f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5441,11 +6179,14 @@ extern "C" void bb_engine_zero_init_01aa18f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa1970: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa1970(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa1970(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5463,11 +6204,14 @@ extern "C" void bb_engine_zero_init_01aa1970(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa5c30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa5c30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa5c30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5485,11 +6229,14 @@ extern "C" void bb_engine_zero_init_01aa5c30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa5cb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa5cb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa5cb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5507,11 +6254,14 @@ extern "C" void bb_engine_zero_init_01aa5cb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa78b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa78b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa78b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5529,11 +6279,14 @@ extern "C" void bb_engine_zero_init_01aa78b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa7930: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa7930(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa7930(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5551,11 +6304,14 @@ extern "C" void bb_engine_zero_init_01aa7930(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa9ee0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa9ee0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa9ee0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5573,11 +6329,14 @@ extern "C" void bb_engine_zero_init_01aa9ee0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aa9f60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aa9f60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aa9f60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5595,11 +6354,14 @@ extern "C" void bb_engine_zero_init_01aa9f60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aab530: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aab530(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aab530(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5617,11 +6379,14 @@ extern "C" void bb_engine_zero_init_01aab530(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aab5b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aab5b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aab5b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5639,11 +6404,14 @@ extern "C" void bb_engine_zero_init_01aab5b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aadcc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aadcc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aadcc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5661,11 +6429,14 @@ extern "C" void bb_engine_zero_init_01aadcc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aadd40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aadd40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aadd40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5683,11 +6454,14 @@ extern "C" void bb_engine_zero_init_01aadd40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aaf280: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aaf280(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aaf280(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5705,11 +6479,14 @@ extern "C" void bb_engine_zero_init_01aaf280(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aaf300: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aaf300(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aaf300(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5727,11 +6504,14 @@ extern "C" void bb_engine_zero_init_01aaf300(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab0910: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab0910(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab0910(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5749,11 +6529,14 @@ extern "C" void bb_engine_zero_init_01ab0910(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab0990: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab0990(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab0990(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5771,11 +6554,14 @@ extern "C" void bb_engine_zero_init_01ab0990(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab2ce0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab2ce0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab2ce0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5793,11 +6579,14 @@ extern "C" void bb_engine_zero_init_01ab2ce0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab2d60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab2d60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab2d60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5815,11 +6604,14 @@ extern "C" void bb_engine_zero_init_01ab2d60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab4400: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab4400(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab4400(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5837,11 +6629,14 @@ extern "C" void bb_engine_zero_init_01ab4400(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab4480: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab4480(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab4480(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5859,11 +6654,14 @@ extern "C" void bb_engine_zero_init_01ab4480(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab68c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab68c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab68c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5881,11 +6679,14 @@ extern "C" void bb_engine_zero_init_01ab68c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab6940: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab6940(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab6940(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5903,11 +6704,14 @@ extern "C" void bb_engine_zero_init_01ab6940(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab7e80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab7e80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab7e80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5925,11 +6729,14 @@ extern "C" void bb_engine_zero_init_01ab7e80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ab7f00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ab7f00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ab7f00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5947,11 +6754,14 @@ extern "C" void bb_engine_zero_init_01ab7f00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01abc4c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01abc4c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01abc4c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5969,11 +6779,14 @@ extern "C" void bb_engine_zero_init_01abc4c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01abc540: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01abc540(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01abc540(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -5991,11 +6804,14 @@ extern "C" void bb_engine_zero_init_01abc540(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01abccd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01abccd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01abccd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6013,11 +6829,14 @@ extern "C" void bb_engine_zero_init_01abccd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01abcd50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01abcd50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01abcd50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6035,11 +6854,14 @@ extern "C" void bb_engine_zero_init_01abcd50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac0110: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac0110(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac0110(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6057,11 +6879,14 @@ extern "C" void bb_engine_zero_init_01ac0110(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac0190: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac0190(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac0190(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6079,11 +6904,14 @@ extern "C" void bb_engine_zero_init_01ac0190(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac2ea0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac2ea0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac2ea0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6101,11 +6929,14 @@ extern "C" void bb_engine_zero_init_01ac2ea0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac2f20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac2f20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac2f20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6123,11 +6954,14 @@ extern "C" void bb_engine_zero_init_01ac2f20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac5060: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac5060(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac5060(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6145,11 +6979,14 @@ extern "C" void bb_engine_zero_init_01ac5060(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac50e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac50e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac50e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6167,11 +7004,14 @@ extern "C" void bb_engine_zero_init_01ac50e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac7020: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac7020(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac7020(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6189,11 +7029,14 @@ extern "C" void bb_engine_zero_init_01ac7020(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac70a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac70a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac70a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6211,11 +7054,14 @@ extern "C" void bb_engine_zero_init_01ac70a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac95e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac95e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac95e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6233,11 +7079,14 @@ extern "C" void bb_engine_zero_init_01ac95e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ac9660: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ac9660(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ac9660(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6255,11 +7104,14 @@ extern "C" void bb_engine_zero_init_01ac9660(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01acbb30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01acbb30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01acbb30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6277,11 +7129,14 @@ extern "C" void bb_engine_zero_init_01acbb30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01acbbb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01acbbb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01acbbb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6299,11 +7154,14 @@ extern "C" void bb_engine_zero_init_01acbbb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01acd680: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01acd680(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01acd680(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6321,11 +7179,14 @@ extern "C" void bb_engine_zero_init_01acd680(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01acd700: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01acd700(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01acd700(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6343,11 +7204,14 @@ extern "C" void bb_engine_zero_init_01acd700(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01acef10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01acef10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01acef10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6365,11 +7229,14 @@ extern "C" void bb_engine_zero_init_01acef10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01acef90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01acef90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01acef90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6387,11 +7254,14 @@ extern "C" void bb_engine_zero_init_01acef90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad04d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad04d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad04d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6409,11 +7279,14 @@ extern "C" void bb_engine_zero_init_01ad04d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad0550: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad0550(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad0550(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6431,11 +7304,14 @@ extern "C" void bb_engine_zero_init_01ad0550(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad1ce0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad1ce0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad1ce0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6453,11 +7329,14 @@ extern "C" void bb_engine_zero_init_01ad1ce0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad1d60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad1d60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad1d60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6475,11 +7354,14 @@ extern "C" void bb_engine_zero_init_01ad1d60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad62e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad62e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad62e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6497,11 +7379,14 @@ extern "C" void bb_engine_zero_init_01ad62e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad6360: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad6360(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad6360(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6519,11 +7404,14 @@ extern "C" void bb_engine_zero_init_01ad6360(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad7ec0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad7ec0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad7ec0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6541,11 +7429,14 @@ extern "C" void bb_engine_zero_init_01ad7ec0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ad7f40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ad7f40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ad7f40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6563,11 +7454,14 @@ extern "C" void bb_engine_zero_init_01ad7f40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01adab70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01adab70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01adab70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6585,11 +7479,14 @@ extern "C" void bb_engine_zero_init_01adab70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01adabf0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01adabf0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01adabf0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6607,11 +7504,14 @@ extern "C" void bb_engine_zero_init_01adabf0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01adf600: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01adf600(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01adf600(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6629,11 +7529,14 @@ extern "C" void bb_engine_zero_init_01adf600(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01adf680: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01adf680(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01adf680(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6651,11 +7554,14 @@ extern "C" void bb_engine_zero_init_01adf680(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ae6700: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ae6700(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ae6700(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6673,11 +7579,14 @@ extern "C" void bb_engine_zero_init_01ae6700(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ae6780: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ae6780(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ae6780(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6695,11 +7604,14 @@ extern "C" void bb_engine_zero_init_01ae6780(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ae9200: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ae9200(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ae9200(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6717,11 +7629,14 @@ extern "C" void bb_engine_zero_init_01ae9200(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01ae9280: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01ae9280(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01ae9280(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6739,11 +7654,14 @@ extern "C" void bb_engine_zero_init_01ae9280(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aeaac0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aeaac0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aeaac0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6761,11 +7679,14 @@ extern "C" void bb_engine_zero_init_01aeaac0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aeab40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aeab40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aeab40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6783,11 +7704,14 @@ extern "C" void bb_engine_zero_init_01aeab40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aec410: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aec410(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aec410(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6805,11 +7729,14 @@ extern "C" void bb_engine_zero_init_01aec410(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01aec490: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01aec490(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01aec490(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6827,11 +7754,14 @@ extern "C" void bb_engine_zero_init_01aec490(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af16b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af16b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af16b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6849,11 +7779,14 @@ extern "C" void bb_engine_zero_init_01af16b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af1730: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af1730(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af1730(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6871,11 +7804,14 @@ extern "C" void bb_engine_zero_init_01af1730(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af1da0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af1da0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af1da0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6893,11 +7829,14 @@ extern "C" void bb_engine_zero_init_01af1da0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af1e20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af1e20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af1e20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6915,11 +7854,14 @@ extern "C" void bb_engine_zero_init_01af1e20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af5850: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af5850(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af5850(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6937,11 +7879,14 @@ extern "C" void bb_engine_zero_init_01af5850(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af58d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af58d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af58d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6959,11 +7904,14 @@ extern "C" void bb_engine_zero_init_01af58d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af8300: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af8300(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af8300(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -6981,11 +7929,14 @@ extern "C" void bb_engine_zero_init_01af8300(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01af8380: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01af8380(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01af8380(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7003,11 +7954,14 @@ extern "C" void bb_engine_zero_init_01af8380(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01afe030: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01afe030(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01afe030(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7025,11 +7979,14 @@ extern "C" void bb_engine_zero_init_01afe030(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01afe0b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01afe0b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01afe0b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7047,11 +8004,14 @@ extern "C" void bb_engine_zero_init_01afe0b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b00e50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b00e50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b00e50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7069,11 +8029,14 @@ extern "C" void bb_engine_zero_init_01b00e50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b00ed0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b00ed0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b00ed0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7091,11 +8054,14 @@ extern "C" void bb_engine_zero_init_01b00ed0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b056f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b056f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b056f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7113,11 +8079,14 @@ extern "C" void bb_engine_zero_init_01b056f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b05770: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b05770(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b05770(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7135,11 +8104,14 @@ extern "C" void bb_engine_zero_init_01b05770(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b08fb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b08fb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b08fb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7157,11 +8129,14 @@ extern "C" void bb_engine_zero_init_01b08fb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b09030: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b09030(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b09030(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7179,11 +8154,14 @@ extern "C" void bb_engine_zero_init_01b09030(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b0d0e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b0d0e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b0d0e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7201,11 +8179,14 @@ extern "C" void bb_engine_zero_init_01b0d0e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b0d160: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b0d160(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b0d160(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7223,11 +8204,14 @@ extern "C" void bb_engine_zero_init_01b0d160(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b0f810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b0f810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b0f810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7245,11 +8229,14 @@ extern "C" void bb_engine_zero_init_01b0f810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b0f890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b0f890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b0f890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7267,11 +8254,14 @@ extern "C" void bb_engine_zero_init_01b0f890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b13120: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b13120(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b13120(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7289,11 +8279,14 @@ extern "C" void bb_engine_zero_init_01b13120(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b131a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b131a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b131a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7311,11 +8304,14 @@ extern "C" void bb_engine_zero_init_01b131a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b14a90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b14a90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b14a90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7333,11 +8329,14 @@ extern "C" void bb_engine_zero_init_01b14a90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b14b10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b14b10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b14b10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7355,11 +8354,14 @@ extern "C" void bb_engine_zero_init_01b14b10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b19470: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b19470(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b19470(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7377,11 +8379,14 @@ extern "C" void bb_engine_zero_init_01b19470(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b194f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b194f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b194f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7399,11 +8404,14 @@ extern "C" void bb_engine_zero_init_01b194f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b1c9e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b1c9e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b1c9e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7421,11 +8429,14 @@ extern "C" void bb_engine_zero_init_01b1c9e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b1ca60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b1ca60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b1ca60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7443,11 +8454,14 @@ extern "C" void bb_engine_zero_init_01b1ca60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b1e810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b1e810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b1e810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7465,11 +8479,14 @@ extern "C" void bb_engine_zero_init_01b1e810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b1e890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b1e890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b1e890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7487,11 +8504,14 @@ extern "C" void bb_engine_zero_init_01b1e890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b24ac0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b24ac0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b24ac0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7509,11 +8529,14 @@ extern "C" void bb_engine_zero_init_01b24ac0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b24b40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b24b40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b24b40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7531,11 +8554,14 @@ extern "C" void bb_engine_zero_init_01b24b40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b295f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b295f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b295f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7553,11 +8579,14 @@ extern "C" void bb_engine_zero_init_01b295f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b29670: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b29670(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b29670(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7575,11 +8604,14 @@ extern "C" void bb_engine_zero_init_01b29670(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b2f050: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b2f050(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b2f050(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7597,11 +8629,14 @@ extern "C" void bb_engine_zero_init_01b2f050(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b2f0d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b2f0d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b2f0d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7619,11 +8654,14 @@ extern "C" void bb_engine_zero_init_01b2f0d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b30da0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b30da0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b30da0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7641,11 +8679,14 @@ extern "C" void bb_engine_zero_init_01b30da0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b30e20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b30e20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b30e20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7663,11 +8704,14 @@ extern "C" void bb_engine_zero_init_01b30e20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b32470: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b32470(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b32470(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7685,11 +8729,14 @@ extern "C" void bb_engine_zero_init_01b32470(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b324f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b324f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b324f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7707,11 +8754,14 @@ extern "C" void bb_engine_zero_init_01b324f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b3a8c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b3a8c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b3a8c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7729,11 +8779,14 @@ extern "C" void bb_engine_zero_init_01b3a8c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b3a940: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b3a940(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b3a940(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7751,11 +8804,14 @@ extern "C" void bb_engine_zero_init_01b3a940(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b40ff0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b40ff0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b40ff0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7773,11 +8829,14 @@ extern "C" void bb_engine_zero_init_01b40ff0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b41070: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b41070(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b41070(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7795,11 +8854,14 @@ extern "C" void bb_engine_zero_init_01b41070(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b45d90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b45d90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b45d90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7817,11 +8879,14 @@ extern "C" void bb_engine_zero_init_01b45d90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b45e10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b45e10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b45e10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7839,11 +8904,14 @@ extern "C" void bb_engine_zero_init_01b45e10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b47cd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b47cd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b47cd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7861,11 +8929,14 @@ extern "C" void bb_engine_zero_init_01b47cd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b47d50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b47d50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b47d50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7883,11 +8954,14 @@ extern "C" void bb_engine_zero_init_01b47d50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b49ef0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b49ef0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b49ef0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7905,11 +8979,14 @@ extern "C" void bb_engine_zero_init_01b49ef0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b49f70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b49f70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b49f70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7927,11 +9004,14 @@ extern "C" void bb_engine_zero_init_01b49f70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b4bc90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b4bc90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b4bc90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7949,11 +9029,14 @@ extern "C" void bb_engine_zero_init_01b4bc90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b4bd10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b4bd10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b4bd10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7971,11 +9054,14 @@ extern "C" void bb_engine_zero_init_01b4bd10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b4d6e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b4d6e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b4d6e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -7993,11 +9079,14 @@ extern "C" void bb_engine_zero_init_01b4d6e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b4d760: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b4d760(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b4d760(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8015,11 +9104,14 @@ extern "C" void bb_engine_zero_init_01b4d760(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b50db0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b50db0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b50db0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8037,11 +9129,14 @@ extern "C" void bb_engine_zero_init_01b50db0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b50e30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b50e30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b50e30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8059,11 +9154,14 @@ extern "C" void bb_engine_zero_init_01b50e30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b57c20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b57c20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b57c20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8081,11 +9179,14 @@ extern "C" void bb_engine_zero_init_01b57c20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b57ca0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b57ca0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b57ca0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8103,11 +9204,14 @@ extern "C" void bb_engine_zero_init_01b57ca0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b59d70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b59d70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b59d70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8125,11 +9229,14 @@ extern "C" void bb_engine_zero_init_01b59d70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b59df0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b59df0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b59df0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8147,11 +9254,14 @@ extern "C" void bb_engine_zero_init_01b59df0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b60ea0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b60ea0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b60ea0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8169,11 +9279,14 @@ extern "C" void bb_engine_zero_init_01b60ea0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b60f20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b60f20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b60f20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8191,11 +9304,14 @@ extern "C" void bb_engine_zero_init_01b60f20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b615a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b615a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b615a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8213,11 +9329,14 @@ extern "C" void bb_engine_zero_init_01b615a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b61620: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b61620(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b61620(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8235,11 +9354,14 @@ extern "C" void bb_engine_zero_init_01b61620(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b77570: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b77570(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b77570(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8257,11 +9379,14 @@ extern "C" void bb_engine_zero_init_01b77570(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b775f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b775f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b775f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8279,11 +9404,14 @@ extern "C" void bb_engine_zero_init_01b775f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b78bd0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b78bd0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b78bd0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8301,11 +9429,14 @@ extern "C" void bb_engine_zero_init_01b78bd0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b78c50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b78c50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b78c50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8323,11 +9454,14 @@ extern "C" void bb_engine_zero_init_01b78c50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b7ab30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b7ab30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b7ab30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8345,11 +9479,14 @@ extern "C" void bb_engine_zero_init_01b7ab30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b7abb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b7abb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b7abb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8367,11 +9504,14 @@ extern "C" void bb_engine_zero_init_01b7abb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b7d100: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b7d100(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b7d100(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8389,11 +9529,14 @@ extern "C" void bb_engine_zero_init_01b7d100(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b7d180: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b7d180(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b7d180(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8411,11 +9554,14 @@ extern "C" void bb_engine_zero_init_01b7d180(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b7e7f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b7e7f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b7e7f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8433,11 +9579,14 @@ extern "C" void bb_engine_zero_init_01b7e7f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x01b7e870: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_01b7e870(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_01b7e870(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8455,11 +9604,14 @@ extern "C" void bb_engine_zero_init_01b7e870(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02397380: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02397380(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02397380(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8477,11 +9629,14 @@ extern "C" void bb_engine_zero_init_02397380(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02397400: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02397400(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02397400(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8499,11 +9654,14 @@ extern "C" void bb_engine_zero_init_02397400(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02405800: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02405800(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02405800(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8521,11 +9679,14 @@ extern "C" void bb_engine_zero_init_02405800(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02405880: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02405880(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02405880(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8543,11 +9704,14 @@ extern "C" void bb_engine_zero_init_02405880(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0248e040: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0248e040(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0248e040(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8565,11 +9729,14 @@ extern "C" void bb_engine_zero_init_0248e040(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0248e0c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0248e0c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0248e0c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8587,11 +9754,14 @@ extern "C" void bb_engine_zero_init_0248e0c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0248e540: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0248e540(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0248e540(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8609,11 +9779,14 @@ extern "C" void bb_engine_zero_init_0248e540(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0248e5c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0248e5c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0248e5c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8631,11 +9804,14 @@ extern "C" void bb_engine_zero_init_0248e5c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0248ea50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0248ea50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0248ea50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8653,11 +9829,14 @@ extern "C" void bb_engine_zero_init_0248ea50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0248ead0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0248ead0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0248ead0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8675,11 +9854,14 @@ extern "C" void bb_engine_zero_init_0248ead0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02497f30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02497f30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02497f30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8697,11 +9879,14 @@ extern "C" void bb_engine_zero_init_02497f30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02497fb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02497fb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02497fb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8719,11 +9904,14 @@ extern "C" void bb_engine_zero_init_02497fb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02498440: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02498440(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02498440(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8741,11 +9929,14 @@ extern "C" void bb_engine_zero_init_02498440(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024984c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024984c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024984c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8763,11 +9954,14 @@ extern "C" void bb_engine_zero_init_024984c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249b4d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249b4d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249b4d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8785,11 +9979,14 @@ extern "C" void bb_engine_zero_init_0249b4d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249b550: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249b550(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249b550(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8807,11 +10004,14 @@ extern "C" void bb_engine_zero_init_0249b550(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249cbf0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249cbf0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249cbf0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8829,11 +10029,14 @@ extern "C" void bb_engine_zero_init_0249cbf0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249cc70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249cc70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249cc70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8851,11 +10054,14 @@ extern "C" void bb_engine_zero_init_0249cc70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249e810: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249e810(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249e810(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8873,11 +10079,14 @@ extern "C" void bb_engine_zero_init_0249e810(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249e890: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249e890(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249e890(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8895,11 +10104,14 @@ extern "C" void bb_engine_zero_init_0249e890(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249f280: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249f280(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249f280(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8917,11 +10129,14 @@ extern "C" void bb_engine_zero_init_0249f280(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0249f300: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0249f300(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0249f300(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8939,11 +10154,14 @@ extern "C" void bb_engine_zero_init_0249f300(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a20e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a20e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a20e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8961,11 +10179,14 @@ extern "C" void bb_engine_zero_init_024a20e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a2160: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a2160(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a2160(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -8983,11 +10204,14 @@ extern "C" void bb_engine_zero_init_024a2160(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a3500: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a3500(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a3500(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9005,11 +10229,14 @@ extern "C" void bb_engine_zero_init_024a3500(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a3580: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a3580(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a3580(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9027,11 +10254,14 @@ extern "C" void bb_engine_zero_init_024a3580(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a4930: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a4930(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a4930(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9049,11 +10279,14 @@ extern "C" void bb_engine_zero_init_024a4930(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a49b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a49b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a49b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9071,11 +10304,14 @@ extern "C" void bb_engine_zero_init_024a49b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a7240: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a7240(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a7240(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9093,11 +10329,14 @@ extern "C" void bb_engine_zero_init_024a7240(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a72c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a72c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a72c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9115,11 +10354,14 @@ extern "C" void bb_engine_zero_init_024a72c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a7c10: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a7c10(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a7c10(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9137,11 +10379,14 @@ extern "C" void bb_engine_zero_init_024a7c10(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x024a7c90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_024a7c90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_024a7c90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9159,11 +10404,14 @@ extern "C" void bb_engine_zero_init_024a7c90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0271e5d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0271e5d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0271e5d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9181,11 +10429,14 @@ extern "C" void bb_engine_zero_init_0271e5d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0271e650: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0271e650(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0271e650(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9203,11 +10454,14 @@ extern "C" void bb_engine_zero_init_0271e650(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02727070: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02727070(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02727070(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9225,11 +10479,14 @@ extern "C" void bb_engine_zero_init_02727070(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x027270f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_027270f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_027270f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9247,11 +10504,14 @@ extern "C" void bb_engine_zero_init_027270f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0272c800: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0272c800(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0272c800(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9269,11 +10529,14 @@ extern "C" void bb_engine_zero_init_0272c800(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0272c880: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0272c880(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0272c880(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9291,11 +10554,14 @@ extern "C" void bb_engine_zero_init_0272c880(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0275a830: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0275a830(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0275a830(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9313,11 +10579,14 @@ extern "C" void bb_engine_zero_init_0275a830(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0275a8b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0275a8b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0275a8b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9335,11 +10604,14 @@ extern "C" void bb_engine_zero_init_0275a8b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0275cf20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0275cf20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0275cf20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9357,11 +10629,14 @@ extern "C" void bb_engine_zero_init_0275cf20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0275cfa0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0275cfa0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0275cfa0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9379,11 +10654,14 @@ extern "C" void bb_engine_zero_init_0275cfa0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0276f5b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0276f5b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0276f5b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9401,11 +10679,14 @@ extern "C" void bb_engine_zero_init_0276f5b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x0276f630: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_0276f630(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_0276f630(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9423,11 +10704,14 @@ extern "C" void bb_engine_zero_init_0276f630(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a46820: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a46820(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a46820(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9445,11 +10729,14 @@ extern "C" void bb_engine_zero_init_02a46820(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a468a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a468a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a468a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9467,11 +10754,14 @@ extern "C" void bb_engine_zero_init_02a468a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a48130: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a48130(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a48130(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9489,11 +10779,14 @@ extern "C" void bb_engine_zero_init_02a48130(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a481b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a481b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a481b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9511,11 +10804,14 @@ extern "C" void bb_engine_zero_init_02a481b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a49830: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a49830(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a49830(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9533,11 +10829,14 @@ extern "C" void bb_engine_zero_init_02a49830(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a498b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a498b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a498b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9555,11 +10854,14 @@ extern "C" void bb_engine_zero_init_02a498b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a4a9f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a4a9f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a4a9f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9577,11 +10879,14 @@ extern "C" void bb_engine_zero_init_02a4a9f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a4aa70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a4aa70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a4aa70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9599,11 +10904,14 @@ extern "C" void bb_engine_zero_init_02a4aa70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a51980: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a51980(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a51980(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9621,11 +10929,14 @@ extern "C" void bb_engine_zero_init_02a51980(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a51a00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a51a00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a51a00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9643,11 +10954,14 @@ extern "C" void bb_engine_zero_init_02a51a00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a533b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a533b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a533b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9665,11 +10979,14 @@ extern "C" void bb_engine_zero_init_02a533b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a53430: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a53430(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a53430(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9687,11 +11004,14 @@ extern "C" void bb_engine_zero_init_02a53430(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a536e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a536e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a536e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9709,11 +11029,14 @@ extern "C" void bb_engine_zero_init_02a536e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a53760: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a53760(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a53760(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9731,11 +11054,14 @@ extern "C" void bb_engine_zero_init_02a53760(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a53c30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a53c30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a53c30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9753,11 +11079,14 @@ extern "C" void bb_engine_zero_init_02a53c30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02a53cb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02a53cb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02a53cb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9775,11 +11104,14 @@ extern "C" void bb_engine_zero_init_02a53cb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b28e60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b28e60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b28e60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9797,11 +11129,14 @@ extern "C" void bb_engine_zero_init_02b28e60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b28ee0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b28ee0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b28ee0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9819,11 +11154,14 @@ extern "C" void bb_engine_zero_init_02b28ee0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b4af90: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b4af90(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b4af90(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9841,11 +11179,14 @@ extern "C" void bb_engine_zero_init_02b4af90(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b4b010: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b4b010(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b4b010(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9863,11 +11204,14 @@ extern "C" void bb_engine_zero_init_02b4b010(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b4cd60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b4cd60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b4cd60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9885,11 +11229,14 @@ extern "C" void bb_engine_zero_init_02b4cd60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b4cde0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b4cde0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b4cde0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9907,11 +11254,14 @@ extern "C" void bb_engine_zero_init_02b4cde0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b4e390: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b4e390(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b4e390(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9929,11 +11279,14 @@ extern "C" void bb_engine_zero_init_02b4e390(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b4e410: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b4e410(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b4e410(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9951,11 +11304,14 @@ extern "C" void bb_engine_zero_init_02b4e410(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b50940: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b50940(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b50940(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9973,11 +11329,14 @@ extern "C" void bb_engine_zero_init_02b50940(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b509c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b509c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b509c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -9995,11 +11354,14 @@ extern "C" void bb_engine_zero_init_02b509c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b53580: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b53580(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b53580(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10017,11 +11379,14 @@ extern "C" void bb_engine_zero_init_02b53580(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02b53600: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02b53600(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02b53600(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10039,11 +11404,14 @@ extern "C" void bb_engine_zero_init_02b53600(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02baa040: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02baa040(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02baa040(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10061,11 +11429,14 @@ extern "C" void bb_engine_zero_init_02baa040(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02baa0c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02baa0c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02baa0c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10083,11 +11454,14 @@ extern "C" void bb_engine_zero_init_02baa0c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bac410: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bac410(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bac410(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10105,11 +11479,14 @@ extern "C" void bb_engine_zero_init_02bac410(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bac490: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bac490(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bac490(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10127,11 +11504,14 @@ extern "C" void bb_engine_zero_init_02bac490(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bad7f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bad7f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bad7f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10149,11 +11529,14 @@ extern "C" void bb_engine_zero_init_02bad7f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bad870: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bad870(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bad870(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10171,11 +11554,14 @@ extern "C" void bb_engine_zero_init_02bad870(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb2c00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb2c00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb2c00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10193,11 +11579,14 @@ extern "C" void bb_engine_zero_init_02bb2c00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb2c80: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb2c80(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb2c80(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10215,11 +11604,14 @@ extern "C" void bb_engine_zero_init_02bb2c80(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb3ac0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb3ac0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb3ac0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10237,11 +11629,14 @@ extern "C" void bb_engine_zero_init_02bb3ac0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb3b40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb3b40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb3b40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10259,11 +11654,14 @@ extern "C" void bb_engine_zero_init_02bb3b40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb4980: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb4980(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb4980(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10281,11 +11679,14 @@ extern "C" void bb_engine_zero_init_02bb4980(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb4a00: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb4a00(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb4a00(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10303,11 +11704,14 @@ extern "C" void bb_engine_zero_init_02bb4a00(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb5840: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb5840(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb5840(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10325,11 +11729,14 @@ extern "C" void bb_engine_zero_init_02bb5840(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb58c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb58c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb58c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10347,11 +11754,14 @@ extern "C" void bb_engine_zero_init_02bb58c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb6750: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb6750(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb6750(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10369,11 +11779,14 @@ extern "C" void bb_engine_zero_init_02bb6750(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb67d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb67d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb67d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10391,11 +11804,14 @@ extern "C" void bb_engine_zero_init_02bb67d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb8610: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb8610(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb8610(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10413,11 +11829,14 @@ extern "C" void bb_engine_zero_init_02bb8610(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb8690: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb8690(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb8690(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10435,11 +11854,14 @@ extern "C" void bb_engine_zero_init_02bb8690(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb99b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb99b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb99b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10457,11 +11879,14 @@ extern "C" void bb_engine_zero_init_02bb99b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bb9a30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bb9a30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bb9a30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10479,11 +11904,14 @@ extern "C" void bb_engine_zero_init_02bb9a30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bbdef0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bbdef0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bbdef0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10501,11 +11929,14 @@ extern "C" void bb_engine_zero_init_02bbdef0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bbdf70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bbdf70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bbdf70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10523,11 +11954,14 @@ extern "C" void bb_engine_zero_init_02bbdf70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bc0450: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bc0450(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bc0450(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10545,11 +11979,14 @@ extern "C" void bb_engine_zero_init_02bc0450(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bc04d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bc04d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bc04d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10567,11 +12004,14 @@ extern "C" void bb_engine_zero_init_02bc04d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bc4ba0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bc4ba0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bc4ba0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10589,11 +12029,14 @@ extern "C" void bb_engine_zero_init_02bc4ba0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bc4c20: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bc4c20(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bc4c20(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10611,11 +12054,14 @@ extern "C" void bb_engine_zero_init_02bc4c20(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bc5330: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bc5330(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bc5330(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10633,11 +12079,14 @@ extern "C" void bb_engine_zero_init_02bc5330(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02bc53b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02bc53b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02bc53b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10655,11 +12104,14 @@ extern "C" void bb_engine_zero_init_02bc53b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02c6bdc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02c6bdc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02c6bdc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10677,11 +12129,14 @@ extern "C" void bb_engine_zero_init_02c6bdc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02c6be40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02c6be40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02c6be40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10699,11 +12154,14 @@ extern "C" void bb_engine_zero_init_02c6be40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02c6cc30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02c6cc30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02c6cc30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10721,11 +12179,14 @@ extern "C" void bb_engine_zero_init_02c6cc30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02c6ccb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02c6ccb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02c6ccb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10743,11 +12204,14 @@ extern "C" void bb_engine_zero_init_02c6ccb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02d5e1c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02d5e1c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02d5e1c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10765,11 +12229,14 @@ extern "C" void bb_engine_zero_init_02d5e1c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02d5e240: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02d5e240(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02d5e240(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10787,11 +12254,14 @@ extern "C" void bb_engine_zero_init_02d5e240(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02da6520: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02da6520(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02da6520(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10809,11 +12279,14 @@ extern "C" void bb_engine_zero_init_02da6520(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02da65a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02da65a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02da65a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10831,11 +12304,14 @@ extern "C" void bb_engine_zero_init_02da65a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de26c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de26c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de26c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10853,11 +12329,14 @@ extern "C" void bb_engine_zero_init_02de26c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de2740: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de2740(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de2740(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10875,11 +12354,14 @@ extern "C" void bb_engine_zero_init_02de2740(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de2e50: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de2e50(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de2e50(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10897,11 +12379,14 @@ extern "C" void bb_engine_zero_init_02de2e50(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de2ed0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de2ed0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de2ed0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10919,11 +12404,14 @@ extern "C" void bb_engine_zero_init_02de2ed0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de30c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de30c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de30c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10941,11 +12429,14 @@ extern "C" void bb_engine_zero_init_02de30c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de3140: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de3140(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de3140(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10963,11 +12454,14 @@ extern "C" void bb_engine_zero_init_02de3140(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de3300: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de3300(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de3300(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -10985,11 +12479,14 @@ extern "C" void bb_engine_zero_init_02de3300(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02de3380: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02de3380(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02de3380(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11007,11 +12504,14 @@ extern "C" void bb_engine_zero_init_02de3380(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f22ef0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f22ef0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f22ef0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11029,11 +12529,14 @@ extern "C" void bb_engine_zero_init_02f22ef0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f22f70: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f22f70(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f22f70(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11051,11 +12554,14 @@ extern "C" void bb_engine_zero_init_02f22f70(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f5bd30: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f5bd30(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f5bd30(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11073,11 +12579,14 @@ extern "C" void bb_engine_zero_init_02f5bd30(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f5bdb0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f5bdb0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f5bdb0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11095,11 +12604,14 @@ extern "C" void bb_engine_zero_init_02f5bdb0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f5d530: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f5d530(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f5d530(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11117,11 +12629,14 @@ extern "C" void bb_engine_zero_init_02f5d530(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f5d5b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f5d5b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f5d5b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11139,11 +12654,14 @@ extern "C" void bb_engine_zero_init_02f5d5b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f5f860: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f5f860(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f5f860(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11161,11 +12679,14 @@ extern "C" void bb_engine_zero_init_02f5f860(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f5f8e0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f5f8e0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f5f8e0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11183,11 +12704,14 @@ extern "C" void bb_engine_zero_init_02f5f8e0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f606d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f606d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f606d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11205,11 +12729,14 @@ extern "C" void bb_engine_zero_init_02f606d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f60750: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f60750(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f60750(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11227,11 +12754,14 @@ extern "C" void bb_engine_zero_init_02f60750(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f61540: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f61540(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f61540(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11249,11 +12779,14 @@ extern "C" void bb_engine_zero_init_02f61540(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f615c0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f615c0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f615c0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11271,11 +12804,14 @@ extern "C" void bb_engine_zero_init_02f615c0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f623b0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f623b0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f623b0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11293,11 +12829,14 @@ extern "C" void bb_engine_zero_init_02f623b0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f62430: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f62430(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f62430(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11315,11 +12854,14 @@ extern "C" void bb_engine_zero_init_02f62430(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f63220: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f63220(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f63220(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11337,11 +12879,14 @@ extern "C" void bb_engine_zero_init_02f63220(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f632a0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f632a0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f632a0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11359,11 +12904,14 @@ extern "C" void bb_engine_zero_init_02f632a0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f64090: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f64090(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f64090(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11381,11 +12929,14 @@ extern "C" void bb_engine_zero_init_02f64090(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f64110: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f64110(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f64110(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11403,11 +12954,14 @@ extern "C" void bb_engine_zero_init_02f64110(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f66570: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f66570(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f66570(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11425,11 +12979,14 @@ extern "C" void bb_engine_zero_init_02f66570(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f665f0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f665f0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f665f0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11447,11 +13004,14 @@ extern "C" void bb_engine_zero_init_02f665f0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f6fd40: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f6fd40(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f6fd40(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11469,11 +13029,14 @@ extern "C" void bb_engine_zero_init_02f6fd40(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f6fdc0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f6fdc0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f6fdc0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11491,11 +13054,14 @@ extern "C" void bb_engine_zero_init_02f6fdc0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f714d0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f714d0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f714d0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11513,11 +13079,14 @@ extern "C" void bb_engine_zero_init_02f714d0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f71550: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f71550(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f71550(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11535,11 +13104,14 @@ extern "C" void bb_engine_zero_init_02f71550(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f72a60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f72a60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f72a60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11557,11 +13129,14 @@ extern "C" void bb_engine_zero_init_02f72a60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f72ae0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f72ae0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f72ae0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11579,11 +13154,14 @@ extern "C" void bb_engine_zero_init_02f72ae0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f77590: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f77590(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f77590(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11601,11 +13179,14 @@ extern "C" void bb_engine_zero_init_02f77590(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f77610: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f77610(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f77610(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11623,11 +13204,14 @@ extern "C" void bb_engine_zero_init_02f77610(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f7eee0: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f7eee0(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f7eee0(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11645,11 +13229,14 @@ extern "C" void bb_engine_zero_init_02f7eee0(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
 
 // 0x02f7ef60: zeroes at 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, stores the first argument at +0x78.
-extern "C" void bb_engine_zero_init_02f7ef60(void *rdi_argument, void *rsi_argument) {
+// Returns the constant the original leaves in eax; the cases enter with a nonzero rax, so a body
+// that fell off the end instead of returning would be visible as a register difference.
+extern "C" std::uint64_t bb_engine_zero_init_02f7ef60(void *rdi_argument, void *rsi_argument) {
     auto *object = static_cast<zero_init_object *>(rsi_argument);
     object->unknown_0x0000 = 0;
     object->unknown_0x0008 = 0;
@@ -11667,5 +13254,6 @@ extern "C" void bb_engine_zero_init_02f7ef60(void *rdi_argument, void *rsi_argum
     object->unknown_0x0068 = 0;
     object->unknown_0x0070 = 0;
     object->stored_argument = rdi_argument;
+    return kReturnsZero;
 }
 
