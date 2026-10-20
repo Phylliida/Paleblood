@@ -216,7 +216,8 @@ def status_sentence(d: dict, link: bool) -> str:
     if rt:
         runtime = '[our own runtime](runtime/)' if link else 'our own runtime'
         text += (f" On {runtime} the executable's boot gets as far as {boot_stop(rt)}, with "
-                 f"{rt['imports_covered']} of {rt['imports_total']} system imports implemented.")
+                 f"{rt['imports_covered']} of {rt['imports_total']} system imports covered "
+                 f"({rt['imports_implemented']} of them by the runtime).")
     return text
 
 
