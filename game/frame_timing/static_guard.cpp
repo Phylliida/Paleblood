@@ -66,6 +66,18 @@ void bind_static()
     *guard = 1;
 }
 
+constexpr std::uint32_t guard_of_0135bde0 = 0x05ac59b8;
+constexpr std::uint32_t pointer_of_0135bde0 = 0x05ac59b0;
+constexpr std::uint32_t storage_of_0135bde0 = 0x056b4840;
+
+constexpr std::uint32_t guard_of_0135be10 = 0x05ac59c8;
+constexpr std::uint32_t pointer_of_0135be10 = 0x05ac59c0;
+constexpr std::uint32_t storage_of_0135be10 = 0x056b4890;
+
+constexpr std::uint32_t guard_of_0135be40 = 0x05ac59d8;
+constexpr std::uint32_t pointer_of_0135be40 = 0x05ac59d0;
+constexpr std::uint32_t storage_of_0135be40 = 0x056b47f0;
+
 }  // namespace
 
 extern "C" void bb_frame_timing_static_guard_014405b0()
@@ -81,4 +93,19 @@ extern "C" void bb_frame_timing_static_guard_014405e0()
 extern "C" void bb_frame_timing_static_guard_01440610()
 {
     bind_static<guard_third, pointer_third, storage_third>();
+}
+
+extern "C" void bb_frame_timing_static_guard_0135bde0()
+{
+    bind_static<guard_of_0135bde0, pointer_of_0135bde0, storage_of_0135bde0>();
+}
+
+extern "C" void bb_frame_timing_static_guard_0135be10()
+{
+    bind_static<guard_of_0135be10, pointer_of_0135be10, storage_of_0135be10>();
+}
+
+extern "C" void bb_frame_timing_static_guard_0135be40()
+{
+    bind_static<guard_of_0135be40, pointer_of_0135be40, storage_of_0135be40>();
 }

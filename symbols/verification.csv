@@ -640,6 +640,9 @@ frame_timing_semaphore_delete,edge,,4,4,0,0,833610a51d0c3f41,unavailable,2026-10
 frame_timing_semaphore_signal,edge,,4,4,0,0,833610a51d0c3f41,unavailable,2026-10-12
 frame_timing_semaphore_wait,edge,,4,4,0,0,833610a51d0c3f41,unavailable,2026-10-12
 frame_timing_sleep,edge,,10,10,0,0,7a9ef1731029af59,bf3073ed04b3cd52,2026-10-19
+frame_timing_static_guard_0135bde0,edge,,5,5,0,0,95ebddc717e05243,672c00a7c6fb8918,2026-10-20
+frame_timing_static_guard_0135be10,edge,,5,5,0,0,95ebddc717e05243,6b0016a6b45272fd,2026-10-20
+frame_timing_static_guard_0135be40,edge,,5,5,0,0,95ebddc717e05243,1c5fcda81bb59097,2026-10-20
 frame_timing_static_guard_014405b0,edge,,5,5,0,0,651ccecc04038c16,6be24bc52b90edd2,2026-10-19
 frame_timing_static_guard_014405e0,edge,,5,5,0,0,651ccecc04038c16,507c4557c91b1daf,2026-10-19
 frame_timing_static_guard_01440610,edge,,5,5,0,0,651ccecc04038c16,3609e91d86d6c4fe,2026-10-19
