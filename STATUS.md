@@ -75,4 +75,12 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
 
 `tools/smoke.sh` (record, verify and mutation-test the known-good clock function) passes.
 
+- None of the 622 edge-verified functions has a recorded case, so `tools/promote.py` cannot move
+  one of them to verified: it needs `$BB_CAPTURES/<function>/*.json` from a real run, and nothing
+  in the tree writes those (`../captures` does not exist; the per-function recorders were
+  removed). The generic input capture in NEXT.md's runtime track is the unblocker, and it cannot
+  record until the boot gets past `scePthreadAttrGetaffinity`. The other gate, an approved row in
+  `symbols/reviews.csv`, is not the binding one. Until then the edge-verified count only grows;
+  README carries the live figure.
+
 Queue: [NEXT.md](NEXT.md).
