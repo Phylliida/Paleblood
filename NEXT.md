@@ -83,16 +83,16 @@ what the boot stops at, clean room (CONTRIBUTING.md), then re-runs `tools/boot.p
    `import_write` or `stub_write`. Stubs are installed by writing a jump at the guest address on
    both sides (`:313-327`, up to `STUB_SLOTS` 64), so a case can script any address, including the
    eboot's own thunk at `0x02fbfe68`, which both the original's call and the replacement's
-   `RT_ORIGINAL(... kernel_usleep ...)` reach. What is missing is narrower: the write target is
-   always `args[arg] + offset`, so a stub that takes no pointer argument cannot name the address it
-   should change. `sceKernelUsleep` is exactly that case -- its argument is a microsecond count,
-   and it is not among the eboot's 686 imports either, so the `imports` path cannot reach it. The
-   fix is a `target` form (`{"target": "buf:state+0x10", "bytes": "..."}`) resolved through
-   `self.value()`, about four lines per path; it is the same limitation items below already record
-   against two verified functions ("the stub cannot set a global"). Cost of touching
-   `tools/harness.py`: every catalog run's `harness_sha256` goes stale -- 528 addresses, ~3 min to
-   refresh at 24 threads, then regenerate the packet. The dead `../data/cases/wait/*.json` were
-   written for this and never executed: they name a pointer argument (`arg: 1, offset: 16`) that
+   `RT_ORIGINAL(... kernel_usleep ...)` reach. That gap is closed (`3654028`): a write may carry
+   a `target` (`{"target": "buf:state+0x10", "bytes": "..."}`) resolved through `self.value()`.
+   Until then the write target was always `args[arg] + offset`, so a stub taking no pointer
+   argument could not name the address it should change. `sceKernelUsleep` is exactly that case --
+   its argument is a microsecond count, and it is not among the eboot's 686 imports either, so the
+   `imports` path cannot reach it -- and it is scriptable now. A register is refused as a target on
+   purpose: which register holds a pointer is the compiler's choice. The cost named here was paid
+   in that commit (all 528 catalog runs refreshed, packet regenerated, `harness_sha256` 0 of 528
+   stale). The dead `../data/cases/wait/*.json` were written for this and never executed:
+   they name a pointer argument (`arg: 1, offset: 16`) that
    `sceKernelUsleep` does not have, which is why the format looked broken -- a spec by intent,
    never run, so never forced to be right. `kernel_wait_for_state_024bdd40` (`0x024bdd40`,
    replacement written and faithful) still shows `original` in `symbols/functions.csv` and no ledger
@@ -131,7 +131,7 @@ from the smallest up. New functions go to `main` only verified and readable.
 
 - `0x0138a370` frame_timing_task_dispatch_0138a370: verified (the task dispatcher; 51 recorded frames with 76 registered tasks each). With it the task manager's frame is done: `0x024512a0`, `0x01388c60`, `0x01388c70`, `0x0143e490`, `0x014400a0`, `0x0143f9f0`.
 - `0x0143e490` frame_timing_task_flush_queue_0143e490 and `0x014400a0` frame_timing_task_workers_step_014400a0: verified (200 and 53 recorded calls; the list re-read after each task cannot be made observable with stubs).
-- `0x024512a0` frame_timing_task_frame_024512a0 and `0x01388c70` frame_timing_task_run_01388c70: verified (51 recorded calls each; the singleton re-read after the fatal error cannot be told apart in the harness, whose stubs cannot set a global).
+- `0x024512a0` frame_timing_task_frame_024512a0 and `0x01388c70` frame_timing_task_run_01388c70: verified (51 recorded calls each; the singleton re-read after the fatal error is not scripted in the cases as recorded -- a `target` can now set that global (`3654028`), but adding it changes the case files, which moves `cases_sha256` and needs a new review).
 - `0x01388c60` frame_timing_task_run_all_01388c60 and `0x0143f9f0` frame_timing_task_set_frame_value_0143f9f0: verified (task manager's frame; 51 recorded calls each).
 - `0x0111a7f0` frame_timing_get_monotonic_ms: verified (1a7c39e).
 - `0x02434770` frame_timing_pace_frame: faithful replacement verified; `BB_TARGET_FPS` and `BB_LIMITER_WAIT` options.
