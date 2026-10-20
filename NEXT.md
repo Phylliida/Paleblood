@@ -7,6 +7,30 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 
 Last session: runtime
 
+## Evidence that cannot be re-run (measured 2026-10-21)
+
+142 of 727 ledger rows carry `cases_sha256 = unavailable` (82 edge, 7 option-recorded, 53
+recorded): the row asserts a comparison whose inputs are not in the tree. They cannot be
+re-recorded and cannot be re-checked, so their source pins are asymmetric in a way that matters:
+a source edit stales them permanently. Three of them are stale today --
+`frame_timing_mutex_lock`, `frame_timing_mutex_unlock`, `frame_timing_thread_self`, all recorded
+2026-10-12 against `game/frame_timing/thread.cpp` -- because that file changed since (storage-base
+correction), and there are no case directories for `0x0111acd0`, `0x0111acf0`, `0x0111a8a0` under
+`../data/cases/`. Repairing them means authoring cases for the current implementation, not running
+anything. Do not "fix" them by re-recording: `verify.py` would refuse with no cases, and a
+hand-written ledger row would assert a comparison nobody made.
+
+`verification.source_hash` hashes the defining file **plus every header it includes transitively**
+from `game/` and `runtime/include/`, so every member of a family that shares one file carries the
+identical pin (measured: all 1,117 static-guard members hash `game/frame_timing/static_guard.cpp` +
+`runtime/include/runtime/guest.h`). The pin is therefore safe-but-over-broad: appending 3 wrappers
+staled exactly 3 pins, each repaired by one `verify.py run --record edge` (~1 s of machine time, no
+review event, since none of them is approved). At 1,117 members one edit to that file costs 1,117
+re-records, about six minutes of machine time -- affordable, and the reason the shared file is the
+right call for now. If the pin ever needs to be per-member identity, the honest substitute for
+generated code is generator version + template + member parameters, with the file hash kept as a
+check; that is a ledger scheme change and must be done as one deliberate migration, not piecemeal.
+
 ## The provenance decision (answered 2026-10-20, not yet implemented)
 
 Asked and answered: `verified` keeps its meaning (recorded from the running game) and a third rung
