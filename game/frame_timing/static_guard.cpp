@@ -10,13 +10,13 @@
 // references a different guard, a different pointer and a different storage object. The addresses
 // are therefore the entire content of each function:
 //
-//   0x014405b0  guard 0x05ac59b8  pointer 0x05ac59b0  storage 0x056b4850
-//   0x014405e0  guard 0x05ac59c8  pointer 0x05ac59c0  storage 0x056b4890
-//   0x01440610  guard 0x05ac59d8  pointer 0x05ac59d0  storage 0x056b47f0
+//   0x014405b0  guard 0x05ac59b8  pointer 0x05ac59b0  storage base 0x056b4840
+//   0x014405e0  guard 0x05ac59c8  pointer 0x05ac59c0  storage base 0x056b4890
+//   0x01440610  guard 0x05ac59d8  pointer 0x05ac59d0  storage base 0x056b47f0
 //
-// The storage is `base + 0x10`, not `base`: the original loads the base address, adds 0x10, and
-// stores that. Reading the LEA as the value stored is the easy mistake here, and it is invisible
-// unless a case checks the pointer's bytes rather than only that it changed.
+// The storage *base* is what the LEA names; the value stored is `base + 0x10`, because the original
+// adds 0x10 before storing. Reading the LEA as the value stored is the easy mistake here, and it is
+// invisible unless a case checks the pointer's bytes rather than only that it changed.
 //
 // The guard is *read* one byte at a time (CMP BYTE PTR [rax], 0x0) but *written* eight bytes at a
 // time, and that asymmetry is load-bearing. The case that catches it presets the guard's upper
