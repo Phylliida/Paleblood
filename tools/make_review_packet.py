@@ -193,6 +193,11 @@ def build(args):
         out.append('- Internal-path diagnostics: first divergence classified `%s` on %d comparisons.'
                    % ('`/`'.join(sorted(classes)), sum(classes.values())))
         out.append('  %s' % args.divergence)
+        out.append('  The rule this packet applies: **one divergence class per named mechanism in the')
+        out.append('  source, or the class is a defect.** A class whose explanation is a line of code')
+        out.append('  (here the compiler replacing eighteen eight-byte stores with seven sixteen-byte')
+        out.append('  ones) is understood; a class with no such line is unexplained, and unexplained is')
+        out.append('  not "equivalent but noisy". Fewer classes is not better than more.')
     pinned = sum(1 for r in rows if len(r['cases_sha256']) == 16)
     out.append('- Case identity: %d of %d members have an `edge` ledger row pinning the case files'
                % (pinned, len(rows)))
@@ -225,7 +230,25 @@ def build(args):
     out.append('- Not capture-grade unless the ledger says otherwise: check `cases_sha256` above against')
     out.append('  the fixture directory; synthesized fixtures are `synthetic_or_edge`.')
     out.append('- Behavioural, not semantic: it says what is written where, not what the bytes mean.')
-    out.append('- Nothing about concurrency or reentrancy unless a case runs two instances.\n')
+    out.append('- Nothing about concurrency or reentrancy unless a case runs two instances.')
+    out.append('- **Determinism, not generality.** A promotion needs two input sets, and `promote.py`')
+    out.append('  refuses one set copied into both places. What that buys is narrow and worth saying')
+    out.append('  exactly: a second set made by renaming or replaying the first would show agreement')
+    out.append('  twice for the same inputs, which is evidence about determinism and none at all about')
+    out.append('  inputs nobody tried.')
+    out.append('- **Known-different, not known-independent.** The edge set of a promoted function is')
+    out.append('  compared by content against the recorded set, so it is not a copy; content hashing')
+    out.append('  cannot show it was derived independently, and refusing derivative cases would reject')
+    out.append('  the ordinary way a boundary case is authored (perturb a recorded input). So: known')
+    out.append('  different, provenance reported per set, independence not established.')
+    out.append('- **Not every ledger row is a comparison.** A case that declares `expected_fault` and')
+    out.append('  faults identically on both sides compares nothing -- the run that would have compared')
+    out.append('  never returned -- and is recorded as `compared: false` in `fault_agreement` rather')
+    out.append('  than counted as agreement. It is a coverage row: the behaviour is pinned, the')
+    out.append('  implementations were not compared on it.')
+    for caveat in (args.caveat or []):
+        out.append('- %s' % caveat)
+    out.append('')
 
     out.append('## The attestation\n')
     out.append('```')
@@ -296,6 +319,9 @@ def main(argv):
     ap.add_argument('--per-page', type=int, default=20)
     ap.add_argument('--reading', default=DEFAULT_READING, help='the sentence that reads the disassembly')
     ap.add_argument('--divergence', default=DEFAULT_DIVERGENCE)
+    ap.add_argument('--caveat', action='append', default=None,
+                    help='extra bullet for the "not claimed" list; corpus facts live at the call site, '
+                         'not in this tool, because tools/ is inside check_agnostic.py\'s scope')
     ap.add_argument('--weakness', action='append', default=None,
                     help='a weakness to state before the signature; repeatable')
     args = ap.parse_args(argv)

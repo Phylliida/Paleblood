@@ -124,6 +124,26 @@ def cases_hash(captures: str) -> str:
     return h.hexdigest()[:SOURCE_HASH_LENGTH]
 
 
+def evidence_hash(root: str, name: str) -> str:
+    """What the ledger says the evidence for NAME is: each case set's name and its case pin.
+
+    This is the half of a review's subject that is not the code. It changes when a case file
+    changes (cases_sha256), when a set appears or disappears (cases), and not when a row is
+    re-recorded against the same case files -- re-running unchanged inputs is the same evidence,
+    while a different input set is a different claim and needs a new review. `unavailable` is
+    hashed as the literal claim it is, so approving a function whose captures are not in the
+    checkout pins that absence rather than pretending to a hash it never had.
+    """
+    rows = [r for r in read_csv(os.path.join(root, 'symbols', 'verification.csv'), VERIFICATION_HEADER)
+            if r['function'] == name]
+    if not rows:
+        return ''
+    h = hashlib.sha256()
+    for r in rows:
+        h.update(f"{r['cases']}|{r['option']}|{r['cases_sha256']}".encode() + b'\0')
+    return h.hexdigest()[:SOURCE_HASH_LENGTH]
+
+
 def read_csv(path: str, header: list[str]) -> list[dict]:
     if not os.path.isfile(path):
         return []

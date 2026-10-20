@@ -41,8 +41,14 @@ class Fixture(unittest.TestCase):
                    ['0x00402000', '50', 'camera_follow', 'camera', 'original', '']])
         write_csv(f'{self.d}/game/hooks.csv', ['address', 'replacement', 'system'],
                   [['0x00401000', 'bb_frame_timing_update', 'frame_timing']])
-        write_csv(f'{self.d}/symbols/reviews.csv', ['address', 'name', 'date', 'reviewer', 'verdict', 'notes'],
-                  [['0x00401000', 'frame_timing_update', '2026-01-01', 'independent session', 'approved', '']])
+        # 294c0ca0b6c6086e is evidence_hash over the two ledger rows below (both pinning
+        # aa01000000000000); source_hash is 'unavailable' because no file here defines the
+        # replacement. Written as literals rather than computed, so a change to either hashing
+        # rule shows up in the tests that read this fixture instead of moving with them.
+        write_csv(f'{self.d}/symbols/reviews.csv',
+                  ['address', 'name', 'date', 'reviewer', 'verdict', 'source_hash', 'cases_sha256', 'notes'],
+                  [['0x00401000', 'frame_timing_update', '2026-01-01', 'independent session', 'approved',
+                    'unavailable', '294c0ca0b6c6086e', '']])
         # a clean, current verification record (no source file here, so the source hash is empty)
         write_csv(f'{self.d}/symbols/verification.csv',
                   ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
@@ -700,8 +706,11 @@ class Readable(unittest.TestCase):
             os.makedirs(os.path.join(d, 'symbols'))
             funcs = [{'address': '0x00400000', 'name': 'a_f', 'status': 'verified', '_line': 2}]
             self.assertTrue(v.check_reviews(d, funcs))
+            source = v.verification.source_hash(d, 'a_f')
+            self.assertTrue(source)
             with open(os.path.join(d, 'symbols', 'reviews.csv'), 'w') as f:
-                f.write('address,name,date,reviewer,verdict,notes\n0x00400000,a_f,2026-10-07,independent session,approved,\n')
+                f.write('address,name,date,reviewer,verdict,source_hash,cases_sha256,notes\n'
+                        f'0x00400000,a_f,2026-10-07,independent session,approved,{source},unavailable,\n')
             self.assertEqual(v.check_reviews(d, funcs), [])
             with open(os.path.join(d, 'tools', 'readable_allowlist.txt'), 'w') as f:
                 f.write('game/a/f.cpp\n')
@@ -709,6 +718,102 @@ class Readable(unittest.TestCase):
             self.assertEqual(v.check_reviews(d, funcs), [])         # grandfathered
         finally:
             shutil.rmtree(d)
+
+
+class ReviewPin(unittest.TestCase):
+    """A review names the replacement and the evidence it approved.
+
+    An approval without pins survives edits to both silently: the row still reads `approved` while
+    describing code nobody looked at. `symbols/reviews.csv` is checked by tools/promote.py before it
+    runs anything, so an unpinned approval would also have promoted a changed function on the
+    strength of an older look.
+    """
+
+    def root(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d)
+        os.makedirs(os.path.join(d, 'game', 'engine'))
+        os.makedirs(os.path.join(d, 'symbols'))
+        with open(os.path.join(d, 'game', 'engine', 'sample.cpp'), 'w') as f:
+            f.write('extern "C" void bb_sample(\n    void *base)\n{\n    (void)base;\n}\n')
+        with open(os.path.join(d, 'symbols', 'verification.csv'), 'w') as f:
+            f.write('function,cases,option,total,passed,failed,quarantined,source,cases_sha256,date\n')
+            f.write('sample,edge,,4,4,0,0,abcdef0123456789,1111222233334444,2026-10-19\n')
+        return d
+
+    def review(self, d, source, evidence):
+        with open(os.path.join(d, 'symbols', 'reviews.csv'), 'w', newline='') as f:
+            f.write('address,name,date,reviewer,verdict,source_hash,cases_sha256,notes\n')
+            f.write(f'0x00400020,sample,2026-10-19,independent session,approved,{source},{evidence},\n')
+
+    def funcs(self):
+        return [{'address': '0x00400020', 'name': 'sample', 'status': 'verified', '_line': 2}]
+
+    def test_a_pinned_approval_passes(self):
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import validate_functions as v, verification
+        d = self.root()
+        self.review(d, verification.source_hash(d, 'sample'), verification.evidence_hash(d, 'sample'))
+        self.assertEqual(v.check_reviews(d, self.funcs()), [])
+
+    def test_an_edited_source_makes_the_approval_stale(self):
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import validate_functions as v, verification
+        d = self.root()
+        self.review(d, verification.source_hash(d, 'sample'), verification.evidence_hash(d, 'sample'))
+        self.assertEqual(v.check_reviews(d, self.funcs()), [])
+        with open(os.path.join(d, 'game', 'engine', 'sample.cpp'), 'a') as f:
+            f.write('// a later readability change\n')
+        errs = v.check_reviews(d, self.funcs())
+        self.assertTrue(any('replacement source changed since this approval' in e for e in errs), errs)
+
+    def test_changed_evidence_makes_the_approval_stale(self):
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import validate_functions as v, verification
+        d = self.root()
+        self.review(d, verification.source_hash(d, 'sample'), verification.evidence_hash(d, 'sample'))
+        self.assertEqual(v.check_reviews(d, self.funcs()), [])
+        ledger = os.path.join(d, 'symbols', 'verification.csv')
+        with open(ledger, 'w') as f:
+            f.write('function,cases,option,total,passed,failed,quarantined,source,cases_sha256,date\n')
+            f.write('sample,edge,,4,4,0,0,abcdef0123456789,9999888877776666,2026-10-20\n')
+        errs = v.check_reviews(d, self.funcs())
+        self.assertTrue(any('evidence set changed since this approval' in e for e in errs), errs)
+
+    def test_an_approval_that_pins_nothing_is_refused(self):
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import validate_functions as v
+        d = self.root()
+        self.review(d, '', '')
+        errs = v.check_reviews(d, self.funcs())
+        self.assertTrue(any('without a source_hash' in e for e in errs), errs)
+        self.assertTrue(any('without a cases_sha256' in e for e in errs), errs)
+
+    def test_unavailable_is_the_word_for_evidence_that_is_not_here(self):
+        """The same marker the ledger uses, in the same spirit: a person looked and said so."""
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import validate_functions as v, verification
+        d = self.root()
+        self.review(d, verification.source_hash(d, 'sample'), 'unavailable')
+        self.assertEqual(v.check_reviews(d, self.funcs()), [])
+
+    def test_the_printed_row_is_one_the_checker_accepts(self):
+        """A pin a person types is a pin a person can mistype."""
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import validate_functions as v
+        d = self.root()
+        with open(os.path.join(d, 'symbols', 'functions.csv'), 'w', newline='') as f:
+            f.write('address,size,name,system,status,notes\n')
+            f.write('0x00400020,126,sample,engine,verified,\n')
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            self.assertEqual(v.review_row(d, 'sample'), 0)
+        row = next(ln for ln in printed.getvalue().splitlines() if ln.startswith('row'))[len('row'):].strip()
+        with open(os.path.join(d, 'symbols', 'reviews.csv'), 'w', newline='') as f:
+            f.write('address,name,date,reviewer,verdict,source_hash,cases_sha256,notes\n')
+            f.write(row.replace('<date>', '2026-10-19').replace('<reviewer>', 'independent session')
+                       .replace('<notes>', '') + '\n')
+        self.assertEqual(v.check_reviews(d, self.funcs()), [])
 
 
 class FloatFlags(unittest.TestCase):
@@ -978,7 +1083,31 @@ class Promotion(unittest.TestCase):
                 json.dump(dict(case, args={'rdi': '0x2'}), f)
             self.assertIsNone(promote.duplicate_sets(promote.case_contents(recorded),
                                                     promote.case_contents(edge)))
-            self.assertIsNone(promote.duplicate_sets([], []))
+
+    def test_an_edge_set_that_adds_no_input_is_not_a_second_provenance(self):
+        """Equality is the easy case; a subset is the same defect one member at a time.
+
+        An edge set whose every case is also recorded exercised nothing the recording had not, and
+        a recorded set contained in the edge set leaves one provenance plus extras. Both passed the
+        equality check. An empty set passes it too, by making anything else look different."""
+        sys.path.insert(0, TOOLS)
+        import promote
+        with tempfile.TemporaryDirectory(prefix='capture-library-') as captures:
+            recorded = os.path.join(captures, 'sample_function')
+            edge = os.path.join(recorded, 'edge')
+            os.makedirs(edge)
+            for directory, names in ((recorded, ('a', 'b', 'c')), (edge, ('x', 'y'))):
+                for name in names:
+                    with open(os.path.join(directory, f'{name}.json'), 'w') as f:
+                        json.dump({'case': name}, f)
+            whole = promote.case_contents(recorded)
+            self.assertEqual(len(whole), 3)
+            self.assertIn('exercises no input', promote.duplicate_sets(whole, whole[1:]))
+            self.assertIn('one input set with extra edge members',
+                          promote.duplicate_sets(whole[1:], whole))
+            self.assertIsNone(promote.duplicate_sets(whole, promote.case_contents(edge)))
+            self.assertIn('empty', promote.duplicate_sets([], promote.case_contents(edge)))
+            self.assertIn('empty', promote.duplicate_sets(whole, []))
 
     def test_promotion_refuses_a_copied_case_set_before_running_anything(self):
         """The refusal is a gate, not a note printed beside a successful run."""

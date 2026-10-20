@@ -29,7 +29,27 @@ Needs the maintainer (cannot be done from the sandbox):
   `../data/review/engine_zero_init_review.md`, written by `tools/make_review_packet.py`: the
   disassembly, the computed byte-identity of all 528 members, the traced differential verdicts, the
   case pin, the two weaknesses, and the freshness of every run against the tools in the tree
-  (528 of 528 current).
+  (528 of 528 current). An approval now has to name what it approved: the row carries
+  `source_hash` and `cases_sha256`, and `tools/validate_functions.py --review-row NAME` prints one
+  ready to paste with both computed. Editing the replacement or the cases afterwards makes the
+  approval stale rather than grandfathered, so a review of code that then changes is visible
+  instead of absorbed. Regenerate the packet under the venv (`capstone` is imported) with
+  `../.venvs/paleblood/bin/python3 -P tools/make_review_packet.py --out ../data/review/engine_zero_init_review.md --caveat '<corpus fact>'`: anything naming a game function or case is
+  passed as `--caveat`, because `tools/` is inside `check_agnostic.py`'s scope and a family name
+  written into the tool turns that gate red.
+- Twelve cases among the already-verified families cannot fail against a dropped body, and the
+  reason is in their inputs rather than in the comparison. Eight are `slot_copy` (`overlap_dest_
+  below_source` in `0085c8e0`, `028cd370`, `02c1b760`, `02c1cd10`, `02f01ed0`; `overlap_dest_
+  above_source` in `0085c8b0`, `02113c30`, `028cd340`): each copy is an identity map, `dest -
+  source` equalling the intra-copy stride, so every store lands on the address it just read and a
+  snapshot diff sees nothing. Four are `crc32` (`range_empty_from_zero`, `range_empty_from_
+  garbage`, `range_all_zero_byte`, `byte_zero_byte_zero`): the first two contract to write nothing,
+  so a body that writes nothing satisfies them, and the second two start from state 0 with zero
+  data, which is a fixed point of the table at `0x04cdcf50` since its first entry is `0x00000000`
+  -- the correct result equals the input and a same-value store is invisible to a before/after
+  snapshot. The fix is poisoned presets (nonzero seed, nonzero payload, destination pre-filled
+  with a value no copy would produce), which needs no expectation rewritten because a case is
+  input only. The same machinery is what a real edge case set needs, so it is one change.
 
 ## Runtime track
 

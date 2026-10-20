@@ -101,6 +101,19 @@ patch edit is broken in v1.09, [QUIRKS.md](QUIRKS.md)). The task manager's frame
   is printed with the verdict (`[recorded gameplay 0/200, edge synthetic 24]`), read from the
   `capture` block the recorder writes; it is reported rather than required, because no case file in
   this checkout carries `capture` and requiring it would refuse every promotion in the tree.
+  Equality was not the only way one set could add nothing, so a subset in either direction is
+  refused too, as is an empty set: an edge set every case of which is recorded exercised no input
+  the recording had not, and an empty recorded set makes any edge set look different.
+- A review row now names what it approved. `symbols/reviews.csv` gained `source_hash` and
+  `cases_sha256`, computed by `verification.source_hash` and a new `verification.evidence_hash`
+  (the case-set names and their pins, in ledger order -- re-recording unchanged cases keeps it and
+  a changed input set does not). Without them an approval outlived edits to the code and to the
+  evidence silently, which is how a `verified` function comes to mean "someone checked something
+  once". `tools/validate_functions.py --review-row NAME` prints a pasteable row with both pins
+  computed, because a pin a person types is a pin a person can mistype. The 30 existing rows were
+  backfilled after checking, not assuming: no commit since 2026-10-07 touched any of their
+  defining files, so the approved source is the current source. `unavailable` is accepted in
+  either pin, the way the ledger accepts it -- an absence someone stated, not an empty field.
 
 - None of the 622 edge-verified functions has a recorded case, so `tools/promote.py` cannot move
   one of them to verified: it needs `$BB_CAPTURES/<function>/*.json` from a real run, and nothing

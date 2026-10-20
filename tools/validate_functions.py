@@ -63,10 +63,44 @@ def check_sorted_unique(rows: list[dict], rel: str, errs: list[str]) -> None:
         prev = r['address']
 
 
+def review_row(root: str, name: str) -> int:
+    """Print the row a reviewer can paste into symbols/reviews.csv, with both pins computed here.
+
+    A pin a person types is a pin a person can mistype, and the failure would be a review that
+    silently approves nothing. The row leaves the reviewer's own fields as placeholders: they are
+    the parts only the reviewer can fill."""
+    errs: list[str] = []
+    funcs = load(os.path.join(root, 'symbols', 'functions.csv'), FUNC_HEADER, errs)
+    row = next((f for f in funcs if f['name'] == name), None)
+    if row is None:
+        print(f'review-row: {name}: not in symbols/functions.csv', file=sys.stderr)
+        return 1
+    source = verification.source_hash(root, name)
+    evidence = verification.evidence_hash(root, name)
+    if not source:
+        print(f'review-row: no file under game/ defines bb_{name}, so there is no source to pin',
+              file=sys.stderr)
+    if not evidence:
+        print(f'review-row: no symbols/verification.csv row for {name}, so there is no evidence to pin',
+              file=sys.stderr)
+    print(f"{'address':<12} {row['address']}")
+    print(f"{'name':<12} {name}")
+    print(f"{'source_hash':<12} {source or verification.CASES_UNAVAILABLE}")
+    print(f"{'cases_sha256':<12} {evidence or verification.CASES_UNAVAILABLE}")
+    print(f"{'row':<12} {row['address']},{name},<date>,<reviewer>,approved,"
+          f"{source or verification.CASES_UNAVAILABLE},{evidence or verification.CASES_UNAVAILABLE},<notes>")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument('--root', default=DEFAULT_ROOT)
-    root = ap.parse_args().root
+    ap.add_argument('--review-row', metavar='NAME',
+                    help='print the symbols/reviews.csv row for NAME, with both pins computed')
+    a = ap.parse_args()
+    root = a.root
+    if a.review_row:
+        return review_row(root, a.review_row)
     errs: list[str] = []
 
     export = load(os.path.join(root, 'symbols', 'ghidra_functions.csv'), EXPORT_HEADER, errs)
@@ -147,7 +181,9 @@ def main() -> int:
     return 1 if errs else 0
 
 
-REVIEW_HEADER = ['address', 'name', 'date', 'reviewer', 'verdict', 'notes']
+REVIEW_HEADER = ['address', 'name', 'date', 'reviewer', 'verdict', 'source_hash', 'cases_sha256',
+                 'notes']
+REVIEW_PINS = ('source_hash', 'cases_sha256')
 
 
 def defining_files(root: str, name: str) -> list[str]:
@@ -162,6 +198,33 @@ def defining_files(root: str, name: str) -> list[str]:
                     if pattern.search(f.read()):
                         out.append(os.path.relpath(path, root).replace(os.sep, '/'))
     return out
+
+
+def review_pin_errors(root: str, r: dict, rv: dict) -> list[str]:
+    """A review approves a claim about a particular replacement and a particular evidence set, so
+    the row names both. Without the pins an approval survives edits to either one silently, which
+    is how a `verified` function comes to mean "someone checked something once".
+
+    `unavailable` is accepted the way the ledger accepts it: a person who looked and could not pin
+    the subject says so in a word, and the absence is then visible instead of implied. An empty
+    field is not that -- it is an approval that never said what it approved."""
+    errs = []
+    where = f"symbols/reviews.csv:{rv['_line']}"
+    for column, current, subject in (
+            ('source_hash', verification.source_hash(root, r['name']), 'replacement source'),
+            ('cases_sha256', verification.evidence_hash(root, r['name']), 'evidence set')):
+        if not current:
+            continue            # nothing here to compare against: no defining file, or no rows
+        got = rv[column].strip()
+        if got == verification.CASES_UNAVAILABLE:
+            continue
+        if not got:
+            errs.append(f"{where}: {r['name']} is approved without a {column}, so the approval does "
+                        f"not say which {subject} it approved")
+        elif got != current:
+            errs.append(f"{where}: the {subject} changed since this approval ({column} {got}, now "
+                        f"{current}); {r['name']} needs a new review, not the old approval")
+    return errs
 
 
 def check_reviews(root: str, funcs: list[dict]) -> list[str]:
@@ -185,7 +248,7 @@ def check_reviews(root: str, funcs: list[dict]) -> list[str]:
                 if len(row) != len(REVIEW_HEADER):
                     errs.append(f'symbols/reviews.csv:{n}: expected {len(REVIEW_HEADER)} fields')
                     continue
-                r = dict(zip(REVIEW_HEADER, row))
+                r = dict(zip(REVIEW_HEADER, row), _line=n)
                 if r['verdict'] not in ('approved', 'changes requested'):
                     errs.append(f"symbols/reviews.csv:{n}: verdict must be 'approved' or 'changes requested'")
                 if not r['reviewer'].strip():
@@ -201,6 +264,8 @@ def check_reviews(root: str, funcs: list[dict]) -> list[str]:
         if not rv or rv['verdict'] != 'approved':
             errs.append(f"symbols/functions.csv:{r['_line']}: {r['name']} is verified without an approved review "
                         f"in symbols/reviews.csv (CONTRIBUTING.md, \"Definition of done\")")
+            continue
+        errs += review_pin_errors(root, r, rv)
     return errs
 
 

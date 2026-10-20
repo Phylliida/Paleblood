@@ -59,7 +59,7 @@ def case_contents(directory: str) -> list[str]:
 
 
 def duplicate_sets(recorded: list[str], edge: list[str]) -> str | None:
-    """Why the edge set is not a second input set, or None when the two differ.
+    """Why the two sets are not two independent input sets, or None when they are.
 
     The gate is two input provenances: what the game recorded, and cases written to cover
     boundaries the recording did not. A gate read off a path is satisfied by copying one directory
@@ -69,11 +69,28 @@ def duplicate_sets(recorded: list[str], edge: list[str]) -> str | None:
     paths is what makes the difference checkable. A renamed copy is still caught, because the
     comparison ignores names -- though a copy whose contents were edited is a different set by this
     reading too, and only a reviewer can tell that it is not a second observation.
+
+    Equality is not the only way one set can add nothing: an edge set every case of which is also
+    recorded exercised no input the recorded set had not, and a recorded set contained in the edge
+    set leaves the edge set as the only provenance with extra members. Both are refused here; an
+    empty set is refused too, because an empty recorded set makes any edge set look different.
     """
-    if not recorded or recorded != edge:
-        return None
-    return (f'the edge case set is a copy of the recorded set ({len(recorded)} case file(s), same '
-            f'contents); one input set counted twice is not two provenances')
+    if not recorded or not edge:
+        return (f'one of the two case sets is empty (recorded {len(recorded)}, edge {len(edge)} '
+                f'case file(s)); an empty set makes any other set look different')
+    r, e = set(recorded), set(edge)
+    if r == e:
+        return (f'the edge case set is a copy of the recorded set ({len(e)} case file(s), same '
+                f'contents); one input set counted twice is not two provenances')
+    if e <= r:
+        return (f'every edge case is already a recorded case ({len(e)} of {len(r)}), so the edge '
+                f'set exercises no input the recording did not; one input set counted twice is '
+                f'not two provenances')
+    if r <= e:
+        return (f'every recorded case is also an edge case ({len(r)} of {len(e)}), so the two sets '
+                f'are one input set with extra edge members; one input set counted twice is not '
+                f'two provenances')
+    return None
 
 
 def provenance(directory: str) -> str:
