@@ -30,6 +30,12 @@ import os
 import struct
 import sys
 
+# The four address frames and their conversions are in docs/addressing.md. In short: guest (PS4)
+# addresses are 0x400000-based, IMAGE + guest - EBOOT_BASE is the host address the guest image is
+# mapped at, boot['loads'] reports offsets into that image (not PS4 addresses), and a file offset in
+# eboot.elf is guest - 0x3fc000. Both conversions below are correct as written; changing either to
+# "look more symmetric" has already cost two debugging sessions, because a wrong translation here
+# manifests as a scripted access reported outside every segment, not as a bad address.
 IMAGE = 0x800000000         # host address of guest offset 0, as in the scaffold
 EBOOT_BASE = 0x400000       # PS4 virtual address of guest offset 0
 SANDBOX = 0x900000000       # case buffers
@@ -329,6 +335,8 @@ class Run:
             ctypes.memmove(addr, data, len(data))
 
     def guest(self, ps4: int) -> int:
+        '''PS4 address -> host address. The `- EBOOT_BASE` belongs here and nowhere else: it is
+        what turns the game's 0x400000-based addresses into offsets into the mapped image.'''
         if not EBOOT_BASE <= ps4 < EBOOT_BASE + self.boot['size']:
             raise BadInput(f'0x{ps4:x} is outside the image')
         return IMAGE + ps4 - EBOOT_BASE
@@ -389,7 +397,10 @@ class Run:
                                               "source": source, "region": "guest_image"})
                 return
         direction = 'write' if write else 'read'
-        raise BadInput(f'scripted {direction} 0x{address:x}+0x{size:x} is outside declared readable/writable regions')
+        # describe() names the address as a case author wrote it (guest address, buffer offset or
+        # stack), so the message points at the case line rather than at an internal host address.
+        raise BadInput(f'scripted {direction} {self.describe(address)}+0x{size:x} '
+                       f'is outside declared readable/writable regions')
 
     def describe(self, v: int) -> str:
         top = self.block[19]

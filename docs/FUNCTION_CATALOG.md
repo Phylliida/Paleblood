@@ -193,6 +193,32 @@ current evidence. The `verification_state` table tracks fixture, original-run, d
 coverage, mismatch, blockers, and evidence-reference fields separately. It does not edit canonical
 function status files or promote a function.
 
+A traced differential over a whole family is one command per function and needs no wrapper script:
+
+```
+python3 tools/differential.py --state ../data/catalog.sqlite3 differential 0x01652440 \
+    --function engine_zero_init_01652440 --cases ../data/cases/zero_init/0x01652440 \
+    --elf ../data/bb/elf/eboot.elf --lib build/game/libbbgame.so --trace-instructions
+```
+
+`--state` is required: the default lives under `$XDG_CACHE_HOME`, which does not exist in every
+build environment. The run is then in the database rather than in an ad-hoc file, so the summary
+survives the shell that produced it:
+
+```
+sqlite3 ../data/catalog.sqlite3 "select count(*), max(created_at) from differential_runs"
+```
+
+Verdicts are the `result` JSON's `comparison.passed`/`failed`, not a saved Boolean. A traced run
+also records `instruction_diagnostics` per case: the first recorded memory event where the two
+sides differ, with the instruction on each side. For the `zero_init` family that divergence is
+expected and not a failure. The original stores eight bytes at a time (`mov`, offsets `+0x20`,
+`+0x28`, ...) while the re-emitted C++ vectorizes to sixteen (`movups`, `+0x20`, `+0x30`, ...), so
+the paths differ while the bytes written and the observable results agree. Read the
+`observable_result_mismatch` flag: a diagnostic with it false is an equivalent internal path, and
+one with it true is the finding. This is evidence the four comparison groups cannot produce,
+because they compare final state, not the route taken to it.
+
 Original execution, differential fixture success, edge verification, and full verification remain
 distinct states. Optional bounded instruction tracing observes supported guest memory accesses
 and dynamic CFG paths; unsupported instructions and host-dispatch gaps make traces incomplete.
