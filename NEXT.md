@@ -74,12 +74,29 @@ what the boot stops at, clean room (CONTRIBUTING.md), then re-runs `tools/boot.p
    e5d65ea dropped `rt_capture_begin`/`rt_capture_write` from
    `game/frame_timing/monotonic_clock.cpp:55,64` (`git log -S rt_capture_begin -- game/`). In-game
    recordings resume once the runtime runs the game, and `tools/promote.py` can then move
-   `edge-verified` functions to `verified`. The same hook is the only thing that would let a case
-   change state while a function runs: `tools/harness.py:623` installs a no-op hook, so
-   `kernel_wait_for_state_024bdd40` (`0x024bdd40`, replacement written and faithful, still
-   `original` in `symbols/functions.csv`) cannot be tested at all -- every case spins on a word that never reaches 2 and the
-   harness's runaway guard ends the run. Its cases sit in `../data/cases/wait/` and no ledger row
-   covers the function.
+   `edge-verified` functions to `verified`. That hook is the host interface's code-patch
+   installer (`tools/harness.py:622-627`, a no-op because the harness has nothing to install); it
+   is not, and was never, a way for a case to change state mid-run. Per-call writes already exist
+   and are read on both scripted paths: `imports[].writes` at `:478` (raw bytes, with a `size`
+   cross-check) and `stubs[].writes` at `:511` (`bytes`, `pointer` or `guest`), each applied after
+   the call is served, resolved through `check_memory(write=True)` so it is traced, and recorded as
+   `import_write` or `stub_write`. Stubs are installed by writing a jump at the guest address on
+   both sides (`:313-327`, up to `STUB_SLOTS` 64), so a case can script any address, including the
+   eboot's own thunk at `0x02fbfe68`, which both the original's call and the replacement's
+   `RT_ORIGINAL(... kernel_usleep ...)` reach. What is missing is narrower: the write target is
+   always `args[arg] + offset`, so a stub that takes no pointer argument cannot name the address it
+   should change. `sceKernelUsleep` is exactly that case -- its argument is a microsecond count,
+   and it is not among the eboot's 686 imports either, so the `imports` path cannot reach it. The
+   fix is a `target` form (`{"target": "buf:state+0x10", "bytes": "..."}`) resolved through
+   `self.value()`, about four lines per path; it is the same limitation items below already record
+   against two verified functions ("the stub cannot set a global"). Cost of touching
+   `tools/harness.py`: every catalog run's `harness_sha256` goes stale -- 528 addresses, ~3 min to
+   refresh at 24 threads, then regenerate the packet. The dead `../data/cases/wait/*.json` were
+   written for this and never executed: they name a pointer argument (`arg: 1, offset: 16`) that
+   `sceKernelUsleep` does not have, which is why the format looked broken -- a spec by intent,
+   never run, so never forced to be right. `kernel_wait_for_state_024bdd40` (`0x024bdd40`,
+   replacement written and faithful) still shows `original` in `symbols/functions.csv` and no ledger
+   row covers it.
 2. `scePthreadAttrGetaffinity` (libkernel), called by the game's own libc while it starts: needs
    the main thread's CPU affinity mask on a PS4 (STATUS.md, "Open questions"). Then the next
    import `tools/boot.py` names.
