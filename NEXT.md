@@ -158,3 +158,19 @@ from the smallest up. New functions go to `main` only verified and readable.
   community patches (`verify.py run --patch`).
 - `0x004632d0` (was frame_timing_get_time_us): dead in the stock game, used by the FPS patches as a
   code cave; hook and replacement removed, back to `original` with a note.
+- Harness: an `argf32` index that names no saved register is refused on both scripted paths
+  (`saved_xmm`). Both prologues save xmm0 and xmm1 and nothing else, so index 2 read the next
+  trampoline slot -- bytes no case sets, equal on both sides by construction, hence a comparison
+  that passes on a value nothing loaded. At the last slot it read past the 6144-byte stub mapping.
+  Tested by a fixture that loads the bit pattern of 1.0f into xmm0 and calls a stub; the frame is
+  load-bearing, because the prologue ends `sub rsp, 8; call rax` and a leaf-style caller enters it
+  with the stack misaligned and faults inside the dispatcher, which is how the first version of
+  the fixture failed.
+- Harness: exit status 3 has one shape on the wire. A refusal raised inside a ctypes callback is
+  written to the result pipe (`report_failure`), and the parent prints it once; before, `guarded`
+  printed to stderr and exited without writing, so the parent's parse of an empty pipe appended a
+  second, misleading `Expecting value` line after the real diagnostic. A child killed between fork
+  and write now reports that it exited without reporting why, instead of a parse error. The two
+  refusal tests assert the message *and* that nothing follows it: status 3 plus a substring was
+  satisfied by the bug itself. Refreshed everything the harness identity touches: 528 of 528
+  catalog runs and the review packet, 0 stale.

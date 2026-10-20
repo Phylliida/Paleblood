@@ -117,6 +117,26 @@ XSTUB = 0x940000000
 IMPSTUB = 0x950000000
 IMPSTUB_SIZE = 96
 XSTUB_SIZE = 96
+XMM_SAVE_SLOTS = 2          # both prologues save xmm0 at +64 and xmm1 at +80, and nothing else
+_REPORT_FD = None           # the child's result pipe, while a case runs in a forked child
+
+
+def report_failure(message: str) -> bool:
+    """Hand a refusal to the parent as a payload. True if it landed.
+
+    A refusal raised inside a ctypes callback cannot travel as an exception: ctypes
+    ignores it and the caller sees zero. `Run.guarded` therefore exits the child itself,
+    and it has to report the same way main() does -- as data -- so that exit status 3 has
+    exactly one shape on the wire. Printing instead would put the message on stderr twice,
+    because the parent raises it back as a BadInput and main() prints that.
+    """
+    if _REPORT_FD is None:
+        return False
+    try:
+        os.write(_REPORT_FD, json.dumps({'bad_input': message}, sort_keys=True).encode())
+    except OSError:
+        return False
+    return True
 ARCH_SET_GS, SYS_ARCH_PRCTL = 0x1001, 158
 NID_SALT = bytes.fromhex('518d64a635ded8c1e6b039b1c3e55230')
 
@@ -440,14 +460,31 @@ class Run:
         a scripted write or a series entry -- a write target outside every declared region, a
         register named as a target, a malformed series -- used to leave a clean-looking result
         and exit status 0, and the comparison then covered two runs that never made the write.
-        The message is the evidence, so it goes to stderr with the status main() gives a BadInput
-        raised anywhere else.
+        The message is the evidence, so it is handed to the parent as the payload main() would
+        write for the same refusal, and the parent prints it once. Status 3 means one thing.
         """
         try:
             return call(*args)
         except BaseException as exception:          # ctypes would swallow this and return zero
-            print(f'harness: {exception}', file=sys.stderr)
+            if not report_failure(f'{exception}'):
+                # No pipe: a Run built outside a forked child (a unit test, a direct run_case
+                # call). Stderr is then the only channel there is.
+                print(f'harness: {exception}', file=sys.stderr)
             os._exit(3)
+
+    def saved_xmm(self, save: int, index) -> str:
+        '''The 32-bit pattern of an xmm register a prologue saved at `save`.
+
+        Both native prologues save xmm0 and xmm1 and nothing else, so an index past the
+        last one would read the following trampoline slot: bytes no case set, equal on both
+        sides by construction, which compares clean and reports nothing. Refusing it is the
+        only way that mistake is visible.
+        '''
+        r = int(index)
+        if not 0 <= r < XMM_SAVE_SLOTS:
+            raise BadInput(f'argf32 index {r} names no saved register: '
+                           f'only xmm0 and xmm1 are saved (0 <= index < {XMM_SAVE_SLOTS})')
+        return ctypes.string_at(save + 16 * r, 4).hex()
 
     def dispatch(self, index: int, args: tuple) -> int:
         self.finish_series(index)
@@ -477,7 +514,7 @@ class Run:
         self.calls.append({'import': entry['name'], 'args': [self.describe(a) for a in args[:argc]]})
         if entry.get('argf32'):
             save = IMPSTUB + IMPSTUB_SIZE * index + 64
-            self.calls[-1]['argf32'] = [ctypes.string_at(save + 16 * int(r), 4).hex() for r in entry['argf32']]
+            self.calls[-1]['argf32'] = [self.saved_xmm(save, r) for r in entry['argf32']]
         if series:
             if series.get('format') != 'timeval_us' or int(series.get('offset', 0)):
                 raise BadInput(f"unsupported series {series.get('format')} at offset {series.get('offset', 0)}")
@@ -513,7 +550,7 @@ class Run:
         record = {'call': name, 'args': [self.describe(args[i]) for i in picks]}
         for r in entry.get('argf32', []):
             # Float arguments: xmm0 / xmm1 as their 32-bit pattern.
-            record.setdefault('argf32', []).append(ctypes.string_at(save + 16 * int(r), 4).hex())
+            record.setdefault('argf32', []).append(self.saved_xmm(save, r))
         for m in entry.get('argmem', []):
             at = args[int(m['arg'])] + int(m.get('offset', 0))
             self.check_memory(at, int(m['size']), source="stub_argument")
@@ -712,7 +749,9 @@ def _run_isolated(machine: Machine, case: dict, address: str, target: int | None
     r, w = os.pipe()
     pid = os.fork()
     if pid == 0:
+        global _REPORT_FD
         os.close(r)
+        _REPORT_FD = w
         signal.alarm(timeout)
         try:
             if trace:
@@ -770,7 +809,14 @@ def _run_isolated(machine: Machine, case: dict, address: str, target: int | None
         else:
             result = {'fault': f'signal {sig}'}
     elif os.WEXITSTATUS(status) == 3:
-        raise BadInput(json.loads(data)['bad_input'])
+        # One shape by construction, but a child killed between fork and write would leave
+        # the pipe empty, and a JSONDecodeError here would replace the reason with a parse
+        # error that reads like a bug in the case.
+        try:
+            reason = json.loads(data)['bad_input']
+        except (ValueError, KeyError, TypeError):
+            raise BadInput('the child exited 3 without reporting why') from None
+        raise BadInput(reason)
     elif os.WEXITSTATUS(status) != 0 or not data:
         result = {'fault': f'exit {os.WEXITSTATUS(status)}'}
     else:

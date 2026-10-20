@@ -146,6 +146,13 @@ def boot_image():
     # A real dereference through the computed address must still be checked.
     code[0xc50:0xc58] = bytes.fromhex('488d4708 0fb600 c3')
     code[0xc60:0xc68] = bytes.fromhex('8d047509000000 c3')         # lea eax, [rsi*2+9], no base
+    # Float argument path: load a known pattern into xmm0, then call the stub at 0xd20, so a
+    # case can compare a saved float register against a value guest code actually loaded.
+    # The frame is not decoration: the stub prologue ends in `sub rsp, 8; call rax`, so it
+    # needs rsp == 8 (mod 16) on entry, and a leaf-style caller would enter it with 0 and
+    # hand the Python dispatcher a misaligned stack, which faults on an aligned SSE spill.
+    code[0xd00:0xd17] = bytes.fromhex('b80000803f 660f6ec0 4883ec08 e80e000000 4883c408 c3')
+    code[0xd20:0xd21] = bytes.fromhex('c3')
     return ps4elf.build(
         segments=[(0, bytes(code), 0x1000, 5), (0x1000, DATA, 0x20, 6)],
         symbols=[(nid('testImport') + '#A#A', ps4elf.STT_FUNC, None)],
@@ -839,6 +846,52 @@ class Harness(unittest.TestCase):
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 3)
         self.assertIn('case is for 0x00400800', r.stderr)
+
+    def test_a_saved_float_register_is_read_from_the_guest(self):
+        # code[0xd00] loads 0x3f800000 into xmm0 and calls the stub at 0xd20, so a pattern that
+        # matches proves the field reads a register rather than whatever the block held.
+        case = dict(CASE, address='0x00400d00', id='float-arg', returns='i64',
+                    args={}, buffers={}, imports=[],
+                    stubs=[{'address': '0x00400d20', 'argc': 0, 'argf32': [0]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        r = self.side_case(self.case, None, '0x00400d00')
+        self.assertNotIn('fault', r)                    # a guest fault is a payload field, not a status
+        self.assertEqual(r['calls'][0]['argf32'], ['0000803f'])
+
+    def test_an_argf32_index_that_names_no_saved_register_is_refused(self):
+        # The stub block saves exactly xmm0 (+64) and xmm1 (+80). Index 2 reads at +96, which is
+        # the next stub slot and therefore identical on both sides: without the refusal the case
+        # compares equal on bytes nothing saved and passes with a value it never set.
+        case = dict(CASE, address='0x00400d00', id='float-slot-two', returns='i64',
+                    args={}, buffers={}, imports=[],
+                    stubs=[{'address': '0x00400d20', 'argc': 0, 'argf32': [2]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        cmd = [sys.executable, os.path.join(TOOLS, 'harness.py'), '--elf', self.boot,
+               '--case', self.case, '--address', '0x00400d00']
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 3)
+        self.assertIn('argf32 index 2 names no saved register', r.stderr)
+        # One line: the refusal travels to the parent as the payload main() writes, so a
+        # second, unrelated parse error must not appear after the real diagnostic.
+        self.assertNotIn('Expecting value', r.stderr)
+        self.assertEqual(len(r.stderr.strip().splitlines()), 1)
+
+    def test_an_import_argf32_index_that_names_no_saved_register_is_refused(self):
+        case = dict(CASE, address='0x00400b50', id='float-import-slot-two',
+                    imports=[{'name': 'testImport', 'argc': 2, 'argf32': [2]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        cmd = [sys.executable, os.path.join(TOOLS, 'harness.py'), '--elf', self.boot,
+               '--case', self.case, '--address', '0x00400b50']
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 3)
+        self.assertIn('argf32 index 2 names no saved register', r.stderr)
+        # One line: the refusal travels to the parent as the payload main() writes, so a
+        # second, unrelated parse error must not appear after the real diagnostic.
+        self.assertNotIn('Expecting value', r.stderr)
+        self.assertEqual(len(r.stderr.strip().splitlines()), 1)
 
     def test_stub_replaces_a_game_function(self):
         # Stub f itself at 0x400000 and call it through... the harness calls the stub directly.
