@@ -38,19 +38,22 @@ static int emit_case()
     setenv("BB_CAPTURE_DIR", root, 1);
     setenv("BB_CAPTURE_RUN", "synthetic_run_1", 1);
 
-    auto *out = static_cast<char *>(std::calloc(16, 1));
+    auto *out = static_cast<char *>(std::calloc(32, 1));
     auto *input = static_cast<char *>(std::calloc(16, 1));
     if (!out || !input) return 1;
-    // Initial bytes: *out = 0x11223344, *input = 7. Both live outside the image, so the recorder
-    // names them b0 and b1 and states their initial bytes rather than a guest address.
+    // The field is at a nonzero offset: the synthetic executable stores with a 0x14 displacement,
+    // so the recorded address has to say 0x14 and not merely name the buffer. Initial bytes:
+    // *(out+0x14) = 0x11223344, *input = 7. Both live outside the image, so the recorder names
+    // them b0 and b1 and states their initial bytes rather than a guest address.
+    constexpr unsigned field_offset = 0x14;
     const unsigned char out_bytes[4] = {0x44, 0x33, 0x22, 0x11}, in_bytes[4] = {0x07, 0x00, 0x00, 0x00};
-    std::memcpy(out, out_bytes, 4);
+    std::memcpy(out + field_offset, out_bytes, 4);
     std::memcpy(input, in_bytes, 4);
     rt_image = nullptr;
 
     rt::Recorder recorder;
     if (!recorder.begin("capture_recorder_replay")) return 1;
-    recorder.bytes(out, 0, 4);
+    recorder.bytes(out, field_offset, 4);
     recorder.bytes(input, 0, 4);
     recorder.write("0x00400000",
                    "\"rdi\": \"buf:b0\", \"rsi\": \"buf:b1\", \"rdx\": \"0x00000006\"", "i32");

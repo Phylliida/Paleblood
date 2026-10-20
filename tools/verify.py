@@ -52,10 +52,14 @@ def default_elf() -> str | None:
     return path if os.path.isfile(path) else None
 
 def split_addr(addr: str) -> tuple[str, int]:
-    """'0x1234' -> ('', 0x1234); 'buf:out+0x4' -> ('buf:out', 4)."""
+    """'0x1234' -> ('', 0x1234); 'buf:out+0x4' -> ('buf:out', 4).
+
+    The offset is read with base 0: the harness and runtime/include/runtime/recorder.hpp both
+    write '0x'-prefixed hex, but a case written by an older recorder carried a bare decimal, and
+    base 16 would read that 20 as 0x20. A leading zero is an error rather than a guess."""
     if addr.startswith('buf:'):
         name, _, off = addr.partition('+')
-        return name, int(off, 16) if off else 0
+        return name, int(off, 0) if off else 0
     return '', int(addr, 16)
 
 

@@ -111,6 +111,9 @@ Run IDs are filename-safe; case files are created exclusively with owner-only pe
 reused run ID and case number cannot silently replace an existing recording.
 
 - `args`: `rdi`..`r9`. A number, `buf:NAME[+off]`, or `guest:0xADDRESS` (a PS4 address).
+  An offset in a `buf:NAME+off` address is hex, written `0x...`, the way both the harness and
+  `runtime/include/runtime/recorder.hpp` write it; a bare decimal is still read as decimal, so a
+  case from an older recorder means the same field. Offset 0 is written `+0x0`.
 - `buffers`: sandbox memory, laid out in name order; `bytes` is hex, zero-padded to `size`.
 - `memory`: written before the call, at an image address or at `buf:NAME+off`: `bytes`,
   `pointer` (a buffer's address) or `guest` (the host address of a PS4 address, for example a

@@ -37,15 +37,24 @@ def main() -> int:
     assert case['capture']['run_id'] == 'synthetic_run_1', case
     assert case['args'] == {'rdi': 'buf:b0', 'rsi': 'buf:b1', 'rdx': '0x00000006'}, case
     # Buffers are declared with a size and their initial bytes are separate memory entries: the
-    # shape the recorder uses for host memory, and the one the harness has to accept.
-    assert case['buffers'] == {'b0': {'size': 16}, 'b1': {'size': 16}}, case
-    assert case['memory'] == [{'addr': 'buf:b0+0', 'bytes': '44332211'},
-                              {'addr': 'buf:b1+0', 'bytes': '07000000'}], case
+    # shape the recorder uses for host memory, and the one the harness has to accept. The field is
+    # at 0x14, so b0 grows to 0x20: 0x14 + 4 rounds up to the next multiple of 16.
+    assert case['buffers'] == {'b0': {'size': 0x20}, 'b1': {'size': 16}}, case
+    # The offset is hex with the 0x prefix. It used to be `std::to_string(off)`, a bare decimal,
+    # which tools/verify.py's split_addr read base 16: 0x14 went out as "20" and would have come
+    # back as 0x20. Both ends have to name a displacement the same way.
+    assert case['memory'] == [{'addr': 'buf:b0+0x14', 'bytes': '44332211'},
+                              {'addr': 'buf:b1+0x0', 'bytes': '07000000'}], case
     assert case['stubs'] == [] and case['imports'] == [], case
 
     with tempfile.TemporaryDirectory(prefix='pb-recorder-replay-') as root:
         boot = os.path.join(root, 'synthetic.elf')
-        code = bytes.fromhex('8b06 0fafc2 8907 c3')  # *out = *input * factor; return *out
+        # mov eax,[rsi]; imul eax,edx; mov [rdi+0x14],eax; ret -- the store's displacement is the
+        # ground truth for the recorded offset, read out of the instruction encoding rather than
+        # from the recorder or the verifier.
+        code = bytes.fromhex('8b06 0fafc2 894714 c3')
+        store_displacement = code[-2]
+        assert store_displacement == 0x14, hex(store_displacement)
         image = code + bytes(0x1000 - len(code))
         with open(boot, 'wb') as stream:
             stream.write(ps4elf.build(segments=[(0, image, len(image), 5)], symbols=[],
@@ -64,11 +73,25 @@ typedef struct { uint32_t version; unsigned char *image; uint64_t image_size;
                  int (*install_hook)(uint64_t, uint64_t, const void *); } host_t;
 int bbgame_init(const host_t *host) { (void)host; return 0; }
 int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
-{ *out = *input * factor; return *out; }
+{ *(int32_t *)((char *)out + 0x14) = *input * factor; return *input * factor; }
 ''')
         library = os.path.join(root, 'replacement.so')
         subprocess.run([os.environ.get('CC', 'cc'), '-shared', '-fPIC', '-O2', '-o', library, source],
                        check=True)
+        # The same function storing four bytes early. The verifier has to notice a difference at
+        # 0x14, not agree because neither side touched offset 0.
+        wrong_source = os.path.join(root, 'wrong.c')
+        with open(wrong_source, 'w', encoding='utf-8') as stream:
+            stream.write(r'''#include <stdint.h>
+typedef struct { uint32_t version; unsigned char *image; uint64_t image_size;
+                 int (*install_hook)(uint64_t, uint64_t, const void *); } host_t;
+int bbgame_init(const host_t *host) { (void)host; return 0; }
+int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
+{ *(int32_t *)((char *)out + 0x10) = *input * factor; return *input * factor; }
+''')
+        wrong_library = os.path.join(root, 'wrong.so')
+        subprocess.run([os.environ.get('CC', 'cc'), '-shared', '-fPIC', '-O2', '-o', wrong_library,
+                        wrong_source], check=True)
 
         sides = verify.run_cases(boot, cases, '0x00400000', 'replacement', library,
                                  function=case['capture']['function'])
@@ -82,7 +105,24 @@ int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
         # so the original side's own result proves the case's memory entries reached the guest.
         original = sides['original'][0]
         assert original['ret'] == {'rax': '0x2a'}, original['ret']
-        assert original['writes'] == [{'addr': 'buf:b0+0x0', 'bytes': '2a000000'}], original['writes']
+        assert original['writes'] == [{'addr': 'buf:b0+0x14', 'bytes': '2a000000'}], original['writes']
+        # The address the harness reported carries the displacement the instruction encodes.
+        assert original['writes'][0]['addr'].endswith('+0x%x' % store_displacement)
+
+        # A case written by an older recorder carries a bare decimal offset; it has to mean the
+        # same field, not a field further on.
+        assert verify.split_addr('buf:b0+20') == ('buf:b0', 0x14), verify.split_addr('buf:b0+20')
+        assert verify.split_addr('buf:b0+0x14') == ('buf:b0', 0x14)
+
+        # A replacement that stores four bytes early must fail, naming 0x14: the comparison is
+        # sensitive to the offset itself, not only to both sides agreeing somewhere.
+        wrong = verify.run_cases(boot, cases, '0x00400000', 'replacement', wrong_library,
+                                 function=case['capture']['function'])
+        failed = verify.compare(
+            {'schema': 1, 'address': '0x00400000', 'cases': wrong['original']},
+            {'schema': 1, 'address': '0x00400000', 'cases': wrong['replacement']})
+        assert (failed['cases'], failed['passed'], failed['failed']) == (1, 0, 1), failed
+        assert '0x14' in json.dumps(failed['failures']), failed
 
         # tools/promote.py reads a capture library as <name>/ (recorded) and <name>/edge/. The
         # recorder writes <BB_CAPTURE_DIR>/<function>/, so a recorded set lands there directly and

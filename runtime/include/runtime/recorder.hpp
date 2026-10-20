@@ -76,11 +76,16 @@ public:
         if (extent > it->second.size) it->second.size = (extent + 15) & ~15u;
         return it->second.name;
     }
-    /* Where a field lives in the case: a buffer, or the image itself (global objects). */
+    /* Where a field lives in the case: a buffer, or the image itself (global objects). The offset
+       is hex with the 0x prefix, the same as every other address the recorder writes and the same
+       as the harness reports them: a bare number would be read as hex by tools/verify.py's
+       split_addr and as decimal by tools/harness.py's value, which agree only at offset 0. */
     std::string at(const void *base, unsigned off, unsigned n)
     {
         if (in_image(base)) return guest_hex(guest_of(base) + off);
-        return "buf:" + name(base, off + n) + "+" + std::to_string(off);
+        char displacement[16];
+        std::snprintf(displacement, sizeof displacement, "+0x%x", off);
+        return "buf:" + name(base, off + n) + displacement;
     }
     /* A value for a case argument or a stub's return: a buffer, an image address, or a number. */
     std::string value(const void *p)
