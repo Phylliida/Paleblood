@@ -154,6 +154,35 @@ registers, the final value of every written byte, and the library calls with the
 arguments are equal. Pointer arguments into the stack are recorded as `stack`, since frames
 differ. Write order is not compared.
 
+## What a case pins
+
+A case file is input only. It carries the arguments, the preset `memory` and buffers, and the
+scripted imports and stubs -- never the expected result. Expectations are computed live: the
+original side runs the real instructions with no replacement, the replacement side runs the
+replacement with no original, and the two results are compared. So a case file with no `writes`
+key at all is normal; `writes` appears in a *result*, not in a case.
+
+That means a family's evidence is only as strong as what its cases make observable. Two channels
+cover guest-image writes, both automatic and both independent of the instruction tracer:
+
+- `snapshot()` diffs every mapped segment and every declared buffer before and after the call, so a
+  store to a fixed game address is compared byte for byte even though no case names that address as
+  an output. `frame_timing_static_guard_014405b0` is the clearest example: its five cases preset a
+  guard byte and a pointer slot and compare only a `void` return, yet three of them pin the eight
+  bytes the function stores. Change the object it points at from `0x056b4840 + 0x10` to
+  `0x056b4850 + 0x10` and the run fails three cases with
+  `memory +0x5ac59b0: original 50 replacement 60` -- the low byte of the stored pointer.
+- The whole image is in the comparison, not just the declared regions, so a function that stores
+  when it should have returned early is caught as `original unwritten`. Forcing the guard branch to
+  fall through fails the two early-return cases and nothing else.
+
+The general machinery is pinned by `test/test_harness.py`: `test_original_runs` asserts an image
+write at `0x00401018`, and `test_mutation_matrix_rejects_branch_and_memory_write_errors` requires
+comparison failure for a missing write, a write of the wrong width, and a wrong branch. When adding
+a family that writes only to fixed game addresses, check that the case preset is distinct from
+what the function will store -- if the preset already equals the expected value, a function that
+writes nothing compares equal anyway, and the family proves only that it does not fault.
+
 ## Limits
 
 - The function runs alone: whatever it calls inside the game runs too, as original code,
