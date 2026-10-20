@@ -125,7 +125,11 @@ reused run ID and case number cannot silently replace an existing recording.
   game function a fake vtable points at, which the case then stubs).
 - `imports`: scripted calls in order, per library function. `name` is the function name (its
   NID is computed); `argc` arguments are recorded and compared. A write may give `size`: a
-  write whose bytes do not have that length is reported as an error (a truncated capture).
+  write whose bytes do not have that length is reported as an error (a truncated capture). That
+  check runs on both scripted paths, imports and stubs; before it ran only on imports, so a
+  truncated stub write served a short store silently. It lands in the case's `errors`, and
+  `verify.py` turns any recorded error on either side into a diff, so a case the harness could
+  not serve fails rather than passing on two results that are equal because both are incomplete.
   For long runs of the same call (a wait that polls the clock), one entry can stand for many
   calls: `"series": {"arg": 0, "format": "timeval_us", "values": [t0, t1, ...]}` writes the
   next value (microseconds, as a `struct timeval`) on each call, one call per value. A native
@@ -170,11 +174,19 @@ reused run ID and case number cannot silently replace an existing recording.
 ## Result and comparison
 
 Per case: `ret`, `preserved` (callee-saved registers `kept` or their value, and whether `rsp`
-balanced), `writes` (`addr` is a PS4 address, or `buf:NAME+off`), `calls`, `errors`, or `fault`
-when the process crashed. Two results match when the return registers, the preserved
-registers, the final value of every written byte, and the library calls with their recorded
-arguments are equal. Pointer arguments into the stack are recorded as `stack`, since frames
-differ. Write order is not compared.
+balanced), `writes` (`addr` is a PS4 address, or `buf:NAME+off`), `calls`,
+`scripted_write_targets`, `errors`, or `fault` when the process crashed. Two results match when
+the return registers, the preserved registers, the final value of every written byte, and the
+library calls with their recorded arguments are equal. Pointer arguments into the stack are
+recorded as `stack`, since frames differ. Write order is not compared.
+
+Each call record carries `scripted_write_targets`: the address every scripted write resolved to,
+named with the same `describe()` that names addresses elsewhere, so a divergence in how two sides
+compute a target is reported rather than hidden inside byte equality. It is coarser than it
+sounds for one case — `describe()` renders any stack address as the bare word `stack`, because
+the absolute address differs between sides by construction — so for a stack write the field says
+only that some stack address was written. The observed write diff is the check there; a wrong
+stack target is caught where it lands, not in this field.
 
 ## What a case pins
 

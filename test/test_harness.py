@@ -889,6 +889,43 @@ class Harness(unittest.TestCase):
         self.assertIn({'addr': 'buf:out+0x0', 'bytes': '05'}, r['writes'])
         self.assertEqual(r['calls'][0]['scripted_write_targets'], ['buf:out+0x0'])
 
+    def test_a_truncated_import_write_is_reported(self):
+        # `size` says how long the write should have been: a capture that lost bytes is an
+        # incomplete recording, and the harness says so rather than writing a short store that
+        # happens to succeed.
+        # The fixture calls testImport(7, rsp), so args[1] is the stack -- a legal write target,
+        # which is what lets this test reach the size check instead of failing region validation.
+        case = dict(CASE, imports=[{'name': 'testImport', 'argc': 2, 'ret': 0,
+                                    'writes': [{'arg': 1, 'offset': 0, 'size': 8, 'bytes': '0200'}]}])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        r = self.side()
+        self.assertIn('testImport: write of 2 bytes, the case says 8', r.get('errors', []))
+
+    def test_a_truncated_stub_write_is_reported(self):
+        # This path had no size check until scripted_write was shared: the stub branch took
+        # bytes.fromhex and memmove'd it, so a truncated recording served a short store silently.
+        # The import branch had checked since it was written, which is how the asymmetry hid.
+        case = dict(CASE, stubs=[{'address': '0x00400000', 'argc': 1, 'ret': 5,
+                                  'writes': [{'arg': 0, 'offset': 0, 'size': 8, 'bytes': '0500'}]}],
+                    returns='i64', imports=[])
+        with open(self.case, 'w') as f:
+            json.dump(case, f)
+        r = self.side()
+        # r.get: on a harness without the check the result carries no `errors` at all, and the
+        # failure should say the message is missing, not raise KeyError from the test itself.
+        self.assertIn('0x00400000: write of 2 bytes, the case says 8', r.get('errors', []))
+
+    def test_a_reported_error_fails_the_comparison_even_when_both_sides_agree(self):
+        # A truncated write produces the same message on both sides, so a comparison that looked
+        # only at whether the two results were equal would pass it. compare_case turns every
+        # recorded error into a diff for that reason: a case the harness could not serve is not
+        # a case the original and the replacement agreed on.
+        result = {'ret': {'rax': '0x0'}, 'writes': [], 'calls': [],
+                  'errors': ['testImport: write of 2 bytes, the case says 8']}
+        diffs = verify.compare_case(result, dict(result), {'schema': 1})
+        self.assertTrue(any('write of 2 bytes' in d for d in diffs), diffs)
+
     def test_a_register_is_not_a_write_target(self):
         case = dict(CASE, imports=[{'name': 'testImport', 'argc': 2, 'ret': 0,
                                     'writes': [{'target': 'rdi', 'bytes': '00'}]}])

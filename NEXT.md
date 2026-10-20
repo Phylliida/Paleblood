@@ -8,9 +8,11 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 Last session: runtime
 
 Needs the maintainer (cannot be done from the sandbox):
-- `gh auth login`, so the local commits on `main` can be pushed and the branches opened as pull
-  requests. Everything else here is unblocked without it; `../Paleblood-2026-10-19.bundle`
-  (`git bundle --all`) holds the history.
+- Pushing. The sandbox has no credentials and `gh` stays unauthenticated, so nothing here can
+  push; the maintainer pushes `main` periodically (as of `c25c9c3`, `origin/main` matches `main`).
+  So: fetch at the top of a slice and end each one with `main` committable, and treat a slice as
+  durable only when `git rev-list --count origin/main..main` reads 0. `../Paleblood-2026-10-19.bundle`
+  (`git bundle --all`) is the fallback export and goes stale between pushes.
 - The affinity constant in target 2 below: `0x3F`, `0xFF`, or a decision to park it. No citable
   source in the tree pins it, and the game's libc bit-counts the mask to size worker threads
   (STATUS.md, "Open questions"), so a wrong guess changes thread topology silently.
@@ -136,6 +138,7 @@ from the smallest up. New functions go to `main` only verified and readable.
 - Runtime: libkernel `sceKernelGetProcParam`, `_sceKernelRtldSetApplicationHeapAPI`, the mutex and mutex attribute functions (SCE and POSIX names), `scePthreadSelf` and thread attributes (init, destroy, get).
 - Runtime: the game's own libc and libSceFios2 modules are mapped as guest code (`game/modules.csv`) and the executable's imports they export are bound to them; their functions are tracked in `symbols/module_functions.csv`, replaceable later like game functions.
 - Runtime: our own loader (`runtime/loader.c`) and boot harness (`runtime/boot.c`, `tools/boot.py`); the verification harness maps the executable with the loader.
+- Harness: a scripted write can name the memory it lands in (`target`, `3654028`), so a function that changes state it receives no pointer to is scriptable; the `size` cross-check now runs on stub writes as well as imports. Both are tested (`test_a_truncated_*_write_is_reported`); the stub test is red against `5ee1b4a` and the import test is green there, which is the asymmetry the shared helper closed.
 
 - `0x0138a370` frame_timing_task_dispatch_0138a370: verified (the task dispatcher; 51 recorded frames with 76 registered tasks each). With it the task manager's frame is done: `0x024512a0`, `0x01388c60`, `0x01388c70`, `0x0143e490`, `0x014400a0`, `0x0143f9f0`.
 - `0x0143e490` frame_timing_task_flush_queue_0143e490 and `0x014400a0` frame_timing_task_workers_step_014400a0: verified (200 and 53 recorded calls; the list re-read after each task cannot be made observable with stubs).
