@@ -133,13 +133,27 @@ def evidence_hash(root: str, name: str) -> str:
     while a different input set is a different claim and needs a new review. `unavailable` is
     hashed as the literal claim it is, so approving a function whose captures are not in the
     checkout pins that absence rather than pretending to a hash it never had.
+
+    Rows are hashed in the ledger's own CANONICAL order -- CASE_SETS rank, then option -- and not
+    in the order the file happens to hold them. A row's place in the file is a fact about when it
+    was appended, so hashing file order makes an approval stale when someone rewrites the CSV in a
+    different order, which is a change to how the file was written and not to what was approved.
+    The order is total on today's ledger (no function has two rows with the same set and option),
+    and sorting is a no-op on all 30 approvals in it, so the invariant costs nothing and no longer
+    depends on anyone remembering the convention.
     """
     rows = [r for r in read_csv(os.path.join(root, 'symbols', 'verification.csv'), VERIFICATION_HEADER)
             if r['function'] == name]
     if not rows:
         return ''
+    def canonical(r: dict) -> tuple:
+        # An unknown set sorts after every known one rather than raising: the ledger's own reader
+        # reports that row as malformed, and a hash is the wrong place to discover it.
+        rank = CASE_SETS.index(r['cases']) if r['cases'] in CASE_SETS else len(CASE_SETS)
+        return rank, r['option']
+
     h = hashlib.sha256()
-    for r in rows:
+    for r in sorted(rows, key=canonical):
         h.update(f"{r['cases']}|{r['option']}|{r['cases_sha256']}".encode() + b'\0')
     return h.hexdigest()[:SOURCE_HASH_LENGTH]
 

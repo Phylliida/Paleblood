@@ -34,8 +34,12 @@ and guest `0x057e9b38`. Everything from there to the end of the image (`0x05ad30
 decoded from that range -- the highest function in `symbols/functions.csv` ends at guest
 `0x02f7efde`, `0x286ab5a` bytes (40.4 MiB) below it -- but data the replacements name can live
 there: the static guard at `0x05ac59b8` is inside the zero-fill, while the vtable base
-`0x056fe140` is below it. A preset at a zero-fill address is describing data the loader writes as
-zero, so its value comes from the case, never from the file.
+`0x056fe140` is below it. A preset at a zero-fill address is describing data nothing loaded, so
+its value comes from the case, never from the file: the image is mapped anonymous
+(`tools/harness.py:160-162` is `MAP_PRIVATE | MAP_ANONYMOUS`, at `:227` for `IMAGE`), which the
+kernel zero-fills, and the loader stores only each segment's `filesz` (`runtime/loader.c:380`).
+The zeros are the mapping's guarantee, not something the loader writes -- which is why a case is
+the only thing that can put a nonzero value there.
 
 The file is larger than the image, and the difference is accounted for by the program headers
 rather than left as a mystery. After the two `PT_LOAD`s the file's last mapped byte is `0x53e9b38`;

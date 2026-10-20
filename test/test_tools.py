@@ -378,7 +378,8 @@ class Verify(unittest.TestCase):
         d = tempfile.mkdtemp()
         res = {'schema': 1, 'address': '0x1', 'cases': [{'id': 'a', 'ret': {'rax': '0x1'}}]}
         for n in ('o', 'r'):
-            json.dump(res, open(f'{d}/{n}.json', 'w'))
+            with open(f'{d}/{n}.json', 'w') as f:
+                json.dump(res, f)
         self.assertEqual(run('verify.py', 'compare', f'{d}/o.json', f'{d}/r.json').returncode, 0)
         res['cases'][0]['ret']['rax'] = '0x2'
         json.dump(res, open(f'{d}/r.json', 'w'))
@@ -779,6 +780,37 @@ class ReviewPin(unittest.TestCase):
             f.write('sample,edge,,4,4,0,0,abcdef0123456789,9999888877776666,2026-10-20\n')
         errs = v.check_reviews(d, self.funcs())
         self.assertTrue(any('evidence set changed since this approval' in e for e in errs), errs)
+
+    def test_the_evidence_hash_does_not_depend_on_how_the_ledger_was_written(self):
+        """A row's place in the file is when it was appended, not what was approved.
+
+        Hashing file order made an approval stale when someone rewrote `verification.csv` in a
+        different order, which changes how the file reads and not what it says. The hash is taken
+        in the ledger's own canonical order (CASE_SETS rank, then option), so the same evidence
+        written in any order is the same evidence -- and a changed pin is still a changed pin.
+        """
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import verification
+        d = self.root()
+        header = ('function,cases,option,total,passed,failed,quarantined,source,cases_sha256,'
+                  'date\n')
+        rows = ['sample,recorded,,3,3,0,0,abcdef0123456789,aaaa1111bbbb2222,2026-10-19',
+                'sample,edge,,4,4,0,0,abcdef0123456789,3333444455556666,2026-10-19',
+                'sample,edge,30,4,4,0,0,abcdef0123456789,7777888899990000,2026-10-19']
+
+        def write(order):
+            with open(os.path.join(d, 'symbols', 'verification.csv'), 'w') as f:
+                f.write(header + '\n'.join(order) + '\n')
+
+        write(rows)
+        canonical = verification.evidence_hash(d, 'sample')
+        self.assertEqual(len(canonical), verification.SOURCE_HASH_LENGTH)
+        # The same three rows, written bottom-up and with the option last instead of in the middle.
+        write([rows[2], rows[0], rows[1]])
+        self.assertEqual(verification.evidence_hash(d, 'sample'), canonical)
+        # Still a claim about contents: one pin changes, the evidence changes.
+        write([rows[0], rows[1], rows[2].replace('7777888899990000', '0000000000000001')])
+        self.assertNotEqual(verification.evidence_hash(d, 'sample'), canonical)
 
     def test_an_approval_that_pins_nothing_is_refused(self):
         sys.path.insert(0, os.path.join(ROOT, 'tools'))

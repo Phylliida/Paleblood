@@ -152,6 +152,17 @@ against the original with `tools/verify.py`.
 The pull request template asks for the rest. CI checks the CSV, the progress numbers and that
 no game data is included. If you used an AI assistant, say so in the template.
 
+## Two traps when running the tools by hand
+
+`python3 -P` (which the venv recipes use so a script in the current directory cannot shadow the
+standard library) does not put the script's directory on `sys.path`. The checkers import
+`verification` from `tools/`, so they need `PYTHONPATH=tools`; without it they stop at
+`ModuleNotFoundError: No module named 'verification'`, which reads like a missing file rather than
+a path decision. With `-m` the same flag also drops the working directory, so a single named test
+run from `test/` needs `PYTHONPATH=.`. Both failures exit 1 -- the code a behavioural mismatch
+uses -- so read the traceback, not the status: **exit 1 does not distinguish "it disagreed" from
+"it never ran."**
+
 ## What was not tested by the maintainer
 
 - The Ghidra window (`ghidraRun`) and running the scripts from the Script Manager: the
