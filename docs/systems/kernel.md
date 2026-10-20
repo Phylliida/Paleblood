@@ -8,11 +8,13 @@ The engine's core library (Dantelion2, "ClassLibrary/Core/Kernel" in its source 
 wrappers around the PS4 kernel for threads, mutexes and condition variables, which report every
 unexpected result through the engine's fatal error function (`0x024b55b0`, file, line, message).
 
-The runtime also supplies POSIX-like system imports such as `getpagesize`, `getpid`,
-`clock_gettime`, and `gettimeofday`. Their public contracts and the gaps in target-specific
-evidence are documented in the runtime system-call notes. In the game
+The executable and bundled `libc` import POSIX-like calls such as `getpagesize`, `getpid`,
+`clock_gettime`, and `gettimeofday`; an import does not mean Paleblood implements it. In the
+current runtime, both `getpagesize` entries are registered as fail-loud unresolved diagnostics
+because the PS4 page-size value is not established, as recorded in merged Paleblood [PR #66](https://github.com/Yharnam-Hunters/Paleblood/pull/66).
+See the runtime system-call notes for implementation status and evidence limits. In the game
 evidence reviewed so far, the frame limiter passes null as `gettimeofday`'s timezone argument;
-the numeric clock ID `4` is confirmed for `sceKernelClockGettime`, not for the imported
+numeric clock ID `4` is confirmed for `sceKernelClockGettime`, not for the imported
 `clock_gettime` wrapper.
 
 `kernel_condition_wait` (`0x02483e80`) waits on a condition variable: forever when the timeout
@@ -44,6 +46,22 @@ above 6 when read unsigned — returns `0x2bc` instead of indexing backwards out
 the index is sign-extended only after it has passed the test. The load is a 32-bit `mov eax`,
 which zero-extends into RAX. Two of the seven values appear twice, so indices 6 and 7 are the only
 pair that separates the bound from the table's own contents.
+
+### Runtime thread-call implementations
+
+These are Paleblood runtime services, not newly decompiled game functions. Merged [PR #62](https://github.com/Yharnam-Hunters/Paleblood/pull/62)
+implements `scePthreadEqual` by comparing the object pointers used as guest thread handles. Its
+synthetic registry tests cover one handle compared with itself, distinct handles in both argument
+orders, and null; the public FreeBSD `pthread_equal(3)` contract supports zero for unequal and
+nonzero for equal, but the PS4's exact nonzero value is unknown. Merged [PR #72](https://github.com/Yharnam-Hunters/Paleblood/pull/72)
+implements imported `sched_yield` by yielding the host thread and returning zero, following POSIX
+and FreeBSD's documented contract. Unit tests check the result but cannot show that another host
+thread actually ran.
+
+The similarly named `scePthreadYield` remains registered as an unresolved, fail-loud diagnostic.
+FreeBSD's `pthread_yield` returns `void`, Linux's analogue returns `int`, and no PS4 declaration or
+inspected guest call site settles the guest-visible signature. Do not infer that it is implemented
+from its registry entry. None of these changes has been verified by a new Bloodborne boot.
 
 ## Key functions
 

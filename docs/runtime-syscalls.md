@@ -11,16 +11,21 @@ but do not count as implemented or as supplied imports in progress reports.
 
 `symbols/imports.csv` records `getpagesize` and `gettimeofday` as imports of `eboot` from `libScePosix`; `libc.elf` imports `clock_gettime`, `getpagesize`, `getpid`, and `gettimeofday` from `libkernel`. Import rows establish that the names are required, not their arguments, return values at every call site, or all clock IDs.
 
+The eight hash-verified target images (`eboot.elf` and the seven modules, `tools/check_target.py`) all state `p_align` 0x4000 for every `PT_LOAD` segment, with `p_offset` congruent to `p_vaddr` modulo 0x4000 (the difference is exactly 0x4000 in each; `readelf -l` prints the headers).
+
 The decompiled frame limiter calls `gettimeofday` with a null timezone argument. A separate [verified clock helper](../game/frame_timing/monotonic_clock.cpp) calls `sceKernelClockGettime` with clock ID `4`, named `CLOCK_MONOTONIC` in that code. This confirms one monotonic clock request in the game; it does not establish every ID passed through the imported `clock_gettime` wrapper, or that no other ID is used in unexamined code.
 
 ## Interfaces and known behavior
 
 | Function | Arguments and representation | Publicly documented result and errors | Evidence and open questions for PS4 |
 |---|---|---|---|
-| `getpagesize(void)` | No arguments. Returns the target's page size in bytes. The numeric value is platform-specific. | `getpagesize` is not in current POSIX; portable code is directed to `sysconf(_SC_PAGESIZE)`. Linux and FreeBSD document the byte count; their manuals do not define a general error return for this function. Linux exposes it as a libc interface, not necessarily a dedicated kernel syscall. | The import is present. The target page-size value and behavior under unusual target configurations are not established here. Do not hard-code the build host's page size. |
+| `getpagesize(void)` | No arguments. Returns the target's page size in bytes. The numeric value is platform-specific. | `getpagesize` is not in current POSIX; portable code is directed to `sysconf(_SC_PAGESIZE)`. Linux and FreeBSD document the byte count; their manuals do not define a general error return for this function. Linux exposes it as a libc interface, not necessarily a dedicated kernel syscall. FreeBSD notes the system page size may differ from the underlying hardware page size. | The import is present twice (`eboot` from `libScePosix`, `libc.elf` from `libkernel`), so both library names are registered against one implementation. The target images bound the value but do not pick one: every `PT_LOAD` of the eight hash-verified ELFs has `p_align` 0x4000 with `p_offset` congruent to `p_vaddr` modulo 0x4000, and the ELF ABI's congruence rule then limits the system page size to a divisor of 16384 (4096, 8192 or 16384); `p_align` is the alignment the image requires, not the page size the system reports. Stock FreeBSD on AMD64 uses 4096, and Sony's open-source page confirms the FreeBSD kernel is used but publishes the upstream sources, not the console's modifications, so no public source names the PS4's own value. The runtime entry is therefore registered with `RT_SYSLIB_UNRESOLVED`, so a boot that reaches it names the call, and it does not count as implemented (`runtime/syslib/kernel.c`). What would settle it: one observed `getpagesize()` or `sysconf(_SC_PAGESIZE)` result on a console, or a guest call site whose page arithmetic shows the granularity the system uses. See the section "getpagesize: observed, inferred, unknown" below; do not hard-code the build host's page size.
 | `getpid(void)` | No arguments. Returns a `pid_t` naming the calling process. | POSIX specifies that it succeeds and has no error return. Linux process IDs are scoped by PID namespaces; other systems have their own process-ID scope and lifecycle rules. | The import is present, but this repository does not establish the guest-visible process ID or its scope. Returning the host PID is not justified by the API contract alone. |
 | `clock_gettime(clock_id, tp)` | `clock_id` selects a clock; `tp` points to a `struct timespec`. On the POSIX interface, `tv_sec` is seconds and `tv_nsec` is nanoseconds in `[0, 1,000,000,000)`. The exact target structure layout still needs ABI evidence. | POSIX uses `0` for success and `-1` with `errno` for failure. An unsupported clock ID is an `EINVAL` case. Linux and BSD manuals document additional pointer-error details; use the target contract rather than assuming the host's errno mapping. | The imported wrapper is present. The verified `sceKernelClockGettime` call requests ID `4` (`CLOCK_MONOTONIC`). That is evidence for the SCE entry point only, not proof of the libc wrapper's IDs. Other IDs and exact PS4 error and pointer handling remain unresolved. Unknown IDs must not silently return a fabricated time. |
 | `gettimeofday(tv, tz)` | `tv` points to a `struct timeval`: seconds since the Epoch and microseconds in `[0, 1,000,000)`. The historical timezone argument is passed as null at the confirmed game call site. The exact target structure layout still needs ABI evidence. | The wall clock can jump and is not a monotonic elapsed-time source. Historical POSIX specified a zero return on success and left errors undefined; Linux documents `-1`/`EFAULT` for inaccessible pointers and ignores the timezone argument. POSIX.1-2024 removed the interface. | The imported wrapper and game call sites are present; the game passes null for the second argument. Exact target behavior for bad pointers, non-null timezone arguments, and error mapping is not established. Do not silently ignore an error without evidence. |
+| `sched_yield(void)` | No arguments. Returns `int`. | POSIX: the calling thread gives up the processor until it is again at the head of its thread list; `0` on success, `-1` with `errno` otherwise, and POSIX defines no error case for it. FreeBSD documents the same call. | Imported by `libc.elf` from `libkernel`. Implemented: a guest thread runs on a host thread, so the runtime yields the host thread and returns `0` (`runtime/syslib/kernel_thread.c`). A host failure has no FreeBSD error number to report, so it stops by name. Not observable in a unit test: that the host scheduler actually ran another thread. |
+| `scePthreadYield` | Asks for the same yield through the thread library. The PS4-visible signature is not established. | FreeBSD's `pthread_yield(3)` is `void`; Linux's is `int` (always `0`). No PS4-specific public source gives the SCE name's declaration. | Imported by `eboot` and `libc.elf` from `libkernel`; no call site in this repository shows whether the caller reads a result. Registered with `RT_SYSLIB_UNRESOLVED`: the entry stops by name and does not count as implemented. What would settle it: a guest call site showing whether the return register is read after the call, or a PS4-specific public declaration. Do not assume an `int` or `0` from the FreeBSD or Linux analogues. |
+| `memcpy(dest, src, n)`, `memset(dest, c, n)` (libSceLibcInternal) | `void *memcpy(void *, const void *, size_t)` and `void *memset(void *, int, size_t)`, the ISO C declarations. | ISO C 7.24.2.1 and 7.24.6.1: `memcpy` copies `n` bytes from `src` to `dest`; `memset` writes `c` converted to `unsigned char` into the first `n` bytes; both return `dest`. Overlapping `memcpy` regions and null pointers are undefined behaviour. | Imported by `libSceFios2.elf` from `libSceLibcInternal` (`symbols/imports.csv`). Implemented with the host's own functions, since the standard fixes the whole result and no target-specific value is involved (`runtime/syslib/kernel.c`). Not modelled: what the PS4 C library does for the undefined cases; no public source or call site establishes it. |
 
 ## Clock IDs and platform differences
 
@@ -39,6 +44,45 @@ This evidence supports only the four integer conversions. It says nothing about 
 The executable imports `sceNetInetPton` from `libSceNet`. Target call-site inspection found four unconditional call instructions (at `0x0085785e`, `0x011c7a7b`, `0x02f984f6`, and `0x02df348d`); each passes address family `2` and supplies the result as an IPv4 address. The consumers use a positive return as success. This establishes Bloodborne's observed call shape, not every address family supported by the PS4 library. The import thunk and pointer-table references are not additional call sites.
 
 For the observed AF_INET path, the runtime uses the documented BSD [`inet_pton(3)` contract](https://man.freebsd.org/cgi/man.cgi?query=inet_pton): parse dotted-decimal IPv4 text into four network-order bytes, return 1 for valid input and 0 for malformed input. This conversion does not open a socket or perform network I/O. Other target address families and null-pointer error behavior remain unresolved, so the runtime emits a named diagnostic for those inputs instead of forwarding host-specific errors.
+
+## `getpagesize`: observed, inferred, unknown
+
+**Observed in our target** (read-only; the eight images verify against `target.sha256` and
+`target.image.sha256`):
+
+- `symbols/imports.csv` has exactly two `getpagesize` rows - `eboot` from `libScePosix` and
+  `libc.elf` from `libkernel`. No `sysconf` and no quad-page call is imported, so this is the only
+  page-size query the guest has.
+- All sixteen `PT_LOAD` segments of those eight images have `p_align` `0x4000`, and in every one
+  `p_offset - p_vaddr` is exactly `0x4000`.
+- Three guest call sites share one shape: `0x00e04168`, `0x00e04939` and `0x00e05cf9`, each inside
+  functions `0x00e04140`, `0x00e045c0` and `0x00e05a80`. Each is a lazy initialiser: a guard tests
+  `0x05859ec0`, the call is made, the result is `cltq`-extended, `blsr %rax,%rcx` with `jne` rejects
+  it unless it is a power of two, and the value is cached in `0x05859ec8` beside three fixed
+  siblings (`0x10000`, `0x40000`, `0x200000`).
+- `0x05859ec8` has exactly five cross-references in the executable: the three writes above and two
+  reads, all inside those same three functions. None of them compares the cached value against a
+  constant, and no other function reads it.
+
+**Inferred, and the premise each inference needs**:
+
+- The ELF ABI takes `p_align` of a loadable segment to be a multiple of the system page size, and
+  requires `p_offset` and `p_vaddr` to be congruent modulo the page size. *If the PS4 loader follows
+  both rules for these segments*, a page size larger than `0x4000` could not map them at their
+  fixed addresses, while any power-of-two divisor of `0x4000` could.
+- Restricting that to `0x1000`, `0x2000` and `0x4000` adds a second assumption - that the page size
+  is at least 4096 - which is ours, not observed. The guest's own `blsr` check is consistent with
+  every power of two and selects none of them.
+- So `p_align` bounds the candidate set under our premises; it does not measure the value the kernel
+  returns, and none of the three candidates is established.
+
+**Unknown**: the number the PS4 reports. Stock FreeBSD on AMD64 uses 4096 (`PAGE_SHIFT 12`,
+`sys/amd64/include/param.h`), and Sony's open-source page confirms a FreeBSD kernel but publishes
+the upstream sources rather than the console's modifications, so that value describes the ancestor
+and not the target. Our own loader does not depend on a page size either: it copies `PT_LOAD`
+segments at byte-exact `p_vaddr` into one image buffer (`runtime/loader.c`, `rt_elf_map`) and uses
+`p_align` only for TLS, and the `4096`s in `runtime/boot.c` are host allocation sizes. What would
+settle it: one observed `getpagesize()` or `sysconf(_SC_PAGESIZE)` result on a console.
 
 ## Network connection state (`libSceNetCtl`, issue #41)
 
@@ -70,6 +114,51 @@ fatal that names the question and the evidence that would close it.
 no public source, so no path in `runtime/syslib/netctl.c` returns one: a case that would need an error
 value stops the boot by name instead.
 
+## Thread attribute detach state (`scePthreadAttrSetdetachstate`, issue #34)
+
+`eboot` and `libSceFios2.elf` import `scePthreadAttrSetdetachstate` from `libkernel`, and `eboot`
+imports `pthread_attr_setdetachstate` from `libScePosix` (`symbols/imports.csv`). Each source below
+establishes a different part:
+
+- **What the call does:** POSIX `pthread_attr_setdetachstate`. A thread created with the attribute
+  starts detached for `PTHREAD_CREATE_DETACHED` and joinable for `PTHREAD_CREATE_JOINABLE`.
+- **Invalid detach state:** POSIX and FreeBSD's `pthread_attr(3)` both make any other value
+  `EINVAL`.
+- **Invalid attribute variable:** POSIX leaves a null or uninitialised attribute undefined and only
+  recommends `EINVAL`, and the FreeBSD manual lists no error for it. The behaviour comes from
+  FreeBSD libthr's `_pthread_attr_setdetachstate` (`lib/libthr/thread/thr_attr.c`), which returns
+  `EINVAL` when the variable is null or holds no attribute object.
+- **The numbers:** FreeBSD's `<pthread.h>` defines the two states as `0` and `1`. The OpenOrbis
+  homebrew SDK header (`include/orbis/_types/pthread.h`) defines `ORBIS_PTHREAD_CREATE_JOINABLE` and
+  `ORBIS_PTHREAD_CREATE_DETACHED` with the same values. That header follows FreeBSD's text, so it
+  corroborates the numbers rather than measuring them independently.
+
+As with the mutex functions (`runtime/syslib/kernel_mutex.c`), the SCE name returns `0x80020000`
+plus the error number, and the POSIX name returns the number itself.
+
+Still open: the detach state a fresh attribute starts with, and the one `scePthreadAttrGet` copies
+from a running thread. Both are values the system supplies. POSIX makes joinable the default, but
+nothing we can cite confirms what the PS4 reports. In FreeBSD libthr, `_pthread_create`
+(`thr_create.c`) uses that same default (`_pthread_attr_default`) when it is given no attribute
+variable or an empty one. The runtime treats both cases as the unknown default, so the outcome, a
+fatal, does not depend on the PS4 matching libthr there.
+
+How the runtime keeps that open:
+
+- The attribute records a state only when one is set (`has_detach_state`). `scePthreadAttrGet`
+  replaces the whole attribute, as libthr's `pthread_attr_get_np` does, so a state set before the
+  copy is dropped.
+- By convention, thread creation reads the state through `rt_thread_attr_detach_state`
+  (`runtime/include/runtime/process.h`) and never from the field. A fresh attribute's field holds
+  zero, which is the joinable value, so reading the field directly would assume joinable silently.
+- For no variable, an empty variable, or a state nobody set, the reader stops the process
+  (`rt_fatal`), names the call that asked, and says which of those cases it hit.
+
+What would settle it: an observed `scePthreadAttrGetdetachstate` result on a console, for a fresh
+attribute and for one filled by `scePthreadAttrGet` from the main thread. Guest call sites would
+also settle it: a thread created without a detach state being set, then joined or detached
+(`scePthreadJoin`, `pthread_join` and `scePthreadDetach` are imported).
+
 ## Implementation rule
 
 Implement the established contract and test the `RT_SYSLIB` entry through its library and symbol name. Keep target-specific values separate from host values. When an argument, ID, return value, or error case is unknown, fail loudly with the call name and leave the question open; never choose a value to make `tools/boot.py` advance.
@@ -80,10 +169,17 @@ Implement the established contract and test the `RT_SYSLIB` entry through its li
 - [POSIX `getpid`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpid.html)
 - [Older POSIX `gettimeofday` specification](https://pubs.opengroup.org/onlinepubs/009604599/functions/gettimeofday.html)
 - [FreeBSD `getpagesize(3)`](https://man.freebsd.org/cgi/man.cgi?query=getpagesize&sektion=3&manpath=FreeBSD+13.3-RELEASE)
+- [ELF ABI, program headers and `p_align`](https://refspecs.linuxfoundation.org/elf/gabi4%2B/ch5.pheader.html) (loadable segments must be congruent modulo the page size; `p_align` is the alignment the loader honors)
+- [FreeBSD AMD64 `param.h`](https://github.com/freebsd/freebsd/blob/releng/9.1/sys/amd64/include/param.h) (stock `PAGE_SIZE` 4096) and [Sony's open-source page for the PS4](https://www.playstation.com/en-us/oss/ps4/)
 - [FreeBSD `clock_gettime(2)`](https://man.freebsd.org/cgi/man.cgi?query=clock_gettime&sektion=2&manpath=FreeBSD+15.1-STABLE) and [`gettimeofday(2)`](https://man.freebsd.org/cgi/man.cgi?query=gettimeofday&sektion=2&manpath=FreeBSD+14.4-RELEASE)
 - [Linux `getpagesize(2)`](https://man7.org/linux/man-pages/man2/getpagesize.2.html), [`getpid(2)`](https://man7.org/linux/man-pages/man2/getpid.2.html), [`clock_gettime(2)`](https://man7.org/linux/man-pages/man2/clock_gettime.2.html), and [`gettimeofday(2)`](https://man7.org/linux/man-pages/man2/gettimeofday.2.html)
 - [PSP2SDK `sceNetHtonl`/`sceNetHtons`/`sceNetNtohl`/`sceNetNtohs` declarations](https://psp2sdk.github.io/net_8h.html)
 - [FreeBSD `htonl(3)`/`htons(3)`/`ntohl(3)`/`ntohs(3)`](https://man.freebsd.org/cgi/man.cgi?format=html&query=htons&sektion=3)
+- [POSIX `sched_yield`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/sched_yield.html), [FreeBSD `sched_yield(2)`](https://man.freebsd.org/cgi/man.cgi?query=sched_yield&sektion=2) and [FreeBSD `pthread_yield(3)`](https://man.freebsd.org/cgi/man.cgi?query=pthread_yield&sektion=3); [Linux `pthread_yield(3)`](https://man7.org/linux/man-pages/man3/pthread_yield.3.html) for the `int`-returning form
+- [ISO C (N1570 draft) 7.24.2.1 `memcpy` and 7.24.6.1 `memset`](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)
 - [vitasdk/vita-headers `psp2/net/netctl.h`](https://github.com/vitasdk/vita-headers/blob/master/include/psp2/net/netctl.h) - PS Vita, a different operating system: shape of the `SceNetCtl` declarations, never a PS4 value
 - [PSP2SDK `psp2/net/netctl.h` file reference](https://psp2sdk.github.io/netctl_8h.html) and [vitasdk `SceNetCtl` user group](https://docs.vitasdk.org/group__SceNetCtlUser.html) - the same declarations, with no prose describing any return value in this group
 - [vitasdk/vita-headers `psp2/error.h`](https://github.com/vitasdk/vita-headers/blob/master/include/psp2/error.h) - `0 on success` as the documented SCE-family return convention
+- [POSIX `pthread_attr_setdetachstate`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_attr_getdetachstate.html) - the detach state semantics, the invalid-value error, and the recommended `EINVAL` for an uninitialised attribute
+- [FreeBSD `pthread_attr(3)`](https://man.freebsd.org/cgi/man.cgi?query=pthread_attr_setdetachstate&sektion=3), [libthr `thr_attr.c`](https://cgit.freebsd.org/src/tree/lib/libthr/thread/thr_attr.c) (`_pthread_attr_setdetachstate`, `_pthread_attr_get_np`), [`thr_create.c`](https://cgit.freebsd.org/src/tree/lib/libthr/thread/thr_create.c) (`_pthread_create`: the default attribute for a null or empty variable) and [`include/pthread.h`](https://cgit.freebsd.org/src/tree/include/pthread.h) (`PTHREAD_CREATE_JOINABLE`, `PTHREAD_CREATE_DETACHED`)
+- [OpenOrbis `include/orbis/_types/pthread.h`](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/blob/master/include/orbis/_types/pthread.h) - the PS4 homebrew SDK's `ORBIS_PTHREAD_CREATE_*` values, which follow FreeBSD's

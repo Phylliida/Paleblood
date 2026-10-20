@@ -4,6 +4,13 @@
 into a local, resumable SQLite catalog. It stores no executable bytes and never records the path to
 the executable. The portable `export` command writes JSON without machine-specific source paths.
 
+Optional [type intelligence](TYPE_INTELLIGENCE.md) adds bounded RTTI/vtable candidates,
+class/function relationships, conservative classifications and licensed community research hints.
+These enrich ranking and retain unknowns; they do not establish ABI or behavior qualifications.
+The [automation trial inventory](CANDIDATE_ELIGIBILITY.md) joins fresh ownership and qualification
+with private recorded-fixture, ABI and complete instruction/CFG evidence. It reports missing
+prerequisites separately and uses the same SQLite state as this catalog.
+
 ## Evidence and unknowns
 
 The current `symbols/ghidra_functions.csv` has an entry address and byte size for every function in
@@ -95,10 +102,10 @@ ownership snapshot, catalog/qualification code, decoder, harness, or loader-sour
 matches the current evidence.
 
 Scores are weighted heuristics, not probabilities. `confidence_percent` reports how many of the
-ten evidence dimensions have supporting data. Each result includes per-component weight, evidence
+eleven evidence dimensions have supporting data. Each result includes per-component weight, evidence
 ratio, weighted score, and a reason. Defaults are feasibility 20, dependency complexity 15, fixture
 difficulty 10, analysis confidence 10, unlock potential 15, runtime relevance 15, ownership 5,
-original execution 15, engineering effort 5, and test infrastructure 5.
+original execution 15, engineering effort 5, test infrastructure 5, and type context 10.
 Override any subset with `rank --weights weights.json`; missing keys keep their defaults. For
 example, `{"unlock": 30, "runtime_relevance": 25}` gives extra weight to boot leverage.
 
@@ -175,3 +182,20 @@ does not meet the project's full `verified` promotion bar. Ghidra reports 28 kno
 and no call sites within its body; its data-reference list is empty. Pointer-derived memory and
 global-state dependencies remain unknown. This example shows how the catalog reports the evidence
 and its limits together.
+
+## Differential evidence state
+
+`tools/differential.py` stores resumable Phase 2 run and per-side fixture results in the same
+SQLite database as this catalog. Evidence is keyed by executable, function address, fixture set,
+ABI manifest, qualification snapshot, replacement source and binary, and execution tool sources. A
+changed key causes a fresh run; old evidence remains available for audit but is not reused as
+current evidence. The `verification_state` table tracks fixture, original-run, differential,
+coverage, mismatch, blockers, and evidence-reference fields separately. It does not edit canonical
+function status files or promote a function.
+
+Original execution, differential fixture success, edge verification, and full verification remain
+distinct states. Optional bounded instruction tracing observes supported guest memory accesses
+and dynamic CFG paths; unsupported instructions and host-dispatch gaps make traces incomplete.
+Import entry/return snapshots and mediated scripted accesses are diagnostic channels, not complete
+instruction coverage. See [VERIFY.md](VERIFY.md#import-boundary-observations) and the
+[support matrix](INSTRUCTION_TRACE_SUPPORT.md) for guarantees and limitations.

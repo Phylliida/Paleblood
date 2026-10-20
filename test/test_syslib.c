@@ -50,6 +50,8 @@ typedef int (*f_unregister)(int);
 typedef int (*f_info)(int, void *);
 typedef int (*f_nat)(void *);
 typedef int (*finit)(void **, void **, const char *);
+typedef int (*f_equal)(void *, void *);
+typedef int (*f_attr_get)(void *, void **);
 typedef uint32_t (*f_u32_u32)(uint32_t);
 typedef uint16_t (*f_u16_u16)(uint16_t);
 typedef int (*f_inet_pton)(int, const char *, void *);
@@ -119,6 +121,15 @@ static void info_of_module_one(void) { netctl_info(1, netctl_shared); }
    stack: the fatal must not write through it, and netctl_shared stays the untouched witness. */
 static void nat_info_with_size(void) { int nat[4] = {16, 0, 0, 0}; netctl_nat(nat); }
 
+/* Thread creation will read an attribute's detach state through rt_thread_attr_detach_state. A
+   state the guest did not set is one the system supplies, which is not established, so the read
+   must stop the process; each such case is read in a child. detach_reader_attr is the variable the
+   child reads. */
+static int detach_state_of(void **attr) { return rt_thread_attr_detach_state(attr, "test"); }
+static void *detach_reader_attr;
+static void read_detach_state(void) { (void)detach_state_of(&detach_reader_attr); }
+static void read_detach_state_without_variable(void) { (void)detach_state_of(NULL); }
+
 int main(void)
 {
     /* Unresolved entries are still callable diagnostics, but are not reported as implemented. */
@@ -171,6 +182,86 @@ int main(void)
     static unsigned char block[0x40];
     rt_process.proc_param = block;
     CHECK(((void *(*)(void))fn("libkernel", "sceKernelGetProcParam"))() == block);
+
+    /* a thread variable equals itself and nothing else: the same object pointer is the same thread.
+       The runtime has a single guest thread so far (scePthreadCreate is not implemented), so the
+       unequal cases compare it with a pointer that is not a thread: they exercise pointer inequality
+       only, not two distinct valid thread handles. */
+    static unsigned char main_stack[0x100];
+    rt_thread_register_main(main_stack, sizeof main_stack);
+    void *const self = ((void *(*)(void))fn("libkernel", "scePthreadSelf"))();
+    const f_equal equal = (f_equal)fn("libkernel", "scePthreadEqual");
+    unsigned char not_a_thread;
+    CHECK(self && equal(self, self) != 0);
+    CHECK(equal(self, &not_a_thread) == 0 && equal(&not_a_thread, self) == 0);
+    CHECK(equal(self, NULL) == 0);
+
+    /* A thread attribute takes one of the two detach states, joinable (0) or detached (1). Any
+       other value, or a variable holding no attribute object, is EINVAL: an SCE code under the SCE
+       name, the errno itself under the POSIX name. The state is read back the way thread creation
+       will read it, through rt_thread_attr_detach_state. */
+    const f1 thread_attr_init = (f1)fn("libkernel", "scePthreadAttrInit");
+    const f1 thread_attr_destroy = (f1)fn("libkernel", "scePthreadAttrDestroy");
+    const f_attr_get thread_attr_get = (f_attr_get)fn("libkernel", "scePthreadAttrGet");
+    const f2i set_detach = (f2i)fn("libkernel", "scePthreadAttrSetdetachstate");
+    const f2i posix_set_detach = (f2i)fn("libScePosix", "pthread_attr_setdetachstate");
+    if (failures) return 1;
+    void *thread_attr = NULL;
+    CHECK(thread_attr_init(&thread_attr) == 0 && thread_attr);
+
+    /* A fresh attribute has no state of its own, and a rejected value does not give it one:
+       reading it stops instead of answering joinable. */
+    CHECK(set_detach(&thread_attr, 2) == (int)0x80020016);
+    CHECK(posix_set_detach(&thread_attr, -1) == 22);
+    detach_reader_attr = thread_attr;
+    CHECK(died_in_fatal(read_detach_state));
+
+    /* The last state set is the one kept, and a rejected value leaves it alone. */
+    CHECK(set_detach(&thread_attr, 1) == 0 && detach_state_of(&thread_attr) == 1);
+    CHECK(set_detach(&thread_attr, 0) == 0 && detach_state_of(&thread_attr) == 0);
+    CHECK(set_detach(&thread_attr, 1) == 0);
+    CHECK(set_detach(&thread_attr, 2) == (int)0x80020016);
+    CHECK(set_detach(&thread_attr, -1) == (int)0x80020016);
+    CHECK(detach_state_of(&thread_attr) == 1);
+
+    /* The POSIX name records on the same attribute object. */
+    CHECK(posix_set_detach(&thread_attr, 0) == 0 && detach_state_of(&thread_attr) == 0);
+    CHECK(posix_set_detach(&thread_attr, 2) == 22 && posix_set_detach(&thread_attr, -1) == 22);
+    CHECK(detach_state_of(&thread_attr) == 0);
+    CHECK(set_detach(NULL, 0) == (int)0x80020016 && posix_set_detach(NULL, 0) == 22);
+
+    /* scePthreadAttrGet replaces the attribute with the running thread's, whose detach state the
+       system supplies: the state set before is gone, and a state set afterwards is kept again. */
+    CHECK(set_detach(&thread_attr, 1) == 0);
+    CHECK(thread_attr_get(self, &thread_attr) == 0);
+    detach_reader_attr = thread_attr;
+    CHECK(died_in_fatal(read_detach_state));
+    CHECK(set_detach(&thread_attr, 0) == 0 && detach_state_of(&thread_attr) == 0);
+
+    CHECK(thread_attr_destroy(&thread_attr) == 0 && thread_attr == NULL);
+    /* Destroyed, the variable holds no object: setting is EINVAL. In FreeBSD libthr, creating a
+       thread from an empty variable, or from none, uses the default attributes, so reading stops
+       for both. */
+    CHECK(set_detach(&thread_attr, 0) == (int)0x80020016);
+    CHECK(posix_set_detach(&thread_attr, 0) == 22);
+    detach_reader_attr = thread_attr;
+    CHECK(died_in_fatal(read_detach_state));
+    CHECK(died_in_fatal(read_detach_state_without_variable));
+    CHECK(is_implemented("libkernel", "scePthreadAttrSetdetachstate"));
+    CHECK(is_implemented("libScePosix", "pthread_attr_setdetachstate"));
+
+    /* sched_yield gives up the processor and succeeds with 0, every time. That the host scheduler
+       actually ran another thread is not observable from here, so only the contract's result is
+       checked. */
+    const f_check yield = (f_check)fn("libkernel", "sched_yield");
+    CHECK(yield() == 0 && yield() == 0);
+    CHECK(is_implemented("libkernel", "sched_yield"));
+
+    /* scePthreadYield's PS4 signature (no result, or an int) is not established, so the entry stops
+       by name and is registered without counting as implemented. */
+    void (*pthread_yield_entry)(void) = (void (*)(void))fn("libkernel", "scePthreadYield");
+    CHECK(died_in_fatal(pthread_yield_entry));
+    CHECK(!is_implemented("libkernel", "scePthreadYield"));
 
     /* The PS4 host is little-endian AMD64; the network representation is big-endian. */
     CHECK(htonl(UINT32_C(0x12345678)) == UINT32_C(0x78563412));
@@ -251,6 +342,33 @@ int main(void)
     /* The store survived all of that, because every fatal above was in a child. */
     CHECK(netctl_unregister(netctl_id_b) == 0);
     CHECK(netctl_check() == 0 && netctl_callbacks_run == 0);
+
+    /* the target page size has no public source, so both entries stop by name */
+    void (*posix_getpagesize)(void) = (void (*)(void))fn("libScePosix", "getpagesize");
+    void (*kernel_getpagesize)(void) = (void (*)(void))fn("libkernel", "getpagesize");
+    CHECK(died_in_fatal(posix_getpagesize));
+    CHECK(died_in_fatal(kernel_getpagesize));
+    /* Registered so a boot that reaches the call names it, but not counted as implemented: the
+       fatal alone does not prove the classification, since an absent entry would also never be
+       reported as implemented. */
+    CHECK(!is_implemented("libScePosix", "getpagesize"));
+    CHECK(!is_implemented("libkernel", "getpagesize"));
+
+    /* memcpy and memset (libSceLibcInternal): ISO C fixes the bytes written and the returned
+       destination. The guard bytes past n prove nothing beyond n is touched. */
+    void *(*libc_memcpy)(void *, const void *, size_t) =
+        (void *(*)(void *, const void *, size_t))fn("libSceLibcInternal", "memcpy");
+    void *(*libc_memset)(void *, int, size_t) = (void *(*)(void *, int, size_t))fn("libSceLibcInternal", "memset");
+    const unsigned char source[5] = {1, 2, 3, 4, 5};
+    unsigned char copy[6] = {0, 0, 0, 0, 0, 0xee};
+    CHECK(libc_memcpy(copy, source, 5) == copy);
+    CHECK(memcmp(copy, source, 5) == 0 && copy[5] == 0xee);
+    CHECK(libc_memcpy(copy, (const unsigned char[1]){0x77}, 0) == copy && copy[0] == 1);
+    unsigned char filled[4] = {0, 0, 0, 0xee};
+    CHECK(libc_memset(filled, 0x1a5, 3) == filled);           /* c is converted to unsigned char */
+    CHECK(filled[0] == 0xa5 && filled[1] == 0xa5 && filled[2] == 0xa5 && filled[3] == 0xee);
+    CHECK(libc_memset(filled, 0, 0) == filled && filled[0] == 0xa5);
+    CHECK(is_implemented("libSceLibcInternal", "memcpy") && is_implemented("libSceLibcInternal", "memset"));
 
     if (!failures) puts("syslib: ok");
     return failures != 0;
