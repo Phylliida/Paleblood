@@ -87,6 +87,18 @@ Needs the maintainer (cannot be done from the sandbox):
   (nonzero payload, destination pre-filled with a value no copy would produce); no expectation is
   rewritten, because a case is input only. That is the same machinery a real edge set needs.
 
+- Accepted, not fixed: `tools/harness.py:766` labels every unclassified exception `instruction
+  tracing failed: {error}`, which is a false name for most of them -- the tracing branch is one
+  `except` among many reasons a case can fail. The whole fix is the literal replacement
+
+      result, code = {'bad_input': f'harness failed in the case: {type(error).__name__}: {error}'}, 3
+
+  and it is deliberately not applied. `harness.py` is one of the five identity files, so a one-line
+  message change stales all 528 catalog runs and needs the refresh plus a packet regeneration in the
+  same commit; no test pins this string, so nothing currently reads the label and nothing is blocked
+  by it. Recorded as a fix anyone may apply while they are already refreshing the catalog for another
+  reason, not as work owed.
+
 ## Runtime track
 
 How far the executable boots on our own runtime (`runtime/boot.c`, `tools/boot.py`): the boot
