@@ -122,9 +122,15 @@ A function goes to `main` only when it is **verified and readable**:
 - **Reviewed:** before a function becomes `verified`, an independent reviewer (not the author:
   another contributor, or, for AI-assisted work, a separate review session that did not write
   the code) checks the verification and the readability against STYLE.md, and approves. The
-  approval is a row in `symbols/reviews.csv` (address, name, date, reviewer, verdict, notes);
-  `tools/validate_functions.py` refuses a `verified` function without one, and
-  `tools/promote.py` won't promote without one.
+  approval is a row in `symbols/reviews.csv` (address, name, date, reviewer, verdict,
+  `source_hash`, `cases_sha256`, notes); `tools/validate_functions.py` refuses a `verified`
+  function without one, and `tools/promote.py` won't promote without one. The two pin columns are
+  what make the approval about a particular thing: the row names the replacement source and the
+  evidence set that were approved, and `validate_functions.py --review-row NAME` prints them for
+  you to paste, so nobody types a hash. An approval goes stale when the source changes or when the
+  case set changes -- and stays valid across a re-record, because re-running the same case files
+  hashes to the same `cases_sha256`: approving a function today does not decay just because someone
+  re-recorded it against the same inputs tomorrow.
 - **No unexplained failures:** every run of a function's cases is recorded with
   `tools/verify.py run --record` in `symbols/verification.csv` (counts only). A `verified`
   function needs current recorded and edge results (for the code as it is now), and no failing

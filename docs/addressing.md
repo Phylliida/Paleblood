@@ -27,6 +27,25 @@ because the ELF header, the program headers and their alignment fill the first p
 `(file 0x50e0000, vaddr 0x50dc000, memsz 0x5f70f4, flags 6)`, and `off - vaddr` is `0x4000` for
 both, which is why one bias works for the whole file.
 
+`memsz` above is the size in memory, and for the second segment it is much larger than what the
+file holds: its `filesz` is `0x309b38`, so the file stops backing the image at image `0x53e9b38`
+and guest `0x057e9b38`. Everything from there to the end of the image (`0x05ad30f4`) is zero-fill:
+`0x2e95bc` bytes (3,052,988, 2.9 MiB) that exist in the guest but not in the file. Nothing is
+decoded from that range -- the highest function in `symbols/functions.csv` ends at guest
+`0x02f7efde`, `0x286ab5a` bytes (40.4 MiB) below it -- but data the replacements name can live
+there: the static guard at `0x05ac59b8` is inside the zero-fill, while the vtable base
+`0x056fe140` is below it. A preset at a zero-fill address is describing data the loader writes as
+zero, so its value comes from the case, never from the file.
+
+The file is larger than the image, and the difference is accounted for by the program headers
+rather than left as a mystery. After the two `PT_LOAD`s the file's last mapped byte is `0x53e9b38`;
+beyond it sit `PT_DYNAMIC` (`0x5952c38`, `0xc80` bytes), the SCE metadata segment (`0x61000000`,
+`0x53e9b40`, `0x569d78` bytes), and two `PT_LOPROC` entries (`0x70000000` at `0x59538c0`,
+`0x70000001` at `0x5953910`), the last of which ends at `0x5954138` -- exactly the file size. So
+`objdump` refusing this object is about `e_shoff = 0`, not about the tail. Every one of the 157,757
+addresses in the function catalog and all 625 rows of `symbols/functions.csv` fall inside a
+`PT_LOAD`, none in the zero-fill, which is the check worth re-running if the image ever changes.
+
 Worked example, `frame_timing_static_guard_014405b0`:
 
 ```
