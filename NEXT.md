@@ -173,6 +173,34 @@ labelled `runtime`.
 
 ## Decompilation track
 
+### The decompiler runs headless, and it is not the bottleneck (measured 2026-10-20)
+
+`tools/ghidra/Decompile.java` drives the analyzed project through the existing shim:
+
+    ./data/bin/analyzeHeadless data/ghidra-proj bb -process eboot.elf -noanalysis -readOnly \
+        -scriptPath Paleblood/tools/ghidra -postScript Decompile.java OUT.c [LIMIT] [TIMEOUT_MS] [STRIDE]
+
+199 of 200 functions decompiled on the first bounded run, and the output corroborates the
+Capstone reading of the same bytes: `FUN_00400020 size=102` is the `.init_array` walker over
+`0x57e3bb8..0x57e5b38`, which the census had identified from disassembly alone. Cost, from a
+stride-400 sample (395 functions spanning the whole address range, median per size class):
+
+| size      | median ms | catalog n | bytes  |
+|-----------|-----------|-----------|--------|
+| <=16      | 2         | 44,331    | 0.7%   |
+| 17-64     | 4         | 30,291    | 2.8%   |
+| 65-256    | 11        | 46,179    | 15.8%  |
+| 257-1024  | 33        | 29,165    | 33.5%  |
+| >1024     | 233       | 7,791     | 47.2%  |
+
+**The whole catalog is about 11.5 h of machine time, single-threaded, in the background** — 7 ms
+median per function, with 3.3% of functions over 1 s consuming 80% of the total (`0x0112db00`,
+56 bytes, took 35.8 s: a decompiler pathology on a small function, not a size effect). So
+decompilation costs nothing against translation, case generation and verification, and it can be
+run once over everything rather than per family. The output is raw Ghidra C -- `undefined8`
+everywhere, arguments as `in_RDI` -- so it is the input to a translation pass, not a result.
+
+
 Readability burn-down first (STYLE.md; CONTRIBUTING.md, "Definition of done"): refactor each
 file in `tools/readable_allowlist.txt`, re-verify every recorded and edge case, get the
 independent review, remove its line. Order: `game/ai/hk_ai_frame_update.cpp`, then the others
