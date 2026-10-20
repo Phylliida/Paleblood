@@ -7,24 +7,57 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 
 Last session: runtime
 
+## The provenance decision (answered 2026-10-20, not yet implemented)
+
+Asked and answered: `verified` keeps its meaning (recorded from the running game) and a third rung
+is added for a traced differential. **Build one gate, not two pipelines**: `differential_runs`
+already stamps `capture_provenance` (`synthetic_or_edge` today); extend that to a declared field
+inside the capture content with values `game_recorded` / `traced_differential` /
+`synthetic_or_edge`, and make `promote.py`'s requirement "two non-empty sets whose declared
+provenances differ". That single rule serves both tracks and closes the two-copies-of-one-set hole
+at the level of content rather than of path. In order, one slice at a time:
+
+1. Provenance field + promote gate + `progress.py` counting the new rung separately + README and
+   STATUS. Bounded; no harness identity change if `tools/harness.py` is untouched. **`promote.py`
+   must stop exiting 0 when it can do nothing** (today: `no capture library at ...; nothing to do`
+   returns 0, so CI sees green on a tool that ran nothing); "cannot act" is non-zero unless
+   `--nothing-to-do-ok` is passed.
+2. **The loop test — highest value on the board and available today.** Run the recorder under
+   `capture_poc_replay`, dump a capture, feed it through `promote.py` in a throwaway worktree, and
+   assert acceptance at the new rung. This proves the running-game path's endpoint before the game
+   runs: if `recorder.hpp`'s output disagrees with what `promote.py` wants, that is found now and
+   not after the boot clears.
+3. **Recorder caller in `runtime/hooks.c`.** `rt_capture_begin` / `rt_capture_write` exist with no
+   caller outside tests; the hook boundary is the caller. Before item 4: an affinity constant with
+   no recorder yields no captures however far the boot gets.
+4. `scePthreadAttrGetaffinity` = `0x3F`, with the citation and the which-cores residual in the
+   comment, recorded as a decision in `symbols/boot_history.csv`.
+
+Expectation to state rather than predict: `symbols/boot_history.csv` has four rows, `milestone`
+`loaded`, `milestone_index` **0 of 8**, and the same `stops_at`
+(`libc.elf->libkernel:scePthreadAttrGetaffinity`, `libc.elf+0x81ad5`) since 2026-10-07. Clearing
+that site does not buy 21 -> 30 replacements; it buys one learned stop. **The deliverable is where
+it stops next, not a promotion count.**
+
 Needs the maintainer (cannot be done from the sandbox):
 - Pushing. The sandbox has no credentials and `gh` stays unauthenticated, so nothing here can
   push; the maintainer pushes `main` periodically (as of `c25c9c3`, `origin/main` matches `main`).
   So: fetch at the top of a slice and end each one with `main` committable, and treat a slice as
   durable only when `git rev-list --count origin/main..main` reads 0. `../Paleblood-2026-10-19.bundle`
   (`git bundle --all`) is the fallback export and goes stale between pushes.
-- The affinity constant in target 2 below: `0x3F`, `0xFF`, or a decision to park it. No citable
-  source in the tree pins it, and the game's libc bit-counts the mask to size worker threads
-  (STATUS.md, "Open questions"), so a wrong guess changes thread topology silently.
-- What `verified` means for a function whose captures are not in the checkout. 20 of the 21
-  `verified` functions have no case directory here (their captures were recorded in a 2026-10-07
-  checkout), so their `symbols/verification.csv` rows carry `cases_sha256` `unavailable` rather than
-  a hash. `tools/verification.py::check` currently accepts that marker as sufficient; the argument
-  for it is that it is a deliberate act by someone who looked, and that a blank is still an error.
-  The argument against, and the reason this is here rather than settled in code: if those inputs
-  cannot be re-run in this tree, "verified" claims more than the tree can show, and the honest
-  status is `edge-verified` until the captures return. Flipping it is one predicate in `check`;
-  what matters is that it is a decision, not a default.
+- The affinity constant in target 2 below: **answered -- `0x3F`.** The count has a source outside
+  the tree (Digital Foundry, July 2013: "six of the eight AMD CPU cores are available to
+  developers ... Both consoles allocate two Jaguar CPU cores to the operating system"), which
+  sources *six*, not *which six*; `0x3F` assumes the OS takes the top two. Both sentences go in the
+  comment, and the choice goes into `symbols/boot_history.csv` as a decision. This supersedes the
+  earlier `RT_SYSLIB_UNRESOLVED` lean. Not urgent: without a recorder in the runtime, clearing this
+  site yields no captures even if the boot advances.
+- What `verified` means for a function whose captures are not in the checkout: **answered, both
+  ways.** `verified` keeps meaning recorded from the running game, and a named third rung --
+  `differential-verified`, counted separately in `progress.py` and the README -- holds a
+  canary-backed traced differential with pinned cases. Widening the existing word would put 21
+  recorded rows and 528 traced rows under one label with two evidentiary bases, which is the failure
+  the ledger exists to expose. The work is queued in "The provenance decision" below.
 - Independent review of the 528 `engine_zero_init_*` functions (`symbols/reviews.csv`). They carry
   no approved row, so `tools/promote.py` cannot move them; the nine reviewed `frame_timing_*`
   functions are the ones to prove that path on first. The packet to read is
