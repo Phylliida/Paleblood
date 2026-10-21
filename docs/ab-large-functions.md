@@ -71,3 +71,59 @@ each class, so the choice cannot be tuned to a preferred function:
 The decompiler cache has been promised ten times and shipped zero. It ships as this A/B's first
 deliverable or it is deleted from the plan: one function decompiled, cached to disk, and re-read
 from cache on a second invocation with the second run measurably shorter and byte-identical.
+
+## Amendment 1 -- the adequacy criterion, replaced before the first decompile
+
+The rule above measures the wrong thing, and the companion named it exactly: **three mutants chosen
+by the author are caught by the first case that reaches the function**, so "minimum cases to catch
+three mutants" cannot come back large, and a threshold it cannot fail is not a threshold. Mutants
+settle whether the **comparator** is sensitive to a change. They say nothing about whether the
+**behaviour** was ever exercised.
+
+Primary criterion, as of this amendment (made before any pilot function has been decompiled,
+translated or run):
+
+1. **Cases until every basic block of the function executes at least once**, measured from the
+   harness's execution trace, not asserted.
+2. **Blocks that never run at any case count I can design** -- printed as a set, and carried into
+   the approval packet as a **stated limit**, rather than discovered by a reviewer.
+3. Mutants are retained, demoted to what they are good for: **comparator validity**, i.e. proof that
+   a wrong translation would have been caught.
+
+## The denominator, measured: `tools/blocks.py`
+
+A block starts at the entry, at every branch target, and after every branch; it ends at a branch or
+a return. Computed from the decoded bytes at `guest - 0x3fc000` with capstone, `detail=True`;
+anything the decoder cannot place is **counted and refused, never approximated**.
+
+Over the three pre-registered candidates plus a seeded 150-function sample of the tier (153
+functions, `--sample 150 --seed 0`), on 2026-10-21:
+
+| quantity | value |
+| --- | --- |
+| basic blocks, median | **67** |
+| basic blocks, min / max | 1 / 1,434 |
+| short decode (decoded bytes < declared size) | **70 of 153 (46%)** |
+| functions with unplaceable branch targets | **54 of 153 (35%)** |
+
+Three consequences, each of which changes the A/B rather than decorating it:
+
+- **67 blocks at the median size means the answer to "how many cases" is not 2.** Whatever number
+  the trace produces, the denominator is large and visible before a single case is written.
+- **46% short decode** says the declared sizes in `symbols/ghidra_functions.csv` are upper bounds —
+  the body ends before the size does -- so any cost derived from bytes is an over-estimate in exactly
+  this tier. It also corroborates the `boundary_confidence` note (`ghidra-export-entry-size`) that had
+  been carried as a curiosity: entry sizes are a Ghidra export property, not measured code extents.
+- **35% have unplaceable branch targets**, i.e. indirect jumps whose targets cannot be enumerated
+  statically. For those functions full block coverage **cannot be claimed by construction**; the
+  honest report is coverage over the statically enumerable blocks plus the count of dynamic targets
+  seen at run time.
+
+## Cache trap, closed before the cache is written
+
+Ghidra's output can embed the output path or a timestamp. A cached re-read compared against a fresh
+decompile **in the same directory** would then match for the wrong reason -- and I would have
+concluded the cache was sound when it was keyed to a directory. The cache's acceptance test is
+therefore: decompile the same function twice into **two different output directories**, diff the two
+fresh outputs to see what varies, and only then assert that a cached re-read matches its own fresh
+control byte for byte.
