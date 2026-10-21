@@ -229,6 +229,26 @@ def quarantined(root: str, function: str, cases: str, option: str) -> dict[str, 
             if r['function'] == function and r['cases'] == cases and r['option'] == option}
 
 
+def _head_or_refuse(root: str) -> str:
+    """The commit a pre-record snapshot belongs to. Empty output refuses; it is never a stamp.
+
+    The snapshot exists to be diffed against the tree that produced it. `git rev-parse HEAD`
+    that fails -- no repo, no git, a killed pipe -- used to be swallowed by `except OSError`
+    and then written as an empty first line, which is a snapshot claiming a provenance it does
+    not have: the promote.py-exits-0-while-unable class, in the one file the value-identity
+    check reads. A caller that genuinely has no HEAD must say so out loud.
+    """
+    proc = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=root, capture_output=True, text=True)
+    head = proc.stdout.strip()
+    if proc.returncode == 0 and head:
+        return head
+    if os.environ.get('BB_ALLOW_NO_HEAD') == '1':
+        return 'no-head:' + datetime.datetime.now().isoformat(timespec='seconds')
+    why = proc.stderr.strip() or f'git rev-parse exited {proc.returncode}'
+    raise RuntimeError(f'{root}: cannot read HEAD ({why}). The pre-record snapshot is diffed '
+                       'against a commit; set BB_ALLOW_NO_HEAD=1 to stamp "no-head:<time>" instead.')
+
+
 def record(root: str, function: str, cases: str, option: str, case_names: list[str], failing: list[str],
            captures: str) -> dict:
     """Writes the row for one run, including a hash of the case files it ran; returns it."""
@@ -254,14 +274,18 @@ def record(root: str, function: str, cases: str, option: str, case_names: list[s
         # pre-record state seen for this path, with the HEAD it belongs to, so a re-record can
         # be diffed against what it replaced instead of against nothing.
         if not os.path.exists(path + '.pre'):
+            head = _head_or_refuse(root)
             try:
                 shutil.copy2(path, path + '.pre')
-                head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=root, capture_output=True,
-                                      text=True).stdout.strip()
-                with open(path + '.pre.stamp', 'w') as s:
+                stamp, tmp = path + '.pre.stamp', path + '.pre.stamp.tmp'
+                with open(tmp, 'w') as s:
                     s.write(f'{head}\n{datetime.datetime.now().isoformat(timespec="seconds")}\n')
-            except OSError:
-                pass
+                os.replace(tmp, stamp)
+            except OSError as e:
+                for stray in (path + '.pre', path + '.pre.stamp.tmp'):
+                    if os.path.exists(stray):
+                        os.unlink(stray)
+                raise RuntimeError(f'cannot snapshot {path} before recording: {e}') from e
         rows = [r for r in read_csv(path, VERIFICATION_HEADER)
                 if (r['function'], r['cases'], r['option']) != (function, cases, option)]
         rows.append(row)
