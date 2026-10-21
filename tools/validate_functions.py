@@ -29,6 +29,9 @@ MAX_NOTE = 200
 
 
 
+_install_mode_cache: dict = {}      # (path, mtime_ns, size) -> frozenset of host addresses
+
+
 def _install_mode_hosts():
     """Addresses declared installed as host calls rather than by a game hook.
 
@@ -41,9 +44,17 @@ def _install_mode_hosts():
     path = _pathlib.Path(__file__).resolve().parents[1] / "symbols" / "install_mode.csv"
     if not path.exists():
         return frozenset()
+    st = path.stat()
+    key = (str(path), st.st_mtime_ns, st.st_size)
+    hit = _install_mode_cache.get(key)
+    if hit is not None:
+        return hit
     with open(path, newline="") as handle:
-        return frozenset(row["address"].lower() for row in _csv.DictReader(handle)
-                         if row.get("mode") == "host")
+        hosts = frozenset(row["address"].lower() for row in _csv.DictReader(handle)
+                          if row.get("mode") == "host")
+    _install_mode_cache.clear()             # one entry: the table as it stands on disk
+    _install_mode_cache[key] = hosts
+    return hosts
 
 def load(path: str, header: list[str], errs: list[str]) -> list[dict]:
     rel = os.path.basename(os.path.dirname(path)) + '/' + os.path.basename(path)
@@ -220,9 +231,10 @@ def main() -> int:
             errs.append(f"{where}: {f['name']} is {f['size']} bytes; a hook needs at least 14 (QUIRKS.md)")
         if h['replacement'] != 'bb_' + f['name']:
             errs.append(f"{where}: replacement must be 'bb_{f['name']}'")
+    hosts = _install_mode_hosts()      # read once, not once per functions.csv row
     for r in funcs:
         if r['status'] in HOOKED and r['address'] not in hooked:
-            if r['address'].lower() not in _install_mode_hosts():
+            if r['address'].lower() not in hosts:
                 errs.append(f"symbols/functions.csv:{r['_line']}: {r['name']} is {r['status']} but has no game/hooks.csv entry")
 
     errs += check_reviews(root, funcs)
