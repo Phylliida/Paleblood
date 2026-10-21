@@ -92,12 +92,16 @@ def main():
     ap.add_argument('--elf', default=_ELF)
     ap.add_argument('--address', action='append', default=[], type=lambda s: int(s, 0))
     ap.add_argument('--sample', type=int, default=0, help='census N tier entries, seeded by address')
+    ap.add_argument('--tier', action='store_true', help='census the whole >1024 B tier')
+    ap.add_argument('--verbose', action='store_true', help='print a line per function')
     ap.add_argument('--seed', type=int, default=0)
     a = ap.parse_args()
     elf_bytes = open(a.elf, 'rb').read()
     tier = {int(r['address'], 16): int(r['size'])
             for r in csv.DictReader(open(_GHIDRA)) if int(r['size']) > TIER_FLOOR}
     targets = list(a.address)
+    if a.tier:
+        targets += sorted(tier)
     if a.sample:
         pool = sorted(tier)
         random.Random(a.seed).shuffle(pool)
@@ -115,15 +119,24 @@ def main():
             continue
         c = census(elf_bytes, guest, size)
         rows.append((guest, c))
-        print(f'{guest:#010x} size {c["size"]:5d} blocks {c["blocks"]:4d} calls {c["calls"]:4d} '
-              f'largest {c["largest"]:5d} unplaced {c["unplaced"]:3d} '
-              f'decoded {c["decoded"]}/{c["size"]}')
+        if not a.tier or a.verbose or guest in a.address:
+            print(f'{guest:#010x} size {c["size"]:5d} blocks {c["blocks"]:4d} calls {c["calls"]:4d} '
+                  f'largest {c["largest"]:5d} unplaced {c["unplaced"]:3d} '
+                  f'decoded {c["decoded"]}/{c["size"]}')
     if len(rows) > 1:
         bs = sorted(c['blocks'] for _, c in rows)
         short = sum(1 for _, c in rows if c['decoded'] != c['size'])
         unp = sum(1 for _, c in rows if c['unplaced'])
         print(f'\n{len(rows)} functions: blocks median {bs[len(bs) // 2]} min {bs[0]} max {bs[-1]}; '
               f'short decode {short}; with unplaceable targets {unp}')
+    if rows:
+        delta = sorted(c['size'] - c['decoded'] for _, c in rows)
+        declared = sum(c['size'] for _, c in rows)
+        decoded = sum(c['decoded'] for _, c in rows)
+        under = sum(1 for _, c in rows if c['decoded'] <= TIER_FLOOR)
+        print(f'decoded vs declared: {decoded} / {declared} bytes '
+              f'({100.0 * decoded / declared:.2f}%); delta median {delta[len(delta) // 2]} '
+              f'max {delta[-1]}; declaring >{TIER_FLOOR} but decoding <={TIER_FLOOR}: {under}')
 
 
 if __name__ == '__main__':

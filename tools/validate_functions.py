@@ -12,6 +12,12 @@ import os
 import re
 import sys
 
+try:                                  # a hanging gate should print its own frame, not hang
+    import stacks
+    stacks.arm()
+except ImportError:                   # run from a tree without tools/ on sys.path
+    pass
+
 import verification
 
 DEFAULT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

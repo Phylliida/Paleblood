@@ -127,3 +127,37 @@ concluded the cache was sound when it was keyed to a directory. The cache's acce
 therefore: decompile the same function twice into **two different output directories**, diff the two
 fresh outputs to see what varies, and only then assert that a cached re-read matches its own fresh
 control byte for byte.
+
+## Amendment 2 -- what the declared sizes actually are, and what pilot 1 proves
+
+The three pre-registered candidates, decoded:
+
+| entry | declared | decoded | blocks | calls |
+| --- | --- | --- | --- | --- |
+| `0x00a78940` | 1,659 | **1,657** | 43 | 5 |
+| `0x00b46d20` | 1,659 | **1,659** | 23 | 0 |
+| `0x00fe0450` | 4,700 | **4,696** | 278 | 48 |
+
+All three are still large by decoded extent, so the frame is sound -- but the census over the whole
+tier says why that had to be checked rather than assumed, and corrects a sentence I wrote one
+amendment ago: **3,299 of 7,791 entries (42%) decode short of their declared size, and the byte
+consequence is 20,055,556 / 20,064,463 = 99.96%, delta median 0, max 14.** So the declared sizes are
+upper bounds by **0.04%** -- trailing padding, not missing code -- and my "any cost derived from bytes
+is an over-estimate in exactly this tier" was right in direction and **negligible in magnitude**.
+Membership at the boundary is fuzzy in exactly **10 entries** of 7,791 that declare >1,024 and decode
+<=1,024 (0.13%). The 47.2%-of-bytes figure stands.
+
+The real limit is the other number: **3,321 of 7,791 (43%) have indirect branch targets**, so block
+coverage for them can never be complete by construction, and the report for such a function is
+static blocks covered plus the dynamic target set observed.
+
+### Pilot 1 is a floor, not the tier
+
+`0x00b46d20` makes **zero calls**. No landed replacement in this tree has ever made a call: pool B
+read memory, the static guard wrote it, the leaf families returned constants. So pilot 1 proves the
+smallest true positive -- *a zero-call 1,659-byte function can be translated, cased to block coverage,
+and differentially verified* -- and nothing more. **A host replacement that invokes a guest callee is
+a capability this tree does not yet have**; demonstrating it (how a host body calls a guest address,
+and what the trace then attributes where) is a separate deliverable, and the tier is not reachable
+until it exists. The verdict sentence for pilot 1 must say "zero-call", or it will be read as a
+statement about 43%-of-bytes functions, 48 of whose blocks sit behind `0x00fe0450`'s 48 calls.

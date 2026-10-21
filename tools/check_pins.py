@@ -27,6 +27,12 @@ import csv
 import os
 import sys
 
+try:                                  # a hanging gate should print its own frame, not hang
+    import stacks
+    stacks.arm()
+except ImportError:                   # run from a tree without tools/ on sys.path
+    pass
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import verification
 import validate_functions as vf

@@ -22,6 +22,12 @@ import re
 import string
 import sys
 
+try:                                  # a hanging gate should print its own frame, not hang
+    import stacks
+    stacks.arm()
+except ImportError:                   # run from a tree without tools/ on sys.path
+    pass
+
 DEFAULT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCOPE = ('runtime', 'test', 'tools')
 SKIP_EXT = {'.pyc'}

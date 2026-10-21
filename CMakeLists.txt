@@ -61,3 +61,15 @@ add_test(NAME progress_readme COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR
 # 3,012 of 21,129 were stale when it first ran. 2.2 s: three content caches in verification.py, not
 # the defining-file index alone, are what make auditing the whole ledger cheaper than one test run.
 add_test(NAME check_pins COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/check_pins.py)
+# A gate whose only failure mode is "never finishes" is a gate that cannot fail. Three checks in
+# this tree have already grown a cost proportional to the population they read -- a 507 s resolver,
+# a 44.6 ms walk, and 1.07e9 regex searches in check_agnostic, which stopped completing quietly on
+# the way from a few hundred ledger rows to 21,130. A per-test timeout turns that regression into a
+# red test on the day it happens, without an operator watching, and each gate arms faulthandler
+# (tools/stacks.py) so the red prints the frame that caused it.
+set_tests_properties(
+  hooks plugin host_hooks capture capture_poc_fail_closed capture_poc_replay
+  capture_recorder_replay syslib verify_self_test validate_functions check_agnostic
+  float_flags progress_readme check_pins
+  PROPERTIES TIMEOUT 120)
+set_tests_properties(tools PROPERTIES TIMEOUT 300)
