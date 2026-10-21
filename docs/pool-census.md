@@ -148,3 +148,18 @@ distinct constants over one six-byte rule with no shared structure, i.e. pure tr
   two it is claiming.
 - **Zero members is a state, not a success.** `install_mode.csv` shipping empty means the schema
   exists and nothing uses it; the burndown says `hook-registered 1,737 / host-only 0` either way.
+
+## What family #3 will and will not prove
+
+`xor eax,eax; ret` has **one** distinct body, so its transcription assertion has a domain of one
+and its packet is one page. Landing it proves **the gate** — that a non-`original` row can exist
+with no hook row while both checker directions still bite. It proves **nothing about scale**, and
+it must not be cited as evidence that the one-rule-plus-N-transcriptions model works. That claim
+belongs to `lea rax,[rip+K]; ret` — 8,072 members over 8,045 distinct bodies — and until that lands
+the review model is a design, not a result.
+
+Predicted end state for family #3, to check against the burndown rather than reading whatever it
+prints: count 1,737 → **6,458** (+4.09%); bytes 130,370 → **144,533** (+4,721 × 3 = 0.340% of
+42,487,347); ledger rows 1,838 → **6,559**, multi-set surplus holding at exactly **101**;
+exclusive edge-verified 1,716 → 6,437 with original 2 and verified 21 unchanged; and
+`hook-registered 1,737 / host-only 4,721`. A miss on any of the six means a member silently failed.
