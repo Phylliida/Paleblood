@@ -331,3 +331,64 @@ decompile term is populated, the cache question is closed as the wrong question,
 measured on the axis that matters, and the data tables are generated. What remains is one body, its
 minutes, and the count of differential failures it takes to reach a pass -- with the three planted
 translation errors still owed as the oracle's proof.
+
+## Amendment 6 — "unplaced 3" was three exits, and 42.6% was two populations added together (dated: this slice)
+
+**The number that blocked the pilot.** `tools/blocks.py --verbose` on `0x00414040` printed `unplaced 3`, and
+amendment 5 recorded that the pilot therefore sits inside the 42.6% class where "every basic block ran" cannot
+be claimed. Both sentences are wrong, and the mechanism is one line: `blocks()` counts **every static jump
+target that is not an instruction boundary in the decode window**, and the decode window *is* the declared
+extent. A tail jump out of the function therefore cannot be a boundary and is counted as a missing one.
+
+**Measured.** The three targets of `0x00414040` are `0x41447d`, `0x414481`, `0x4144ad`; the entry is
+`0x00414040+1072`, end `0x414470`. All three are **past the declared end**, by **+13, +17 and +61 bytes**,
+inside a **179–227 byte gap** before the next entry at `0x414560`. The function has **66 blocks and zero
+genuinely unplaceable leaders**; the pilot's coverage claim was never at risk from the population it was said
+to belong to.
+
+**Tier-wide, 7,791 entries (two independent implementations, `tools/blocks.py` and `tools/leaders.py`,
+agreeing on the same definition; the 2,751 vs 2,750 difference is one duplicate address in the leaders run):**
+
+| population | entries | share |
+|---|---|---|
+| internal unplaceable leader (target inside the declared extent, not an instruction boundary) | **742** | **9.5%** |
+| exit (static target past the declared end) | **2,750** | **35.3%** |
+| either | ≈3,320 | **≈42.6%** |
+
+So the carried **42.6% was the union of two populations that demand opposite responses**, and the pilot sat in
+the cheap one. `blocks.py` now prints both, and takes the declared end as an argument rather than
+reconstructing it from the decoded tail — that reconstruction put `0x417e3a` of `0x00416e80` (exactly one byte
+past the last decoded instruction, but inside the declared extent) on the wrong side of the boundary, and the
+two tools disagreed 742 vs 0 until it was fixed. **A boundary reconstructed from a truncated decode is not the
+declared boundary.**
+
+**And the exits are mostly not tail calls to other functions.** Of **6,942** tier exit targets, only **316**
+land inside another catalogued entry; the rest land where **no entry's `[start, start+size)` covers them** —
+`symbols/ghidra_functions.csv` holds exactly **157,757** entries, so "unowned" is not a lookup artefact. Their
+distance past the preceding entry's end: **p10 2, p50 17, p90 110 B**; **47.6% within 16 B, 81.9% within 64 B,
+95.7% within 256 B, 99.9% within 4 KiB** (max 35,754 B). A median of 17 bytes is not a jump into distant code:
+**the declared size of a Ghidra entry is systematically short**, ending at the last `ret`, with reachable
+blocks — out-of-line epilogues, shared tails, stack-check paths — left outside every entry. 3,299 of 7,791
+entries also have a short decode (declared minus decoded, max 14 B), which is a *different* truncation and was
+already carried.
+
+**What this retires.** "Coverage of the declared extent" is retired as a criterion — the declared extent is a
+truncated body, so a function can be fully covered by that measure and still leave its own tail untested.
+
+**What replaces it, in general form (the form that serves 7,791 members, not one pilot).** The coverage
+denominator is the **reachable set from the entry by recursive descent, allowed to leave the declared extent**;
+an internal unplaceable leader is a defect and is **named, never averaged** (742 tier-wide); an exit is
+attributed to the entry that owns the target, and if none does it is recorded as a **partition gap** and is
+never counted in the callee's denominator; after the cases run, executed addresses that fall inside the
+reachable set are added as leaders and coverage is recomputed against the revised set, so a dynamic target that
+lands mid-instruction becomes a **finding to report**, not an ambiguity to average away.
+
+**Consequence for the denominator, recorded now rather than discovered at the end.** The campaign's burndown
+counts **entries** (157,757). The 6,942 unowned exit targets per tier are reachable code that no entry owns, so
+"all of Bloodborne decompiled" measured in entries will report complete while leaving that code unowned.
+That is a stated limit of the measure, not a change of scope.
+
+**Instrument.** `tools/leaders.py` (new) does the three-way split and the owner lookup; `tools/blocks.py` was
+patched to print both populations (unplaced **742**, exits **2,750**) and keeps its old numbers otherwise
+identical (blocks median 61, min 1, max 2,550; decoded 20,055,556 / 20,064,463 = 99.96%; 10 entries declaring
+>1024 and decoding ≤1024).

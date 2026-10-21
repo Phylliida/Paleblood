@@ -47,13 +47,16 @@ def decode(elf_bytes, guest, size):
     return list(md.disasm(elf_bytes[off:off + size], guest))
 
 
-def blocks(insns):
+def blocks(insns, end=None):
     """Return (block count, unplaceable branch targets, block sizes) or raise on short decode."""
     if not insns:
-        return 0, 0, []
+        return 0, 0, 0, []
+    if end is None:
+        end = insns[-1].address + insns[-1].size
     starts = {insns[0].address}
     boundaries = {i.address for i in insns}
     unplaced = 0
+    exits = 0
     for i in insns:
         mnem = i.mnemonic
         branch = mnem in TERMINATING or mnem in CONDITIONAL
@@ -66,8 +69,10 @@ def blocks(insns):
                 continue                      # indirect: no static edge, not an unplaced one
             if tgt in boundaries:
                 starts.add(tgt)
+            elif insns[0].address <= tgt < end:
+                unplaced += 1          # a real defect: no instruction boundary inside the extent
             else:
-                unplaced += 1
+                exits += 1             # past the declared end: attributed to the callee, never a defect here
         if branch:
             nxt = i.address + i.size
             if nxt in boundaries:
@@ -75,14 +80,14 @@ def blocks(insns):
     ordered = sorted(starts)
     sizes = [b - a for a, b in zip(ordered, ordered[1:])]
     sizes.append(insns[-1].address + insns[-1].size - ordered[-1])
-    return len(ordered), unplaced, sizes
+    return len(ordered), unplaced, exits, sizes
 
 
 def census(elf_bytes, guest, size):
     insns = decode(elf_bytes, guest, size)
     decoded = sum(i.size for i in insns)
-    n, unplaced, sizes = blocks(insns)
-    return {'blocks': n, 'unplaced': unplaced, 'decoded': decoded, 'size': size,
+    n, unplaced, exits, sizes = blocks(insns, guest + size)
+    return {'blocks': n, 'unplaced': unplaced, 'exits': exits, 'decoded': decoded, 'size': size,
             'largest': max(sizes) if sizes else 0,
             'calls': sum(1 for i in insns if i.mnemonic == 'call')}
 
@@ -121,14 +126,16 @@ def main():
         rows.append((guest, c))
         if not a.tier or a.verbose or guest in a.address:
             print(f'{guest:#010x} size {c["size"]:5d} blocks {c["blocks"]:4d} calls {c["calls"]:4d} '
-                  f'largest {c["largest"]:5d} unplaced {c["unplaced"]:3d} '
+                  f'largest {c["largest"]:5d} unplaced {c["unplaced"]:3d} exits {c["exits"]:3d} '
                   f'decoded {c["decoded"]}/{c["size"]}')
     if len(rows) > 1:
         bs = sorted(c['blocks'] for _, c in rows)
         short = sum(1 for _, c in rows if c['decoded'] != c['size'])
         unp = sum(1 for _, c in rows if c['unplaced'])
+        exc = sum(1 for _, c in rows if c['exits'])
         print(f'\n{len(rows)} functions: blocks median {bs[len(bs) // 2]} min {bs[0]} max {bs[-1]}; '
-              f'short decode {short}; with unplaceable targets {unp}')
+              f'short decode {short}; internal unplaceable targets {unp}; '
+              f'with exits (static target past the declared end) {exc}')
     if rows:
         delta = sorted(c['size'] - c['decoded'] for _, c in rows)
         declared = sum(c['size'] for _, c in rows)
