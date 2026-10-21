@@ -215,6 +215,36 @@ def hexint(v) -> int:
 STUB_SLOTS = 64             # internal-function stubs per case
 
 
+def byte_diffs(old: bytes, new: bytes, chunk: int = 1 << 12) -> list[tuple[int, bytes]]:
+    """(offset, new bytes) for each run of differing bytes, in ascending order.
+
+    Comparing every byte in Python was the entire per-case cost: the writable segment alone is
+    `memsz 0x5f70f4` = 6.25 MB, and that loop measured 1818 ms against 2.6 ms for one C-level
+    comparison of the same two regions. It is not the guest executing -- a 41-byte body costs
+    microseconds -- so compare a chunk at a time in C and drop into the byte loop only where a
+    chunk differs. Runs stay maximal: the inner scan walks past the chunk boundary, so a run
+    spanning chunks is still reported once.
+    """
+    if old == new:
+        return []
+    n, runs, i = len(old), [], 0
+    while i < n:
+        stop = min(i + chunk, n)
+        if old[i:stop] == new[i:stop]:
+            i = stop
+            continue
+        while i < stop:
+            if old[i] == new[i]:
+                i += 1
+                continue
+            end = i
+            while end < n and old[end] != new[end]:
+                end += 1
+            runs.append((i, new[i:end]))
+            i = end
+    return runs
+
+
 class Machine:
     """The image mapped and relocated once, import stubs in place. Library calls dispatch to
     the current Run, so cases can share one mapping (each runs in its own fork)."""
@@ -675,17 +705,8 @@ class Run:
         out['registers'] = {reg: register_values[reg] for reg in out['observed_registers']}
         writes = []
         for start, old in before.items():
-            new = after[start]
-            i, n = 0, len(old)
-            while i < n:
-                if old[i] == new[i]:
-                    i += 1
-                    continue
-                j = i
-                while j < n and old[j] != new[j]:
-                    j += 1
-                writes.append({'addr': self.describe(start + i), 'bytes': new[i:j].hex()})
-                i = j
+            for offset, data in byte_diffs(old, after[start]):
+                writes.append({'addr': self.describe(start + offset), 'bytes': data.hex()})
         out['writes'] = writes
         out['access_trace'] = self.access_trace
         out['access_trace_scope'] = "harness-mediated scripted accesses; guest instructions are not instrumented"
