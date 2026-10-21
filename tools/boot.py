@@ -149,10 +149,22 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--elf', default=None)
     ap.add_argument('--nids', default=None)
+    ap.add_argument('--allow-nids', action='store_true',
+                    help='record even with no NID database, storing raw NIDs as symbols')
     ap.add_argument('--timeout', type=int, default=30)
     ap.add_argument('--trace', action='store_true')
     ap.add_argument('--no-record', action='store_true', help='run and print only')
     a = ap.parse_args()
+    nids = a.nids or default_nids()
+    # Recording without a NID database rewrites every import symbol as a raw NID: a run in this
+    # checkout turned 845 named rows into `-qLsfDAywIY#N#O` and nothing objected except a test
+    # about an unrelated issue body. Refuse instead, and name the three ways forward. This is a
+    # precondition of recording, not of running, so it is checked before the files are.
+    if not a.no_record and not nids and not a.allow_nids:
+        print('boot: no NID database, so --record would rewrite every import symbol as a raw NID '
+              '(845 rows last time): pass --nids FILE, set $BB_NID_DB, or --allow-nids to record '
+              'NIDs deliberately', file=sys.stderr)
+        return 3
     elf = a.elf or default_elf()
     pbboot = os.environ.get('BB_PBBOOT') or os.path.join(ROOT, 'build', 'runtime', 'pbboot')
     for path, what in ((elf, 'executable (your own dump\'s eboot.elf)'), (pbboot, 'boot harness: build the repository')):
@@ -167,7 +179,6 @@ def main() -> int:
                   file=sys.stderr)
             return 3
         objects += ['--module', path]
-    nids = a.nids or default_nids()
     names = ['--nids', nids] if nids else []
     with tempfile.TemporaryDirectory() as d:
         out = os.path.join(d, 'status.json')

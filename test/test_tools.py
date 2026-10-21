@@ -617,6 +617,14 @@ class Statuses(unittest.TestCase):
         finally:
             shutil.rmtree(d)
 
+    def test_boot_record_refuses_without_a_nid_database(self):
+        """Recording with no NID database rewrites every import symbol as a raw NID; a run in this
+        checkout turned 845 named rows into `-qLsfDAywIY#N#O`. The three ways forward are named."""
+        r = run('boot.py', '--elf', os.path.join(tempfile.gettempdir(), 'absent.elf'))
+        self.assertEqual(r.returncode, 3)
+        self.assertIn('no NID database', r.stderr)
+        self.assertIn('--allow-nids', r.stderr)
+
     def test_boot_history_records_changes_and_milestones(self):
         sys.path.insert(0, os.path.join(ROOT, 'tools'))
         import boot
