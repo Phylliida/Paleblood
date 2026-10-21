@@ -105,7 +105,7 @@ int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
         # zeros and match. The scripted call reads 7, multiplies by the recorded 6, and writes 42,
         # so the original side's own result proves the case's memory entries reached the guest.
         original = sides['original'][0]
-        assert original['ret'] == {'rax': '0x2a'}, original['ret']
+        assert original['ret'] == {'rax': 0x2a}, original['ret']
         assert original['writes'] == [{'addr': 'buf:b0+0x14', 'bytes': '2a000000'}], original['writes']
         # The address the harness reported carries the displacement the instruction encodes.
         assert original['writes'][0]['addr'].endswith('+0x%x' % store_displacement)
@@ -171,7 +171,7 @@ int32_t replacement(int32_t *out, const int32_t *input, int32_t factor)
             {'schema': 1, 'address': '0x00400000', 'cases': edge_sides['original']},
             {'schema': 1, 'address': '0x00400000', 'cases': edge_sides['replacement']})
         assert (edge_report['cases'], edge_report['passed'], edge_report['failed']) == (1, 1, 0), edge_report
-        assert edge_sides['original'][0]['ret'] == {'rax': '0x36'}, edge_sides['original'][0]['ret']
+        assert edge_sides['original'][0]['ret'] == {'rax': 0x36}, edge_sides['original'][0]['ret']
         assert edge_sides['original'][0]['writes'] == [{'addr': 'buf:b0+0x14', 'bytes': '36000000'}], \
             edge_sides['original'][0]['writes']
 
