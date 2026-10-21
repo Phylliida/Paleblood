@@ -201,3 +201,61 @@ of the bytes; a number produced by summing it with case authoring would decide n
 stated but untested by it. A host replacement invoking a guest callee -- the capability the 48-call
 candidate and 43% of the tier need -- is a separate deliverable, and it must be demonstrated before
 any tier verdict is written.
+
+## Amendment 4 -- the decompile is measured, the cache question is settled, and the pre-registered class was wrong for a measured reason
+
+**T_decompile = 8.081 s and 8.103 s** for `0x00b46d20`, **8.1 s** for `0x00414040`, on the existing
+analyzed project (`data/bin/analyzeHeadless data/ghidra-proj bb -process eboot.elf -noanalysis
+-readOnly`, i.e. `tools/draft.sh`). Ghidra's median for the catalog is 7 ms; process start dominates.
+Against a per-function hand cost in hours, **decompile time is not a term in the budget** and the
+resumable cache has been answering a question nobody was asking.
+
+**The cache's acceptance test, run: two decompiles of the same function into two different output
+directories are byte-identical.** `diff -r /tmp/draftA /tmp/draftB` returns 0 for `0x00b46d20` and
+for `0x00414040`. The reason this matters is the failure it rules out: had Ghidra embedded the output
+path or a timestamp, a cached re-read would have matched a fresh one **by accident** and I would have
+certified an unsound cache on a diff that could not disagree. The mechanism is now known to be sound;
+the cache is still **not built**, and this document does not ask for it -- see the pre-registration
+below, which is the condition under which it would be worth building.
+
+**The pre-registered candidate class was wrong, and by a measured margin rather than an argument.**
+`0x00b46d20` decompiles to **1,090 lines containing 591 vector temporaries** (`undefined1 auVar[16]`,
+i.e. live XMM registers): it is auto-vectorised float code. `0x00a78940` is the same shape (1,029
+lines, 262 vector temporaries) and additionally leaks `extraout_RDX` ABI artifacts, meaning Ghidra
+could not resolve its calling convention. Neither is translatable into `game/` bodies: `check_readable.py`
+forbids SSE outside `game/engine/`, and a body placed in `engine/` to dodge that would be the gate
+being circumvented rather than answered.
+
+**So the class was re-measured rather than re-argued.** A Capstone census of the whole tier, counting
+instructions whose mnemonic is SIMD (VEX or the classic SSE set):
+
+    7,791 tier entries; 2,545 (32.7%) contain zero SIMD instructions; median SIMD per entry 9
+    of the zero-SIMD entries, 257 have <= 2 calls
+
+**New pre-registered rule, applied before any translation work exists:** among tier entries with zero
+SIMD instructions and at most two calls, take the **first in address order** -- the tie-break that
+cannot be tuned after the fact. That selects **`0x00414040`**: declared 1,072 bytes, decoded 1,070,
+**264 instructions, 66 blocks, 0 calls, 3 unplaceable branch targets**. It is **below** the tier's
+median size (1,659), so any cost measured on it is a **lower bound** for median-size translation, and
+the report must say so in that direction.
+
+**The subject, read rather than assumed:** it is a UTF-16 scanner over a bracket-pair table -- `(`/`)`,
+`<`/`>`, `[`/`]`, `{`/`}` mirrored, with a lookahead that decides whether a pair closes -- writing a
+normalised string, a position array and a flag array, and returning whether anything was seen. It reads
+two **rodata bit-tables** (guest `0x02fc5120` and `0x02fc4a40`) through a two-level lookup: index by
+the high byte, then, if the entry is neither 0 nor 1, by the high nibble into a second level whose
+16-bit word is bit-tested with the low nibble. That idiom appears three times in the draft and
+collapses to one helper in readable C++, which is the first concrete win of the readable rewrite --
+and the site where a translation error would be invisible, because all three copies must collapse to
+the *same* helper.
+
+**A cost term no pool-B member had, pre-registered before it is measured: `T_data`.** Lifting the two
+rodata tables into `constexpr` arrays is a step the leaf families never paid (they returned a
+constant, or copied one word). Its size is unknown -- the tables' extents are not annotated -- so it is
+named now, timed separately, and reported even if it turns out to be seconds.
+
+**Status, stated instead of implied: `T_translate` is not yet measured.** The four clocks defined in
+amendment 3 stand; the decompile term is now populated (8.1 s), the two-dir diff is green, and the
+subject is selected and read. The translation attempt, its minute count and the number of differential
+failures it takes to reach a passing body are the next entries in this document, and a pass on the
+first attempt is to be reported as a suspicious result rather than a good one.
