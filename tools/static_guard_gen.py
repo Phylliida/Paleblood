@@ -58,6 +58,7 @@ except ImportError:  # pragma: no cover
 ROOT = Path(__file__).resolve().parent.parent
 PARTITION = ROOT / 'symbols' / 'ghidra_functions.csv'
 FUNCTIONS = ROOT / 'symbols' / 'functions.csv'
+ORIGINS = ROOT / 'symbols' / 'replacement_origins.csv'
 HOOKS = ROOT / 'game' / 'hooks.csv'
 SOURCE = ROOT / 'game' / 'frame_timing' / 'static_guard.cpp'
 CASES = ROOT.parent / 'data' / 'cases' / 'static_guard'
@@ -317,7 +318,9 @@ def main(argv: list[str]) -> int:
                  'is clear, then sets it; one guard per translation unit, sharing '
                  'static_guard.cpp'] for member in chosen]
         staged = {FUNCTIONS: merge_rows(FUNCTIONS,
-                                       ['address', 'size', 'name', 'system', 'status', 'notes'], rows)}
+                                       ['address', 'size', 'name', 'system', 'status', 'notes'], rows),
+                  ORIGINS: merge_rows(ORIGINS, ['address', 'origin'],
+                                      [[m['key'], 'generated'] for m in chosen])}
         source = SOURCE.read_text()
         insertion = source.index('\n}  // namespace')
         if insertion < 0:
@@ -326,17 +329,18 @@ def main(argv: list[str]) -> int:
                           + ''.join(wrapper(m) for m in chosen))
         apply(staged, lambda: write_cases(chosen, template_by_triple), chosen,
               [(FUNCTIONS, [sys.executable, '-P', 'tools/validate_functions.py'], ''),
+               (ORIGINS, [sys.executable, '-P', 'tools/validate_functions.py'], ''),
                (SOURCE, [sys.executable, '-P', 'tools/check_readable.py'], '')])
         return 0
 
-    waiting = [member for member in registered if status[member['key']] == 'original'
+    # The hook comes after the status flip, not before it: validate_functions.py refuses a hooks
+    # row for a function still at 'original', and verify.py refuses to run a replacement that has
+    # no hooks row. So the order is write -> (session flips) -> hooks -> record, and a member is
+    # waiting for its hook row when it is past 'original' and not yet hooked. An earlier version
+    # treated that state as an anomaly and skipped 1,111 members that were waiting exactly as
+    # designed.
+    waiting = [member for member in registered if status[member['key']] != 'original'
                and member['key'] not in hooked]
-    past = [member for member in registered if status[member['key']] not in ('original',)
-            and member['key'] not in hooked]
-    if past:
-        print(f'note: {len(past)} registered members are past original without a hook row, first '
-              f'{past[0]["key"]}; not this pass\'s business (they are the pre-existing three '
-              'unless something else went wrong)')
     chosen = waiting[:args.limit] if args.limit else waiting
     if not chosen:
         print('no member is waiting for a hook row')
@@ -345,7 +349,7 @@ def main(argv: list[str]) -> int:
             for member in chosen]
     staged = {HOOKS: merge_rows(HOOKS, ['address', 'replacement', 'system'], rows)}
     apply(staged, lambda: 0, chosen,
-          [(HOOKS, [sys.executable, '-P', 'tools/validate_functions.py'], TRANSIENT)])
+          [(HOOKS, [sys.executable, '-P', 'tools/validate_functions.py'], '')])
     return 0
 
 

@@ -28,7 +28,7 @@ a NID appears there instead of a name.
 
 Each row includes the next: verified functions are also edge-verified and replaced.
 
-Of those 626 functions, 42 rest on ledger rows whose `cases_sha256` is `unavailable`: the comparison is recorded, its inputs are not in this tree, so it cannot be re-run. At the top rung that is 21 of 21.
+Of those 627 functions, 42 rest on ledger rows whose `cases_sha256` is `unavailable`: the comparison is recorded, its inputs are not in this tree, so it cannot be re-run. At the top rung that is 21 of 21.
 
 | Runtime | |
 |---|---|

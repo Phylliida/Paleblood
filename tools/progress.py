@@ -86,6 +86,7 @@ def compute(root: str) -> dict:
         'slices': slices(export, funcs),
         'statuses': statuses,
         'ledger': ledger(root),
+        'origins': replacement_origins(root),
         'inputs': {
             'ghidra_functions_sha256': sha256_file(os.path.join(root, 'symbols', 'ghidra_functions.csv')),
             'functions_sha256': sha256_file(os.path.join(root, 'symbols', 'functions.csv')),
@@ -101,6 +102,29 @@ def compute(root: str) -> dict:
         'systems': {k: systems[k] for k in sorted(systems)},
         'runtime': runtime(root),
     }
+
+
+def replacement_origins(root: str) -> dict | None:
+    """How many replacements were hand-written and how many a generator emitted.
+
+    `symbols/replacement_origins.csv` holds one row per non-original function. The split is
+    printed on every burndown because the tree's first generated rows are indistinguishable from
+    hand-written ones in every other artifact: same CSV shape, same readable C++ after the
+    generator's output is reviewed. A count that does not say where its rows came from is a count
+    about volume, and this project's claims are about provenance."""
+    path = os.path.join(root, 'symbols', 'replacement_origins.csv')
+    if not os.path.exists(path):
+        return None
+    replaced = {r['address'] for r in read_csv(os.path.join(root, 'symbols', 'functions.csv'))
+                if r['status'] != 'original'}
+    counts = {'hand': 0, 'generated': 0}
+    for r in read_csv(path):
+        # Only rows that are actually replacements: a generated body may sit at status 'original'
+        # waiting for its evidence, and counting it would print a split that does not partition
+        # the 'replaced' figure it is printed beside.
+        if r['address'] in replaced:
+            counts[r['origin']] = counts.get(r['origin'], 0) + 1
+    return counts
 
 
 def ledger(root: str) -> dict | None:
@@ -153,6 +177,11 @@ def burndown_line(d: dict) -> str:
         rung('verified', v),
         rung('edge-verified incl. verified', e),
         rung('replaced', r),
+    ]
+    if d.get('origins'):
+        o = d['origins']
+        parts.append(f"hand {o['hand']} / generated {o['generated']}")
+    parts += [
         f'target {t["functions"]} ({t["bytes"]} B)',
         'exclusive ' + ' + '.join(f'{ex[s]} {s}' for s in sorted(ex)),
     ]

@@ -39,6 +39,11 @@ class Fixture(unittest.TestCase):
                   ['address', 'size', 'name', 'system', 'status', 'notes'],
                   [['0x00401000', '100', 'frame_timing_update', 'frame_timing', 'verified', ''],
                    ['0x00402000', '50', 'camera_follow', 'camera', 'original', '']])
+        # Every replacement declares where it came from; the real tree's file has 600+ rows and
+        # the burndown's hand/generated split is read from it, so a fixture tree that skips it is
+        # a tree validate_functions.py is right to refuse.
+        write_csv(f'{self.d}/symbols/replacement_origins.csv', ['address', 'origin'],
+                  [['0x00401000', 'hand']])
         write_csv(f'{self.d}/game/hooks.csv', ['address', 'replacement', 'system'],
                   [['0x00401000', 'bb_frame_timing_update', 'frame_timing']])
         # 294c0ca0b6c6086e is evidence_hash over the two ledger rows below (both pinning

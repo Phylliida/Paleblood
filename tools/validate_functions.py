@@ -21,6 +21,8 @@ NAME = re.compile(r'^[a-z][a-z0-9]*(_[a-z0-9]+)+$')
 STATUSES = ('original', 'replaced', 'edge-verified', 'verified')
 HOOKED = ('replaced', 'edge-verified', 'verified')
 FUNC_HEADER = ['address', 'size', 'name', 'system', 'status', 'notes']
+ORIGIN_HEADER = ['address', 'origin']
+ORIGINS = ('hand', 'generated')
 EXPORT_HEADER = ['address', 'size']
 HOOK_HEADER = ['address', 'replacement', 'system']
 MAX_NOTE = 200
@@ -151,6 +153,38 @@ def main() -> int:
                 errs.append(f"{where}: size {r['size']} differs from the export ({exp_size[r['address']]})")
         by_addr[r['address']] = r
 
+    origin_path = os.path.join(root, 'symbols', 'replacement_origins.csv')
+    if os.path.exists(origin_path):
+        origins = load(origin_path, ORIGIN_HEADER, errs)
+        check_sorted_unique(origins, 'symbols/replacement_origins.csv', errs)
+    else:
+        # The requirement is that replacements have provenance, not that a file exists: a tree
+        # with no replacements has nothing to attribute, and the coverage rule below still fires
+        # the moment one appears.
+        origins = []
+        if any(r['status'] != 'original' for r in funcs):
+            errs.append('symbols/replacement_origins.csv: missing, but the tree has replacements')
+    declared = {o['address']: o['origin'] for o in origins}
+    for o in origins:
+        where = f"symbols/replacement_origins.csv:{o['_line']}"
+        if o['origin'] not in ORIGINS:
+            errs.append(f"{where}: origin '{o['origin']}' must be one of {'|'.join(ORIGINS)}")
+        f = by_addr.get(o['address'])
+        if f is None:
+            errs.append(f'{where}: no row in symbols/functions.csv for {o["address"]}')
+        elif f['status'] == 'original' and o['origin'] != 'generated':
+            # A generated body exists before its evidence does: tools/static_guard_gen.py emits
+            # rows at status 'original' and the authoring session flips them after recording.
+            # 'hand' on an original row would be a provenance claim about no replacement at all.
+            errs.append(f"{where}: {f['name']} is 'original', which has no replacement to attribute; "
+                        f"only 'generated' may precede the status flip")
+    # Every replacement carries its provenance or the burndown's hand/generated split is a guess:
+    # the tree's first generated rows landed with this rule, and a marker added later never gets
+    # added to the rows that preceded it.
+    for r in funcs:
+        if r['status'] != 'original' and r['address'] not in declared:
+            errs.append(f"symbols/functions.csv:{r['_line']}: {r['name']} is {r['status']} but has no "
+                        f'replacement_origins.csv row (hand or generated)')
     hooks = load(os.path.join(root, 'game', 'hooks.csv'), HOOK_HEADER, errs)
     check_sorted_unique(hooks, 'game/hooks.csv', errs)
     hooked: set[str] = set()
