@@ -7,6 +7,36 @@ Decisions and blockers go to STATUS.md instead of being worked around.
 
 Last session: runtime
 
+## The two-tier question, answered from the checker (2026-10-21)
+
+Hand-written readable C++ is right for functions that carry meaning and cannot be the standard
+for 157,757, but the readability gate does **not** force a second tier: `check_readable.py`
+forbids calls by address, numeric offset accessors (`get<T>(p, N)`, `ptr_at(p, N)`, `p[0x..]`),
+recording code, SSE outside `game/engine/`, and numeric literals other than 0/1 outside a
+named-constant declaration (`constexpr`/`const`/`enum`/`static_assert`/`alignas`/`RT_ORIGINAL`/
+`RT_GLOBAL`). Generated code satisfies all of that mechanically by emitting per-member `constexpr`
+declarations and a named wrapper -- measured, not argued: the 27 added lines in
+`game/frame_timing/static_guard.cpp` pass at rc=0 with no allowlist entry. So: **one tier, one
+gate**, and the allowlist stays empty. The open risk is specific to the decompiler path, whose raw
+Ghidra C carries hex literals inside expressions; if it is used at scale it needs a generated
+constant-naming pass, and that decision is made at n=3 in the probe, not at 44,331.
+
+Third argument for generation over storage, recorded: **generated cases cannot go missing**, so the
+whole `cases_sha256 = unavailable` class (42 functions today) is impossible by construction under
+the factory and permanent under the store.
+
+## screen_easy's missing input (one command, not yet run)
+
+`tools/screen_easy.py` consumes a `function_catalog.py export` JSON that `data/exports/` does not
+have. The export wants local SQLite state, which exists (`../data/catalog.sqlite3`, the same one
+`differential.py` uses):
+
+    tools/function_catalog.py --state ../data/catalog.sqlite3 export ../data/exports/function_catalog.json
+
+Then `screen_easy.py ../data/exports/function_catalog.json --min 14 --max 100 --self-contained`.
+Run it after the probe: it turns the documented 35,986-row prescreened pool (19,076 at complexity
+1) from a claim in a doc into a list the next fifty families can come from.
+
 ## Evidence that cannot be re-run (measured 2026-10-21)
 
 142 of 727 ledger rows carry `cases_sha256 = unavailable` (82 edge, 7 option-recorded, 53

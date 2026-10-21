@@ -118,6 +118,42 @@ class Progress(Fixture):
         self.assertIn('incl. verified', line)
         self.assertIn('1 edge-verified + 2 original + 1 verified', line)
 
+    def test_burndown_reports_evidence_that_cannot_be_rerun(self):
+        """A ledger row whose `cases_sha256` is 'unavailable' records a comparison whose inputs
+        are not in the tree. Counting those functions beside the rung is what stops the headline
+        from claiming more than the tree can reproduce; this pins the relation, not the numbers
+        (they move every session): un-rerunnable functions are a subset of the ledger's, and the
+        verified subset is a subset of the verified rung."""
+        write_csv(f'{self.d}/symbols/ghidra_functions.csv', ['address', 'size'],
+                  [['0x00401000', '100'], ['0x00402000', '50']])
+        write_csv(f'{self.d}/symbols/functions.csv',
+                  ['address', 'size', 'name', 'system', 'status', 'notes'],
+                  [['0x00401000', '100', 'a', 'frame_timing', 'verified', ''],
+                   ['0x00402000', '50', 'b', 'camera', 'edge-verified', '']])
+        write_csv(f'{self.d}/symbols/verification.csv',
+                  ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
+                   'cases_sha256', 'date'],
+                  [['a', 'recorded', '', '3', '3', '0', '0', '', 'unavailable', '2026-01-01'],
+                   ['b', 'edge', '', '2', '2', '0', '0', '', 'aa01000000000000', '2026-01-01']])
+        d = json.loads(run('progress.py', '--root', self.d).stdout)
+        led = d['ledger']
+        self.assertEqual((led['functions'], led['unrerunnable']), (2, 1))
+        self.assertEqual((led['verified'], led['unrerunnable_verified']), (1, 1))
+        self.assertLessEqual(led['unrerunnable'], led['functions'])
+        self.assertLessEqual(led['unrerunnable_verified'], led['verified'])
+        line = run('progress.py', '--root', self.d, '--burndown').stdout
+        self.assertIn('re-runnable evidence 1 of 2 (verified 0 of 1)', line)
+        # The sentence a reader meets next to the rung, and the one that must not vanish when
+        # README is regenerated: render it through the real path rather than asserting on prose.
+        with open(f'{self.d}/README.md', 'w') as f:
+            for name in ('status', 'progress', 'target'):
+                f.write(f'<!-- {name}:start -->\nold\n<!-- {name}:end -->\n')
+        run('progress.py', '--root', self.d, '--update-readme')
+        with open(f'{self.d}/README.md') as f:
+            readme = f.read()
+        self.assertIn('cannot be re-run', readme)
+        self.assertIn('At the top rung that is 1 of 1', readme)
+
     def test_empty_export(self):
         write_csv(f'{self.d}/symbols/ghidra_functions.csv', ['address', 'size'], [])
         d = json.loads(run('progress.py', '--root', self.d).stdout)

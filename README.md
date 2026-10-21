@@ -21,6 +21,8 @@ The game doesn't run on Paleblood yet: 21 of 157757 functions are verified (0.01
 
 Each row includes the next: verified functions are also edge-verified and replaced.
 
+Of those 626 functions, 42 rest on ledger rows whose `cases_sha256` is `unavailable`: the comparison is recorded, its inputs are not in this tree, so it cannot be re-run. At the top rung that is 21 of 21.
+
 | Runtime | |
 |---|---|
 | System imports implemented | 247 of 686 (36.01%): 219 by the game's own modules, 28 by the runtime |
