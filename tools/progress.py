@@ -366,12 +366,56 @@ def apply_blocks(text: str, bodies: dict[str, str]) -> str:
     return text
 
 
+def evidence_join(root, argv=None):
+    """Join claimed status against recorded evidence.
+
+    A row counts as edge-verified only when symbols/functions.csv says so AND
+    symbols/verification.csv holds a row for it. status and ledger-backed are
+    different claims; re-runnable is a third. Fail on inability to read the
+    ledger, not only on disagreement: rc=0 from an unrun check is the species
+    this exists to kill.
+    """
+    import csv as _csv
+    try:
+        with open(os.path.join(root, 'symbols', 'functions.csv'), newline='') as f:
+            funcs = list(_csv.DictReader(f))
+        with open(os.path.join(root, 'symbols', 'verification.csv'), newline='') as f:
+            ledger = list(_csv.DictReader(f))
+    except (OSError, _csv.Error) as exc:
+        print(f'join: cannot read the ledger: {exc}')
+        return 1
+    edge = [r for r in funcs if r['status'] in ('edge-verified', 'verified')]
+    by_addr = {}
+    for r in ledger:
+        by_addr.setdefault(r.get('function', ''), []).append(r)
+    names = {r['name'] for r in funcs}
+    backed, rerun, unbacked = 0, 0, []
+    for r in edge:
+        rows = by_addr.get(r['name']) or []
+        if not rows:
+            unbacked.append(r['address'])
+            continue
+        backed += 1
+        if any((x.get('cases_sha256') or '') not in ('', 'unavailable') for x in rows):
+            rerun += 1
+    surplus = len(ledger) - len(funcs)
+    print(f'join: status {len(edge)} \u00b7 ledger-backed {backed} \u00b7 '
+          f're-runnable {rerun} \u00b7 unbacked {len(unbacked)} \u00b7 surplus {surplus}')
+    for a in unbacked[:10]:
+        print(f'  unbacked: {a}')
+    if unbacked:
+        print('join: FAIL -- status claims evidence the ledger does not hold')
+        return 1
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--root', default=DEFAULT_ROOT)
     ap.add_argument('--out')
     ap.add_argument('--update-readme', action='store_true')
     ap.add_argument('--check', action='store_true')
+    ap.add_argument('--join', action='store_true', help='join status against recorded evidence')
     ap.add_argument('--status-line', action='store_true')
     ap.add_argument('--burndown', action='store_true')
     a = ap.parse_args()
@@ -387,6 +431,8 @@ def main() -> int:
     if a.out:
         with open(a.out, 'w') as f:
             f.write(js)
+    if a.join:
+        return evidence_join(a.root)
     if not (a.update_readme or a.check):
         if not a.out:
             sys.stdout.write(js)
