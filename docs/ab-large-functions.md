@@ -427,3 +427,49 @@ campaign operates on a truncated body.
 - The 742 and the 2,750 are **instrument boundaries reached from a short declaration**, not properties of the
   binary; the count of entries whose declaration is provably short is therefore **at least 3,320 (42.6%)**, and
   that is now a statement about the export, to be read as one.
+
+## Amendment 8 — the body is sized by the descent set; the coverage expectation is pre-registered as zero (dated: this slice)
+
+Amendment 7 ended by saying the pilot's body "must reach at least `0x4144ad + 61`". That was a direction,
+not a size. The review that caught it is worth naming: sizing the work against the declared extent puts the
+discovery of the extra blocks **inside `T_translate`**, where it looks like translation being slow rather than
+the extent being short. Counted first, then translated.
+
+**`tools/descent.py` (new, in the repo).** Recursive descent from the entry, allowed to leave the declared
+extent; fall-through continues except after `ret`/`jmp`; a conditional jump adds its target and its
+fall-through; a **call adds nothing** (its target is a callee, not this body) but keeps the fall-through;
+indirect transfers are counted, never assumed away; an address that does not decode is reported and stops the
+walk. Block leaders are entry + static targets + instructions after any transfer — the coverage denominator,
+deliberately not the same set as the worklist.
+
+| entry | declared | descent insns | blocks | span from entry | outside extent | owner of those |
+|---|---|---|---|---|---|---|
+| `0x00414040` | 1,072 B | **279** | **64** | **1,144 B** `[0x414040,0x4144b8)` | 22 insns `0x414471..0x4144b7` | unowned |
+| `0x00416e80` | 4,030 B | **939** | **269** | **4,072 B** `[0x416e80,0x417e68)` | 9 insns `0x417e3f..0x417e63` | unowned |
+
+So the pilot is **279 instructions over 64 blocks, 257 of them inside the declared extent** — not 264, and
+not the 1,072 B the work was sized against. `0x00416e80` corroborates the shape at larger scale (939 vs 934 by
+linear sweep, +38 B span, 18 indirect calls, 33 distinct call targets). Two block counts coexist for the pilot
+and both are printed: `blocks.py`'s linear-sweep leaders **66**, the descent's reachable leaders **64** — the
+descent number is the coverage denominator, because a leader that is not reachable from the entry can never
+run.
+
+**Pre-registration, written before any case for pilot 1 exists.** With **0 internal unplaceable leaders across
+all 7,791 tier entries** (amendment 7), the expected number of **dynamic targets landing inside a decoded
+instruction** on pilot 1's first case run is **zero**. If one appears it is a finding, with two candidate
+causes to separate by re-deriving the descent from the observed address: **(i)** the descent set is wrong —
+a successor was never followed; **(ii)** a decode defect on the case's own path. Zero is also what makes the
+pilot's coverage claim cheap: no unplaceable leader means every block in the set can be enumerated as a
+literal, so "every block ran" is checkable without a dynamic-leader revision at all.
+
+**Supersession — stated so the older sentence is not cited later.** Amendment 6 said: "an exit is attributed
+to the entry that owns the target, and if none does it is recorded as a partition gap." That rule used the
+**decoded extent** as the boundary and is **superseded**. A target outside the declared extent that is
+**reachable from the entry's descent is this entry's body**: the 22 instructions at `0x414471..0x4144b7` belong
+to `0x00414040`, unowned by the partition but not a gap in *its* coverage. "Partition gap" now means only a
+target reachable from **no** entry's descent — a fact about the partition, never about a function — and the
+tier-wide set of those has not been computed.
+
+**Queued, not claimed.** The union of descent sets is a third byte total, above the 20,064,463 declared and
+above anything an entry count can express. One descent costs ~0.02 s, so the tier is ~3 min of work; it stays a
+queue item until it is run and printed with its own control.
