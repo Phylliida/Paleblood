@@ -26,21 +26,48 @@ code at its own address. So the 14-byte floor is a property of *in-game installa
 one of the 1,737 recorded members already carries host-call evidence — the hook rows they were
 also required to have were never load-bearing for a ledger claim.
 
-Entries ≤ 16 bytes, exact decode, terminating in `ret`: **38,125, with 6,206 refused** (declared
-size does not decode cleanly, or ends in `jmp`), collapsing to **1,904 templates**. The six
-largest:
+Of the **44,331 entries ≤ 16 bytes**, **37,540 are leaf bodies** — exact decode to declared size,
+terminating in `ret`, no interior `call`/`jmp` — collapsing to **1,382 templates**. Refused:
+5,879 end in `jmp` (tail calls, a different semantics), **585 contain an interior transfer**
+(they look like leaves until the call is read), 320 end in `call`, 7 in something else.
 
 | members | distinct bodies | size | body |
 |--------:|----------------:|-----:|------|
-| 8,071 | 8,044 | 8 | `lea rax,[rip+K]; ret` |
+| 8,072 | 8,045 | 8 | `lea rax,[rip+K]; ret` |
 | 7,761 | 1 | 1 | `ret` |
 | 4,721 | 1 | 3 | `xor eax,eax; ret` |
-| 3,518 | 119 | 5,8 | `mov rax,[rdi+K]; ret` |
-| 1,947 | 296 | 6 | `mov eax,K; ret` |
-| 979 | 1 | 5 | `lea rax,[rdi+8]; ret` |
+| 3,619 | 121 | 5,8 | `mov rax,[rdi+K]; ret` |
+| 2,978 | 305 | 6 | `mov eax,K; ret` |
+| 1,462 | 115 | 5,8 | `lea rax,[rdi+K]; ret` |
+| 793 | 1 | 3 | `mov al,K; ret` |
 
-**27,197 of 38,125 (71.3%) sit in six templates, 17.2% of the catalog.** Pool A + pool B is the
-addressable pool: **53,797 entries, 34.1%**.
+**The top five cover 27,151 of 37,540 leaves (72.3%) and 17.2% of the catalog**, at 8,672 distinct
+bodies between them — 8,045 of those in the first template alone. Review and packet cost scale
+with **distinct bodies, not members**: `static_guard` was 1,117 members over 1,117 bodies and cost
+29 pages; family #3 is 4,721 members over **one** body.
+
+### Two earlier counts disagreed with these, and why
+
+`mov eax,K; ret` was first counted at 1,947 and `mov rax,[rdi+K]; ret` at 3,518 — 35% and 4% below
+the figures above. The cause is the normaliser, not the binary: **Capstone renders an immediate
+below 10 in decimal and one above in hex**, and the template key zeroed only `0x…`. Every body
+whose constant happened to be small therefore fell out of its family into a singleton. Zeroing
+both forms brings the counts to 2,978 and 3,619 (121 refused of the latter end in `jmp` or carry
+an interior call). A template table whose key silently splits on render format is a count of one
+printer's habits.
+
+Two checks close the census's remaining hedges: parsing hex operands from `op_str` versus reading
+`operands[0].imm` with `detail = True` **disagrees on 0 of 37,540** bodies, so the text-parse was
+not distorting the branch classification; and the interior-transfer count of 585 is the reason
+that test exists at all.
+
+`k+AXqu2-eBc` — the one raw NID left in `symbols/imports.csv` — is imported by **two modules that
+disagree about its library** (`eboot` as `libScePosix`, `libc.elf` as `libkernel`), so at most one
+row is right and neither export table is in this tree. That is the closed form: *imports complete
+except for NIDs from modules whose export tables are absent* — not an open hunt.
+
+Pool A and pool B overlap only in the 14–16 byte band, so the addressable union is roughly 50,000
+entries; a precise union is not quoted until it is measured.
 
 ## What a host-call run does and does not prove
 
@@ -58,5 +85,6 @@ has silently meant both since the first generated body and must stop.
 - **"Verifiable body" is not "function."** Exact decode plus a return is strong evidence of a body
   and says nothing about entry points; 120,641 entries have no in-catalog caller to corroborate
   entry status. Say entries.
-- The hookable enumeration parsed branch targets from `op_str` rather than the operand model, and
-  has not yet been diffed against a hand-decoded member. Provisional until it is.
+- The pool B figures are measured twice by two instruments that agree exactly (`detail = True`
+  operands versus `op_str`, 0 disagreements in 37,540). The pool A hookable enumeration is still
+  single-instrument and remains provisional.
