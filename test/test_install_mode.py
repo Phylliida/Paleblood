@@ -82,8 +82,13 @@ class TestInstallMode(unittest.TestCase):
         """The counterexample: drop a record and the gate must name the row."""
         funcs = [dict(r) for r in _rows(FUNCTIONS)]
         hooks = _rows(HOOKS)
-        install = []
-        target = next(r for r in funcs if r['status'] != 'original')
+        # The baseline must be the real tree, install rows included: a host-only
+        # member is consistent, and an empty install table stopped describing it
+        # the moment the first one landed.
+        install = _rows(INSTALL_MODE)
+        hooked = {h['address'] for h in hooks}
+        target = next(r for r in funcs
+                      if r['status'] != 'original' and r['address'] in hooked)
         self.assertEqual(violations(funcs, hooks, install), [])
         del_hook = [h for h in hooks if h['address'] != target['address']]
         errs = violations(funcs, del_hook, install)
