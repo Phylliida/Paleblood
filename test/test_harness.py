@@ -184,7 +184,7 @@ class Harness(unittest.TestCase):
         self.assertEqual(len(result['cases']), 1)
         execution, = result['cases']
         self.assertEqual(execution['id'], 'fixture')
-        self.assertEqual(execution['ret']['rax'], '0x7')
+        self.assertEqual(execution['ret']['rax'], 7)
         self.assertTrue(execution['instruction_trace']['complete'])
         self.assertEqual(execution['instruction_trace']['instructions'], 2)
         self.assertTrue(execution['instruction_trace']['control_flow_coverage']['feedback_eligible'])
@@ -467,13 +467,13 @@ class Harness(unittest.TestCase):
         case = {'schema': 1, 'address': '0x00400c40', 'id': 'lea-only', 'returns': 'i32',
                 'args': {'rdi': '0x0', 'rsi': '0x1'}, 'buffers': {}, 'memory': [], 'imports': [], 'stubs': []}
         result = self.traced_case(case, case['address'])
-        self.assertEqual(result['ret']['rax'], '0x9')
+        self.assertEqual(result['ret']['rax'], 9)
         trace = result['instruction_trace']
         self.assertTrue(trace['complete'], trace)
         self.assertEqual([event['mnemonic'] for event in trace['events']], ['ret'])
         self.assertTrue(trace['control_flow_coverage']['feedback_eligible'])
         indexed = self.traced_case({**case, 'address': '0x00400c60'}, '0x00400c60')
-        self.assertEqual(indexed['ret']['rax'], '0xb')
+        self.assertEqual(indexed['ret']['rax'], 0xb)
         self.assertTrue(indexed['instruction_trace']['complete'], indexed['instruction_trace'])
         self.assertEqual([event['mnemonic'] for event in indexed['instruction_trace']['events']], ['ret'])
 
@@ -899,7 +899,7 @@ class Harness(unittest.TestCase):
         with open(self.case, 'w') as f:
             json.dump(case, f)
         r = self.side()
-        self.assertEqual(r['ret'], {'rax': '0x5'})
+        self.assertEqual(r['ret'], {'rax': 5})
         self.assertEqual(r['calls'], [{'call': '0x00400000', 'args': []}])
         self.assertEqual(r['writes'], [])
 
@@ -938,7 +938,7 @@ class Harness(unittest.TestCase):
         with open(self.case, 'w') as f:
             json.dump(case, f)
         r = self.side()
-        self.assertEqual(r['ret'], {'rax': '0x5'})
+        self.assertEqual(r['ret'], {'rax': 5})
         self.assertIn({'addr': 'buf:out+0x0', 'bytes': '05'}, r['writes'])
         self.assertEqual(r['calls'][0]['scripted_write_targets'], ['buf:out+0x0'])
 
@@ -1013,7 +1013,7 @@ class Harness(unittest.TestCase):
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         out = json.loads(r.stdout)
-        self.assertEqual(out['ret'], {'rax': '0x321'})
+        self.assertEqual(out['ret'], {'rax': 0x321})
         self.assertEqual(out['preserved']['rsp'], 'kept')
 
     def test_unscripted_import_is_reported(self):

@@ -460,6 +460,19 @@ class Run:
         raise BadInput(f'scripted {direction} {self.describe(address)}+0x{size:x} '
                        f'is outside declared readable/writable regions')
 
+    def normalised(self, v: int) -> int:
+        """Map a host address inside the mapped image back to its guest address.
+
+        This is a *value* conversion, not a display one: the original runs in the host mapping
+        and a computed pointer lands at IMAGE + (guest - EBOOT_BASE), while a replacement gets
+        no such mapping and returns the guest address directly. Comparison must see one space,
+        so the conversion happens here and produces an int. describe() then renders it for
+        humans -- a comparison must never be built from a display format.
+        """
+        if IMAGE <= v < IMAGE + self.boot['size']:
+            return v - IMAGE + EBOOT_BASE
+        return v
+
     def describe(self, v: int) -> str:
         top = self.block[19]
         if top and top - STACK_WINDOW <= v <= top:
@@ -679,10 +692,10 @@ class Run:
         rax, rdx = self.block[7], self.block[8]
         xmm0 = bytes(ctypes.string_at(ctypes.addressof(self.block) + 72, 16))
         xmm1 = bytes(ctypes.string_at(ctypes.addressof(self.block) + 88, 16))
-        ret = {'i8': {'rax': f'0x{rax & 0xff:x}'},
-               'i32': {'rax': f'0x{rax & 0xffffffff:x}'},
-               'i64': {'rax': self.describe(rax)},
-               'i128': {'rax': f'0x{rax:x}', 'rdx': f'0x{rdx:x}'},
+        ret = {'i8': {'rax': rax & 0xff},
+               'i32': {'rax': rax & 0xffffffff},
+               'i64': {'rax': self.normalised(rax)},
+               'i128': {'rax': rax, 'rdx': rdx},
                'f32': {'xmm0': xmm0[:4].hex()},
                'f64': {'xmm0': xmm0[:8].hex()},
                'vec': {'xmm0': xmm0.hex(), 'xmm1': xmm1.hex()},

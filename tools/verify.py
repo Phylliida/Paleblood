@@ -78,6 +78,34 @@ def byte_map(writes: list[dict]) -> dict[tuple[str, int], int]:
     return m
 
 
+def num(v):
+    """Coerce one compared value to an int where it is a number.
+
+    Captures recorded before the snapshot carried ints store `ret`/register values as hex
+    strings, and a replay compares stored against fresh. Coercing on both sides keeps one
+    schema change from reading as a behavioural difference. Byte-blob registers (xmm0/xmm1)
+    are hex strings with no 0x prefix and are deliberately left alone: '3f800000' is a word
+    of data, not the number 1065353216.
+    """
+    if isinstance(v, bool) or isinstance(v, int):
+        return v
+    if isinstance(v, str):
+        try:
+            return int(v, 16) if v[:2].lower() == '0x' else int(v, 10)
+        except ValueError:
+            return v
+    return v
+
+
+def show(v) -> str:
+    """Render one compared value for a human. Formatting lives here and nowhere else:
+    the verdict above it is decided on the raw values, so a display format can never
+    manufacture agreement or disagreement."""
+    if isinstance(v, bool) or not isinstance(v, int):
+        return str(v)
+    return f'0x{v:x}'
+
+
 def compare_case(orig: dict, repl: dict, case: dict | None = None) -> list[str]:
     diffs: list[str] = []
     # A fault is a behaviour, so compare the two sides' faults against each other rather than
@@ -126,19 +154,19 @@ def compare_case(orig: dict, repl: dict, case: dict | None = None) -> list[str]:
         return diffs
     for group, regs in (('ret', RETURN_REGS), ('preserved', CALLEE_SAVED)):
         for r in regs:
-            a = orig.get(group, {}).get(r)
-            b = repl.get(group, {}).get(r)
+            a = num(orig.get(group, {}).get(r))
+            b = num(repl.get(group, {}).get(r))
             if a != b:
-                diffs.append(f'{group}.{r}: original {a} replacement {b}')
+                diffs.append(f'{group}.{r}: original {show(a)} replacement {show(b)}')
     original_observed = set(orig.get('observed_registers', []))
     replacement_observed = set(repl.get('observed_registers', []))
     if original_observed != replacement_observed:
         diffs.append('registers: compared-register declarations differ')
     for reg in sorted(original_observed & replacement_observed):
-        a = orig.get('registers', {}).get(reg)
-        b = repl.get('registers', {}).get(reg)
+        a = num(orig.get('registers', {}).get(reg))
+        b = num(repl.get('registers', {}).get(reg))
         if a != b:
-            diffs.append(f'registers.{reg}: original {a} replacement {b}')
+            diffs.append(f'registers.{reg}: original {show(a)} replacement {show(b)}')
     mo, mr = byte_map(orig.get('writes', [])), byte_map(repl.get('writes', []))
     bad = sorted(a for a in set(mo) | set(mr) if mo.get(a) != mr.get(a))
     for a in bad[:MAX_REPORTED]:
@@ -266,7 +294,7 @@ def falsification_report(original: dict, replacement: dict, cases: dict | None =
             return False
         reg = sorted(c['ret'])[0]
         try:
-            c['ret'][reg] = f'0x{int(str(c["ret"][reg]), 0) + 1:x}'
+            c['ret'][reg] = int(num(c['ret'][reg])) + 1
         except ValueError:
             return False
         return True
