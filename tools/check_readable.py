@@ -22,17 +22,13 @@ not in that list is an error.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import os
 import re
 import subprocess
 import sys
-import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALLOWLIST = 'tools/readable_allowlist.txt'
-CACHE = '.readable-cache.json'   # content-hash cache; gitignored, per worktree
 SOURCES = ('.c', '.cc', '.cpp', '.h', '.hpp')
 
 NUMBER = re.compile(r'(?<![\w.])(0[xX][0-9a-fA-F]+[uUlL]*|\d+\.\d*(?:[eE][-+]?\d+)?[fF]?|\d*\.\d+(?:[eE][-+]?\d+)?[fF]?|\d+[uUlL]*)(?![\w.])')
@@ -121,80 +117,11 @@ def game_files(root: str) -> list[str]:
     return sorted(out)
 
 
-def rules_fingerprint() -> str:
-    """sha256 over everything that decides a verdict for a given file's text.
-
-    The checker's own source and the allowlist (which gates whether a file's problems are
-    reported and whether an entry is stale) are the only inputs. A rules change forces a
-    full pass; a cache that cannot be invalidated must not exist."""
-    h = hashlib.sha256()
-    here = os.path.abspath(__file__)
-    with open(here, 'rb') as f:
-        h.update(f.read())
-    h.update(b'\0' + ALLOWLIST.encode() + b'\0')
-    with open(os.path.join(ROOT, ALLOWLIST), 'rb') as f:
-        h.update(f.read())
-    return h.hexdigest()
-
-
-class Cache:
-    """path -> (sha256(text), problems) with a rules fingerprint header.
-
-    Semantics are unchanged because problems() is a pure function of (path, text) and the
-    only other inputs are the allowlist, which the fingerprint covers."""
-
-    def __init__(self, root: str, enabled: bool = True):
-        self.root, self.enabled = root, enabled
-        self.path = os.path.join(root, CACHE)
-        self.rules = rules_fingerprint()
-        self.files: dict[str, list] = {}
-        self.scanned = self.cached = 0
-        self.why = ''
-        if enabled:
-            try:
-                with open(self.path) as f:
-                    blob = json.load(f)
-            except (OSError, ValueError):
-                self.why = 'no cache' if not os.path.exists(self.path) else 'unreadable cache'
-                return
-            if blob.get('rules') != self.rules:
-                self.why = 'rules changed'
-                return
-            self.files = {k: v for k, v in blob.get('files', {}).items()
-                          if isinstance(v, list) and len(v) == 2 and isinstance(v[0], str)}
-
-    def problems(self, rel: str, text: str) -> list[str]:
-        digest = hashlib.sha256(text.encode('utf-8', 'replace')).hexdigest()
-        hit = self.files.get(rel)
-        if hit is not None and hit[0] == digest:
-            self.cached += 1
-            return list(hit[1])
-        self.scanned += 1
-        found = problems(rel, text)
-        self.files[rel] = [digest, found]
-        return found
-
-    def save(self) -> None:
-        if not self.enabled:
-            return
-        blob = {'rules': self.rules, 'files': self.files}
-        os.makedirs(self.root, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=self.root, prefix='.readable-cache.')
-        with os.fdopen(fd, 'w') as f:
-            json.dump(blob, f, sort_keys=True)
-        os.replace(tmp, self.path)
-
-    def summary(self) -> str:
-        head = self.why or 'valid'
-        return f'scanned {self.scanned}, cached {self.cached} ({head})'
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--root', default=ROOT)
     ap.add_argument('--base', help='git ref whose allowlist this one may not grow beyond')
     ap.add_argument('--base-list', help='a file with the allowlist this one may not grow beyond')
-    ap.add_argument('--no-cache', action='store_true', help='ignore and do not write the cache')
     ap.add_argument('files', nargs='*')
     a = ap.parse_args()
     root = a.root
@@ -214,7 +141,6 @@ def main() -> int:
         grown = sorted(set(allow) - set(read_allowlist(base)))
         for g in grown:
             errors.append(f'{ALLOWLIST}: {g} was added; the list may only shrink (make the file readable instead)')
-    cache = Cache(root, enabled=not a.no_cache)
     every = game_files(root)
     targets = [f.replace(os.sep, '/') for f in a.files] if a.files else every
     for rel in targets:
@@ -224,7 +150,7 @@ def main() -> int:
         if not os.path.isfile(path):
             continue
         with open(path, errors='replace') as f:
-            found = cache.problems(rel, f.read())
+            found = problems(rel, f.read())
         if rel in allow:
             continue
         errors += found
@@ -235,16 +161,15 @@ def main() -> int:
                 errors.append(f'{ALLOWLIST}: {rel} no longer exists; remove it from the list')
                 continue
             with open(path, errors='replace') as f:
-                if not cache.problems(rel, f.read()):
+                if not problems(rel, f.read()):
                     errors.append(f'{ALLOWLIST}: {rel} passes now; remove it from the list')
-    cache.save()
     for e in errors:
         print(f'readable: {e}', file=sys.stderr)
     if errors:
-        print(f'readable: {len(errors)} problem(s); see STYLE.md · {cache.summary()}', file=sys.stderr)
+        print(f'readable: {len(errors)} problem(s); see STYLE.md', file=sys.stderr)
         return 1
     remaining = sum(1 for r in allow)
-    print(f'readable: ok ({remaining} grandfathered file(s) left in {ALLOWLIST}) · {cache.summary()}')
+    print(f'readable: ok ({remaining} grandfathered file(s) left in {ALLOWLIST})')
     return 0
 
 

@@ -37,5 +37,3 @@ __pycache__/
 compile_commands.json
 symbols/verification.csv.pre
 symbols/verification.csv.pre.stamp
-.readable-cache.json
-.readable-cache.*
