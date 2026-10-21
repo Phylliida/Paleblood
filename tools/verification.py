@@ -273,7 +273,9 @@ def record(root: str, function: str, cases: str, option: str, case_names: list[s
         # A snapshot you have to remember is a snapshot you will not have. Keep the first
         # pre-record state seen for this path, with the HEAD it belongs to, so a re-record can
         # be diffed against what it replaced instead of against nothing.
-        if not os.path.exists(path + '.pre'):
+        # Only a ledger that exists has a prior state worth preserving: the first record on a
+        # fresh tree creates it, and a snapshot of nothing is not a failure, it is an absence.
+        if os.path.exists(path) and not os.path.exists(path + '.pre'):
             head = _head_or_refuse(root)
             try:
                 shutil.copy2(path, path + '.pre')

@@ -981,6 +981,11 @@ class VerificationRecord(unittest.TestCase):
         sys.path.insert(0, os.path.join(ROOT, 'tools'))
         import verification
         self.v = verification
+        # This fixture is a scratch tree with no git history, so it says so out loud: record()
+        # refuses to stamp a snapshot with a HEAD it could not read, and the opt-out writes
+        # `no-head:<time>` rather than an empty first line that reads like a commit.
+        self._no_head = os.environ.get('BB_ALLOW_NO_HEAD')
+        os.environ['BB_ALLOW_NO_HEAD'] = '1'
         self.root = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.root, 'game', 'x'))
         os.makedirs(os.path.join(self.root, 'symbols'))
@@ -997,6 +1002,10 @@ class VerificationRecord(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.root)
+        if self._no_head is None:
+            os.environ.pop('BB_ALLOW_NO_HEAD', None)
+        else:
+            os.environ['BB_ALLOW_NO_HEAD'] = self._no_head
 
     def quarantine(self, *cases):
         self.v.write_csv(os.path.join(self.root, 'symbols', 'quarantine.csv'), self.v.QUARANTINE_HEADER,
