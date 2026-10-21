@@ -251,17 +251,12 @@ REVIEW_PINS = ('source_hash', 'cases_sha256')
 
 
 def defining_files(root: str, name: str) -> list[str]:
-    """Files under game/ that define the replacement bb_<name>."""
-    out = []
-    pattern = re.compile(rf'\bbb_{re.escape(name)}\s*\(')
-    for dp, _, fns in os.walk(os.path.join(root, 'game')):
-        for fn in fns:
-            if fn.endswith(('.c', '.cc', '.cpp')):
-                path = os.path.join(dp, fn)
-                with open(path, errors='replace') as f:
-                    if pattern.search(f.read()):
-                        out.append(os.path.relpath(path, root).replace(os.sep, '/'))
-    return out
+    """Files under game/ that define the replacement bb_<name>.
+
+    This was a second copy of verification.defining_files, drifted (unsorted) and paying the
+    per-call walk twice. One resolver, two callers: the agreement is code now, not a comment.
+    """
+    return verification.defining_files(root, name)
 
 
 def review_pin_errors(root: str, r: dict, rv: dict) -> list[str]:

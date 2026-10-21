@@ -60,18 +60,60 @@ CASES_UNAVAILABLE = 'unavailable'
 INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
 
 
-def defining_files(root: str, name: str) -> list[str]:
-    """Files under game/ that define the replacement bb_<name>."""
-    out = []
-    pattern = re.compile(rf'\bbb_{re.escape(name)}\s*\(')
+_DEFINING_INDEX: dict = {}      # root -> {bb_ name -> sorted defining files}, built once per process
+DEFINER = re.compile(r'\bbb_([A-Za-z0-9_]+)\s*\(')
+PLAIN_NAME = re.compile(r'^[A-Za-z0-9_]+$')
+
+
+def _defining_index(root: str) -> dict:
+    """One walk of game/ that records every bb_<name> each source defines.
+
+    `defining_files` used to walk and read all of game/ per call: 44.6 ms measured, which is
+    fine for the 21 rows checked today and 7,051 s in `verification.check` the day all 157,757
+    entries are verified -- the same shape as the 507 s `_install_mode_hosts` quadratic, waking
+    up exactly at the finish condition. A process never edits game/ mid-run, so one walk is
+    the whole truth for its lifetime; a caller that does edit must call forget_defining_index.
+    """
+    key = os.path.realpath(root)
+    index = _DEFINING_INDEX.get(key)
+    if index is not None:
+        return index
+    index = {}
     for dp, _, fns in os.walk(os.path.join(root, 'game')):
         for fn in sorted(fns):
-            if fn.endswith(('.c', '.cc', '.cpp')):
-                path = os.path.join(dp, fn)
-                with open(path, errors='replace') as f:
-                    if pattern.search(f.read()):
-                        out.append(os.path.relpath(path, root).replace(os.sep, '/'))
-    return sorted(out)
+            if not fn.endswith(('.c', '.cc', '.cpp')):
+                continue
+            path = os.path.join(dp, fn)
+            rel = os.path.relpath(path, root).replace(os.sep, '/')
+            with open(path, errors='replace') as f:
+                for found in set(DEFINER.findall(f.read())):
+                    index.setdefault(found, []).append(rel)
+    for files in index.values():
+        files.sort()
+    _DEFINING_INDEX.clear()         # one root per process in practice; keep the map honest
+    _DEFINING_INDEX[key] = index
+    return index
+
+
+def forget_defining_index() -> None:
+    """Drop the cached index (a caller that writes sources between lookups must ask for this)."""
+    _DEFINING_INDEX.clear()
+
+
+def defining_files(root: str, name: str) -> list[str]:
+    """Files under game/ that define the replacement bb_<name>."""
+    if not PLAIN_NAME.match(name):
+        out = []
+        pattern = re.compile(rf'\bbb_{re.escape(name)}\s*\(')
+        for dp, _, fns in os.walk(os.path.join(root, 'game')):
+            for fn in sorted(fns):
+                if fn.endswith(('.c', '.cc', '.cpp')):
+                    path = os.path.join(dp, fn)
+                    with open(path, errors='replace') as f:
+                        if pattern.search(f.read()):
+                            out.append(os.path.relpath(path, root).replace(os.sep, '/'))
+        return sorted(out)
+    return list(_defining_index(root).get(name, ()))
 
 
 def source_files(root: str, name: str) -> list[str]:
