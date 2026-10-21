@@ -1,0 +1,4 @@
+function,reason,date
+frame_timing_mutex_lock,no case directory under ../data/cases/*/ and no case-named files: the captures were never kept on this machine; the pin cannot be re-derived until cases are written again,2026-10-21
+frame_timing_mutex_unlock,no case directory under ../data/cases/*/ and no case-named files: the captures were never kept on this machine; the pin cannot be re-derived until cases are written again,2026-10-21
+frame_timing_thread_self,no case directory under ../data/cases/*/ and no case-named files: the captures were never kept on this machine; the pin cannot be re-derived until cases are written again,2026-10-21

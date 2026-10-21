@@ -272,10 +272,16 @@ def review_pin_errors(root: str, r: dict, rv: dict) -> list[str]:
     for column, current, subject in (
             ('source_hash', verification.source_hash(root, r['name']), 'replacement source'),
             ('cases_sha256', verification.evidence_hash(root, r['name']), 'evidence set')):
-        if not current:
-            continue            # nothing here to compare against: no defining file, or no rows
         got = rv[column].strip()
         if got == verification.CASES_UNAVAILABLE:
+            continue            # a person looked and could not pin it; the absence is declared
+        if not current:
+            # This used to `continue`, which meant a review whose replacement source had been
+            # deleted compared against nothing and passed -- the fail-open that record()'s
+            # empty-HEAD stamp turned out to be, one file over. Absence refuses.
+            errs.append(f"{where}: {r['name']} is approved against a {subject} this tree does not "
+                        f"have, so the approval cannot be checked (no defining file, or no ledger "
+                        f"rows); record the evidence, or write {verification.CASES_UNAVAILABLE}")
             continue
         if not got:
             errs.append(f"{where}: {r['name']} is approved without a {column}, so the approval does "

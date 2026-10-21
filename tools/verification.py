@@ -116,6 +116,58 @@ def defining_files(root: str, name: str) -> list[str]:
     return list(_defining_index(root).get(name, ()))
 
 
+_FILE_BYTES: dict = {}
+
+
+def file_bytes(path: str) -> bytes:
+    """The file's bytes, read once per process per (realpath, mtime_ns, size).
+
+    source_files() and source_hash() each opened every defining file and every included header
+    once per call, so auditing 21,128 ledger pins read the same 105 files tens of thousands of
+    times: 6.5 ms per row, 2 m 18 s for one audit, and half an hour at the finish condition for
+    a check that reads about three megabytes of source in total."""
+    real = os.path.realpath(path)
+    st = os.stat(path)
+    key = (real, st.st_mtime_ns, st.st_size)
+    got = _FILE_BYTES.get(key)
+    if got is None:
+        with open(path, 'rb') as f:
+            got = f.read()
+        if len(_FILE_BYTES) > 8192:
+            _FILE_BYTES.clear()
+        _FILE_BYTES[key] = got
+    return got
+
+
+_FILE_INCLUDES: dict = {}
+
+
+def includes_of(path: str) -> tuple:
+    """The #include names in PATH, scanned once per (realpath, mtime_ns, size).
+
+    Caching the bytes was not enough: the leaf family's translation unit is one megabyte of
+    generated bodies, so decoding it and running the include regex over it cost 5 ms of CPU per
+    source_hash() call -- 1 m 52 s for one pin audit even after every read was served from
+    memory. The scan is a property of the file, so it is done when the file is first seen."""
+    real = os.path.realpath(path)
+    st = os.stat(path)
+    key = (real, st.st_mtime_ns, st.st_size)
+    got = _FILE_INCLUDES.get(key)
+    if got is None:
+        got = tuple(INCLUDE.findall(file_bytes(path).decode(errors='replace')))
+        if len(_FILE_INCLUDES) > 8192:
+            _FILE_INCLUDES.clear()
+        _FILE_INCLUDES[key] = got
+    return got
+
+
+def forget_sources() -> None:
+    """Drop the cached source text and file bytes: for a caller that writes game/ mid-process."""
+    _FILE_BYTES.clear()
+    _FILE_INCLUDES.clear()
+    _DEFINING_INDEX.clear()
+
+
 def source_files(root: str, name: str) -> list[str]:
     """The defining files and every header they include from game/ or runtime/include/."""
     search = [os.path.join(root, 'game'), os.path.join(root, 'runtime', 'include')]
@@ -126,9 +178,7 @@ def source_files(root: str, name: str) -> list[str]:
         if path in seen or not os.path.isfile(path):
             continue
         seen.add(path)
-        with open(path, errors='replace') as f:
-            text = f.read()
-        for inc in INCLUDE.findall(text):
+        for inc in includes_of(path):
             for base in [os.path.dirname(path)] + search:
                 candidate = os.path.normpath(os.path.join(base, inc))
                 if os.path.isfile(candidate):
@@ -137,16 +187,34 @@ def source_files(root: str, name: str) -> list[str]:
     return sorted(os.path.relpath(p, root).replace(os.sep, '/') for p in seen)
 
 
+_SOURCE_HASH_CACHE: dict = {}
+
+
 def source_hash(root: str, name: str) -> str:
     files = source_files(root, name)
     if not files:
         return ''
-    h = hashlib.sha256()
+    # The hash is a function of the defining file list and those files' contents, and nothing
+    # else, so every member of a generated family has the same one: 3,619 mov_rax members share
+    # one translation unit. Keyed on the list plus each file's (mtime_ns, size), a repeat costs a
+    # few stats instead of a megabyte of sha256, and a file that changes cannot hit a stale entry.
+    versions = []
     for rel in files:
+        st = os.stat(os.path.join(root, rel))
+        versions.append((rel, st.st_mtime_ns, st.st_size))
+    key = (os.path.realpath(root), tuple(versions))
+    got = _SOURCE_HASH_CACHE.get(key)
+    if got is not None:
+        return got
+    h = hashlib.sha256()
+    for rel, _, _ in versions:
         h.update(rel.encode() + b'\0')
-        with open(os.path.join(root, rel), 'rb') as f:
-            h.update(f.read() + b'\0')
-    return h.hexdigest()[:SOURCE_HASH_LENGTH]
+        h.update(file_bytes(os.path.join(root, rel)) + b'\0')
+    got = h.hexdigest()[:SOURCE_HASH_LENGTH]
+    if len(_SOURCE_HASH_CACHE) > 8192:
+        _SOURCE_HASH_CACHE.clear()
+    _SOURCE_HASH_CACHE[key] = got
+    return got
 
 
 def cases_hash(captures: str) -> str:
@@ -168,6 +236,14 @@ def cases_hash(captures: str) -> str:
     return h.hexdigest()[:SOURCE_HASH_LENGTH]
 
 
+# A ledger cache keyed on (path, mtime_ns, size) was tried here and removed: the suite's
+# test_the_evidence_hash_does_not_depend_on_how_the_ledger_was_written rewrites the file three
+# times with a 16-hex pin changed, so path, size and mtime tick are all identical and the cache
+# served the first answer for the third write. A changed pin stopped changing the evidence -- the
+# one property that test exists to hold. Correct invalidation needs the content, and reading the
+# content is the cost being avoided, so the cost stands until the ledger write itself is batched.
+
+
 def evidence_hash(root: str, name: str) -> str:
     """What the ledger says the evidence for NAME is: each case set's name and its case pin.
 
@@ -186,8 +262,8 @@ def evidence_hash(root: str, name: str) -> str:
     and sorting is a no-op on all 30 approvals in it, so the invariant costs nothing and no longer
     depends on anyone remembering the convention.
     """
-    rows = [r for r in read_csv(os.path.join(root, 'symbols', 'verification.csv'), VERIFICATION_HEADER)
-            if r['function'] == name]
+    rows = [r for r in read_csv(os.path.join(root, 'symbols', 'verification.csv'),
+                                     VERIFICATION_HEADER) if r['function'] == name]
     if not rows:
         return ''
     def canonical(r: dict) -> tuple:
