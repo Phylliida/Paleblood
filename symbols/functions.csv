@@ -1,14 +1,59 @@
 address,size,name,system,status,notes
 0x0040c4c0,3,leaf_ret_zero_0040c4c0,leaf,edge-verified,
+0x00431870,3,leaf_ret_zero_00431870,leaf,edge-verified,
+0x00431880,3,leaf_ret_zero_00431880,leaf,edge-verified,
+0x00438080,3,leaf_ret_zero_00438080,leaf,edge-verified,
+0x00451500,3,leaf_ret_zero_00451500,leaf,edge-verified,
+0x00454cb0,3,leaf_ret_zero_00454cb0,leaf,edge-verified,
+0x00454d20,3,leaf_ret_zero_00454d20,leaf,edge-verified,
+0x00454d30,3,leaf_ret_zero_00454d30,leaf,edge-verified,
 0x004632d0,67,frame_timing_get_time_us,frame_timing,original,dead in the stock game: only unwind entries refer to it; the community frame-rate patches overwrite it as a code cave (gettimeofday in microseconds)
+0x00466360,3,leaf_ret_zero_00466360,leaf,edge-verified,
 0x004663f0,18,kernel_pending_code,kernel,edge-verified,"Reads the signed count at +0x34 of its argument: returns 2 while it is above zero, otherwise bit 0 of the word at +0x30"
 0x004664e0,25,kernel_index_code,kernel,edge-verified,Bounds-checked lookup of a code word in the seven-entry table at 0x02fc5480; an index above 6 returns 0x2bc
+0x00466740,3,leaf_ret_zero_00466740,leaf,edge-verified,
 0x00466810,19,kernel_usleep,kernel,edge-verified,Sleeps for its argument in microseconds via libc usleep (argument*1000 ns) and returns 1; called with a constant 10 by 0x007199f0
+0x00480d10,3,leaf_ret_zero_00480d10,leaf,edge-verified,
 0x00485c20,19,engine_slot_copy_staged_00485c20,engine,edge-verified,"2 x 16-byte slot(s) from rdi to rsi, all loads before the stores; staged order is visible only when the buffers overlap"
+0x00486fe0,3,leaf_ret_zero_00486fe0,leaf,edge-verified,
+0x004987f0,3,leaf_ret_zero_004987f0,leaf,edge-verified,
 0x00499610,20,engine_slot_copy_interleaved_00499610,engine,edge-verified,"2 x 4-byte slot(s) from rsi to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
 0x004bb970,21,engine_slot_copy_interleaved_004bb970,engine,edge-verified,"2 x 4-byte slot(s) from rsi to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
 0x004be730,21,engine_slot_copy_interleaved_004be730,engine,edge-verified,"2 x 4-byte slot(s) from rsi to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
+0x004de370,3,leaf_ret_zero_004de370,leaf,edge-verified,
+0x004ef2e0,3,leaf_ret_zero_004ef2e0,leaf,edge-verified,
+0x0050af70,3,leaf_ret_zero_0050af70,leaf,edge-verified,
+0x0050b380,3,leaf_ret_zero_0050b380,leaf,edge-verified,
+0x0050b4b0,3,leaf_ret_zero_0050b4b0,leaf,edge-verified,
+0x0050b4c0,3,leaf_ret_zero_0050b4c0,leaf,edge-verified,
+0x005230e0,3,leaf_ret_zero_005230e0,leaf,edge-verified,
+0x005230f0,3,leaf_ret_zero_005230f0,leaf,edge-verified,
+0x0053fe30,3,leaf_ret_zero_0053fe30,leaf,edge-verified,
+0x005abdc0,3,leaf_ret_zero_005abdc0,leaf,edge-verified,
+0x005abfd0,3,leaf_ret_zero_005abfd0,leaf,edge-verified,
+0x005abfe0,3,leaf_ret_zero_005abfe0,leaf,edge-verified,
+0x005abff0,3,leaf_ret_zero_005abff0,leaf,edge-verified,
+0x005ac010,3,leaf_ret_zero_005ac010,leaf,edge-verified,
+0x005ac020,3,leaf_ret_zero_005ac020,leaf,edge-verified,
+0x005ac030,3,leaf_ret_zero_005ac030,leaf,edge-verified,
+0x00625cd0,3,leaf_ret_zero_00625cd0,leaf,edge-verified,
+0x00626ff0,3,leaf_ret_zero_00626ff0,leaf,edge-verified,
+0x00628070,3,leaf_ret_zero_00628070,leaf,edge-verified,
+0x00629720,3,leaf_ret_zero_00629720,leaf,edge-verified,
 0x0063e8c0,21,engine_slot_copy_interleaved_0063e8c0,engine,edge-verified,"2 x 16-byte slot(s) from rdx to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
+0x006a13c0,3,leaf_ret_zero_006a13c0,leaf,edge-verified,
+0x006a1500,3,leaf_ret_zero_006a1500,leaf,edge-verified,
+0x006a1510,3,leaf_ret_zero_006a1510,leaf,edge-verified,
+0x006a1670,3,leaf_ret_zero_006a1670,leaf,edge-verified,
+0x006b0550,3,leaf_ret_zero_006b0550,leaf,edge-verified,
+0x006b0560,3,leaf_ret_zero_006b0560,leaf,edge-verified,
+0x006da830,3,leaf_ret_zero_006da830,leaf,edge-verified,
+0x00700ab0,3,leaf_ret_zero_00700ab0,leaf,edge-verified,
+0x00700ac0,3,leaf_ret_zero_00700ac0,leaf,edge-verified,
+0x0070e460,3,leaf_ret_zero_0070e460,leaf,edge-verified,
+0x0070ea80,3,leaf_ret_zero_0070ea80,leaf,edge-verified,
+0x0070eb70,3,leaf_ret_zero_0070eb70,leaf,edge-verified,
+0x0070eca0,3,leaf_ret_zero_0070eca0,leaf,edge-verified,
 0x00842ba0,39,engine_sse_copy_rdi_to_rsi_00842ba0,engine,edge-verified,Copies four 16-byte slots from [rdi..+0x30] to [rsi..+0x30] one slot at a time through xmm0; rdi holds the SOURCE here and rsi the destination
 0x00842bd0,39,engine_sse_copy_rsi_to_rdi_00842bd0,engine,edge-verified,Copies four 16-byte slots from [rsi..+0x30] to [rdi..+0x30] one slot at a time through xmm0; interleaved load and store like 0x00842ba0 with the operands exchanged
 0x0085c8b0,40,engine_slot_copy_interleaved_0085c8b0,engine,edge-verified,"4 x 16-byte slot(s) from rdi to rsi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
