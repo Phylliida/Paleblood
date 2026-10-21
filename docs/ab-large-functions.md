@@ -259,3 +259,75 @@ amendment 3 stand; the decompile term is now populated (8.1 s), the two-dir diff
 subject is selected and read. The translation attempt, its minute count and the number of differential
 failures it takes to reach a passing body are the next entries in this document, and a pass on the
 first attempt is to be reported as a suspicious result rather than a good one.
+
+## Amendment 5 -- the invocation shape was the cost, the axis is a distribution, and T_data measured
+
+**Batch, not per function. 8.1 s was process start, not decompilation.** `Decompile.java OUT.c [LIMIT]
+[TIMEOUT_MS] [STRIDE]` in one session, twice, with a 20 s per-function timeout:
+
+    stride 700 --> 226 functions, ms=88,345, ms_per_function=390.9, wall 95.9 s
+    stride 200 --> 789 functions, ms=363,853, ms_per_function=461.2, wall 371.7 s, failed=1
+
+So the marginal cost is **~0.46 s per function** against **8.1 s per function** for one
+`analyzeHeadless` call: a **17.6x** difference whose entire cause is JVM start and project load
+(7.6 s of 95.9 s, i.e. 8% of the batch run and ~94% of the per-function run). The lesson is not
+"cache the decompiler" -- it is that **I was paying 8 s of process start to buy 2 ms of analysis**,
+and the cache I carried for eleven slices was answering a question nobody was asking. It is dropped
+from the plan, not deferred again: `data/exports` already holds a full batch export.
+
+**The two figures this replaces, both of which I had been quoting.** (1) "17.5 h for the tier" was
+7,791 x 8.1 s -- an artefact of the wrong invocation; at the batch slope the tier is **~60 minutes**
+and the whole 157,757-entry catalog is **~20 h**, not the 11.5 h I carried from a batching figure
+whose population I never re-read. Both are now numbers with a command behind them. (2) The batch run
+fails loudly on the pathological case (`failed=1` at a 20 s timeout), so the 35.8 s function is
+caught by the timeout argument rather than by luck.
+
+**Zero-SIMD is a filter on a continuous axis, and the census now reports the axis.**
+`tools/simd_census.py` -- landed in the repo, because a tool that finds defects while living in /tmp
+is not in the repo it protects -- scans the tier with a completed allow-list (VEX prefix, the legacy
+SSE set, the `p*` integer set, the `ps/pd/ss/sd/dq/qu` suffix rule, with `insd/outsd` and friends
+excluded) and **prints a known-positive control first**: `0x00b46d20` scores **351 instructions,
+322 SIMD, density 0.917**, so the allow-list is shown to find a function known to be vector-dense
+before any number below it is reported.
+
+    7,791 tier entries scanned; density = SIMD instructions / total instructions
+    p10 0.000   p25 0.000   p50 0.026   p75 0.191   p90 0.499   p99 0.910
+    density = 0          2,512 (32.2%)
+    0    < d <= 0.02     1,184 (15.2%)
+    0.02 < d <= 0.05     1,004 (12.9%)
+    0.05 < d <= 0.10       569 ( 7.3%)
+    0.10 < d <= 0.25       873 (11.2%)
+    d > 0.25             1,649 (21.2%)
+    density <= 0.02  3,696 (47.4%)   with <=2 calls 270
+    density <= 0.05  4,700 (60.3%)   with <=2 calls 287
+    density <= 0.10  5,269 (67.6%)   with <=2 calls 297
+    density <= 0.25  6,142 (78.8%)   with <=2 calls 341
+
+**The honest statement, corrected from this morning's:** 32.2% is a **lower bound** on the reachable
+tier and the ceiling is not 32.2% -- the median tier function carries **2.6%** SIMD, and 60.3% of the
+tier sits at or below 5%, which is a body with a handful of vector ops that a helper can carry rather
+than a different kind of program (`0x00b46d20` at 0.917 belongs to the 21.2% above 0.25 and needs
+`game/engine/`, not a helper). The zero-SIMD count also moved **2,545 -> 2,512** between two runs of
+my own instrument; the difference is the allow-list, and the earlier figure is withdrawn rather than
+reconciled. **Where the line sits is a policy choice, not a measured limit** -- `check_readable.py`
+forbidding SSE outside `game/engine/` is a decision the maintainer owns -- so it is raised as a
+**fourth yes/no** rather than decided here.
+
+**`T_data`, named last amendment, measured this one: it is a non-term.** `tools/rodata_table.py`
+derives each table's extent from the binary rather than guessing it -- 256 level-1 words, ending 16
+words past the largest level-1 value that names a level-2 block -- emits a `constexpr` array, pins the
+**sha256 of the exact span**, and round-trips the emitted words against the bytes:
+
+    sg_bracket_a: guest 0x02fc5120  words 384  span  768 B  max level-2 base 368  T_data 0.064 s
+    sg_bracket_b: guest 0x02fc4a40  words 880  span 1760 B  max level-2 base 864  T_data 0.064 s
+
+**And the two extents corroborate each other**: `0x02fc5120 + 768` is exactly `0x02fc4a40 + 1760`, so
+the derived end of the second table lands flush on the start of the first. Two independent lookups
+(derive-forward and neighbour-address) agreeing on a boundary is worth more than either alone, and a
+guessed extent would rarely land flush.
+
+**Still not measured, and this is the fourth amendment it has been true in: `T_translate`.** The
+decompile term is populated, the cache question is closed as the wrong question, the population is
+measured on the axis that matters, and the data tables are generated. What remains is one body, its
+minutes, and the count of differential failures it takes to reach a pass -- with the three planted
+translation errors still owed as the oracle's proof.
