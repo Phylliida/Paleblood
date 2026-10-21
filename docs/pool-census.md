@@ -163,3 +163,28 @@ prints: count 1,737 → **6,458** (+4.09%); bytes 130,370 → **144,533** (+4,72
 42,487,347); ledger rows 1,838 → **6,559**, multi-set surplus holding at exactly **101**;
 exclusive edge-verified 1,716 → 6,437 with original 2 and verified 21 unchanged; and
 `hook-registered 1,737 / host-only 4,721`. A miss on any of the six means a member silently failed.
+
+## Pool B can never produce `verified`, and that is not a stall
+
+`verified` means a differential against **recorded gameplay captures**. A function the game never
+calls never has one. So every pool B family is **permanently `edge-verified`**: family #3 moves the
+count line 1,737 → 6,458 and leaves the `verified` line at 21, and that is correct behaviour.
+
+The consequence, written down before it looks like the campaign stopped: **translation work alone
+reaches ~34.1% edge-verified and 0% verified growth.** The top rung is gated entirely by the boot
+reaching game code — one recorder caller and one import wall — and by nothing in pool B. Any
+twenty-turn stretch where the count climbs and `verified` and `observed executing in game` do not
+is the campaign moving on the only rung it can reach without the game running.
+
+## Two requirements for every checker and every large commit
+
+- **Print the work, not just the verdict.** A baseline `rc=0` is consistent with "no violations"
+  *and* with "the check never ran", exactly as an `rc=1` can come from a `NameError` instead of a
+  rule — both happened while wiring this gate. `validate_functions.py` must print one line of its
+  own arithmetic, e.g. `install_mode: 0 host rows · hook-resolved 1,737 · original 1,113`, so a
+  wiring failure reads as `0 host rows` rather than as silence. Lands with the first family
+  tranche, and applies to every `tools/` checker that reports only pass/fail.
+- **A large insertion must not re-sort its file.** The 4,721-row `functions.csv` addition must
+  append and rewrite in place, and the commit asserts its own diff shape — `git diff --stat`
+  showing that file and additions only. A re-sorted 157,757-line diff buries 4,721 real changes
+  where no reviewer will find them, and the assertion is what the reviewer actually relies on.
