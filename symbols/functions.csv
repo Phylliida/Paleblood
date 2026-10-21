@@ -1,4 +1,5 @@
 address,size,name,system,status,notes
+0x0040c4c0,3,leaf_ret_zero_0040c4c0,leaf,edge-verified,
 0x004632d0,67,frame_timing_get_time_us,frame_timing,original,dead in the stock game: only unwind entries refer to it; the community frame-rate patches overwrite it as a code cave (gettimeofday in microseconds)
 0x004663f0,18,kernel_pending_code,kernel,edge-verified,"Reads the signed count at +0x34 of its argument: returns 2 while it is above zero, otherwise bit 0 of the word at +0x30"
 0x004664e0,25,kernel_index_code,kernel,edge-verified,Bounds-checked lookup of a code word in the seven-entry table at 0x02fc5480; an index above 6 returns 0x2bc

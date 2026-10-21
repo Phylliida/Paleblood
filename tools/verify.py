@@ -333,11 +333,10 @@ def lookup(name: str) -> tuple[str, str]:
     if not rows:
         raise BadInput(f'{name} is not in symbols/functions.csv')
     address = rows[0]['address']
-    with open(os.path.join(ROOT, 'game', 'hooks.csv'), newline='') as f:
-        hooks = [r for r in csv.DictReader(f) if r['address'] == address]
-    if not hooks:
-        raise BadInput(f'{name} has no replacement in game/hooks.csv')
-    return address, hooks[0]['replacement']
+    symbol = verification.replacement_symbol(ROOT, name, address)
+    if not symbol:
+        raise BadInput(f'{name} has no replacement in game/hooks.csv or symbols/install_mode.csv')
+    return address, symbol
 
 
 def run_side(boot: str, case: str, address: str, symbol: str | None, lib: str | None,

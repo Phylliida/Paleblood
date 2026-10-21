@@ -285,3 +285,26 @@ def check(root: str, funcs: list[dict]) -> list[str]:
             errs.append(f"{where} but its {label} result (symbols/verification.csv:{r['_line']}) is for other code: "
                         f"run it again with --record")
     return errs
+
+
+def replacement_symbol(root: str, name: str, address: str) -> str | None:
+    """The replacement symbol for a function, resolved in one place.
+
+    The hook registry is binding; a row declared `host` in symbols/install_mode.csv
+    is verified without being installed in the running game. verify.py and
+    validate_functions.py both call this, so the two tools cannot drift into
+    disagreeing about what a non-`original` row means.
+    """
+    hooks = os.path.join(root, 'game', 'hooks.csv')
+    if os.path.exists(hooks):
+        with open(hooks, newline='') as f:
+            for r in csv.DictReader(f):
+                if r['address'] == address:
+                    return r['replacement']
+    modes = os.path.join(root, 'symbols', 'install_mode.csv')
+    if os.path.exists(modes):
+        with open(modes, newline='') as f:
+            for r in csv.DictReader(f):
+                if r['address'] == address and r['mode'] == 'host':
+                    return 'bb_' + name
+    return None
