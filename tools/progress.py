@@ -193,7 +193,9 @@ def burndown_line(d: dict) -> str:
         if 'unrerunnable' in led:
             parts.append(f're-runnable evidence {led["functions"] - led["unrerunnable"]} of '
                          f'{led["functions"]} (verified {led.get("verified", 0) - led.get("unrerunnable_verified", 0)}'
-                         f' of {led.get("verified", 0)})')
+                         f' of {led.get("verified", 0)})'
+                         ' [all rows clean; the join prints the any-row-clean count beside it,'
+                         ' and the two differ by functions holding one timestamp-less row]')
     return 'burndown: ' + ' | '.join(parts)
 
 
@@ -389,18 +391,26 @@ def evidence_join(root, argv=None):
     for r in ledger:
         by_addr.setdefault(r.get('function', ''), []).append(r)
     names = {r['name'] for r in funcs}
-    backed, rerun, unbacked = 0, 0, []
+    backed, rerun, rerun_all, unbacked, mixed = 0, 0, 0, [], []
     for r in edge:
         rows = by_addr.get(r['name']) or []
         if not rows:
             unbacked.append(r['address'])
             continue
         backed += 1
-        if any((x.get('cases_sha256') or '') not in ('', 'unavailable') for x in rows):
+        clean = [(x.get('cases_sha256') or '') not in ('', 'unavailable') for x in rows]
+        if any(clean):
             rerun += 1
+        if all(clean):
+            rerun_all += 1
+        elif any(clean):
+            mixed.append(r['address'])
     surplus = len(ledger) - len(funcs)
     print(f'join: status {len(edge)} \u00b7 ledger-backed {backed} \u00b7 '
-          f're-runnable {rerun} \u00b7 unbacked {len(unbacked)} \u00b7 surplus {surplus}')
+          f're-runnable any row clean {rerun} \u00b7 all rows clean {rerun_all} '
+          f'\u00b7 unbacked {len(unbacked)} \u00b7 surplus {surplus}')
+    for a in mixed[:10]:
+        print(f'  mixed rows (one clean row and one timestamp-less row): {a}')
     for a in unbacked[:10]:
         print(f'  unbacked: {a}')
     if unbacked:

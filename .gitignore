@@ -35,3 +35,5 @@ __pycache__/
 *.pyc
 .cache/
 compile_commands.json
+symbols/verification.csv.pre
+symbols/verification.csv.pre.stamp

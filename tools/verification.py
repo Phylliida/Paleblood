@@ -44,6 +44,8 @@ import glob
 import hashlib
 import io
 import os
+import shutil
+import subprocess
 import re
 
 VERIFICATION_HEADER = ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
@@ -206,6 +208,18 @@ def record(root: str, function: str, cases: str, option: str, case_names: list[s
     # Runs may record at the same time (one per function): read, update and write under a lock.
     with open(path + '.lock', 'w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        # A snapshot you have to remember is a snapshot you will not have. Keep the first
+        # pre-record state seen for this path, with the HEAD it belongs to, so a re-record can
+        # be diffed against what it replaced instead of against nothing.
+        if not os.path.exists(path + '.pre'):
+            try:
+                shutil.copy2(path, path + '.pre')
+                head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=root, capture_output=True,
+                                      text=True).stdout.strip()
+                with open(path + '.pre.stamp', 'w') as s:
+                    s.write(f'{head}\n{datetime.datetime.now().isoformat(timespec="seconds")}\n')
+            except OSError:
+                pass
         rows = [r for r in read_csv(path, VERIFICATION_HEADER)
                 if (r['function'], r['cases'], r['option']) != (function, cases, option)]
         rows.append(row)

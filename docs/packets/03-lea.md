@@ -27,12 +27,21 @@ padded it. Values were right; verdicts were unusable. The fix makes the space co
 value operation returning ints and demotes formatting to display only. All 8,073 rows are
 now recorded clean: `passed == total`, `failed 0`.
 
+**Measured about the stored values, and what is not.** The re-record could not be
+diffed against a pre-record snapshot because none was taken, so *that the verdict
+changed and nothing else did is unmeasured.* What is measured, over all 8,073:
+**every stored value equals the independently derived constant, 0 disagreements
+by two routes that share no object.** The recorder now snapshots
+`symbols/verification.csv.pre` once, stamped with its HEAD, so the next re-record
+is diffable rather than merely assertable.
+
 **What the canary covered.** Nothing applies — the replacement returns a constant.
 
 **Limits, stated rather than discovered later.** All 8,073 members return a **guest address
 as a host integer**; both sides compute the same number, so this is **coverage, not a
 semantic bridge** — nothing here dereferences the address, and no member has been observed
-executing in game. 8,046 distinct bodies over 305-ish parameter families.
+executing in game. 8,046 distinct bodies (the 305 was `mov eax,K`'s count, carried
+here by mistake and removed).
 
 ```
 0x005a0170,leaf_lea_rip_005a0170,2026-10-20,<your name>,approved,<pin>,<cases sha>,shape approval: lea rax,[rip+K]; ret -> return K; 8,073 members over 8,046 bodies (docs/packets/members/lea.csv); 0/8,073 transcription disagreements by two routes; K+/-1 fail, K+0 passes; member-set hash 1502ec95862ed03f
