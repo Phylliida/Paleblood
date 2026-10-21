@@ -161,3 +161,43 @@ a capability this tree does not yet have**; demonstrating it (how a host body ca
 and what the trace then attributes where) is a separate deliverable, and the tier is not reachable
 until it exists. The verdict sentence for pilot 1 must say "zero-call", or it will be read as a
 statement about 43%-of-bytes functions, 48 of whose blocks sit behind `0x00fe0450`'s 48 calls.
+
+## Amendment 3 -- the tier is solid, the coverage rule is pre-registered, and pilot 1 measures a new thing
+
+**The membership worry was 0.13% in magnitude and the census settles it in the tier's favour.** Ten
+entries of 7,791 declare >1,024 B and decode <=1,024; decoded/declared is 99.96% with a median delta
+of 0 and a maximum of 14 bytes. The tier is not fuzzy -- it is solid, and the only load-bearing limit
+in it is the **3,321 entries (43%) with indirect branch targets**, whose block coverage cannot be
+complete by construction and whose report is therefore static blocks plus the dynamic target set
+observed at run time. Both sentences go in the packet: the tier is solid, and 43% of it cannot make
+the claim this document's primary criterion asks for.
+
+**Coverage is attributed by address range, not by the trace.** A block counts toward function F only
+if its start lies inside F's own decoded extent `[entry, entry + decoded)`. Anything the trace reports
+outside that range is attributed to its own function, or reported as **callee/unattributed** and never
+counted. With a zero-call body this cannot bite; the moment a replacement invokes a guest callee the
+callee's blocks would land in the caller's coverage and a caller could be **reported** fully covered
+without being so. Pre-registered here, before the first case exists, because the fix is free today and
+a retraction later.
+
+**Pilot 1 measures hand translation of real logic -- the campaign's first such number.** Every member
+landed so far was generated from a decode: `return 0`, a constant return, one `memcpy` at a fixed
+offset. `0x00b46d20` is 23 blocks and 1,659 bytes of code that must be **read and rewritten**, and the
+differential then verifies the rewrite. The deliverable is therefore not a verdict but a cost, stated
+in advance:
+
+| term | start | stop |
+| --- | --- | --- |
+| `T_decompile` | launching the decompile | Ghidra's C on disk (two runs, different output dirs, diffed) |
+| `T_translate` | first read of that C | a hand body that compiles and links into the harness |
+| `T_correct` | that build | the differential passing on the case set that reaches block coverage |
+| `T_cases` | first case authored | coverage target met **or abandoned, with the reason** |
+
+Reported separately, never summed into one "cost per function". `T_translate + T_correct` at median
+size is the only per-function cost this campaign has never measured, and it decides the remaining 86%
+of the bytes; a number produced by summing it with case authoring would decide nothing.
+
+**Pilot 1 remains a floor.** Zero calls, so zero callees, so the callee-attribution rule above is
+stated but untested by it. A host replacement invoking a guest callee -- the capability the 48-call
+candidate and 43% of the tier need -- is a separate deliverable, and it must be demonstrated before
+any tier verdict is written.
