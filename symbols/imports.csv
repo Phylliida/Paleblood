@@ -119,14 +119,12 @@ eboot,libSceHttp,sceHttpDeleteTemplate,function,
 eboot,libSceHttp,sceHttpDestroyEpoll,function,
 eboot,libSceHttp,sceHttpGetResponseContentLength,function,
 eboot,libSceHttp,sceHttpGetStatusCode,function,
-eboot,libSceHttp,sceHttpInit,function,
 eboot,libSceHttp,sceHttpReadData,function,
 eboot,libSceHttp,sceHttpSendRequest,function,
 eboot,libSceHttp,sceHttpSetConnectTimeOut,function,
 eboot,libSceHttp,sceHttpSetEpoll,function,
 eboot,libSceHttp,sceHttpSetNonblock,function,
 eboot,libSceHttp,sceHttpSetRequestContentLength,function,
-eboot,libSceHttp,sceHttpTerm,function,
 eboot,libSceHttp,sceHttpUnsetEpoll,function,
 eboot,libSceHttp,sceHttpWaitRequest,function,
 eboot,libSceHttp,sceHttpsDisableOption,function,
@@ -155,14 +153,10 @@ eboot,libSceNet,sceNetEpollWait,function,
 eboot,libSceNet,sceNetErrnoLoc,function,
 eboot,libSceNet,sceNetGetsockname,function,
 eboot,libSceNet,sceNetGetsockopt,function,
-eboot,libSceNet,sceNetHtonl,function,runtime
-eboot,libSceNet,sceNetHtons,function,runtime
 eboot,libSceNet,sceNetInetNtop,function,
 eboot,libSceNet,sceNetInetPton,function,runtime
 eboot,libSceNet,sceNetInit,function,
 eboot,libSceNet,sceNetListen,function,
-eboot,libSceNet,sceNetNtohl,function,runtime
-eboot,libSceNet,sceNetNtohs,function,runtime
 eboot,libSceNet,sceNetPoolCreate,function,
 eboot,libSceNet,sceNetPoolDestroy,function,
 eboot,libSceNet,sceNetRecv,function,
@@ -298,7 +292,6 @@ eboot,libSceNpWebApi,sceNpWebApiSendRequest,function,
 eboot,libSceNpWebApi,sceNpWebApiTerminate,function,
 eboot,libSceNpWebApi,sceNpWebApiUnregisterPushEventCallback,function,
 eboot,libSceNpWebApi,sceNpWebApiUtilityParseNpId,function,
-eboot,libScePad,scePadClose,function,
 eboot,libScePad,scePadGetControllerInformation,function,
 eboot,libScePad,scePadInit,function,
 eboot,libScePad,scePadOpen,function,
@@ -312,8 +305,8 @@ eboot,libScePlayGo,scePlayGoGetLocus,function,
 eboot,libScePlayGo,scePlayGoInitialize,function,
 eboot,libScePlayGo,scePlayGoOpen,function,
 eboot,libScePlayGo,scePlayGoSetInstallSpeed,function,
-eboot,libScePosix,getpagesize,function,
 eboot,libScePosix,gettimeofday,function,
+eboot,libScePosix,k+AXqu2-eBc#I#J,function,runtime-unresolved
 eboot,libScePosix,mkdir,function,
 eboot,libScePosix,pthread_attr_destroy,function,
 eboot,libScePosix,pthread_attr_init,function,
@@ -343,7 +336,6 @@ eboot,libScePosix,rename,function,
 eboot,libScePosix,rmdir,function,
 eboot,libScePosix,sleep,function,
 eboot,libScePosix,stat,function,
-eboot,libScePosix,usleep,function,
 eboot,libSceRtc,sceRtcConvertLocalTimeToUtc,function,
 eboot,libSceRtc,sceRtcConvertUtcToLocalTime,function,
 eboot,libSceRtc,sceRtcFormatRFC2822LocalTime,function,
@@ -397,7 +389,6 @@ eboot,libSceVoice,sceVoiceConnectIPortToOPort,function,
 eboot,libSceVoice,sceVoiceCreatePort,function,
 eboot,libSceVoice,sceVoiceDeletePort,function,
 eboot,libSceVoice,sceVoiceDisconnectIPortFromOPort,function,
-eboot,libSceVoice,sceVoiceEnd,function,
 eboot,libSceVoice,sceVoiceGetPortInfo,function,
 eboot,libSceVoice,sceVoiceInit,function,
 eboot,libSceVoice,sceVoiceReadFromOPort,function,
@@ -473,7 +464,6 @@ eboot,libc,__cxa_guard_acquire,function,libc.elf
 eboot,libc,__cxa_guard_release,function,libc.elf
 eboot,libc,__cxa_pure_virtual,function,libc.elf
 eboot,libc,__cxa_rethrow,function,libc.elf
-eboot,libc,__cxa_throw,function,libc.elf
 eboot,libc,__gxx_personality_v0,function,libc.elf
 eboot,libc,_init_env,function,libc.elf
 eboot,libc,abort,function,libc.elf
@@ -524,7 +514,6 @@ eboot,libc,ldexpf,function,libc.elf
 eboot,libc,ldiv,function,libc.elf
 eboot,libc,localeconv,function,libc.elf
 eboot,libc,localtime,function,libc.elf
-eboot,libc,localtime_s,function,libc.elf
 eboot,libc,longjmp,function,libc.elf
 eboot,libc,malloc,function,libc.elf
 eboot,libc,memalign,function,libc.elf
@@ -565,7 +554,6 @@ eboot,libc,strcspn,function,libc.elf
 eboot,libc,strerror,function,libc.elf
 eboot,libc,strftime,function,libc.elf
 eboot,libc,strlen,function,libc.elf
-eboot,libc,strncasecmp,function,libc.elf
 eboot,libc,strncat,function,libc.elf
 eboot,libc,strncmp,function,libc.elf
 eboot,libc,strncpy,function,libc.elf
@@ -606,6 +594,7 @@ eboot,libc,wmemcpy,function,libc.elf
 eboot,libc,wmemmove,function,libc.elf
 eboot,libc,wmemset,function,libc.elf
 eboot,libc,wprintf,function,libc.elf
+eboot,libkernel,T72hz6ffq08#p#J,function,runtime-unresolved
 eboot,libkernel,__error,function,
 eboot,libkernel,__stack_chk_fail,function,
 eboot,libkernel,__stack_chk_guard,data,
@@ -683,13 +672,12 @@ eboot,libkernel,scePthreadRwlockUnlock,function,
 eboot,libkernel,scePthreadRwlockWrlock,function,
 eboot,libkernel,scePthreadSelf,function,runtime
 eboot,libkernel,scePthreadSetaffinity,function,
-eboot,libkernel,scePthreadSetprio,function,
-eboot,libkernel,scePthreadYield,function,
 libSceFios2.elf,?,module_start,function,
-libSceFios2.elf,?,module_stop,function,
-libSceFios2.elf,libSceDiscMap,ioKMruft1ek#A#B,function,
+libSceFios2.elf,?,module_start,function,
 libSceFios2.elf,libSceDiscMap,sceDiscMapIsRequestOnHDD,function,
+libSceFios2.elf,libSceLibcInternal,8zTFvBIAIN8#D#E,function,runtime
 libSceFios2.elf,libSceLibcInternal,Need_sceLibcInternal,data,
+libSceFios2.elf,libSceLibcInternal,Q3VBxCXhUHs#D#E,function,runtime
 libSceFios2.elf,libSceLibcInternal,_Stdout,data,
 libSceFios2.elf,libSceLibcInternal,__cxa_finalize,function,
 libSceFios2.elf,libSceLibcInternal,fflush,function,
@@ -703,8 +691,6 @@ libSceFios2.elf,libSceLibcInternal,memset,function,
 libSceFios2.elf,libSceLibcInternal,mktime,function,
 libSceFios2.elf,libSceLibcInternal,printf,function,
 libSceFios2.elf,libSceLibcInternal,time,function,
-libSceFios2.elf,libSceLibcInternal,vprintf,function,
-libSceFios2.elf,libSceLibcInternal,vsnprintf,function,
 libSceFios2.elf,libSceSysmodule,sceSysmoduleLoadModule,function,
 libSceFios2.elf,libSceSysmodule,sceSysmoduleUnloadModule,function,
 libSceFios2.elf,libkernel,__error,function,
@@ -766,8 +752,6 @@ libSceFios2.elf,libkernel,scePthreadRwlockTrywrlock,function,
 libSceFios2.elf,libkernel,scePthreadRwlockUnlock,function,
 libSceFios2.elf,libkernel,scePthreadRwlockWrlock,function,
 libSceFios2.elf,libkernel,scePthreadSelf,function,runtime
-libSceFios2.elf,libkernel,scePthreadSetaffinity,function,
-libSceFios2.elf,libkernel,scePthreadSetprio,function,
 libc.elf,libSceFios2,sceFiosDeleteSync,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosFHCloseSync,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosFHOpenWithModeSync,function,libSceFios2.elf
@@ -776,6 +760,7 @@ libc.elf,libSceFios2,sceFiosFHSeek,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosFHWriteSync,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosIsValidHandle,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosRenameSync,function,libSceFios2.elf
+libc.elf,libkernel,T72hz6ffq08#A#B,function,runtime-unresolved
 libc.elf,libkernel,__Ux86_64_setcontext,function,
 libc.elf,libkernel,__elf_phdr_match_addr,function,
 libc.elf,libkernel,__error,function,
@@ -792,10 +777,10 @@ libc.elf,libkernel,_sigprocmask,function,
 libc.elf,libkernel,_write,function,
 libc.elf,libkernel,clock_gettime,function,
 libc.elf,libkernel,fstat,function,
-libc.elf,libkernel,getpagesize,function,
 libc.elf,libkernel,getpid,function,
 libc.elf,libkernel,getrusage,function,
 libc.elf,libkernel,gettimeofday,function,
+libc.elf,libkernel,k+AXqu2-eBc#A#B,function,runtime-unresolved
 libc.elf,libkernel,mmap,function,
 libc.elf,libkernel,msync,function,
 libc.elf,libkernel,munmap,function,
@@ -841,9 +826,5 @@ libc.elf,libkernel,scePthreadOnce,function,
 libc.elf,libkernel,scePthreadSelf,function,runtime
 libc.elf,libkernel,scePthreadSetspecific,function,
 libc.elf,libkernel,scePthreadYield,function,
-libc.elf,libkernel,sched_yield,function,
 libc.elf,libkernel,sigfillset,function,
 libc.elf,libkernel,signal,function,
-libc.elf,libkernel,sigprocmask,function,
-libc.elf,libkernel,sigreturn,function,
-libc.elf,libkernel,sysctl,function,

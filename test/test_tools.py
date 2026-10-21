@@ -617,13 +617,37 @@ class Statuses(unittest.TestCase):
         finally:
             shutil.rmtree(d)
 
-    def test_boot_record_refuses_without_a_nid_database(self):
-        """Recording with no NID database rewrites every import symbol as a raw NID; a run in this
-        checkout turned 845 named rows into `-qLsfDAywIY#N#O`. The three ways forward are named."""
-        r = run('boot.py', '--elf', os.path.join(tempfile.gettempdir(), 'absent.elf'))
-        self.assertEqual(r.returncode, 3)
-        self.assertIn('no NID database', r.stderr)
-        self.assertIn('--allow-nids', r.stderr)
+    def test_boot_preserves_a_resolved_name_against_a_nid(self):
+        """The invariant is on the output: recording may never turn a resolved import name into a
+        raw NID. A run whose NID database resolves most names leaves the rest as NIDs, so a guard
+        that only checks that one was supplied passes the degradation through."""
+        import boot
+        before = 'importer,library,symbol,kind,provider\nsceNet,sceNet,sceNetCtlGetInfo,function,\n'
+        rows = [('sceNet', 'sceNet', 'ABCDEFGHijk#p#q', 'function', '')]
+        out, error = boot.preserve(before, rows, False)
+        self.assertIsNone(error)
+        self.assertEqual(out[0][2], 'sceNetCtlGetInfo')
+
+    def test_boot_does_not_write_a_nid_where_a_name_was(self):
+        """When the names are used up the surplus row is not written: a dropped unresolved row is
+        recoverable on the next run, a rewritten name is not."""
+        import boot
+        before = 'importer,library,symbol,kind,provider\nsceNet,sceNet,sceNetCtlGetInfo,function,\n'
+        rows = [('sceNet', 'sceNet', 'ABCDEFGHijk#p#q', 'function', ''),
+                ('sceNet', 'sceNet', 'LMNOPQRStuv#p#q', 'function', '')]
+        out, error = boot.preserve(before, rows, False)
+        self.assertIsNone(error)
+        self.assertEqual([r[2] for r in out], ['sceNetCtlGetInfo'])
+
+    def test_boot_records_a_new_nid_it_could_not_resolve(self):
+        """An import the file has never seen is recorded as the NID it is; the '#library' suffix in
+        the listing marks it unidentified, and that is a fact about this run, not a loss."""
+        import boot
+        before = 'importer,library,symbol,kind,provider\nsceNet,sceNet,sceNetCtlGetInfo,function,\n'
+        rows = [('sceHttp', 'sceHttp', 'ABCDEFGHijk#K#L', 'function', '')]
+        out, error = boot.preserve(before, rows, False)
+        self.assertIsNone(error)
+        self.assertEqual([r[2] for r in out], ['ABCDEFGHijk#K#L'])
 
     def test_boot_history_records_changes_and_milestones(self):
         sys.path.insert(0, os.path.join(ROOT, 'tools'))

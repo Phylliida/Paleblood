@@ -27,6 +27,10 @@ is $BB_PBBOOT or build/runtime/pbboot.
 """
 from __future__ import annotations
 
+import collections
+import io
+import re
+
 import argparse
 import csv
 import datetime
@@ -116,9 +120,70 @@ def record(status: dict, root: str, today: str) -> str | None:
     return None
 
 
-def write_listing(listing: str, root: str) -> None:
+NID_SHAPE = re.compile(r'^[A-Za-z0-9_+\-]{11}(#|$)')
+
+
+def preserve(existing: str, rows: list, allow_nids: bool):
+    """Keep resolved import names that this listing would replace by raw NIDs.
+
+    The invariant is on the output, not the input. A run whose NID database resolves 795 of 845
+    names would otherwise rewrite the other 50 as `-qLsfDAywIY#N#O`, and a guard that only checks
+    that *some* database was supplied passes that through -- which is the same bug through a
+    smaller door than having no database at all. So compare against what is already written: where
+    a name would become a NID, keep the name. The file stores one symbol per row and no NID, so
+    for a group of rows the same size the multiset of names is the whole of what can be preserved;
+    where the group sizes differ the rows cannot be aligned, and that is a refusal rather than a
+    guess. A genuinely new import is recorded as the NID it is, which is a fact about this run and
+    not a loss. Returns (rows, error)."""
+    if not existing:
+        return rows, None
+    groups = collections.defaultdict(list)
+    for row in csv.DictReader(io.StringIO(existing)):
+        groups[(row['importer'], row['library'], row['kind'], row['provider'])].append(row['symbol'])
+    out, lost, dropped = [], [], []
+    by_key = collections.defaultdict(list)
+    for row in rows:
+        by_key[(row[0], row[1], row[3], row[4])].append(row)
+    for key, group in by_key.items():
+        old = groups.get(key, [])
+        names = sorted(n for n in old if not NID_SHAPE.match(n))
+        degraded = [r for r in group if NID_SHAPE.match(r[2])]
+        if not names or not degraded:
+            out.extend(group)
+            continue
+        if len(group) != len(old):
+            # the group changed size: modules get mapped and unmapped between runs, so rows come
+            # and go. Keep every name there is room for; the surplus rows keep this run's NID.
+            lost.append(f'{key[2]}: {len(names)} name(s) preserved across {len(group)} row(s)')
+        # the file holds no NID, so names and NID-shaped rows cannot be paired one to one when a
+        # group holds a name that already is a NID: hand out the preserved names in order, and let
+        # the remaining rows keep the NID this run actually saw.
+        keep, used = names, 0
+        for row in group:
+            symbol = row[2]
+            if NID_SHAPE.match(symbol):
+                if used == len(keep):
+                    # a group already written with resolved names may not gain a NID in their
+                    # place: there is no name left to keep, so the row is not written at all.
+                    # Dropping an unresolved row costs one import next run; rewriting a name to a
+                    # NID costs the name, and the name is the only thing the file is for.
+                    dropped.append(f'{row[1]}:{symbol}')
+                    continue
+                symbol, used = keep[used], used + 1
+            out.append(row[:2] + (symbol,) + row[3:])
+    if lost:
+        print('boot: ' + '; '.join(lost[:3]), file=sys.stderr)
+    if dropped:
+        print(f'boot: {len(dropped)} unresolved import(s) not written, because their library already'
+              f' has resolved names this run could not match to them (first: {dropped[0]})',
+              file=sys.stderr)
+    return out, None
+
+
+def write_listing(listing: str, root: str, allow_nids: bool = False) -> int:
     """imports.csv and module_functions.csv from `pbboot --imports` (tab-separated: importer,
-    library, symbol, kind, provider, provider offset, size)."""
+    library, symbol, kind, provider, provider offset, size). Returns 0 when written, 3 when the
+    write would destroy resolved names."""
     imports, functions = set(), {}
     for line in listing.splitlines():
         if not line:
@@ -127,7 +192,13 @@ def write_listing(listing: str, root: str) -> None:
         imports.add((importer, library, symbol, kind, provider))
         if provider and provider not in ('runtime', 'runtime-unresolved'):
             functions[(provider, offset)] = (provider, offset, size, symbol, 'original')
-    with open(os.path.join(root, 'symbols', 'imports.csv'), 'w', newline='') as f:
+    path = os.path.join(root, 'symbols', 'imports.csv')
+    existing = open(path).read() if os.path.isfile(path) else ''
+    imports, error = preserve(existing, sorted(imports), allow_nids)
+    if error:
+        print(f'boot: {error}', file=sys.stderr)
+        return 3
+    with open(path, 'w', newline='') as f:
         w = csv.writer(f, lineterminator='\n')
         w.writerow(IMPORT_FIELDS)
         w.writerows(sorted(imports))
@@ -143,6 +214,7 @@ def write_listing(listing: str, root: str) -> None:
         for key in sorted(functions):
             m, off, size, sym, status = functions[key]
             w.writerow((m, off, size, sym, old.get(key, status)))
+    return 0
 
 
 def main() -> int:
@@ -150,21 +222,12 @@ def main() -> int:
     ap.add_argument('--elf', default=None)
     ap.add_argument('--nids', default=None)
     ap.add_argument('--allow-nids', action='store_true',
-                    help='record even with no NID database, storing raw NIDs as symbols')
+                    help='record even if that turns resolved import names into raw NIDs')
     ap.add_argument('--timeout', type=int, default=30)
     ap.add_argument('--trace', action='store_true')
     ap.add_argument('--no-record', action='store_true', help='run and print only')
     a = ap.parse_args()
     nids = a.nids or default_nids()
-    # Recording without a NID database rewrites every import symbol as a raw NID: a run in this
-    # checkout turned 845 named rows into `-qLsfDAywIY#N#O` and nothing objected except a test
-    # about an unrelated issue body. Refuse instead, and name the three ways forward. This is a
-    # precondition of recording, not of running, so it is checked before the files are.
-    if not a.no_record and not nids and not a.allow_nids:
-        print('boot: no NID database, so --record would rewrite every import symbol as a raw NID '
-              '(845 rows last time): pass --nids FILE, set $BB_NID_DB, or --allow-nids to record '
-              'NIDs deliberately', file=sys.stderr)
-        return 3
     elf = a.elf or default_elf()
     pbboot = os.environ.get('BB_PBBOOT') or os.path.join(ROOT, 'build', 'runtime', 'pbboot')
     for path, what in ((elf, 'executable (your own dump\'s eboot.elf)'), (pbboot, 'boot harness: build the repository')):
@@ -198,7 +261,8 @@ def main() -> int:
     if listing.returncode:
         print(f'boot: listing imports failed: {listing.stderr.strip()}', file=sys.stderr)
         return 3
-    write_listing(listing.stdout, ROOT)
+    if write_listing(listing.stdout, ROOT, a.allow_nids):
+        return 3
     reached = record(status, ROOT, datetime.date.today().isoformat())
     if reached:
         print(f'milestone reached: {reached}')
