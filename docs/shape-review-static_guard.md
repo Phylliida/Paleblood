@@ -6,6 +6,12 @@ byte flag; on every later call, return without touching memory. It is the first 
 family in the tree, so it is also the first test of whether the review format can attest a
 shape rather than a function.
 
+**The claim you can re-run without trusting this document** (about 40 seconds): change
+`storage_bias` in `game/frame_timing/static_guard.cpp` from `0x10` to `0x08`, rebuild, and run
+any six members. All six fail, each naming the pointer slot and both values —
+`memory +0x5ac59b0: original 50 replacement 48`. Revert; the source is byte-identical and the
+same six pass. Everything else here is a report; that is a measurement.
+
 ## What is being attested
 
 One body. Every member is 41 bytes and decodes to the same nine instructions; the only
@@ -70,23 +76,27 @@ the family is 3, which is why the review is per shape.
 `cases_sha256`) are per member: all 1,117 share `source_hash` but every `cases_sha256` differs.
 Two ways to express a shape approval:
 
-**(A) One decision, 1,117 derived rows.** The reviewer approves this document; a tool then
-writes the 1,117 rows, taking `source_hash`/`cases_sha256` from `validate_functions.py
---review-row NAME` so nobody types a hash, all sharing the same `date`, `reviewer`, `verdict`
-and a `notes` naming this packet. The existing gate is unchanged, pins keep their per-member
-meaning, and the approver's attention is spent once.
-*Cost: 1,117 rows that are all one attestation wearing 1,117 bodies. The records would
-overstate the review unless `notes` says "shape attestation, see docs/shape-review-static_guard.md".*
+**(A) One decision, 1,117 derived rows.** The reviewer approves this document; a tool writes
+1,117 `reviews.csv` rows sharing the attestation. *Rejected:* the table would then say 1,117
+decisions were made when one was, and a later reader cannot tell a derived row from a reviewed
+one. That is one word with two evidentiary bases — the defect this project already refused once,
+for `verified`.
 
-**(B) A shape-level record.** A new table (`symbols/shape_reviews.csv`: shape id, members,
-template hash, evidence hash, reviewer, verdict) that `validate_functions.py` accepts in place
-of a `reviews.csv` row for members covered by an approved shape.
-*Cost: a second gate and a second meaning of "approved"; `promote.py` grows a branch.*
+**(B) A second table.** `symbols/shape_reviews.csv` (shape id, members, template hash, evidence
+hash, reviewer, verdict), accepted by the gate in place of per-member rows. *Cost:* a second
+gate and a second meaning of "approved"; `promote.py` grows a branch.
 
-**Recommendation: (A), with the `notes` sentence mandatory.** It needs no new gate, keeps the
-pins honest, and the per-shape cost is what the reviewer actually spends. If the illusion of
-1,117 reviews is unacceptable, (B) is the honest schema and should be done deliberately, in one
-commit, for all generated families — not invented halfway through this one.
+**(C) One table, a `scope` column.** Keep `symbols/reviews.csv`; add `scope` (`function` |
+`shape`). A `shape` row carries the template hash, the triple count and the member count in
+place of an address. The gate expands it to the members matching that template plus those
+triples, and the expansion is checkable: if the member set changes, the template hash no longer
+matches and the approval goes stale on its own, exactly as a `source_hash` pin does today.
+
+**Recommendation: (C).** It is one table and one column more than today, it keeps the pins and
+their meaning, no reader has to trust a `notes` sentence to know what a row meant, and the
+staleness test is the same mechanism the table already uses. It costs a column, a gate branch
+and an expansion function — one deliberate commit, which is the point: it applies to every
+generated family at once rather than being invented halfway through this one.
 
 ## To execute in one sitting
 

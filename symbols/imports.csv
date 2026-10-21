@@ -594,7 +594,7 @@ eboot,libc,wmemcpy,function,libc.elf
 eboot,libc,wmemmove,function,libc.elf
 eboot,libc,wmemset,function,libc.elf
 eboot,libc,wprintf,function,libc.elf
-eboot,libkernel,T72hz6ffq08#p#J,function,runtime-unresolved
+eboot,libkernel,scePthreadYield,function,runtime-unresolved
 eboot,libkernel,__error,function,
 eboot,libkernel,__stack_chk_fail,function,
 eboot,libkernel,__stack_chk_guard,data,
@@ -675,9 +675,9 @@ eboot,libkernel,scePthreadSetaffinity,function,
 libSceFios2.elf,?,module_start,function,
 libSceFios2.elf,?,module_start,function,
 libSceFios2.elf,libSceDiscMap,sceDiscMapIsRequestOnHDD,function,
-libSceFios2.elf,libSceLibcInternal,8zTFvBIAIN8#D#E,function,runtime
+libSceFios2.elf,libSceLibcInternal,memset,function,runtime
 libSceFios2.elf,libSceLibcInternal,Need_sceLibcInternal,data,
-libSceFios2.elf,libSceLibcInternal,Q3VBxCXhUHs#D#E,function,runtime
+libSceFios2.elf,libSceLibcInternal,memcpy,function,runtime
 libSceFios2.elf,libSceLibcInternal,_Stdout,data,
 libSceFios2.elf,libSceLibcInternal,__cxa_finalize,function,
 libSceFios2.elf,libSceLibcInternal,fflush,function,
@@ -760,7 +760,7 @@ libc.elf,libSceFios2,sceFiosFHSeek,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosFHWriteSync,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosIsValidHandle,function,libSceFios2.elf
 libc.elf,libSceFios2,sceFiosRenameSync,function,libSceFios2.elf
-libc.elf,libkernel,T72hz6ffq08#A#B,function,runtime-unresolved
+libc.elf,libkernel,scePthreadYield,function,runtime-unresolved
 libc.elf,libkernel,__Ux86_64_setcontext,function,
 libc.elf,libkernel,__elf_phdr_match_addr,function,
 libc.elf,libkernel,__error,function,
