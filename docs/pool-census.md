@@ -88,3 +88,46 @@ has silently meant both since the first generated body and must stop.
 - The pool B figures are measured twice by two instruments that agree exactly (`detail = True`
   operands versus `op_str`, 0 disagreements in 37,540). The pool A hookable enumeration is still
   single-instrument and remains provisional.
+
+### The two diagnostics that catch a fifth normaliser bug
+
+Printed beside every future census, because a key that fails to zero a field does not announce
+itself — it just makes every member its own family:
+
+1. **Singleton count, plus whether singletons are real.** `templates=1,382, singleton-templates=746
+   (54%)`, and the check that matters: **bodies appearing under more than one key = 0**. A high
+   singleton fraction with zero split bodies means the singletons are genuinely distinct programs
+   (`mov dword ptr [rdi + K], K; and byte ptr [rdi + K], K; ret` is one of them, not a mis-parse);
+   a nonzero split count means the key is still eating something. Distinct bodies: **13,612**.
+2. **The extreme keys printed verbatim**, so a decimal/hex residual is visible on sight rather than
+   after a 35% discrepancy: largest `'lea rax, [rip + K]; ret'`, smallest `'ret'`.
+
+## Review model: one rule, N transcriptions
+
+`members / distinct bodies` alone reads as *8,672 review units*, which is unsellable and wrong. A
+reviewer of `lea rax,[rip+K]; ret` is not asked to understand 8,045 programs; they are asked one
+question — **does the generated rule correctly express this instruction sequence** — plus a
+machine-checkable one — **was each member's constant transcribed correctly**. Split in the packet:
+
+- **the rule**: one attestation per template.
+- **the parameter table**: one assertion over *every* member — re-decode the member's own bytes,
+  recompute the expected constant, compare against what the generator emitted. Two independent
+  derivations of one value, the same discipline as `detail=True` against `op_str`, and stronger
+  than any human reading 8,045 numbers.
+- **the cases**: per template, since the constant is the only variance, plus two or three members
+  run end-to-end so the assertion is not the only witness.
+
+So distinct bodies becomes **the domain size of one assertion**, and the pool is *1,382 decisions,
+27,151 of them transcription-checked*.
+
+### `lea rax,[rip+K]; ret` must return a literal
+
+A replacement running as a host function **cannot know the guest's RIP**, so the generated body
+resolves the address at generation time and emits `return 0x…;`. That is also what makes the
+transcription assertion exact and the replacement reviewable at a glance. Passing the site address
+at runtime would add an argument the original ABI does not have, and the differential would stop
+comparing like with like.
+
+Which reorders the families: `lea` is cheaper than `mov rax,[rdi+K]` **not because of size but
+because it needs no memory model at all** — and cheaper than `mov eax,K; ret`, which is 2,978
+distinct constants over one six-byte rule with no shared structure, i.e. pure transcription.
