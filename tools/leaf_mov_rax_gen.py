@@ -109,13 +109,17 @@ def cases(addr, K):
 
 
 def bodies(batch):
+    # The order here is the order on disk, not the order I first emitted: the `readable` fix
+    # inserted the named constant above the comment block by hand, and a generator whose header
+    # no longer matches the reviewed file is a generator that rewrites it on the next batch.
     out = ['#include <cstdint>', '#include <cstring>', '',
+           'constexpr std::size_t k_word_bytes = sizeof(std::uint64_t);  // one 8-byte word',
+           '',
            '// Generated: mov rax, [rdi + K]; ret. Each body reads the 8 bytes at the pointer',
            "// the caller passed, at that member's own displacement. The read is asserted through",
            '// the returned rax: the harness does not instrument guest load/store instructions,',
            '// and the marker sits in a non-writable segment so the post-call snapshot misses it.',
            '// memcpy, not a dereference through a cast: K=0x1 leaves the pointer unaligned.',
-           'constexpr std::size_t k_word_bytes = sizeof(std::uint64_t);  // one 8-byte word',
            '']
     for addr, size, K in batch:
         out.append(f'constexpr std::uint64_t k_{name_for(addr)} = 0x{K:x}u;  // size {size}')
@@ -178,7 +182,16 @@ def write(limit):
                 if os.path.exists(path):
                     backups[path] = path + '.genbak'
                     shutil.copy2(path, backups[path])
-            shutil.copy2(os.path.join(staged, 'mov_rax_family.cpp'), BODY_FILE)
+            # Insert, never replace: this file already holds members that are recorded and
+            # flipped, and a generator that re-emits a batch must not delete the batch before it.
+            existing = open(BODY_FILE).read() if os.path.exists(BODY_FILE) else ''
+            header = bodies([])
+            if existing and not existing.startswith(header):
+                raise SystemExit(f'{BODY_FILE}: does not start with the emitted header; '
+                                 'refusing to rewrite a file this generator did not write')
+            blocks = body_text[len(header):]
+            open(BODY_FILE, 'w').write((existing.rstrip('\n') + '\n\n' + blocks)
+                                       if existing else header + blocks)
             open(fcsv, 'w').write(fc_text)
             open(or_path, 'w').write(or_text)
             open(im_path, 'w').write(im_text)
