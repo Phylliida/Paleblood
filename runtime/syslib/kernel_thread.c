@@ -35,7 +35,17 @@ typedef struct {
     uint64_t stack_size;
     int has_detach_state;
     int detach_state;
+    int has_affinity;
+    uint64_t affinity;
 } guest_attr;
+
+/* The CPU affinity mask the system supplies when an attribute carries none: the PS4 leaves six of
+   its eight cores available (Digital Foundry, "Inside the PlayStation 4", July 2013), so bits 0-5
+   are set. What that source does not fix is *which* six; this assumes the OS keeps the top two.
+   The game bit-counts the mask to size its worker threads, so a wrong constant changes thread
+   topology without failing any call -- which is why the assumption is here, once, in a place a
+   reader cannot mistake for a measurement, instead of being invented at a call site. */
+enum { PS4_DEFAULT_AFFINITY = 0x3F };
 
 static int sce(int bsd) { return bsd ? SCE_KERNEL_ERROR(bsd) : 0; }
 
@@ -104,6 +114,18 @@ static int attr_destroy(guest_attr **attr)
    everything the object held (libthr's pthread_attr_get_np copies the whole attribute block), so a
    detach state set on it before is dropped: the thread's own detach state is one the system
    supplies, and the runtime does not know it. */
+/* The mask an attribute carries. A fresh attribute holds none -- the system supplies a default at
+   creation time, and this runtime has no setter yet -- so the documented default is returned and
+   the stored mask wins the moment one exists. Read through this, never the field: a stored zero
+   would otherwise read as "no cores", which the system never means. */
+static int attr_get_affinity(guest_attr **attr, uint64_t *mask)
+{
+    const guest_attr *a = attr ? *attr : NULL;
+    if (!a || !mask) return SCE_KERNEL_ERROR(BSD_EINVAL);
+    *mask = a->has_affinity ? a->affinity : PS4_DEFAULT_AFFINITY;
+    return 0;
+}
+
 static int attr_get(guest_thread *thread, guest_attr **attr)
 {
     if (!thread || !attr || !*attr) return SCE_KERNEL_ERROR(BSD_EINVAL);
@@ -148,6 +170,7 @@ RT_SYSLIB_UNRESOLVED("libkernel", scePthreadYield, thread_yield);
 RT_SYSLIB("libkernel", scePthreadAttrInit, attr_init);
 RT_SYSLIB("libkernel", scePthreadAttrDestroy, attr_destroy);
 RT_SYSLIB("libkernel", scePthreadAttrGet, attr_get);
+RT_SYSLIB("libkernel", scePthreadAttrGetaffinity, attr_get_affinity);
 RT_SYSLIB("libkernel", scePthreadAttrSetdetachstate, sce_attr_set_detach_state);
 
 /* libScePosix: errno values. pthread_attr_init and pthread_attr_destroy are not registered yet, so

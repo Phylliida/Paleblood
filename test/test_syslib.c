@@ -52,6 +52,7 @@ typedef int (*f_nat)(void *);
 typedef int (*finit)(void **, void **, const char *);
 typedef int (*f_equal)(void *, void *);
 typedef int (*f_attr_get)(void *, void **);
+typedef int (*f_attr_get_affinity)(void **, uint64_t *);
 typedef uint32_t (*f_u32_u32)(uint32_t);
 typedef uint16_t (*f_u16_u16)(uint16_t);
 typedef int (*f_inet_pton)(int, const char *, void *);
@@ -237,6 +238,18 @@ int main(void)
     detach_reader_attr = thread_attr;
     CHECK(died_in_fatal(read_detach_state));
     CHECK(set_detach(&thread_attr, 0) == 0 && detach_state_of(&thread_attr) == 0);
+
+    /* A fresh attribute carries no affinity mask; the system supplies a default, six of eight
+       cores (0x3F), which this runtime adopts once with the assumption written at its definition.
+       A missing attribute or output pointer is EINVAL, not a silent zero. */
+    const f_attr_get_affinity thread_attr_get_affinity =
+        (f_attr_get_affinity)fn("libkernel", "scePthreadAttrGetaffinity");
+    if (failures) return 1;
+    uint64_t affinity = 0;
+    CHECK(thread_attr_get_affinity(&thread_attr, &affinity) == 0 && affinity == 0x3F);
+    CHECK(affinity != 0);
+    CHECK(thread_attr_get_affinity(NULL, &affinity) == (int)0x80020016);
+    CHECK(thread_attr_get_affinity(&thread_attr, NULL) == (int)0x80020016);
 
     CHECK(thread_attr_destroy(&thread_attr) == 0 && thread_attr == NULL);
     /* Destroyed, the variable holds no object: setting is EINVAL. In FreeBSD libthr, creating a
