@@ -392,3 +392,38 @@ That is a stated limit of the measure, not a change of scope.
 patched to print both populations (unplaced **742**, exits **2,750**) and keeps its old numbers otherwise
 identical (blocks median 61, min 1, max 2,550; decoded 20,055,556 / 20,064,463 = 99.96%; 10 entries declaring
 >1024 and decoding ≤1024).
+
+## Amendment 7 — the 742 are not a defect class: zero mid-body unplaceable leaders exist in the tier (dated: same slice as amendment 6)
+
+Amendment 6 called the 742 entries with "internal unplaceable leaders" a defect class and promised to name them.
+Measured before anything was built on that sentence: **split all 742 by whether their unplaced targets lie in the
+undecoded tail. All 742. Zero entries in the 7,791 have a static branch target landing inside a *decoded*
+instruction.**
+
+The mechanism, from four probes. `0x00416e80` targets `0x417e3a` with declared end `0x417e3e`; `0x00419d70`
+targets `0x41a206` / end `0x41a209`; `0x0041c260` targets `0x41c89a` / end `0x41c89b`; `0x00448df0` targets
+`0x449237` / end `0x44923b`. At every one of those addresses the bytes begin `e8` followed by a 4-byte
+displacement — a 5-byte `call rel32` — and the declared end falls **1 to 4 bytes into that instruction**.
+`0x00416e80`'s tail at the target is `e8 b9 66 ba 02`, a call to `0x02fc94f8`, one byte of which lies outside
+the entry's declared extent. So the entry's own final instruction is truncated by its own declared size, and the
+linear sweep "stopped early" because the remaining 4 bytes were less than one instruction needed.
+
+**And a probe defect worth keeping, because it nearly produced the opposite conclusion.** My first attempt sliced
+the tail as exactly `declared_end − target` bytes and decoded it: **0 instructions in all four cases.** A probe
+that slices exactly the declared remainder cannot see an instruction that crosses it — the "0 instructions"
+was my slice, not the bytes, and read the other way it would have "confirmed" that these targets point into data.
+
+**One fact, not three.** Zero mid-body unplaceable leaders · 742 entries whose declared size truncates the
+instruction at a branch target · 2,750 entries with exits past the declared end (6,942 unowned targets, p50
+17 B past the preceding entry's end) — all three are the same statement: **`size` in the Ghidra export is a
+lower bound on the function body, not its extent.** Every per-entry decode, translation and verification in this
+campaign operates on a truncated body.
+
+**What this changes for the pilot and for the campaign.**
+- The pilot's coverage denominator is unaffected in kind (0 internal unplaceable leaders, 66 enumerable blocks)
+  but its body is **not** the 1,072 declared bytes: three `call`/jump targets land at `0x41447d`/`0x414481`/
+  `0x4144ad`, so the translation must reach at least `0x4144ad + 61`.
+- The tier's byte total (20,064,463) is a **lower bound** on the bytes the tier's functions occupy.
+- The 742 and the 2,750 are **instrument boundaries reached from a short declaration**, not properties of the
+  binary; the count of entries whose declaration is provably short is therefore **at least 3,320 (42.6%)**, and
+  that is now a statement about the export, to be read as one.
