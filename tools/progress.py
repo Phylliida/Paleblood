@@ -406,9 +406,21 @@ def evidence_join(root, argv=None):
         elif any(clean):
             mixed.append(r['address'])
     surplus = len(ledger) - len(funcs)
+    # The surplus is arithmetic, not drift, and it has been misread as drift for several slices.
+    # Measured 2026-10-21: 30 functions carry 101 rows beyond one apiece -- both a `recorded` and
+    # an `edge` case set, most with options 30/60/uncapped -- and the two `original` rows carry no
+    # evidence by design. 21,229 rows - 21,130 functions = 99 = 101 - 2. Printed decomposed so the
+    # pair stops looking like two functions nobody has identified.
+    per_fn = {}
+    for _r in ledger:
+        per_fn[_r['function']] = per_fn.get(_r['function'], 0) + 1
+    multi_rows = sum(n - 1 for n in per_fn.values())
+    no_evidence = len(funcs) - len(per_fn)
     print(f'join: status {len(edge)} \u00b7 ledger-backed {backed} \u00b7 '
           f're-runnable any row clean {rerun} \u00b7 all rows clean {rerun_all} '
-          f'\u00b7 unbacked {len(unbacked)} \u00b7 surplus {surplus}')
+          f'\u00b7 unbacked {len(unbacked)} \u00b7 surplus {surplus}'
+          f' = {multi_rows} extra rows over {sum(1 for n in per_fn.values() if n > 1)} multi-row'
+          f' functions - {no_evidence} with no evidence')
     for a in mixed[:10]:
         print(f'  mixed rows (one clean row and one timestamp-less row): {a}')
     for a in unbacked[:10]:
