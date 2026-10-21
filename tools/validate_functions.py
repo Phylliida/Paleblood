@@ -28,6 +28,23 @@ HOOK_HEADER = ['address', 'replacement', 'system']
 MAX_NOTE = 200
 
 
+
+def _install_mode_hosts():
+    """Addresses declared installed as host calls rather than by a game hook.
+
+    A pool B body is shorter than the 14-byte absolute jump a hook needs, so the differential
+    verifies it by calling the replacement as a host symbol. Declaring that is the only way past
+    the hooks-entry requirement; an absent declaration still refuses.
+    """
+    import csv as _csv
+    import pathlib as _pathlib
+    path = _pathlib.Path(__file__).resolve().parents[1] / "symbols" / "install_mode.csv"
+    if not path.exists():
+        return frozenset()
+    with open(path, newline="") as handle:
+        return frozenset(row["address"].lower() for row in _csv.DictReader(handle)
+                         if row.get("mode") == "host")
+
 def load(path: str, header: list[str], errs: list[str]) -> list[dict]:
     rel = os.path.basename(os.path.dirname(path)) + '/' + os.path.basename(path)
     if not os.path.isfile(path):
@@ -205,7 +222,8 @@ def main() -> int:
             errs.append(f"{where}: replacement must be 'bb_{f['name']}'")
     for r in funcs:
         if r['status'] in HOOKED and r['address'] not in hooked:
-            errs.append(f"symbols/functions.csv:{r['_line']}: {r['name']} is {r['status']} but has no game/hooks.csv entry")
+            if r['address'].lower() not in _install_mode_hosts():
+                errs.append(f"symbols/functions.csv:{r['_line']}: {r['name']} is {r['status']} but has no game/hooks.csv entry")
 
     errs += check_reviews(root, funcs)
     errs += verification.check(root, funcs)
@@ -305,3 +323,4 @@ def check_reviews(root: str, funcs: list[dict]) -> list[str]:
 
 if __name__ == '__main__':
     sys.exit(main())
+
