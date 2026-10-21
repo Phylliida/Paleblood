@@ -110,10 +110,13 @@ question — **does the generated rule correctly express this instruction sequen
 machine-checkable one — **was each member's constant transcribed correctly**. Split in the packet:
 
 - **the rule**: one attestation per template.
-- **the parameter table**: one assertion over *every* member — re-decode the member's own bytes,
+- **the parameter table**: one assertion over every member — re-decode the member's own bytes,
   recompute the expected constant, compare against what the generator emitted. Two independent
   derivations of one value, the same discipline as `detail=True` against `op_str`, and stronger
-  than any human reading 8,045 numbers.
+  than any human reading 8,045 numbers. The domain is **13,612 distinct bodies, not 37,540
+  members**: identical bytes must yield identical constants, so group by body hash and require a
+  single constant per group — which also catches a generator that keys on address instead of on
+  bytes.
 - **the cases**: per template, since the constant is the only variance, plus two or three members
   run end-to-end so the assertion is not the only witness.
 
@@ -131,3 +134,17 @@ comparing like with like.
 Which reorders the families: `lea` is cheaper than `mov rax,[rdi+K]` **not because of size but
 because it needs no memory model at all** — and cheaper than `mov eax,K; ret`, which is 2,978
 distinct constants over one six-byte rule with no shared structure, i.e. pure transcription.
+
+## Three lines that must not be comments
+
+- **`observed executing in game`** is not printed as `0`. A constant nothing can contradict is a
+  comment wearing a number's clothes, the same species as `promote.py` exiting 0. It reads
+  **`unknown (no runtime witness)`** until a hook-entry counter exists in the runtime to make it
+  move on its own; then it is derived and printed. `hook-registered` and `host-only` are countable
+  from the tree today and are the two lines that may carry numbers.
+- **Determinism is not asserted on an empty table.** An empty file round-trips identically however
+  broken the writer is; `--check` byte-identical twice proves nothing until a family lands in it.
+  The property is asserted again when the file holds 4,721 rows, and the commit says which of the
+  two it is claiming.
+- **Zero members is a state, not a success.** `install_mode.csv` shipping empty means the schema
+  exists and nothing uses it; the burndown says `hook-registered 1,737 / host-only 0` either way.
