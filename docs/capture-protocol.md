@@ -327,3 +327,27 @@ question is worse than no differential, because it reports agreement.**
 **If a future body reads a singleton whose storage the harness cannot preset** — outside a loaded segment, or
 written by a stub the harness models — **the honest outcome is category (3): the oracle cannot express this
 input.** Not a differential that happens to pass.
+
+### `memory` already takes a pointer, symbolically — and no case uses it yet
+
+`harness.py:383–390` parses a preset three ways, and the one this case needs is already there:
+
+```python
+addr = self.value(target) if isinstance(target, str) and target.startswith('buf:') else self.guest(hexint(target))
+if 'pointer' in m:
+    data = struct.pack('<Q', self.value(f"buf:{m['pointer']}"))
+elif 'guest' in m:
+    data = struct.pack('<Q', self.guest(hexint(m['guest'])))
+else:
+    data = bytes.fromhex(m['bytes'])
+```
+
+So the record is `{"addr": "<window_instance storage>", "pointer": "window"}`, resolved **at run time** against
+wherever the harness placed `buf:window` — **order-independent by construction**, and no allocation-order guess
+enters the case. A literal there would be right until someone adds a buffer to the case, which is the worst
+kind of correctness; `guest:` exists too, for a value that is genuinely a fixed guest address.
+
+**This is the first case whose preset value is a pointer, and the corpus exercises that branch nowhere:**
+`grep -rl '"pointer"' ../data/cases` → **0 files**, against **0** that use `memory` at all. The branch is
+written, typed, and read by nothing — **so the first case to use it is also its first test**, and the two-replay
+falsification (`pointer: window` must pass, `guest: 0` must differ) doubles as the branch's only coverage.
