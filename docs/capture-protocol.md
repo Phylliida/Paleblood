@@ -821,3 +821,43 @@ loader's line is the one to keep and the plugin's is owed a rename.
 **`sites_checked=0` on the startup line is the pre-install count**, printed by `rt_host_hooks_initialize` before any
 hook exists; the post-install counter is `hooks_installed=1`. **Two populations, one label, again** — the startup
 line cannot carry a count that only exists after the line is printed.
+
+### The capture gate check fired — but not the sentence I pre-registered, and that is the finding
+
+Three gates stand between a capture run and the site, and **the unsatisfiable-size refusal is the last of them**. Each
+run below is the previous one with the named variable supplied:
+
+```text
+# 1. BB_CAPTURE=1 alone
+capture: BB_CAPTURE_TABLE_ID is unset: refusing; it is mandatory in capture mode and a default would manufacture
+         agreement with a stale table
+# 2. + BB_CAPTURE_TABLE_ID=<table's so_sha256>
+capture: no row for 0x2018d20 in symbols/capture_ok.csv: refusing; nothing is recorded
+# 3. not reached yet -- the capture-form check sits behind both
+```
+
+**Gate 2 is a wrong-key defect, not a missing row.** `symbols/capture_ok.csv` keys on the **guest address**
+(`0x02418d20`); the installer looks up the **image offset** (`0x02018d20`) it was handed. They differ by exactly
+`0x400000`, so **the row is present and the lookup misses**, and the message blames the table. **A key format is a
+schema; two readers disagreeing about the key is the `surplus 101` shape in a new costume.**
+
+Every refusal left **`hooks_installed=0`** and `rc=3`, so nothing was written — but **the byte-identity assertion I
+pre-registered for the site was never made by an instrument**: `hooks_installed=0` is a count of successful installs,
+not a `memcmp`. Owed.
+
+**So the pre-registered outcome is not met and is not refuted: it was not reached.** Running it as a gate check was
+right; expecting the *third* gate's sentence from the *first* attempt was the error, and the honest record is the
+order the gates actually fire in.
+
+**The two labels are now honest, which is what this slice did land:**
+
+```text
+bbgame: installer=provided mode=off          # the plugin, saying who is speaking
+bbgame: installed 1 of 1 selected (BB_HOOK_ONLY)
+install: sites_checked=1 refused=0 hooks_installed=1    # post-install, by whoever finishes installing
+```
+
+`sites_checked` moved to the post-install line because **it does not exist before the loop that checks sites** — a
+count printed by the line that precedes its own population is one step too early. And regenerating the table was a
+**one-column change** (`so_sha256` `f5bd9fc1…` → `8b784efa…`) forced by relinking `libbbgame.so`, which the staleness
+guard caught before I could reason about it.

@@ -168,6 +168,10 @@ static unsigned installed_count;   /* what the startup line reports and what the
 static unsigned sites_checked, sites_already_patched, sites_mismatched, sites_unlisted;
 
 unsigned rt_host_hooks_installed_count(void) { return installed_count; }
+/* Read after the install loop, by whoever finishes installing: sites_checked is zero on the startup line because
+   it does not exist yet at that point, which is a count printed one step too early. */
+unsigned rt_host_hooks_sites_checked(void) { return sites_checked; }
+unsigned rt_host_hooks_sites_refused(void) { return sites_already_patched + sites_mismatched + sites_unlisted; }
 
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {

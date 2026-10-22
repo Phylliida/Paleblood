@@ -69,7 +69,7 @@ int bbgame_init(const rt_host *host)
        cause is a host whose install_hook is somebody else's callback (the harness passes `lambda o,s,t: 0`,
        which installs nothing and succeeds). Name the callback so one failing run says which of the three it
        was, and say it again if every selected hook reported success while nothing was installed. */
-    fprintf(stderr, "capture: installer=%s mode=%s\n",
+    fprintf(stderr, "bbgame: installer=%s mode=%s\n",
             host->install_hook ? "provided" : "absent",
             (getenv("BB_CAPTURE") && *getenv("BB_CAPTURE") && *getenv("BB_CAPTURE") != '0') ? "on" : "off");
 
