@@ -175,3 +175,14 @@ the claim is family-wide; a reviewer reading one row must know the scope of what
 **+793** · bytes **252,274 → 254,653 (+2,379)** from `{3: 793}` · evidence line
 **`22376 differential / 793 byte-identical`**. **If any of the four disagrees, stop and read —
 never adjust the expectation to meet the output.**
+
+### 1e. Byte-tier families need no case schema, and big families need per-batch digests
+
+`mov al,[rdi+K]` landed with **no buffer, no snapshot, no marker**: under `cases='bytes'` nothing
+declares anything, and the claim is "these bytes are the original's". **The byte tier is what makes
+the 245 and the 624 cheap — reintroducing the case schema out of habit would cost it back.**
+
+For `ret` (7,761) one family digest is the wrong blast radius: a single bad member would decay all
+7,761 and say nothing about *where*, and bisecting across a dozen tool runs is not a diagnosis.
+**Batch by ~500, one digest per batch:** a failure localises to its batch and names it, and rows
+still cannot be cherry-picked inside a batch. `record_bytes_family.py --batch N` is the mechanism.

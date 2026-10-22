@@ -35,6 +35,7 @@ address,size,name,system,status,notes
 0x00461770,3,leaf_mov_al_imm_00461770,leaf,edge-verified,
 0x00461780,3,leaf_mov_al_imm_00461780,leaf,edge-verified,
 0x00461790,3,leaf_mov_al_imm_00461790,leaf,edge-verified,
+0x00462320,4,leaf_mov_al_mem_00462320,leaf,edge-verified,
 0x00462330,5,leaf_lea_rdi_00462330,leaf,edge-verified,generated: return arg0 + K
 0x00462400,3,leaf_mov_al_imm_00462400,leaf,edge-verified,
 0x00462410,3,leaf_mov_al_imm_00462410,leaf,edge-verified,
@@ -46,6 +47,7 @@ address,size,name,system,status,notes
 0x00463040,5,leaf_lea_rdi_00463040,leaf,edge-verified,generated: return arg0 + K
 0x004632d0,67,frame_timing_get_time_us,frame_timing,original,dead in the stock game: only unwind entries refer to it; the community frame-rate patches overwrite it as a code cave (gettimeofday in microseconds)
 0x00463320,6,leaf_mov_eax_k_00463320,leaf,edge-verified,
+0x00464d60,4,leaf_mov_al_mem_00464d60,leaf,edge-verified,
 0x00464ef0,4,leaf_mov_eax_mem_00464ef0,leaf,edge-verified,
 0x00465480,3,leaf_mov_al_imm_00465480,leaf,edge-verified,
 0x00465ad0,3,leaf_mov_al_imm_00465ad0,leaf,edge-verified,
@@ -61,6 +63,7 @@ address,size,name,system,status,notes
 0x00485c20,19,engine_slot_copy_staged_00485c20,engine,edge-verified,"2 x 16-byte slot(s) from rdi to rsi, all loads before the stores; staged order is visible only when the buffers overlap"
 0x00486fe0,3,leaf_ret_zero_00486fe0,leaf,edge-verified,
 0x00491d50,4,leaf_mov_eax_mem_00491d50,leaf,edge-verified,
+0x004921c0,4,leaf_mov_al_mem_004921c0,leaf,edge-verified,
 0x00494b80,5,leaf_lea_rdi_00494b80,leaf,edge-verified,generated: return arg0 + K
 0x004987f0,3,leaf_ret_zero_004987f0,leaf,edge-verified,
 0x00499610,20,engine_slot_copy_interleaved_00499610,engine,edge-verified,"2 x 4-byte slot(s) from rsi to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
@@ -276,6 +279,7 @@ address,size,name,system,status,notes
 0x00827120,8,leaf_lea_rip_00827120,leaf,edge-verified,
 0x00827270,8,leaf_lea_rip_00827270,leaf,edge-verified,
 0x00827710,8,leaf_lea_rip_00827710,leaf,edge-verified,
+0x00828f50,4,leaf_mov_al_mem_00828f50,leaf,edge-verified,
 0x00828f70,5,leaf_mov_rax_00828f70,leaf,edge-verified,
 0x00829640,4,leaf_mov_eax_mem_00829640,leaf,edge-verified,
 0x0082a0e0,8,leaf_lea_rip_0082a0e0,leaf,edge-verified,
@@ -348,6 +352,7 @@ address,size,name,system,status,notes
 0x0085c8e0,40,engine_slot_copy_interleaved_0085c8e0,engine,edge-verified,"4 x 16-byte slot(s) from rsi to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
 0x0085cae0,4,leaf_mov_eax_mem_0085cae0,leaf,edge-verified,
 0x0085cd90,6,leaf_mov_eax_k_0085cd90,leaf,edge-verified,
+0x0085cff0,4,leaf_mov_al_mem_0085cff0,leaf,edge-verified,
 0x0085d320,6,leaf_mov_eax_k_0085d320,leaf,edge-verified,
 0x00862350,6,leaf_mov_eax_k_00862350,leaf,edge-verified,
 0x00862540,6,leaf_mov_eax_k_00862540,leaf,edge-verified,
@@ -489,6 +494,8 @@ address,size,name,system,status,notes
 0x0094e540,3,leaf_ret_zero_0094e540,leaf,edge-verified,
 0x0094e550,3,leaf_ret_zero_0094e550,leaf,edge-verified,
 0x0094e560,3,leaf_ret_zero_0094e560,leaf,edge-verified,
+0x0094f980,7,leaf_mov_al_mem_0094f980,leaf,edge-verified,
+0x0094f990,4,leaf_mov_al_mem_0094f990,leaf,edge-verified,
 0x00958540,5,leaf_lea_rdi_00958540,leaf,edge-verified,generated: return arg0 + K
 0x009591e0,7,leaf_mov_eax_mem_009591e0,leaf,edge-verified,
 0x00959840,7,leaf_mov_eax_mem_00959840,leaf,edge-verified,
@@ -704,6 +711,7 @@ address,size,name,system,status,notes
 0x009e42d0,6,leaf_mov_eax_k_009e42d0,leaf,edge-verified,
 0x009e4340,8,leaf_lea_rip_009e4340,leaf,edge-verified,
 0x009e4610,8,leaf_lea_rip_009e4610,leaf,edge-verified,
+0x009e4790,4,leaf_mov_al_mem_009e4790,leaf,edge-verified,
 0x009e5420,8,leaf_lea_rip_009e5420,leaf,edge-verified,
 0x009e5450,8,leaf_lea_rip_009e5450,leaf,edge-verified,
 0x009e5480,8,leaf_lea_rip_009e5480,leaf,edge-verified,
@@ -1251,6 +1259,7 @@ address,size,name,system,status,notes
 0x00b623b0,6,leaf_mov_eax_k_00b623b0,leaf,edge-verified,
 0x00b623c0,3,leaf_mov_al_imm_00b623c0,leaf,edge-verified,
 0x00b680a0,6,leaf_mov_eax_k_00b680a0,leaf,edge-verified,
+0x00b6a020,7,leaf_mov_al_mem_00b6a020,leaf,edge-verified,
 0x00b6afa0,6,leaf_mov_eax_k_00b6afa0,leaf,edge-verified,
 0x00b6bca0,6,leaf_mov_eax_k_00b6bca0,leaf,edge-verified,
 0x00b6c7d0,6,leaf_mov_eax_k_00b6c7d0,leaf,edge-verified,
@@ -1326,6 +1335,7 @@ address,size,name,system,status,notes
 0x00be3100,7,leaf_mov_eax_mem_00be3100,leaf,edge-verified,
 0x00be3360,8,leaf_lea_rdi_00be3360,leaf,edge-verified,generated: return arg0 + K
 0x00be3370,7,leaf_mov_eax_mem_00be3370,leaf,edge-verified,
+0x00be35d0,7,leaf_mov_al_mem_00be35d0,leaf,edge-verified,
 0x00be35e0,7,leaf_mov_eax_mem_00be35e0,leaf,edge-verified,
 0x00be3790,8,leaf_lea_rip_00be3790,leaf,edge-verified,
 0x00be38d0,8,leaf_lea_rip_00be38d0,leaf,edge-verified,
@@ -1354,6 +1364,10 @@ address,size,name,system,status,notes
 0x00bfd560,3,leaf_ret_zero_00bfd560,leaf,edge-verified,
 0x00bffca0,6,leaf_mov_eax_k_00bffca0,leaf,edge-verified,
 0x00c02210,5,leaf_mov_rax_00c02210,leaf,edge-verified,
+0x00c02230,4,leaf_mov_al_mem_00c02230,leaf,edge-verified,
+0x00c02240,4,leaf_mov_al_mem_00c02240,leaf,edge-verified,
+0x00c02250,4,leaf_mov_al_mem_00c02250,leaf,edge-verified,
+0x00c02260,4,leaf_mov_al_mem_00c02260,leaf,edge-verified,
 0x00c02df0,5,leaf_mov_rax_00c02df0,leaf,edge-verified,
 0x00c02e50,6,leaf_mov_eax_k_00c02e50,leaf,edge-verified,
 0x00c02e60,5,leaf_lea_rdi_00c02e60,leaf,edge-verified,generated: return arg0 + K
@@ -1366,6 +1380,7 @@ address,size,name,system,status,notes
 0x00c097f0,5,leaf_mov_rax_00c097f0,leaf,edge-verified,
 0x00c09c80,6,leaf_mov_eax_k_00c09c80,leaf,edge-verified,
 0x00c0b920,5,leaf_mov_rax_00c0b920,leaf,edge-verified,
+0x00c0d570,7,leaf_mov_al_mem_00c0d570,leaf,edge-verified,
 0x00c0e6b0,7,leaf_mov_eax_mem_00c0e6b0,leaf,edge-verified,
 0x00c0e9c0,3,leaf_ret_zero_00c0e9c0,leaf,edge-verified,
 0x00c0e9d0,3,leaf_ret_zero_00c0e9d0,leaf,edge-verified,
@@ -2125,8 +2140,11 @@ address,size,name,system,status,notes
 0x00fc8d90,3,leaf_ret_zero_00fc8d90,leaf,edge-verified,
 0x00fc8da0,3,leaf_ret_zero_00fc8da0,leaf,edge-verified,
 0x00fd2710,3,leaf_ret_zero_00fd2710,leaf,edge-verified,
+0x00fda090,7,leaf_mov_al_mem_00fda090,leaf,edge-verified,
+0x00fda0a0,7,leaf_mov_al_mem_00fda0a0,leaf,edge-verified,
 0x00fdac20,3,leaf_ret_zero_00fdac20,leaf,edge-verified,
 0x00fdd0c0,7,leaf_mov_eax_mem_00fdd0c0,leaf,edge-verified,
+0x00fdd380,7,leaf_mov_al_mem_00fdd380,leaf,edge-verified,
 0x00fe4aa0,6,leaf_mov_eax_k_00fe4aa0,leaf,edge-verified,
 0x00fe4ab0,6,leaf_mov_eax_k_00fe4ab0,leaf,edge-verified,
 0x00ff9290,7,leaf_mov_eax_mem_00ff9290,leaf,edge-verified,
@@ -2217,7 +2235,13 @@ address,size,name,system,status,notes
 0x01088150,8,leaf_lea_rdi_01088150,leaf,edge-verified,generated: return arg0 + K
 0x01088160,8,leaf_lea_rdi_01088160,leaf,edge-verified,generated: return arg0 + K
 0x01088210,7,leaf_mov_eax_mem_01088210,leaf,edge-verified,
+0x01088220,7,leaf_mov_al_mem_01088220,leaf,edge-verified,
 0x01088350,6,leaf_mov_eax_k_01088350,leaf,edge-verified,
+0x01088360,7,leaf_mov_al_mem_01088360,leaf,edge-verified,
+0x01088370,7,leaf_mov_al_mem_01088370,leaf,edge-verified,
+0x01088380,7,leaf_mov_al_mem_01088380,leaf,edge-verified,
+0x01088390,7,leaf_mov_al_mem_01088390,leaf,edge-verified,
+0x010883a0,7,leaf_mov_al_mem_010883a0,leaf,edge-verified,
 0x010883b0,7,leaf_mov_eax_mem_010883b0,leaf,edge-verified,
 0x01088500,7,leaf_mov_eax_mem_01088500,leaf,edge-verified,
 0x01088510,7,leaf_mov_eax_mem_01088510,leaf,edge-verified,
@@ -2229,6 +2253,9 @@ address,size,name,system,status,notes
 0x010885c0,8,leaf_mov_rax_010885c0,leaf,edge-verified,
 0x010885d0,8,leaf_mov_rax_010885d0,leaf,edge-verified,
 0x010885e0,8,leaf_mov_rax_010885e0,leaf,edge-verified,
+0x010885f0,7,leaf_mov_al_mem_010885f0,leaf,edge-verified,
+0x01088600,7,leaf_mov_al_mem_01088600,leaf,edge-verified,
+0x0108b120,4,leaf_mov_al_mem_0108b120,leaf,edge-verified,
 0x0108b130,4,leaf_mov_eax_mem_0108b130,leaf,edge-verified,
 0x0108b140,5,leaf_mov_rax_0108b140,leaf,edge-verified,
 0x0108b150,4,leaf_mov_eax_mem_0108b150,leaf,edge-verified,
@@ -2264,6 +2291,8 @@ address,size,name,system,status,notes
 0x0109df60,8,leaf_mov_rax_0109df60,leaf,edge-verified,
 0x0109e430,8,leaf_mov_rax_0109e430,leaf,edge-verified,
 0x0109e6e0,8,leaf_mov_rax_0109e6e0,leaf,edge-verified,
+0x0109f7c0,7,leaf_mov_al_mem_0109f7c0,leaf,edge-verified,
+0x010a3b10,4,leaf_mov_al_mem_010a3b10,leaf,edge-verified,
 0x010a3ce0,3,leaf_mov_al_imm_010a3ce0,leaf,edge-verified,
 0x010a5cf0,4,leaf_mov_eax_mem_010a5cf0,leaf,edge-verified,
 0x010a6bb0,8,leaf_lea_rdi_010a6bb0,leaf,edge-verified,generated: return arg0 + K
@@ -2282,17 +2311,25 @@ address,size,name,system,status,notes
 0x010b4410,3,leaf_ret_zero_010b4410,leaf,edge-verified,
 0x010b4470,6,leaf_mov_eax_k_010b4470,leaf,edge-verified,
 0x010b4490,3,leaf_ret_zero_010b4490,leaf,edge-verified,
+0x010b5bb0,7,leaf_mov_al_mem_010b5bb0,leaf,edge-verified,
+0x010b5e80,7,leaf_mov_al_mem_010b5e80,leaf,edge-verified,
+0x010b90b0,7,leaf_mov_al_mem_010b90b0,leaf,edge-verified,
+0x010b90c0,7,leaf_mov_al_mem_010b90c0,leaf,edge-verified,
 0x010b90d0,3,leaf_ret_zero_010b90d0,leaf,edge-verified,
 0x010b90e0,3,leaf_ret_zero_010b90e0,leaf,edge-verified,
 0x010b90f0,3,leaf_ret_zero_010b90f0,leaf,edge-verified,
 0x010b9100,6,leaf_mov_eax_k_010b9100,leaf,edge-verified,
+0x010b9c80,7,leaf_mov_al_mem_010b9c80,leaf,edge-verified,
 0x010ba360,3,leaf_mov_al_imm_010ba360,leaf,edge-verified,
 0x010bcc70,3,leaf_ret_zero_010bcc70,leaf,edge-verified,
 0x010bcd10,3,leaf_ret_zero_010bcd10,leaf,edge-verified,
+0x010bf730,4,leaf_mov_al_mem_010bf730,leaf,edge-verified,
 0x010bf8f0,3,leaf_ret_zero_010bf8f0,leaf,edge-verified,
 0x010bfe00,3,leaf_ret_zero_010bfe00,leaf,edge-verified,
 0x010c1260,3,leaf_mov_al_imm_010c1260,leaf,edge-verified,
+0x010c2850,4,leaf_mov_al_mem_010c2850,leaf,edge-verified,
 0x010c6600,3,leaf_mov_al_imm_010c6600,leaf,edge-verified,
+0x010d2570,4,leaf_mov_al_mem_010d2570,leaf,edge-verified,
 0x010d3370,8,leaf_lea_rip_010d3370,leaf,edge-verified,
 0x010d4cf0,3,leaf_ret_zero_010d4cf0,leaf,edge-verified,
 0x010d5150,3,leaf_ret_zero_010d5150,leaf,edge-verified,
@@ -2309,6 +2346,7 @@ address,size,name,system,status,notes
 0x010df740,8,leaf_mov_rax_010df740,leaf,edge-verified,
 0x010dfd80,5,leaf_mov_rax_010dfd80,leaf,edge-verified,
 0x010e0b10,8,leaf_mov_rax_010e0b10,leaf,edge-verified,
+0x010e1660,4,leaf_mov_al_mem_010e1660,leaf,edge-verified,
 0x010e52d0,8,leaf_mov_rax_010e52d0,leaf,edge-verified,
 0x010e58a0,8,leaf_mov_rax_010e58a0,leaf,edge-verified,
 0x010e68d0,8,leaf_lea_rip_010e68d0,leaf,edge-verified,
@@ -2320,6 +2358,7 @@ address,size,name,system,status,notes
 0x010ed8f0,8,leaf_mov_rax_010ed8f0,leaf,edge-verified,
 0x010edaa0,8,leaf_mov_rax_010edaa0,leaf,edge-verified,
 0x010edc60,5,leaf_mov_rax_010edc60,leaf,edge-verified,
+0x010edc70,7,leaf_mov_al_mem_010edc70,leaf,edge-verified,
 0x010edf40,5,leaf_mov_rax_010edf40,leaf,edge-verified,
 0x010edf50,7,leaf_mov_eax_mem_010edf50,leaf,edge-verified,
 0x010ee630,5,leaf_mov_rax_010ee630,leaf,edge-verified,
@@ -2333,6 +2372,7 @@ address,size,name,system,status,notes
 0x010f2f10,5,leaf_mov_rax_010f2f10,leaf,edge-verified,
 0x010f2f20,5,leaf_mov_rax_010f2f20,leaf,edge-verified,
 0x010f2f30,5,leaf_mov_rax_010f2f30,leaf,edge-verified,
+0x010f30d0,7,leaf_mov_al_mem_010f30d0,leaf,edge-verified,
 0x010f30f0,5,leaf_mov_rax_010f30f0,leaf,edge-verified,
 0x010f4020,3,leaf_mov_al_imm_010f4020,leaf,edge-verified,
 0x010f4740,5,leaf_mov_rax_010f4740,leaf,edge-verified,
@@ -2342,6 +2382,8 @@ address,size,name,system,status,notes
 0x010f59c0,3,leaf_ret_zero_010f59c0,leaf,edge-verified,
 0x010f5f80,5,leaf_mov_rax_010f5f80,leaf,edge-verified,
 0x010f7b20,4,leaf_mov_eax_mem_010f7b20,leaf,edge-verified,
+0x010f7bc0,4,leaf_mov_al_mem_010f7bc0,leaf,edge-verified,
+0x010f7ed0,4,leaf_mov_al_mem_010f7ed0,leaf,edge-verified,
 0x010f8ad0,4,leaf_mov_eax_mem_010f8ad0,leaf,edge-verified,
 0x010f8ae0,4,leaf_mov_eax_mem_010f8ae0,leaf,edge-verified,
 0x010f8af0,4,leaf_mov_eax_mem_010f8af0,leaf,edge-verified,
@@ -2555,6 +2597,8 @@ address,size,name,system,status,notes
 0x012c4950,40,engine_slot_copy_interleaved_012c4950,engine,edge-verified,"4 x 16-byte slot(s) from rsi to rdi, each slot loaded and stored in turn; interleaved order is visible only when the buffers overlap"
 0x012c4e40,5,leaf_mov_rax_012c4e40,leaf,edge-verified,
 0x012c4e50,5,leaf_mov_rax_012c4e50,leaf,edge-verified,
+0x012dca40,4,leaf_mov_al_mem_012dca40,leaf,edge-verified,
+0x012dca50,4,leaf_mov_al_mem_012dca50,leaf,edge-verified,
 0x012e4ff0,3,leaf_mov_al_imm_012e4ff0,leaf,edge-verified,
 0x012e5030,3,leaf_ret_zero_012e5030,leaf,edge-verified,
 0x012e7da0,3,leaf_ret_zero_012e7da0,leaf,edge-verified,
@@ -2682,6 +2726,8 @@ address,size,name,system,status,notes
 0x0137b810,41,frame_timing_static_guard_0137b810,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0137b840,41,frame_timing_static_guard_0137b840,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0137d4c0,8,leaf_mov_rax_0137d4c0,leaf,edge-verified,
+0x0137d4e0,7,leaf_mov_al_mem_0137d4e0,leaf,edge-verified,
+0x0137d4f0,7,leaf_mov_al_mem_0137d4f0,leaf,edge-verified,
 0x0137d670,41,frame_timing_static_guard_0137d670,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0137d6a0,41,frame_timing_static_guard_0137d6a0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0137d6d0,41,frame_timing_static_guard_0137d6d0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
@@ -2715,6 +2761,7 @@ address,size,name,system,status,notes
 0x0137f5e0,41,frame_timing_static_guard_0137f5e0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0137f610,41,frame_timing_static_guard_0137f610,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0137f640,41,frame_timing_static_guard_0137f640,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
+0x013820a0,7,leaf_mov_al_mem_013820a0,leaf,edge-verified,
 0x01382360,41,frame_timing_static_guard_01382360,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01382390,41,frame_timing_static_guard_01382390,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x013823c0,41,frame_timing_static_guard_013823c0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
@@ -2845,6 +2892,7 @@ address,size,name,system,status,notes
 0x01391300,41,frame_timing_static_guard_01391300,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01391330,41,frame_timing_static_guard_01391330,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01391360,41,frame_timing_static_guard_01391360,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
+0x013918c0,4,leaf_mov_al_mem_013918c0,leaf,edge-verified,
 0x013918d0,4,leaf_mov_eax_mem_013918d0,leaf,edge-verified,
 0x01393000,5,leaf_mov_rax_01393000,leaf,edge-verified,
 0x01393740,41,frame_timing_static_guard_01393740,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
@@ -3035,13 +3083,18 @@ address,size,name,system,status,notes
 0x013c3010,41,frame_timing_static_guard_013c3010,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x013c3040,41,frame_timing_static_guard_013c3040,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x013c3440,5,leaf_mov_rax_013c3440,leaf,edge-verified,
+0x013c3450,7,leaf_mov_al_mem_013c3450,leaf,edge-verified,
+0x013c3460,7,leaf_mov_al_mem_013c3460,leaf,edge-verified,
 0x013c3830,41,frame_timing_static_guard_013c3830,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x013c3860,41,frame_timing_static_guard_013c3860,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x013c3890,41,frame_timing_static_guard_013c3890,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x013c3d00,5,leaf_mov_rax_013c3d00,leaf,edge-verified,
 0x013c3d10,5,leaf_lea_rdi_013c3d10,leaf,edge-verified,generated: return arg0 + K
 0x013c3d20,5,leaf_lea_rdi_013c3d20,leaf,edge-verified,generated: return arg0 + K
+0x013c3d30,7,leaf_mov_al_mem_013c3d30,leaf,edge-verified,
 0x013c3d40,8,leaf_lea_rdi_013c3d40,leaf,edge-verified,generated: return arg0 + K
+0x013c3d50,7,leaf_mov_al_mem_013c3d50,leaf,edge-verified,
+0x013c3d60,7,leaf_mov_al_mem_013c3d60,leaf,edge-verified,
 0x013c3d70,8,leaf_lea_rdi_013c3d70,leaf,edge-verified,generated: return arg0 + K
 0x013c3d80,8,leaf_mov_rax_013c3d80,leaf,edge-verified,
 0x013c3d90,8,leaf_mov_rax_013c3d90,leaf,edge-verified,
@@ -3415,6 +3468,7 @@ address,size,name,system,status,notes
 0x01417a20,41,frame_timing_static_guard_01417a20,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01417a50,41,frame_timing_static_guard_01417a50,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01417a80,41,frame_timing_static_guard_01417a80,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
+0x014181c0,4,leaf_mov_al_mem_014181c0,leaf,edge-verified,
 0x014181d0,41,frame_timing_static_guard_014181d0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01418200,41,frame_timing_static_guard_01418200,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x01418230,41,frame_timing_static_guard_01418230,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
@@ -3761,6 +3815,7 @@ address,size,name,system,status,notes
 0x0145edb0,41,frame_timing_static_guard_0145edb0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0145ede0,41,frame_timing_static_guard_0145ede0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0145ee10,41,frame_timing_static_guard_0145ee10,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59d0 to storage 0x056b47f0 + 0x10 when the guard byte at 0x05ac59d8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
+0x0145f280,7,leaf_mov_al_mem_0145f280,leaf,edge-verified,
 0x0145f290,5,leaf_lea_rdi_0145f290,leaf,edge-verified,generated: return arg0 + K
 0x0145f2d0,41,frame_timing_static_guard_0145f2d0,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59b0 to storage 0x056b4840 + 0x10 when the guard byte at 0x05ac59b8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
 0x0145f300,41,frame_timing_static_guard_0145f300,frame_timing,edge-verified,"Binds the static vtable pointer at 0x05ac59c0 to storage 0x056b4890 + 0x10 when the guard byte at 0x05ac59c8 is clear, then sets it; one guard per translation unit, sharing static_guard.cpp"
@@ -3856,6 +3911,7 @@ address,size,name,system,status,notes
 0x015380e0,8,leaf_mov_rax_015380e0,leaf,edge-verified,
 0x015380f0,8,leaf_mov_rax_015380f0,leaf,edge-verified,
 0x0155f740,5,leaf_mov_rax_0155f740,leaf,edge-verified,
+0x015625f0,4,leaf_mov_al_mem_015625f0,leaf,edge-verified,
 0x01566710,3,leaf_ret_zero_01566710,leaf,edge-verified,
 0x015a46c0,6,leaf_mov_eax_k_015a46c0,leaf,edge-verified,
 0x015d6b10,3,leaf_ret_zero_015d6b10,leaf,edge-verified,
@@ -3875,6 +3931,7 @@ address,size,name,system,status,notes
 0x0160f8c0,4,leaf_mov_eax_mem_0160f8c0,leaf,edge-verified,
 0x01610620,4,leaf_mov_eax_mem_01610620,leaf,edge-verified,
 0x01624290,5,leaf_mov_rax_01624290,leaf,edge-verified,
+0x01626310,4,leaf_mov_al_mem_01626310,leaf,edge-verified,
 0x01626320,4,leaf_mov_eax_mem_01626320,leaf,edge-verified,
 0x0162eb30,3,leaf_mov_al_imm_0162eb30,leaf,edge-verified,
 0x0162eb40,3,leaf_ret_zero_0162eb40,leaf,edge-verified,
@@ -4193,12 +4250,14 @@ address,size,name,system,status,notes
 0x0168ded0,8,leaf_lea_rip_0168ded0,leaf,edge-verified,
 0x0168dee0,3,leaf_ret_zero_0168dee0,leaf,edge-verified,
 0x0168df90,6,leaf_mov_eax_k_0168df90,leaf,edge-verified,
+0x01695e80,7,leaf_mov_al_mem_01695e80,leaf,edge-verified,
 0x016991f0,3,leaf_ret_zero_016991f0,leaf,edge-verified,
 0x0169ad70,3,leaf_ret_zero_0169ad70,leaf,edge-verified,
 0x0169b480,5,leaf_lea_rdi_0169b480,leaf,edge-verified,generated: return arg0 + K
 0x0169b490,5,leaf_lea_rdi_0169b490,leaf,edge-verified,generated: return arg0 + K
 0x016a0610,8,leaf_lea_rip_016a0610,leaf,edge-verified,
 0x016a2690,3,leaf_ret_zero_016a2690,leaf,edge-verified,
+0x016a26a0,4,leaf_mov_al_mem_016a26a0,leaf,edge-verified,
 0x016a26b0,3,leaf_ret_zero_016a26b0,leaf,edge-verified,
 0x016a26c0,3,leaf_ret_zero_016a26c0,leaf,edge-verified,
 0x016a26d0,3,leaf_ret_zero_016a26d0,leaf,edge-verified,
@@ -4298,6 +4357,8 @@ address,size,name,system,status,notes
 0x016b91b0,7,leaf_mov_eax_mem_016b91b0,leaf,edge-verified,
 0x016b9220,8,leaf_lea_rdi_016b9220,leaf,edge-verified,generated: return arg0 + K
 0x016ba040,8,leaf_lea_rdi_016ba040,leaf,edge-verified,generated: return arg0 + K
+0x016ba050,7,leaf_mov_al_mem_016ba050,leaf,edge-verified,
+0x016ba070,7,leaf_mov_al_mem_016ba070,leaf,edge-verified,
 0x016bb070,4,leaf_mov_eax_mem_016bb070,leaf,edge-verified,
 0x016bb1c0,4,leaf_mov_eax_mem_016bb1c0,leaf,edge-verified,
 0x016bc040,6,leaf_mov_eax_k_016bc040,leaf,edge-verified,
@@ -4445,6 +4506,8 @@ address,size,name,system,status,notes
 0x017052d0,3,leaf_ret_zero_017052d0,leaf,edge-verified,
 0x01705540,3,leaf_ret_zero_01705540,leaf,edge-verified,
 0x01705690,3,leaf_ret_zero_01705690,leaf,edge-verified,
+0x017059c0,4,leaf_mov_al_mem_017059c0,leaf,edge-verified,
+0x017059e0,4,leaf_mov_al_mem_017059e0,leaf,edge-verified,
 0x01706080,3,leaf_ret_zero_01706080,leaf,edge-verified,
 0x01706d00,3,leaf_ret_zero_01706d00,leaf,edge-verified,
 0x01706f80,3,leaf_ret_zero_01706f80,leaf,edge-verified,
@@ -4498,6 +4561,7 @@ address,size,name,system,status,notes
 0x017350d0,3,leaf_ret_zero_017350d0,leaf,edge-verified,
 0x017350e0,3,leaf_ret_zero_017350e0,leaf,edge-verified,
 0x017350f0,3,leaf_ret_zero_017350f0,leaf,edge-verified,
+0x01735900,7,leaf_mov_al_mem_01735900,leaf,edge-verified,
 0x01739240,3,leaf_ret_zero_01739240,leaf,edge-verified,
 0x0173b370,8,leaf_lea_rip_0173b370,leaf,edge-verified,
 0x01745a20,3,leaf_ret_zero_01745a20,leaf,edge-verified,
@@ -4780,6 +4844,7 @@ address,size,name,system,status,notes
 0x0177d490,8,leaf_lea_rip_0177d490,leaf,edge-verified,
 0x0177d4a0,3,leaf_ret_zero_0177d4a0,leaf,edge-verified,
 0x0177d540,6,leaf_mov_eax_k_0177d540,leaf,edge-verified,
+0x0177d740,4,leaf_mov_al_mem_0177d740,leaf,edge-verified,
 0x0177d750,4,leaf_mov_eax_mem_0177d750,leaf,edge-verified,
 0x0177d760,4,leaf_mov_eax_mem_0177d760,leaf,edge-verified,
 0x0177d770,4,leaf_mov_eax_mem_0177d770,leaf,edge-verified,
@@ -4845,6 +4910,7 @@ address,size,name,system,status,notes
 0x01796030,8,leaf_lea_rip_01796030,leaf,edge-verified,
 0x01796040,3,leaf_ret_zero_01796040,leaf,edge-verified,
 0x017962c0,6,leaf_mov_eax_k_017962c0,leaf,edge-verified,
+0x017964f0,7,leaf_mov_al_mem_017964f0,leaf,edge-verified,
 0x01798e80,8,leaf_mov_rax_01798e80,leaf,edge-verified,
 0x01798e90,8,leaf_lea_rip_01798e90,leaf,edge-verified,
 0x01798ea0,8,leaf_lea_rip_01798ea0,leaf,edge-verified,
@@ -4935,6 +5001,8 @@ address,size,name,system,status,notes
 0x017d7ff0,6,leaf_mov_eax_k_017d7ff0,leaf,edge-verified,
 0x017dc470,4,leaf_mov_eax_mem_017dc470,leaf,edge-verified,
 0x017dc4f0,4,leaf_mov_eax_mem_017dc4f0,leaf,edge-verified,
+0x017dddf0,4,leaf_mov_al_mem_017dddf0,leaf,edge-verified,
+0x017de900,4,leaf_mov_al_mem_017de900,leaf,edge-verified,
 0x017de960,5,leaf_mov_rax_017de960,leaf,edge-verified,
 0x017decf0,4,leaf_mov_eax_mem_017decf0,leaf,edge-verified,
 0x017e2660,5,leaf_mov_rax_017e2660,leaf,edge-verified,
@@ -5467,6 +5535,7 @@ address,size,name,system,status,notes
 0x01838080,8,leaf_lea_rip_01838080,leaf,edge-verified,
 0x01838090,3,leaf_ret_zero_01838090,leaf,edge-verified,
 0x01838310,6,leaf_mov_eax_k_01838310,leaf,edge-verified,
+0x01839cf0,4,leaf_mov_al_mem_01839cf0,leaf,edge-verified,
 0x01839d30,8,leaf_lea_rip_01839d30,leaf,edge-verified,
 0x01839d40,8,leaf_lea_rip_01839d40,leaf,edge-verified,
 0x01839d50,8,leaf_lea_rip_01839d50,leaf,edge-verified,
@@ -5612,10 +5681,16 @@ address,size,name,system,status,notes
 0x01868aa0,3,leaf_ret_zero_01868aa0,leaf,edge-verified,
 0x0186d3d0,3,leaf_ret_zero_0186d3d0,leaf,edge-verified,
 0x0186f590,3,leaf_ret_zero_0186f590,leaf,edge-verified,
+0x0186f800,4,leaf_mov_al_mem_0186f800,leaf,edge-verified,
 0x01870020,4,leaf_mov_eax_mem_01870020,leaf,edge-verified,
+0x018703b0,4,leaf_mov_al_mem_018703b0,leaf,edge-verified,
 0x01870bd0,4,leaf_mov_eax_mem_01870bd0,leaf,edge-verified,
 0x01871cd0,4,leaf_mov_eax_mem_01871cd0,leaf,edge-verified,
 0x01871f40,4,leaf_mov_eax_mem_01871f40,leaf,edge-verified,
+0x018721b0,4,leaf_mov_al_mem_018721b0,leaf,edge-verified,
+0x018721d0,4,leaf_mov_al_mem_018721d0,leaf,edge-verified,
+0x018721f0,4,leaf_mov_al_mem_018721f0,leaf,edge-verified,
+0x01872210,4,leaf_mov_al_mem_01872210,leaf,edge-verified,
 0x0187d830,5,leaf_mov_rax_0187d830,leaf,edge-verified,
 0x0187d840,5,leaf_mov_rax_0187d840,leaf,edge-verified,
 0x0187d850,8,leaf_lea_rip_0187d850,leaf,edge-verified,
@@ -5689,6 +5764,7 @@ address,size,name,system,status,notes
 0x01899b00,6,leaf_mov_eax_k_01899b00,leaf,edge-verified,
 0x018a41d0,3,leaf_mov_al_imm_018a41d0,leaf,edge-verified,
 0x018badb0,3,leaf_mov_al_imm_018badb0,leaf,edge-verified,
+0x018bcef0,4,leaf_mov_al_mem_018bcef0,leaf,edge-verified,
 0x018bd9e0,4,leaf_mov_eax_mem_018bd9e0,leaf,edge-verified,
 0x018bde60,3,leaf_ret_zero_018bde60,leaf,edge-verified,
 0x018bdf90,3,leaf_ret_zero_018bdf90,leaf,edge-verified,
@@ -5861,6 +5937,7 @@ address,size,name,system,status,notes
 0x0192a380,3,leaf_ret_zero_0192a380,leaf,edge-verified,
 0x0192a600,6,leaf_mov_eax_k_0192a600,leaf,edge-verified,
 0x0192b0f0,8,leaf_mov_rax_0192b0f0,leaf,edge-verified,
+0x0192bc60,7,leaf_mov_al_mem_0192bc60,leaf,edge-verified,
 0x0192bca0,5,leaf_mov_rax_0192bca0,leaf,edge-verified,
 0x0192bcb0,5,leaf_mov_rax_0192bcb0,leaf,edge-verified,
 0x0192bcc0,8,leaf_lea_rip_0192bcc0,leaf,edge-verified,
@@ -5913,6 +5990,7 @@ address,size,name,system,status,notes
 0x01982e60,8,leaf_lea_rip_01982e60,leaf,edge-verified,
 0x0198bf30,8,leaf_lea_rdi_0198bf30,leaf,edge-verified,generated: return arg0 + K
 0x0198d260,8,leaf_mov_rax_0198d260,leaf,edge-verified,
+0x0198eba0,4,leaf_mov_al_mem_0198eba0,leaf,edge-verified,
 0x0198f7a0,4,leaf_mov_eax_mem_0198f7a0,leaf,edge-verified,
 0x0198fb70,5,leaf_mov_rax_0198fb70,leaf,edge-verified,
 0x0198fb80,5,leaf_mov_rax_0198fb80,leaf,edge-verified,
@@ -5949,6 +6027,7 @@ address,size,name,system,status,notes
 0x019974e0,8,leaf_lea_rip_019974e0,leaf,edge-verified,
 0x01998ee0,3,leaf_mov_al_imm_01998ee0,leaf,edge-verified,
 0x0199a260,8,leaf_mov_rax_0199a260,leaf,edge-verified,
+0x0199cae0,4,leaf_mov_al_mem_0199cae0,leaf,edge-verified,
 0x0199d6c0,4,leaf_mov_eax_mem_0199d6c0,leaf,edge-verified,
 0x0199dc00,5,leaf_mov_rax_0199dc00,leaf,edge-verified,
 0x0199dc10,5,leaf_mov_rax_0199dc10,leaf,edge-verified,
@@ -5993,6 +6072,7 @@ address,size,name,system,status,notes
 0x019a8710,3,leaf_ret_zero_019a8710,leaf,edge-verified,
 0x019a8990,6,leaf_mov_eax_k_019a8990,leaf,edge-verified,
 0x019aa430,8,leaf_lea_rdi_019aa430,leaf,edge-verified,generated: return arg0 + K
+0x019ac1b0,4,leaf_mov_al_mem_019ac1b0,leaf,edge-verified,
 0x019acda0,4,leaf_mov_eax_mem_019acda0,leaf,edge-verified,
 0x019ad210,5,leaf_mov_rax_019ad210,leaf,edge-verified,
 0x019ad220,5,leaf_mov_rax_019ad220,leaf,edge-verified,
@@ -6199,6 +6279,7 @@ address,size,name,system,status,notes
 0x019ea690,8,leaf_lea_rip_019ea690,leaf,edge-verified,
 0x019ea6a0,3,leaf_ret_zero_019ea6a0,leaf,edge-verified,
 0x019ea920,6,leaf_mov_eax_k_019ea920,leaf,edge-verified,
+0x019eb6e0,4,leaf_mov_al_mem_019eb6e0,leaf,edge-verified,
 0x019ecbc0,3,leaf_ret_zero_019ecbc0,leaf,edge-verified,
 0x019ecbd0,126,engine_zero_init_019ecbd0,engine,edge-verified,zero-initialises the 0x78 bytes at rsi and stores rdi at +0x78; one of 528 byte-identical members; returns zero in eax
 0x019ecc50,126,engine_zero_init_019ecc50,engine,edge-verified,zero-initialises the 0x78 bytes at rsi and stores rdi at +0x78; one of 528 byte-identical members; returns zero in eax
@@ -8168,7 +8249,9 @@ address,size,name,system,status,notes
 0x01c00ca0,6,leaf_mov_eax_k_01c00ca0,leaf,edge-verified,
 0x01c0b910,8,leaf_lea_rip_01c0b910,leaf,edge-verified,
 0x01c0c2b0,3222,physics_instance_construct_01c0c2b0,physics,verified,"physics instance constructor over a body set: back-links, shape copy, controller (step 1/30 s; 60 FPS patches 1/60), motion rescale, listeners"
+0x01c157a0,7,leaf_mov_al_mem_01c157a0,leaf,edge-verified,
 0x01c157c0,5,leaf_lea_rdi_01c157c0,leaf,edge-verified,generated: return arg0 + K
+0x01c15d80,7,leaf_mov_al_mem_01c15d80,leaf,edge-verified,
 0x01c15da0,5,leaf_lea_rdi_01c15da0,leaf,edge-verified,generated: return arg0 + K
 0x01c1bd30,3,leaf_ret_zero_01c1bd30,leaf,edge-verified,
 0x01c1bd40,3,leaf_mov_al_imm_01c1bd40,leaf,edge-verified,
@@ -8190,12 +8273,14 @@ address,size,name,system,status,notes
 0x01c4c930,3,leaf_mov_al_imm_01c4c930,leaf,edge-verified,
 0x01c4c940,3,leaf_ret_zero_01c4c940,leaf,edge-verified,
 0x01c51810,8,leaf_mov_rax_01c51810,leaf,edge-verified,
+0x01c52330,4,leaf_mov_al_mem_01c52330,leaf,edge-verified,
 0x01c55a90,3,leaf_ret_zero_01c55a90,leaf,edge-verified,
 0x01c575b0,5,leaf_mov_rax_01c575b0,leaf,edge-verified,
 0x01c575c0,5,leaf_mov_rax_01c575c0,leaf,edge-verified,
 0x01c66f30,8,leaf_lea_rip_01c66f30,leaf,edge-verified,
 0x01c6c8b0,8,leaf_lea_rip_01c6c8b0,leaf,edge-verified,
 0x01c6f120,7,leaf_mov_eax_mem_01c6f120,leaf,edge-verified,
+0x01c6f1b0,4,leaf_mov_al_mem_01c6f1b0,leaf,edge-verified,
 0x01c76050,7,leaf_mov_eax_mem_01c76050,leaf,edge-verified,
 0x01c777d0,7,leaf_mov_eax_mem_01c777d0,leaf,edge-verified,
 0x01c7a320,8,leaf_lea_rip_01c7a320,leaf,edge-verified,
@@ -8302,6 +8387,7 @@ address,size,name,system,status,notes
 0x01ce8d90,8,leaf_mov_rax_01ce8d90,leaf,edge-verified,
 0x01ce8da0,8,leaf_mov_rax_01ce8da0,leaf,edge-verified,
 0x01ce8db0,7,leaf_mov_eax_mem_01ce8db0,leaf,edge-verified,
+0x01ce8dd0,7,leaf_mov_al_mem_01ce8dd0,leaf,edge-verified,
 0x01ce8f20,5,leaf_mov_rax_01ce8f20,leaf,edge-verified,
 0x01ce8f30,5,leaf_mov_rax_01ce8f30,leaf,edge-verified,
 0x01ce8f40,8,leaf_lea_rip_01ce8f40,leaf,edge-verified,
@@ -8335,6 +8421,7 @@ address,size,name,system,status,notes
 0x01d07b40,8,leaf_lea_rip_01d07b40,leaf,edge-verified,
 0x01d07b50,3,leaf_ret_zero_01d07b50,leaf,edge-verified,
 0x01d07bf0,6,leaf_mov_eax_k_01d07bf0,leaf,edge-verified,
+0x01d086a0,7,leaf_mov_al_mem_01d086a0,leaf,edge-verified,
 0x01d086c0,3,leaf_mov_al_imm_01d086c0,leaf,edge-verified,
 0x01d08e60,5,leaf_mov_rax_01d08e60,leaf,edge-verified,
 0x01d08e70,5,leaf_mov_rax_01d08e70,leaf,edge-verified,
@@ -8348,6 +8435,7 @@ address,size,name,system,status,notes
 0x01d0a820,5,leaf_lea_rdi_01d0a820,leaf,edge-verified,generated: return arg0 + K
 0x01d0a830,5,leaf_lea_rdi_01d0a830,leaf,edge-verified,generated: return arg0 + K
 0x01d0a840,5,leaf_lea_rdi_01d0a840,leaf,edge-verified,generated: return arg0 + K
+0x01d0a850,7,leaf_mov_al_mem_01d0a850,leaf,edge-verified,
 0x01d0b1c0,5,leaf_mov_rax_01d0b1c0,leaf,edge-verified,
 0x01d0b1d0,5,leaf_mov_rax_01d0b1d0,leaf,edge-verified,
 0x01d0b1e0,8,leaf_lea_rip_01d0b1e0,leaf,edge-verified,
@@ -8849,6 +8937,8 @@ address,size,name,system,status,notes
 0x01d6a130,8,leaf_lea_rip_01d6a130,leaf,edge-verified,
 0x01d6a140,3,leaf_ret_zero_01d6a140,leaf,edge-verified,
 0x01d6a3c0,6,leaf_mov_eax_k_01d6a3c0,leaf,edge-verified,
+0x01d6ae00,7,leaf_mov_al_mem_01d6ae00,leaf,edge-verified,
+0x01d6ae10,7,leaf_mov_al_mem_01d6ae10,leaf,edge-verified,
 0x01d6e0d0,4,leaf_mov_eax_mem_01d6e0d0,leaf,edge-verified,
 0x01d6e420,5,leaf_mov_rax_01d6e420,leaf,edge-verified,
 0x01d6e430,5,leaf_mov_rax_01d6e430,leaf,edge-verified,
@@ -9295,6 +9385,7 @@ address,size,name,system,status,notes
 0x01daa180,3,leaf_ret_zero_01daa180,leaf,edge-verified,
 0x01daa400,6,leaf_mov_eax_k_01daa400,leaf,edge-verified,
 0x01dab860,8,leaf_mov_rax_01dab860,leaf,edge-verified,
+0x01dabcb0,4,leaf_mov_al_mem_01dabcb0,leaf,edge-verified,
 0x01dabe30,8,leaf_mov_rax_01dabe30,leaf,edge-verified,
 0x01dabeb0,8,leaf_mov_rax_01dabeb0,leaf,edge-verified,
 0x01dabed0,8,leaf_lea_rdi_01dabed0,leaf,edge-verified,generated: return arg0 + K
@@ -9302,6 +9393,9 @@ address,size,name,system,status,notes
 0x01dabf10,8,leaf_mov_rax_01dabf10,leaf,edge-verified,
 0x01dabf40,8,leaf_mov_rax_01dabf40,leaf,edge-verified,
 0x01dabf50,8,leaf_mov_rax_01dabf50,leaf,edge-verified,
+0x01dacab0,7,leaf_mov_al_mem_01dacab0,leaf,edge-verified,
+0x01dacac0,7,leaf_mov_al_mem_01dacac0,leaf,edge-verified,
+0x01db0f40,4,leaf_mov_al_mem_01db0f40,leaf,edge-verified,
 0x01db1b10,4,leaf_mov_eax_mem_01db1b10,leaf,edge-verified,
 0x01db1ee0,5,leaf_mov_rax_01db1ee0,leaf,edge-verified,
 0x01db1ef0,5,leaf_mov_rax_01db1ef0,leaf,edge-verified,
@@ -9710,6 +9804,9 @@ address,size,name,system,status,notes
 0x01de2950,8,leaf_lea_rip_01de2950,leaf,edge-verified,
 0x01de2960,3,leaf_ret_zero_01de2960,leaf,edge-verified,
 0x01de2be0,6,leaf_mov_eax_k_01de2be0,leaf,edge-verified,
+0x01de3840,7,leaf_mov_al_mem_01de3840,leaf,edge-verified,
+0x01de3850,7,leaf_mov_al_mem_01de3850,leaf,edge-verified,
+0x01de60f0,4,leaf_mov_al_mem_01de60f0,leaf,edge-verified,
 0x01de6cd0,4,leaf_mov_eax_mem_01de6cd0,leaf,edge-verified,
 0x01de70a0,5,leaf_mov_rax_01de70a0,leaf,edge-verified,
 0x01de70b0,5,leaf_mov_rax_01de70b0,leaf,edge-verified,
@@ -10054,6 +10151,8 @@ address,size,name,system,status,notes
 0x01e45820,3,leaf_ret_zero_01e45820,leaf,edge-verified,
 0x01e45aa0,6,leaf_mov_eax_k_01e45aa0,leaf,edge-verified,
 0x01e45d20,4,leaf_mov_eax_mem_01e45d20,leaf,edge-verified,
+0x01e45d80,4,leaf_mov_al_mem_01e45d80,leaf,edge-verified,
+0x01e45d90,4,leaf_mov_al_mem_01e45d90,leaf,edge-verified,
 0x01e464f0,5,leaf_mov_rax_01e464f0,leaf,edge-verified,
 0x01e46500,5,leaf_mov_rax_01e46500,leaf,edge-verified,
 0x01e46510,8,leaf_lea_rip_01e46510,leaf,edge-verified,
@@ -10062,6 +10161,7 @@ address,size,name,system,status,notes
 0x01e46540,8,leaf_lea_rip_01e46540,leaf,edge-verified,
 0x01e46550,3,leaf_ret_zero_01e46550,leaf,edge-verified,
 0x01e467d0,6,leaf_mov_eax_k_01e467d0,leaf,edge-verified,
+0x01e46eb0,4,leaf_mov_al_mem_01e46eb0,leaf,edge-verified,
 0x01e47820,5,leaf_mov_rax_01e47820,leaf,edge-verified,
 0x01e47830,5,leaf_mov_rax_01e47830,leaf,edge-verified,
 0x01e47840,8,leaf_lea_rip_01e47840,leaf,edge-verified,
@@ -10180,6 +10280,8 @@ address,size,name,system,status,notes
 0x01e5f8b0,3,leaf_ret_zero_01e5f8b0,leaf,edge-verified,
 0x01e5fb30,6,leaf_mov_eax_k_01e5fb30,leaf,edge-verified,
 0x01e5fea0,5,leaf_mov_rax_01e5fea0,leaf,edge-verified,
+0x01e61930,4,leaf_mov_al_mem_01e61930,leaf,edge-verified,
+0x01e61940,4,leaf_mov_al_mem_01e61940,leaf,edge-verified,
 0x01e61f60,5,leaf_mov_rax_01e61f60,leaf,edge-verified,
 0x01e61f70,5,leaf_mov_rax_01e61f70,leaf,edge-verified,
 0x01e61f80,8,leaf_lea_rip_01e61f80,leaf,edge-verified,
@@ -10236,6 +10338,7 @@ address,size,name,system,status,notes
 0x01e66fe0,8,leaf_lea_rip_01e66fe0,leaf,edge-verified,
 0x01e66ff0,3,leaf_ret_zero_01e66ff0,leaf,edge-verified,
 0x01e67270,6,leaf_mov_eax_k_01e67270,leaf,edge-verified,
+0x01e6a210,4,leaf_mov_al_mem_01e6a210,leaf,edge-verified,
 0x01e6adf0,4,leaf_mov_eax_mem_01e6adf0,leaf,edge-verified,
 0x01e6b1d0,5,leaf_mov_rax_01e6b1d0,leaf,edge-verified,
 0x01e6b1e0,5,leaf_mov_rax_01e6b1e0,leaf,edge-verified,
@@ -10270,9 +10373,12 @@ address,size,name,system,status,notes
 0x01e6bb90,3,leaf_ret_zero_01e6bb90,leaf,edge-verified,
 0x01e6be10,6,leaf_mov_eax_k_01e6be10,leaf,edge-verified,
 0x01e6c6f0,4,leaf_mov_eax_mem_01e6c6f0,leaf,edge-verified,
+0x01e6cdf0,7,leaf_mov_al_mem_01e6cdf0,leaf,edge-verified,
+0x01e6f650,4,leaf_mov_al_mem_01e6f650,leaf,edge-verified,
 0x01e6f7e0,5,leaf_lea_rdi_01e6f7e0,leaf,edge-verified,generated: return arg0 + K
 0x01e6f7f0,8,leaf_lea_rdi_01e6f7f0,leaf,edge-verified,generated: return arg0 + K
 0x01e6f800,8,leaf_lea_rdi_01e6f800,leaf,edge-verified,generated: return arg0 + K
+0x01e6f810,7,leaf_mov_al_mem_01e6f810,leaf,edge-verified,
 0x01e76f80,8,leaf_lea_rip_01e76f80,leaf,edge-verified,
 0x01e771d0,8,leaf_lea_rip_01e771d0,leaf,edge-verified,
 0x01e7e5b0,8,leaf_lea_rip_01e7e5b0,leaf,edge-verified,
@@ -10310,6 +10416,7 @@ address,size,name,system,status,notes
 0x01ea39a0,8,leaf_lea_rdi_01ea39a0,leaf,edge-verified,generated: return arg0 + K
 0x01ea3fa0,7,leaf_mov_eax_mem_01ea3fa0,leaf,edge-verified,
 0x01ea3fb0,7,leaf_mov_eax_mem_01ea3fb0,leaf,edge-verified,
+0x01eac2b0,4,leaf_mov_al_mem_01eac2b0,leaf,edge-verified,
 0x01eacef0,4,leaf_mov_eax_mem_01eacef0,leaf,edge-verified,
 0x01ead2c0,5,leaf_mov_rax_01ead2c0,leaf,edge-verified,
 0x01ead2d0,5,leaf_mov_rax_01ead2d0,leaf,edge-verified,
@@ -10348,6 +10455,7 @@ address,size,name,system,status,notes
 0x01eb1a60,6,leaf_mov_eax_k_01eb1a60,leaf,edge-verified,
 0x01eb1a70,6,leaf_mov_eax_k_01eb1a70,leaf,edge-verified,
 0x01eb5360,8,leaf_lea_rdi_01eb5360,leaf,edge-verified,generated: return arg0 + K
+0x01ec0db0,4,leaf_mov_al_mem_01ec0db0,leaf,edge-verified,
 0x01ec19d0,4,leaf_mov_eax_mem_01ec19d0,leaf,edge-verified,
 0x01ec20e0,5,leaf_mov_rax_01ec20e0,leaf,edge-verified,
 0x01ec20f0,5,leaf_mov_rax_01ec20f0,leaf,edge-verified,
@@ -10575,6 +10683,7 @@ address,size,name,system,status,notes
 0x01f262c0,3,leaf_ret_zero_01f262c0,leaf,edge-verified,
 0x01f26710,3,leaf_ret_zero_01f26710,leaf,edge-verified,
 0x01f26810,3,leaf_ret_zero_01f26810,leaf,edge-verified,
+0x01f27100,7,leaf_mov_al_mem_01f27100,leaf,edge-verified,
 0x01f271f0,3,leaf_ret_zero_01f271f0,leaf,edge-verified,
 0x01f27640,3,leaf_ret_zero_01f27640,leaf,edge-verified,
 0x01f27c50,3,leaf_ret_zero_01f27c50,leaf,edge-verified,
@@ -10755,6 +10864,7 @@ address,size,name,system,status,notes
 0x01f6ea30,3,leaf_ret_zero_01f6ea30,leaf,edge-verified,
 0x01f6ebc0,3,leaf_ret_zero_01f6ebc0,leaf,edge-verified,
 0x01f6ec80,5,leaf_lea_rdi_01f6ec80,leaf,edge-verified,generated: return arg0 + K
+0x01f6ed10,4,leaf_mov_al_mem_01f6ed10,leaf,edge-verified,
 0x01f6ed20,3,leaf_ret_zero_01f6ed20,leaf,edge-verified,
 0x01f6eeb0,3,leaf_ret_zero_01f6eeb0,leaf,edge-verified,
 0x01f6f120,3,leaf_ret_zero_01f6f120,leaf,edge-verified,
@@ -10776,6 +10886,7 @@ address,size,name,system,status,notes
 0x01f721f0,3,leaf_ret_zero_01f721f0,leaf,edge-verified,
 0x01f72470,3,leaf_ret_zero_01f72470,leaf,edge-verified,
 0x01f72570,3,leaf_ret_zero_01f72570,leaf,edge-verified,
+0x01f72e60,7,leaf_mov_al_mem_01f72e60,leaf,edge-verified,
 0x01f72f50,3,leaf_ret_zero_01f72f50,leaf,edge-verified,
 0x01f73380,3,leaf_ret_zero_01f73380,leaf,edge-verified,
 0x01f734c0,3,leaf_ret_zero_01f734c0,leaf,edge-verified,
@@ -10990,6 +11101,7 @@ address,size,name,system,status,notes
 0x01fc6af0,3,leaf_ret_zero_01fc6af0,leaf,edge-verified,
 0x01fc6c00,3,leaf_ret_zero_01fc6c00,leaf,edge-verified,
 0x01fc6f60,3,leaf_ret_zero_01fc6f60,leaf,edge-verified,
+0x01fc7050,4,leaf_mov_al_mem_01fc7050,leaf,edge-verified,
 0x01fc7060,3,leaf_ret_zero_01fc7060,leaf,edge-verified,
 0x01fc7360,3,leaf_ret_zero_01fc7360,leaf,edge-verified,
 0x01fc7480,5,leaf_lea_rdi_01fc7480,leaf,edge-verified,generated: return arg0 + K
@@ -11505,6 +11617,7 @@ address,size,name,system,status,notes
 0x02089250,3,leaf_ret_zero_02089250,leaf,edge-verified,
 0x0208c160,8,leaf_mov_rax_0208c160,leaf,edge-verified,
 0x0208c170,8,leaf_mov_rax_0208c170,leaf,edge-verified,
+0x0208c180,7,leaf_mov_al_mem_0208c180,leaf,edge-verified,
 0x02090980,6,leaf_mov_eax_k_02090980,leaf,edge-verified,
 0x020910f0,3,leaf_ret_zero_020910f0,leaf,edge-verified,
 0x020912d0,5,leaf_lea_rdi_020912d0,leaf,edge-verified,generated: return arg0 + K
@@ -11633,6 +11746,7 @@ address,size,name,system,status,notes
 0x020b9520,8,leaf_lea_rip_020b9520,leaf,edge-verified,
 0x020b9530,3,leaf_ret_zero_020b9530,leaf,edge-verified,
 0x020b97b0,6,leaf_mov_eax_k_020b97b0,leaf,edge-verified,
+0x020bdb10,4,leaf_mov_al_mem_020bdb10,leaf,edge-verified,
 0x020be6f0,4,leaf_mov_eax_mem_020be6f0,leaf,edge-verified,
 0x020bec50,5,leaf_mov_rax_020bec50,leaf,edge-verified,
 0x020bec60,5,leaf_mov_rax_020bec60,leaf,edge-verified,
@@ -11707,6 +11821,7 @@ address,size,name,system,status,notes
 0x020c5c80,8,leaf_lea_rip_020c5c80,leaf,edge-verified,
 0x020c5c90,3,leaf_ret_zero_020c5c90,leaf,edge-verified,
 0x020c5f10,6,leaf_mov_eax_k_020c5f10,leaf,edge-verified,
+0x020cc5a0,4,leaf_mov_al_mem_020cc5a0,leaf,edge-verified,
 0x020cd160,4,leaf_mov_eax_mem_020cd160,leaf,edge-verified,
 0x020cd5f0,5,leaf_mov_rax_020cd5f0,leaf,edge-verified,
 0x020cd600,5,leaf_mov_rax_020cd600,leaf,edge-verified,
@@ -11801,6 +11916,7 @@ address,size,name,system,status,notes
 0x020d4660,8,leaf_lea_rip_020d4660,leaf,edge-verified,
 0x020d4670,3,leaf_ret_zero_020d4670,leaf,edge-verified,
 0x020d48f0,6,leaf_mov_eax_k_020d48f0,leaf,edge-verified,
+0x020d6980,4,leaf_mov_al_mem_020d6980,leaf,edge-verified,
 0x020d7540,4,leaf_mov_eax_mem_020d7540,leaf,edge-verified,
 0x020d7910,5,leaf_mov_rax_020d7910,leaf,edge-verified,
 0x020d7920,5,leaf_mov_rax_020d7920,leaf,edge-verified,
@@ -11864,6 +11980,9 @@ address,size,name,system,status,notes
 0x020ee000,8,leaf_lea_rdi_020ee000,leaf,edge-verified,generated: return arg0 + K
 0x020ee010,8,leaf_lea_rdi_020ee010,leaf,edge-verified,generated: return arg0 + K
 0x020ee020,8,leaf_mov_rax_020ee020,leaf,edge-verified,
+0x020f4a10,7,leaf_mov_al_mem_020f4a10,leaf,edge-verified,
+0x020f4a60,7,leaf_mov_al_mem_020f4a60,leaf,edge-verified,
+0x020f68e0,4,leaf_mov_al_mem_020f68e0,leaf,edge-verified,
 0x020f74b0,4,leaf_mov_eax_mem_020f74b0,leaf,edge-verified,
 0x020f7880,5,leaf_mov_rax_020f7880,leaf,edge-verified,
 0x020f7890,5,leaf_mov_rax_020f7890,leaf,edge-verified,
@@ -11899,6 +12018,7 @@ address,size,name,system,status,notes
 0x020f84c0,6,leaf_mov_eax_k_020f84c0,leaf,edge-verified,
 0x020f9ff0,8,leaf_mov_rax_020f9ff0,leaf,edge-verified,
 0x020fa020,8,leaf_lea_rdi_020fa020,leaf,edge-verified,generated: return arg0 + K
+0x020fd070,4,leaf_mov_al_mem_020fd070,leaf,edge-verified,
 0x020fdc50,4,leaf_mov_eax_mem_020fdc50,leaf,edge-verified,
 0x020fe020,5,leaf_mov_rax_020fe020,leaf,edge-verified,
 0x020fe030,5,leaf_mov_rax_020fe030,leaf,edge-verified,
@@ -11935,6 +12055,7 @@ address,size,name,system,status,notes
 0x020ff170,8,leaf_lea_rdi_020ff170,leaf,edge-verified,generated: return arg0 + K
 0x02100e10,8,leaf_mov_rax_02100e10,leaf,edge-verified,
 0x02100e20,8,leaf_mov_rax_02100e20,leaf,edge-verified,
+0x02104030,4,leaf_mov_al_mem_02104030,leaf,edge-verified,
 0x02104c20,4,leaf_mov_eax_mem_02104c20,leaf,edge-verified,
 0x02104ff0,5,leaf_mov_rax_02104ff0,leaf,edge-verified,
 0x02105000,5,leaf_mov_rax_02105000,leaf,edge-verified,
@@ -11971,6 +12092,7 @@ address,size,name,system,status,notes
 0x02106440,4,leaf_mov_eax_mem_02106440,leaf,edge-verified,
 0x021064a0,5,leaf_lea_rdi_021064a0,leaf,edge-verified,generated: return arg0 + K
 0x021065e0,8,leaf_lea_rdi_021065e0,leaf,edge-verified,generated: return arg0 + K
+0x02106600,7,leaf_mov_al_mem_02106600,leaf,edge-verified,
 0x02107570,3,leaf_ret_zero_02107570,leaf,edge-verified,
 0x02107ea0,8,leaf_lea_rip_02107ea0,leaf,edge-verified,
 0x0210a660,4,leaf_mov_eax_mem_0210a660,leaf,edge-verified,
@@ -12128,6 +12250,7 @@ address,size,name,system,status,notes
 0x02127d50,6,leaf_mov_eax_k_02127d50,leaf,edge-verified,
 0x0212ba50,5,leaf_mov_rax_0212ba50,leaf,edge-verified,
 0x0212ba60,5,leaf_mov_rax_0212ba60,leaf,edge-verified,
+0x0212ba70,4,leaf_mov_al_mem_0212ba70,leaf,edge-verified,
 0x02130bd0,3,leaf_ret_zero_02130bd0,leaf,edge-verified,
 0x02130be0,3,leaf_ret_zero_02130be0,leaf,edge-verified,
 0x021372d0,8,leaf_lea_rdi_021372d0,leaf,edge-verified,generated: return arg0 + K
@@ -12213,6 +12336,7 @@ address,size,name,system,status,notes
 0x02149f50,8,leaf_lea_rip_02149f50,leaf,edge-verified,
 0x02149f60,3,leaf_ret_zero_02149f60,leaf,edge-verified,
 0x0214a1e0,6,leaf_mov_eax_k_0214a1e0,leaf,edge-verified,
+0x0214ae10,7,leaf_mov_al_mem_0214ae10,leaf,edge-verified,
 0x0214cb60,4,leaf_mov_eax_mem_0214cb60,leaf,edge-verified,
 0x0214ceb0,5,leaf_mov_rax_0214ceb0,leaf,edge-verified,
 0x0214cec0,5,leaf_mov_rax_0214cec0,leaf,edge-verified,
@@ -12292,6 +12416,7 @@ address,size,name,system,status,notes
 0x02164d70,5,leaf_mov_rax_02164d70,leaf,edge-verified,
 0x02164d80,5,leaf_mov_rax_02164d80,leaf,edge-verified,
 0x02164d90,8,leaf_mov_rax_02164d90,leaf,edge-verified,
+0x02164da0,7,leaf_mov_al_mem_02164da0,leaf,edge-verified,
 0x02166770,8,leaf_mov_rax_02166770,leaf,edge-verified,
 0x0216a320,4,leaf_mov_eax_mem_0216a320,leaf,edge-verified,
 0x0216a330,5,leaf_mov_rax_0216a330,leaf,edge-verified,
@@ -12559,6 +12684,7 @@ address,size,name,system,status,notes
 0x0219de50,6,leaf_mov_eax_k_0219de50,leaf,edge-verified,
 0x021a0640,3,leaf_ret_zero_021a0640,leaf,edge-verified,
 0x021a0830,3,leaf_ret_zero_021a0830,leaf,edge-verified,
+0x021a3990,4,leaf_mov_al_mem_021a3990,leaf,edge-verified,
 0x021a4550,4,leaf_mov_eax_mem_021a4550,leaf,edge-verified,
 0x021a4910,5,leaf_mov_rax_021a4910,leaf,edge-verified,
 0x021a4920,5,leaf_mov_rax_021a4920,leaf,edge-verified,
@@ -12576,10 +12702,12 @@ address,size,name,system,status,notes
 0x021a4c80,8,leaf_lea_rip_021a4c80,leaf,edge-verified,
 0x021a4c90,3,leaf_ret_zero_021a4c90,leaf,edge-verified,
 0x021a4f10,6,leaf_mov_eax_k_021a4f10,leaf,edge-verified,
+0x021a87a0,4,leaf_mov_al_mem_021a87a0,leaf,edge-verified,
 0x021a8870,5,leaf_mov_rax_021a8870,leaf,edge-verified,
 0x021aae40,3,leaf_ret_zero_021aae40,leaf,edge-verified,
 0x021ab010,8,leaf_lea_rdi_021ab010,leaf,edge-verified,generated: return arg0 + K
 0x021ab020,8,leaf_lea_rdi_021ab020,leaf,edge-verified,generated: return arg0 + K
+0x021adf20,4,leaf_mov_al_mem_021adf20,leaf,edge-verified,
 0x021aeb00,4,leaf_mov_eax_mem_021aeb00,leaf,edge-verified,
 0x021aef70,5,leaf_mov_rax_021aef70,leaf,edge-verified,
 0x021aef80,5,leaf_mov_rax_021aef80,leaf,edge-verified,
@@ -12614,6 +12742,8 @@ address,size,name,system,status,notes
 0x021af930,3,leaf_ret_zero_021af930,leaf,edge-verified,
 0x021afbb0,6,leaf_mov_eax_k_021afbb0,leaf,edge-verified,
 0x021b4e40,3,leaf_ret_zero_021b4e40,leaf,edge-verified,
+0x021bb8d0,7,leaf_mov_al_mem_021bb8d0,leaf,edge-verified,
+0x021bb900,7,leaf_mov_al_mem_021bb900,leaf,edge-verified,
 0x021bcbe0,8,leaf_mov_rax_021bcbe0,leaf,edge-verified,
 0x021bcde0,8,leaf_mov_rax_021bcde0,leaf,edge-verified,
 0x021bcdf0,8,leaf_mov_rax_021bcdf0,leaf,edge-verified,
@@ -12688,6 +12818,7 @@ address,size,name,system,status,notes
 0x021c7c50,3,leaf_ret_zero_021c7c50,leaf,edge-verified,
 0x021c7cf0,6,leaf_mov_eax_k_021c7cf0,leaf,edge-verified,
 0x021c8030,4,leaf_mov_eax_mem_021c8030,leaf,edge-verified,
+0x021c81e0,4,leaf_mov_al_mem_021c81e0,leaf,edge-verified,
 0x021c81f0,4,leaf_mov_eax_mem_021c81f0,leaf,edge-verified,
 0x021c8210,5,leaf_mov_rax_021c8210,leaf,edge-verified,
 0x021c84a0,3,leaf_mov_al_imm_021c84a0,leaf,edge-verified,
@@ -12903,6 +13034,7 @@ address,size,name,system,status,notes
 0x022143e0,8,leaf_lea_rip_022143e0,leaf,edge-verified,
 0x022143f0,3,leaf_ret_zero_022143f0,leaf,edge-verified,
 0x02214670,6,leaf_mov_eax_k_02214670,leaf,edge-verified,
+0x0221bb60,4,leaf_mov_al_mem_0221bb60,leaf,edge-verified,
 0x0221c730,4,leaf_mov_eax_mem_0221c730,leaf,edge-verified,
 0x0221cb00,5,leaf_mov_rax_0221cb00,leaf,edge-verified,
 0x0221cb10,5,leaf_mov_rax_0221cb10,leaf,edge-verified,
@@ -12943,6 +13075,7 @@ address,size,name,system,status,notes
 0x0221ff60,3,leaf_ret_zero_0221ff60,leaf,edge-verified,
 0x02220310,7,leaf_mov_eax_mem_02220310,leaf,edge-verified,
 0x02220870,5,leaf_mov_rax_02220870,leaf,edge-verified,
+0x02229790,4,leaf_mov_al_mem_02229790,leaf,edge-verified,
 0x0222a360,4,leaf_mov_eax_mem_0222a360,leaf,edge-verified,
 0x0222a720,5,leaf_mov_rax_0222a720,leaf,edge-verified,
 0x0222a730,5,leaf_mov_rax_0222a730,leaf,edge-verified,
@@ -12962,6 +13095,7 @@ address,size,name,system,status,notes
 0x0222ad20,6,leaf_mov_eax_k_0222ad20,leaf,edge-verified,
 0x0222bc10,2693,ai_hk_frame_update_0222bc10,ai,verified,"SprjHkAiManager per-frame update: steps the AI world by 1/30 s (the 60 FPS patches: 1/60), AI debug display and drawing"
 0x022329a0,8,leaf_lea_rip_022329a0,leaf,edge-verified,
+0x02234ca0,4,leaf_mov_al_mem_02234ca0,leaf,edge-verified,
 0x02235870,4,leaf_mov_eax_mem_02235870,leaf,edge-verified,
 0x02235b30,5,leaf_mov_rax_02235b30,leaf,edge-verified,
 0x02235b40,5,leaf_mov_rax_02235b40,leaf,edge-verified,
@@ -13023,6 +13157,7 @@ address,size,name,system,status,notes
 0x0224a420,8,leaf_lea_rip_0224a420,leaf,edge-verified,
 0x0224a430,3,leaf_ret_zero_0224a430,leaf,edge-verified,
 0x0224a6b0,6,leaf_mov_eax_k_0224a6b0,leaf,edge-verified,
+0x0224d530,4,leaf_mov_al_mem_0224d530,leaf,edge-verified,
 0x0224e110,4,leaf_mov_eax_mem_0224e110,leaf,edge-verified,
 0x0224e4e0,5,leaf_mov_rax_0224e4e0,leaf,edge-verified,
 0x0224e4f0,5,leaf_mov_rax_0224e4f0,leaf,edge-verified,
@@ -13056,6 +13191,7 @@ address,size,name,system,status,notes
 0x0224ee90,8,leaf_lea_rip_0224ee90,leaf,edge-verified,
 0x0224eea0,3,leaf_ret_zero_0224eea0,leaf,edge-verified,
 0x0224f120,6,leaf_mov_eax_k_0224f120,leaf,edge-verified,
+0x02252650,4,leaf_mov_al_mem_02252650,leaf,edge-verified,
 0x02253230,4,leaf_mov_eax_mem_02253230,leaf,edge-verified,
 0x02253600,5,leaf_mov_rax_02253600,leaf,edge-verified,
 0x02253610,5,leaf_mov_rax_02253610,leaf,edge-verified,
@@ -13089,6 +13225,7 @@ address,size,name,system,status,notes
 0x02253fb0,8,leaf_lea_rip_02253fb0,leaf,edge-verified,
 0x02253fc0,3,leaf_ret_zero_02253fc0,leaf,edge-verified,
 0x02254240,6,leaf_mov_eax_k_02254240,leaf,edge-verified,
+0x02259040,4,leaf_mov_al_mem_02259040,leaf,edge-verified,
 0x02259c10,4,leaf_mov_eax_mem_02259c10,leaf,edge-verified,
 0x0225a080,5,leaf_mov_rax_0225a080,leaf,edge-verified,
 0x0225a090,5,leaf_mov_rax_0225a090,leaf,edge-verified,
@@ -13154,6 +13291,7 @@ address,size,name,system,status,notes
 0x0225ece0,8,leaf_lea_rip_0225ece0,leaf,edge-verified,
 0x0225ecf0,3,leaf_ret_zero_0225ecf0,leaf,edge-verified,
 0x0225ef70,6,leaf_mov_eax_k_0225ef70,leaf,edge-verified,
+0x02261de0,4,leaf_mov_al_mem_02261de0,leaf,edge-verified,
 0x022629b0,4,leaf_mov_eax_mem_022629b0,leaf,edge-verified,
 0x02262c00,3,leaf_ret_zero_02262c00,leaf,edge-verified,
 0x02262eb0,5,leaf_mov_rax_02262eb0,leaf,edge-verified,
@@ -13189,6 +13327,7 @@ address,size,name,system,status,notes
 0x02263870,3,leaf_ret_zero_02263870,leaf,edge-verified,
 0x02263af0,6,leaf_mov_eax_k_02263af0,leaf,edge-verified,
 0x02265c70,6,leaf_mov_eax_k_02265c70,leaf,edge-verified,
+0x02270390,4,leaf_mov_al_mem_02270390,leaf,edge-verified,
 0x02270f50,4,leaf_mov_eax_mem_02270f50,leaf,edge-verified,
 0x02271320,5,leaf_mov_rax_02271320,leaf,edge-verified,
 0x02271330,5,leaf_mov_rax_02271330,leaf,edge-verified,
@@ -13222,6 +13361,7 @@ address,size,name,system,status,notes
 0x02271cd0,8,leaf_lea_rip_02271cd0,leaf,edge-verified,
 0x02271ce0,3,leaf_ret_zero_02271ce0,leaf,edge-verified,
 0x02271f60,6,leaf_mov_eax_k_02271f60,leaf,edge-verified,
+0x02279fb0,4,leaf_mov_al_mem_02279fb0,leaf,edge-verified,
 0x0227a930,4,leaf_mov_eax_mem_0227a930,leaf,edge-verified,
 0x0227add0,5,leaf_mov_rax_0227add0,leaf,edge-verified,
 0x0227ade0,5,leaf_mov_rax_0227ade0,leaf,edge-verified,
@@ -13265,6 +13405,7 @@ address,size,name,system,status,notes
 0x022ccf20,3,leaf_ret_zero_022ccf20,leaf,edge-verified,
 0x022cdf20,3,leaf_mov_al_imm_022cdf20,leaf,edge-verified,
 0x022cdf30,6,leaf_mov_eax_k_022cdf30,leaf,edge-verified,
+0x022d4580,4,leaf_mov_al_mem_022d4580,leaf,edge-verified,
 0x022d5150,4,leaf_mov_eax_mem_022d5150,leaf,edge-verified,
 0x022d55e0,5,leaf_mov_rax_022d55e0,leaf,edge-verified,
 0x022d55f0,5,leaf_mov_rax_022d55f0,leaf,edge-verified,
@@ -13336,6 +13477,7 @@ address,size,name,system,status,notes
 0x022dc030,6,leaf_mov_eax_k_022dc030,leaf,edge-verified,
 0x022de910,5,leaf_lea_rdi_022de910,leaf,edge-verified,generated: return arg0 + K
 0x022dea10,7,leaf_mov_eax_mem_022dea10,leaf,edge-verified,
+0x022dea30,7,leaf_mov_al_mem_022dea30,leaf,edge-verified,
 0x022dfed0,5,leaf_mov_rax_022dfed0,leaf,edge-verified,
 0x022dfee0,5,leaf_mov_rax_022dfee0,leaf,edge-verified,
 0x022dfef0,8,leaf_lea_rip_022dfef0,leaf,edge-verified,
@@ -13691,6 +13833,7 @@ address,size,name,system,status,notes
 0x02344210,8,leaf_lea_rip_02344210,leaf,edge-verified,
 0x02344220,3,leaf_ret_zero_02344220,leaf,edge-verified,
 0x023444a0,6,leaf_mov_eax_k_023444a0,leaf,edge-verified,
+0x02348080,4,leaf_mov_al_mem_02348080,leaf,edge-verified,
 0x02348c40,4,leaf_mov_eax_mem_02348c40,leaf,edge-verified,
 0x02349010,5,leaf_mov_rax_02349010,leaf,edge-verified,
 0x02349020,5,leaf_mov_rax_02349020,leaf,edge-verified,
@@ -13724,6 +13867,7 @@ address,size,name,system,status,notes
 0x023499c0,8,leaf_lea_rip_023499c0,leaf,edge-verified,
 0x023499d0,3,leaf_ret_zero_023499d0,leaf,edge-verified,
 0x02349c50,6,leaf_mov_eax_k_02349c50,leaf,edge-verified,
+0x0234dd60,4,leaf_mov_al_mem_0234dd60,leaf,edge-verified,
 0x0234e920,4,leaf_mov_eax_mem_0234e920,leaf,edge-verified,
 0x0234ecf0,5,leaf_mov_rax_0234ecf0,leaf,edge-verified,
 0x0234ed00,5,leaf_mov_rax_0234ed00,leaf,edge-verified,
@@ -13757,6 +13901,7 @@ address,size,name,system,status,notes
 0x0234f6a0,8,leaf_lea_rip_0234f6a0,leaf,edge-verified,
 0x0234f6b0,3,leaf_ret_zero_0234f6b0,leaf,edge-verified,
 0x0234f930,6,leaf_mov_eax_k_0234f930,leaf,edge-verified,
+0x023521e0,4,leaf_mov_al_mem_023521e0,leaf,edge-verified,
 0x02352da0,4,leaf_mov_eax_mem_02352da0,leaf,edge-verified,
 0x02353170,5,leaf_mov_rax_02353170,leaf,edge-verified,
 0x02353180,5,leaf_mov_rax_02353180,leaf,edge-verified,
@@ -13823,6 +13968,7 @@ address,size,name,system,status,notes
 0x023576d0,8,leaf_lea_rip_023576d0,leaf,edge-verified,
 0x023576e0,3,leaf_ret_zero_023576e0,leaf,edge-verified,
 0x02357960,6,leaf_mov_eax_k_02357960,leaf,edge-verified,
+0x023592d0,4,leaf_mov_al_mem_023592d0,leaf,edge-verified,
 0x023592e0,4,leaf_mov_eax_mem_023592e0,leaf,edge-verified,
 0x02359810,5,leaf_mov_rax_02359810,leaf,edge-verified,
 0x02359820,5,leaf_mov_rax_02359820,leaf,edge-verified,
@@ -13984,6 +14130,7 @@ address,size,name,system,status,notes
 0x023858f0,8,leaf_lea_rip_023858f0,leaf,edge-verified,
 0x02385900,3,leaf_ret_zero_02385900,leaf,edge-verified,
 0x02385b80,6,leaf_mov_eax_k_02385b80,leaf,edge-verified,
+0x02386ba0,7,leaf_mov_al_mem_02386ba0,leaf,edge-verified,
 0x02386bb0,8,leaf_mov_rax_02386bb0,leaf,edge-verified,
 0x02386bc0,8,leaf_mov_rax_02386bc0,leaf,edge-verified,
 0x02386bd0,8,leaf_mov_rax_02386bd0,leaf,edge-verified,
@@ -14370,8 +14517,10 @@ address,size,name,system,status,notes
 0x023c7050,8,leaf_mov_rax_023c7050,leaf,edge-verified,
 0x023c7060,8,leaf_mov_rax_023c7060,leaf,edge-verified,
 0x023cc720,3,leaf_ret_zero_023cc720,leaf,edge-verified,
+0x023cd890,7,leaf_mov_al_mem_023cd890,leaf,edge-verified,
 0x023cd8a0,3,leaf_ret_zero_023cd8a0,leaf,edge-verified,
 0x023cd8b0,8,leaf_mov_rax_023cd8b0,leaf,edge-verified,
+0x023d0020,4,leaf_mov_al_mem_023d0020,leaf,edge-verified,
 0x023d0c00,4,leaf_mov_eax_mem_023d0c00,leaf,edge-verified,
 0x023d1070,5,leaf_mov_rax_023d1070,leaf,edge-verified,
 0x023d1080,5,leaf_mov_rax_023d1080,leaf,edge-verified,
@@ -14438,6 +14587,7 @@ address,size,name,system,status,notes
 0x023d8cb0,8,leaf_lea_rip_023d8cb0,leaf,edge-verified,
 0x023d8cc0,3,leaf_ret_zero_023d8cc0,leaf,edge-verified,
 0x023d8f40,6,leaf_mov_eax_k_023d8f40,leaf,edge-verified,
+0x023e15f0,4,leaf_mov_al_mem_023e15f0,leaf,edge-verified,
 0x023e21c0,4,leaf_mov_eax_mem_023e21c0,leaf,edge-verified,
 0x023e2590,5,leaf_mov_rax_023e2590,leaf,edge-verified,
 0x023e25a0,5,leaf_mov_rax_023e25a0,leaf,edge-verified,
@@ -14657,6 +14807,7 @@ address,size,name,system,status,notes
 0x0241f820,8,leaf_lea_rip_0241f820,leaf,edge-verified,
 0x0241f830,3,leaf_ret_zero_0241f830,leaf,edge-verified,
 0x0241fab0,6,leaf_mov_eax_k_0241fab0,leaf,edge-verified,
+0x02421ea0,4,leaf_mov_al_mem_02421ea0,leaf,edge-verified,
 0x02422a80,4,leaf_mov_eax_mem_02422a80,leaf,edge-verified,
 0x02422e50,5,leaf_mov_rax_02422e50,leaf,edge-verified,
 0x02422e60,5,leaf_mov_rax_02422e60,leaf,edge-verified,
@@ -14691,6 +14842,7 @@ address,size,name,system,status,notes
 0x02423810,3,leaf_ret_zero_02423810,leaf,edge-verified,
 0x02423a90,6,leaf_mov_eax_k_02423a90,leaf,edge-verified,
 0x02424260,3,leaf_mov_al_imm_02424260,leaf,edge-verified,
+0x02424960,4,leaf_mov_al_mem_02424960,leaf,edge-verified,
 0x024266e0,3,leaf_ret_zero_024266e0,leaf,edge-verified,
 0x02428b90,4,leaf_mov_eax_mem_02428b90,leaf,edge-verified,
 0x02428ee0,5,leaf_mov_rax_02428ee0,leaf,edge-verified,
@@ -14727,6 +14879,8 @@ address,size,name,system,status,notes
 0x02429b20,6,leaf_mov_eax_k_02429b20,leaf,edge-verified,
 0x0242a6d0,4,leaf_mov_eax_mem_0242a6d0,leaf,edge-verified,
 0x0242a7c0,4,leaf_mov_eax_mem_0242a7c0,leaf,edge-verified,
+0x0242a7d0,4,leaf_mov_al_mem_0242a7d0,leaf,edge-verified,
+0x0242a7e0,4,leaf_mov_al_mem_0242a7e0,leaf,edge-verified,
 0x0242c750,3,leaf_ret_zero_0242c750,leaf,edge-verified,
 0x0242c760,3,leaf_ret_zero_0242c760,leaf,edge-verified,
 0x0242e2f0,5,leaf_mov_rax_0242e2f0,leaf,edge-verified,
@@ -14746,10 +14900,12 @@ address,size,name,system,status,notes
 0x02430b40,3,leaf_ret_zero_02430b40,leaf,edge-verified,
 0x02430dc0,6,leaf_mov_eax_k_02430dc0,leaf,edge-verified,
 0x02433700,4,leaf_mov_eax_mem_02433700,leaf,edge-verified,
+0x02433720,4,leaf_mov_al_mem_02433720,leaf,edge-verified,
 0x02433740,4,leaf_mov_eax_mem_02433740,leaf,edge-verified,
 0x02434520,552,frame_timing_flipper_init,frame_timing,verified,SprjFlipper constructor: reads Game.FlipMode (default 4; pending default 3; clamped to 4); unset in the shipped config
 0x02434770,2077,frame_timing_pace_frame,frame_timing,verified,Frame limiter: target interval at +0x18 (1/30 or 1/60 s); sleeps then spins; 32-frame ring; every FPS patch edits it
 0x02435200,4,leaf_mov_eax_mem_02435200,leaf,edge-verified,
+0x02435270,7,leaf_mov_al_mem_02435270,leaf,edge-verified,
 0x024362a0,3,leaf_ret_zero_024362a0,leaf,edge-verified,
 0x02436890,3,leaf_ret_zero_02436890,leaf,edge-verified,
 0x024368a0,3,leaf_ret_zero_024368a0,leaf,edge-verified,
@@ -14758,6 +14914,7 @@ address,size,name,system,status,notes
 0x02439150,8,leaf_lea_rip_02439150,leaf,edge-verified,
 0x02444920,3,leaf_ret_zero_02444920,leaf,edge-verified,
 0x02445ab0,4,leaf_mov_eax_mem_02445ab0,leaf,edge-verified,
+0x024471b0,7,leaf_mov_al_mem_024471b0,leaf,edge-verified,
 0x0244a880,8,leaf_lea_rip_0244a880,leaf,edge-verified,
 0x0244a890,6,leaf_mov_eax_k_0244a890,leaf,edge-verified,
 0x0244aa00,8,leaf_lea_rip_0244aa00,leaf,edge-verified,
@@ -14832,6 +14989,7 @@ address,size,name,system,status,notes
 0x02466730,6,leaf_mov_eax_k_02466730,leaf,edge-verified,
 0x02466740,6,leaf_mov_eax_k_02466740,leaf,edge-verified,
 0x024676f0,8,leaf_mov_rax_024676f0,leaf,edge-verified,
+0x02467700,4,leaf_mov_al_mem_02467700,leaf,edge-verified,
 0x02467710,6,leaf_mov_eax_k_02467710,leaf,edge-verified,
 0x02467720,6,leaf_mov_eax_k_02467720,leaf,edge-verified,
 0x0246cf30,5,leaf_mov_rax_0246cf30,leaf,edge-verified,
@@ -14845,6 +15003,7 @@ address,size,name,system,status,notes
 0x02476c10,4,leaf_mov_eax_mem_02476c10,leaf,edge-verified,
 0x024778c0,4,leaf_mov_eax_mem_024778c0,leaf,edge-verified,
 0x02478460,5,leaf_mov_rax_02478460,leaf,edge-verified,
+0x02478530,4,leaf_mov_al_mem_02478530,leaf,edge-verified,
 0x02478550,6,leaf_mov_eax_k_02478550,leaf,edge-verified,
 0x02478560,6,leaf_mov_eax_k_02478560,leaf,edge-verified,
 0x024785d0,4,leaf_mov_eax_mem_024785d0,leaf,edge-verified,
@@ -14861,6 +15020,8 @@ address,size,name,system,status,notes
 0x0247cb60,6,leaf_mov_eax_k_0247cb60,leaf,edge-verified,
 0x0247d8c0,6,leaf_mov_eax_k_0247d8c0,leaf,edge-verified,
 0x0247e250,3,leaf_mov_al_imm_0247e250,leaf,edge-verified,
+0x0247ee80,4,leaf_mov_al_mem_0247ee80,leaf,edge-verified,
+0x0247f3b0,4,leaf_mov_al_mem_0247f3b0,leaf,edge-verified,
 0x0247f850,3,leaf_ret_zero_0247f850,leaf,edge-verified,
 0x0247f860,3,leaf_ret_zero_0247f860,leaf,edge-verified,
 0x0247f870,3,leaf_mov_al_imm_0247f870,leaf,edge-verified,
@@ -14887,6 +15048,7 @@ address,size,name,system,status,notes
 0x02485620,5,leaf_mov_rax_02485620,leaf,edge-verified,
 0x024856b0,5,leaf_mov_rax_024856b0,leaf,edge-verified,
 0x02485d50,3,leaf_mov_al_imm_02485d50,leaf,edge-verified,
+0x02488720,4,leaf_mov_al_mem_02488720,leaf,edge-verified,
 0x02488740,8,leaf_mov_rax_02488740,leaf,edge-verified,
 0x024887d0,8,leaf_mov_rax_024887d0,leaf,edge-verified,
 0x02489250,3,leaf_ret_zero_02489250,leaf,edge-verified,
@@ -14894,6 +15056,7 @@ address,size,name,system,status,notes
 0x0248bda0,4,leaf_mov_eax_mem_0248bda0,leaf,edge-verified,
 0x0248c520,5,leaf_lea_rdi_0248c520,leaf,edge-verified,generated: return arg0 + K
 0x0248c530,4,leaf_mov_eax_mem_0248c530,leaf,edge-verified,
+0x0248c540,4,leaf_mov_al_mem_0248c540,leaf,edge-verified,
 0x0248d000,5,leaf_lea_rdi_0248d000,leaf,edge-verified,generated: return arg0 + K
 0x0248e030,3,leaf_ret_zero_0248e030,leaf,edge-verified,
 0x0248e040,126,engine_zero_init_0248e040,engine,edge-verified,zero-initialises the 0x78 bytes at rsi and stores rdi at +0x78; one of 528 byte-identical members; returns zero in eax
@@ -14982,6 +15145,7 @@ address,size,name,system,status,notes
 0x0249cd90,3,leaf_ret_zero_0249cd90,leaf,edge-verified,
 0x0249d010,6,leaf_mov_eax_k_0249d010,leaf,edge-verified,
 0x0249d210,7,leaf_mov_eax_mem_0249d210,leaf,edge-verified,
+0x0249d4d0,7,leaf_mov_al_mem_0249d4d0,leaf,edge-verified,
 0x0249d5d0,5,leaf_lea_rdi_0249d5d0,leaf,edge-verified,generated: return arg0 + K
 0x0249e800,3,leaf_ret_zero_0249e800,leaf,edge-verified,
 0x0249e810,126,engine_zero_init_0249e810,engine,edge-verified,zero-initialises the 0x78 bytes at rsi and stores rdi at +0x78; one of 528 byte-identical members; returns zero in eax
@@ -15321,7 +15485,9 @@ address,size,name,system,status,notes
 0x024c17d0,8,leaf_lea_rdi_024c17d0,leaf,edge-verified,generated: return arg0 + K
 0x024c7040,8,leaf_lea_rdi_024c7040,leaf,edge-verified,generated: return arg0 + K
 0x024c7050,4,leaf_mov_eax_mem_024c7050,leaf,edge-verified,
+0x024c7060,4,leaf_mov_al_mem_024c7060,leaf,edge-verified,
 0x024cccb0,8,leaf_lea_rip_024cccb0,leaf,edge-verified,
+0x024cccc0,7,leaf_mov_al_mem_024cccc0,leaf,edge-verified,
 0x024d2fb0,8,leaf_lea_rip_024d2fb0,leaf,edge-verified,
 0x024d7b00,3,leaf_ret_zero_024d7b00,leaf,edge-verified,
 0x024daf50,7,leaf_mov_eax_mem_024daf50,leaf,edge-verified,
@@ -15675,6 +15841,7 @@ address,size,name,system,status,notes
 0x025ba980,8,leaf_lea_rip_025ba980,leaf,edge-verified,
 0x025ba990,3,leaf_ret_zero_025ba990,leaf,edge-verified,
 0x025bac10,6,leaf_mov_eax_k_025bac10,leaf,edge-verified,
+0x025bd240,4,leaf_mov_al_mem_025bd240,leaf,edge-verified,
 0x025bffd0,3,leaf_ret_zero_025bffd0,leaf,edge-verified,
 0x025bffe0,6,leaf_mov_eax_k_025bffe0,leaf,edge-verified,
 0x025bfff0,6,leaf_mov_eax_k_025bfff0,leaf,edge-verified,
@@ -15685,6 +15852,7 @@ address,size,name,system,status,notes
 0x025c0050,3,leaf_ret_zero_025c0050,leaf,edge-verified,
 0x025c0610,4,leaf_mov_eax_mem_025c0610,leaf,edge-verified,
 0x025c0660,5,leaf_mov_rax_025c0660,leaf,edge-verified,
+0x025c4250,7,leaf_mov_al_mem_025c4250,leaf,edge-verified,
 0x025c7450,3,leaf_ret_zero_025c7450,leaf,edge-verified,
 0x0260b470,8,leaf_mov_rax_0260b470,leaf,edge-verified,
 0x0260b490,8,leaf_mov_rax_0260b490,leaf,edge-verified,
@@ -16108,7 +16276,9 @@ address,size,name,system,status,notes
 0x02775b40,8,leaf_lea_rip_02775b40,leaf,edge-verified,
 0x02775b50,3,leaf_ret_zero_02775b50,leaf,edge-verified,
 0x02775dd0,6,leaf_mov_eax_k_02775dd0,leaf,edge-verified,
+0x02776870,4,leaf_mov_al_mem_02776870,leaf,edge-verified,
 0x027768a0,4,leaf_mov_eax_mem_027768a0,leaf,edge-verified,
+0x02776950,4,leaf_mov_al_mem_02776950,leaf,edge-verified,
 0x02776990,4,leaf_mov_eax_mem_02776990,leaf,edge-verified,
 0x02776a60,5,leaf_lea_rdi_02776a60,leaf,edge-verified,generated: return arg0 + K
 0x02776a70,5,leaf_lea_rdi_02776a70,leaf,edge-verified,generated: return arg0 + K
@@ -16155,6 +16325,7 @@ address,size,name,system,status,notes
 0x0278bc10,5,leaf_mov_rax_0278bc10,leaf,edge-verified,
 0x0278c4a0,3,leaf_ret_zero_0278c4a0,leaf,edge-verified,
 0x0278c4f0,3,leaf_mov_al_imm_0278c4f0,leaf,edge-verified,
+0x0278c720,4,leaf_mov_al_mem_0278c720,leaf,edge-verified,
 0x0278c730,3,leaf_ret_zero_0278c730,leaf,edge-verified,
 0x0278c740,4,leaf_mov_eax_mem_0278c740,leaf,edge-verified,
 0x0278c760,4,leaf_mov_eax_mem_0278c760,leaf,edge-verified,
@@ -16351,6 +16522,7 @@ address,size,name,system,status,notes
 0x027b8490,3,leaf_mov_al_imm_027b8490,leaf,edge-verified,
 0x027b8600,6,leaf_mov_eax_k_027b8600,leaf,edge-verified,
 0x027b8610,6,leaf_mov_eax_k_027b8610,leaf,edge-verified,
+0x027b8620,4,leaf_mov_al_mem_027b8620,leaf,edge-verified,
 0x027b88f0,6,leaf_mov_eax_k_027b88f0,leaf,edge-verified,
 0x027b8900,6,leaf_mov_eax_k_027b8900,leaf,edge-verified,
 0x027b8910,6,leaf_mov_eax_k_027b8910,leaf,edge-verified,
@@ -16740,9 +16912,11 @@ address,size,name,system,status,notes
 0x02804a20,6,leaf_mov_eax_k_02804a20,leaf,edge-verified,
 0x02804c70,3,leaf_ret_zero_02804c70,leaf,edge-verified,
 0x02805190,3,leaf_ret_zero_02805190,leaf,edge-verified,
+0x02805720,4,leaf_mov_al_mem_02805720,leaf,edge-verified,
 0x02805730,3,leaf_ret_zero_02805730,leaf,edge-verified,
 0x02805740,5,leaf_mov_rax_02805740,leaf,edge-verified,
 0x02805760,4,leaf_mov_eax_mem_02805760,leaf,edge-verified,
+0x02805790,4,leaf_mov_al_mem_02805790,leaf,edge-verified,
 0x028059c0,3,leaf_mov_al_imm_028059c0,leaf,edge-verified,
 0x02805a70,3,leaf_mov_al_imm_02805a70,leaf,edge-verified,
 0x02805b30,6,leaf_mov_eax_k_02805b30,leaf,edge-verified,
@@ -17018,6 +17192,7 @@ address,size,name,system,status,notes
 0x028a3240,3,leaf_mov_al_imm_028a3240,leaf,edge-verified,
 0x028a3270,3,leaf_ret_zero_028a3270,leaf,edge-verified,
 0x028a3320,6,leaf_mov_eax_k_028a3320,leaf,edge-verified,
+0x028a33e0,4,leaf_mov_al_mem_028a33e0,leaf,edge-verified,
 0x028a33f0,5,leaf_mov_rax_028a33f0,leaf,edge-verified,
 0x028a3410,4,leaf_mov_eax_mem_028a3410,leaf,edge-verified,
 0x028a3600,8,leaf_lea_rip_028a3600,leaf,edge-verified,
@@ -17371,6 +17546,7 @@ address,size,name,system,status,notes
 0x02a25270,6,leaf_mov_eax_k_02a25270,leaf,edge-verified,
 0x02a25280,6,leaf_mov_eax_k_02a25280,leaf,edge-verified,
 0x02a26ee0,8,leaf_mov_rax_02a26ee0,leaf,edge-verified,
+0x02a26ef0,4,leaf_mov_al_mem_02a26ef0,leaf,edge-verified,
 0x02a26f00,6,leaf_mov_eax_k_02a26f00,leaf,edge-verified,
 0x02a26f10,6,leaf_mov_eax_k_02a26f10,leaf,edge-verified,
 0x02a27820,5,leaf_mov_rax_02a27820,leaf,edge-verified,
@@ -17396,6 +17572,8 @@ address,size,name,system,status,notes
 0x02a34320,3,leaf_ret_zero_02a34320,leaf,edge-verified,
 0x02a396b0,3,leaf_ret_zero_02a396b0,leaf,edge-verified,
 0x02a396c0,8,leaf_lea_rip_02a396c0,leaf,edge-verified,
+0x02a3a960,4,leaf_mov_al_mem_02a3a960,leaf,edge-verified,
+0x02a3adf0,4,leaf_mov_al_mem_02a3adf0,leaf,edge-verified,
 0x02a3b2f0,3,leaf_ret_zero_02a3b2f0,leaf,edge-verified,
 0x02a3cf00,8,leaf_lea_rdi_02a3cf00,leaf,edge-verified,generated: return arg0 + K
 0x02a3cf10,8,leaf_lea_rdi_02a3cf10,leaf,edge-verified,generated: return arg0 + K
@@ -17580,6 +17758,7 @@ address,size,name,system,status,notes
 0x02a756c0,3,leaf_ret_zero_02a756c0,leaf,edge-verified,
 0x02a756d0,6,leaf_mov_eax_k_02a756d0,leaf,edge-verified,
 0x02a76100,5,leaf_mov_rax_02a76100,leaf,edge-verified,
+0x02a77dc0,7,leaf_mov_al_mem_02a77dc0,leaf,edge-verified,
 0x02a77dd0,7,leaf_mov_eax_mem_02a77dd0,leaf,edge-verified,
 0x02a77de0,7,leaf_mov_eax_mem_02a77de0,leaf,edge-verified,
 0x02a78790,8,leaf_lea_rip_02a78790,leaf,edge-verified,
@@ -17752,6 +17931,7 @@ address,size,name,system,status,notes
 0x02a99b60,8,leaf_lea_rip_02a99b60,leaf,edge-verified,
 0x02a99b70,3,leaf_ret_zero_02a99b70,leaf,edge-verified,
 0x02a99cc0,6,leaf_mov_eax_k_02a99cc0,leaf,edge-verified,
+0x02a9c870,4,leaf_mov_al_mem_02a9c870,leaf,edge-verified,
 0x02a9ca00,5,leaf_mov_rax_02a9ca00,leaf,edge-verified,
 0x02a9ca10,5,leaf_mov_rax_02a9ca10,leaf,edge-verified,
 0x02a9ca20,8,leaf_lea_rip_02a9ca20,leaf,edge-verified,
@@ -17762,7 +17942,9 @@ address,size,name,system,status,notes
 0x02a9cbb0,6,leaf_mov_eax_k_02a9cbb0,leaf,edge-verified,
 0x02a9d600,3,leaf_ret_zero_02a9d600,leaf,edge-verified,
 0x02a9d610,3,leaf_ret_zero_02a9d610,leaf,edge-verified,
+0x02a9eec0,4,leaf_mov_al_mem_02a9eec0,leaf,edge-verified,
 0x02a9eed0,5,leaf_mov_rax_02a9eed0,leaf,edge-verified,
+0x02a9fd50,4,leaf_mov_al_mem_02a9fd50,leaf,edge-verified,
 0x02a9fd60,5,leaf_mov_rax_02a9fd60,leaf,edge-verified,
 0x02a9ff60,3,leaf_ret_zero_02a9ff60,leaf,edge-verified,
 0x02a9ff90,5,leaf_mov_rax_02a9ff90,leaf,edge-verified,
@@ -17798,6 +17980,7 @@ address,size,name,system,status,notes
 0x02aa2250,5,leaf_lea_rdi_02aa2250,leaf,edge-verified,generated: return arg0 + K
 0x02aa2260,5,leaf_mov_rax_02aa2260,leaf,edge-verified,
 0x02aa2270,5,leaf_mov_rax_02aa2270,leaf,edge-verified,
+0x02aa24e0,4,leaf_mov_al_mem_02aa24e0,leaf,edge-verified,
 0x02aa24f0,5,leaf_mov_rax_02aa24f0,leaf,edge-verified,
 0x02aa2500,5,leaf_mov_rax_02aa2500,leaf,edge-verified,
 0x02aa3e90,4,leaf_mov_eax_mem_02aa3e90,leaf,edge-verified,
@@ -17805,6 +17988,7 @@ address,size,name,system,status,notes
 0x02aa4b80,5,leaf_lea_rdi_02aa4b80,leaf,edge-verified,generated: return arg0 + K
 0x02aa4d80,5,leaf_lea_rdi_02aa4d80,leaf,edge-verified,generated: return arg0 + K
 0x02aa4d90,5,leaf_lea_rdi_02aa4d90,leaf,edge-verified,generated: return arg0 + K
+0x02aa4ea0,4,leaf_mov_al_mem_02aa4ea0,leaf,edge-verified,
 0x02aa6650,3,leaf_ret_zero_02aa6650,leaf,edge-verified,
 0x02aa6af0,5,leaf_mov_rax_02aa6af0,leaf,edge-verified,
 0x02aa7100,5,leaf_mov_rax_02aa7100,leaf,edge-verified,
@@ -17818,6 +18002,7 @@ address,size,name,system,status,notes
 0x02aa7d50,3,leaf_ret_zero_02aa7d50,leaf,edge-verified,
 0x02aa7ea0,6,leaf_mov_eax_k_02aa7ea0,leaf,edge-verified,
 0x02aa93d0,3,leaf_ret_zero_02aa93d0,leaf,edge-verified,
+0x02ab9a50,4,leaf_mov_al_mem_02ab9a50,leaf,edge-verified,
 0x02ab9c00,3,leaf_ret_zero_02ab9c00,leaf,edge-verified,
 0x02ab9c40,3,leaf_ret_zero_02ab9c40,leaf,edge-verified,
 0x02ab9c50,3,leaf_ret_zero_02ab9c50,leaf,edge-verified,
@@ -17868,10 +18053,13 @@ address,size,name,system,status,notes
 0x02aeab10,3,leaf_ret_zero_02aeab10,leaf,edge-verified,
 0x02aeacb0,5,leaf_mov_rax_02aeacb0,leaf,edge-verified,
 0x02aeaef0,3,leaf_mov_al_imm_02aeaef0,leaf,edge-verified,
+0x02aeb610,4,leaf_mov_al_mem_02aeb610,leaf,edge-verified,
 0x02aebe40,5,leaf_mov_rax_02aebe40,leaf,edge-verified,
 0x02aebfe0,5,leaf_mov_rax_02aebfe0,leaf,edge-verified,
 0x02aec010,4,leaf_mov_eax_mem_02aec010,leaf,edge-verified,
 0x02aec020,4,leaf_mov_eax_mem_02aec020,leaf,edge-verified,
+0x02aec040,4,leaf_mov_al_mem_02aec040,leaf,edge-verified,
+0x02aed6a0,4,leaf_mov_al_mem_02aed6a0,leaf,edge-verified,
 0x02aed6b0,4,leaf_mov_eax_mem_02aed6b0,leaf,edge-verified,
 0x02aedf50,3,leaf_ret_zero_02aedf50,leaf,edge-verified,
 0x02af14f0,3,leaf_mov_al_imm_02af14f0,leaf,edge-verified,
@@ -18275,9 +18463,11 @@ address,size,name,system,status,notes
 0x02b9a430,5,leaf_mov_rax_02b9a430,leaf,edge-verified,
 0x02b9a440,5,leaf_mov_rax_02b9a440,leaf,edge-verified,
 0x02b9bdd0,3,leaf_ret_zero_02b9bdd0,leaf,edge-verified,
+0x02b9dc50,4,leaf_mov_al_mem_02b9dc50,leaf,edge-verified,
 0x02b9dc60,3,leaf_mov_al_imm_02b9dc60,leaf,edge-verified,
 0x02b9eef0,7,leaf_mov_eax_mem_02b9eef0,leaf,edge-verified,
 0x02b9f540,5,leaf_mov_rax_02b9f540,leaf,edge-verified,
+0x02b9f550,4,leaf_mov_al_mem_02b9f550,leaf,edge-verified,
 0x02ba2e70,3,leaf_mov_al_imm_02ba2e70,leaf,edge-verified,
 0x02ba2e80,6,leaf_mov_eax_k_02ba2e80,leaf,edge-verified,
 0x02ba2ea0,3,leaf_mov_al_imm_02ba2ea0,leaf,edge-verified,
@@ -18291,7 +18481,9 @@ address,size,name,system,status,notes
 0x02ba2fa0,5,leaf_mov_rax_02ba2fa0,leaf,edge-verified,
 0x02ba4990,5,leaf_lea_rdi_02ba4990,leaf,edge-verified,generated: return arg0 + K
 0x02ba4ce0,5,leaf_lea_rdi_02ba4ce0,leaf,edge-verified,generated: return arg0 + K
+0x02ba52d0,4,leaf_mov_al_mem_02ba52d0,leaf,edge-verified,
 0x02ba52e0,3,leaf_mov_al_imm_02ba52e0,leaf,edge-verified,
+0x02ba57e0,4,leaf_mov_al_mem_02ba57e0,leaf,edge-verified,
 0x02ba5840,4,leaf_mov_eax_mem_02ba5840,leaf,edge-verified,
 0x02ba66a0,3,leaf_ret_zero_02ba66a0,leaf,edge-verified,
 0x02ba69e0,3,leaf_ret_zero_02ba69e0,leaf,edge-verified,
@@ -18603,12 +18795,14 @@ address,size,name,system,status,notes
 0x02bcc6d0,8,leaf_lea_rdi_02bcc6d0,leaf,edge-verified,generated: return arg0 + K
 0x02bcc6e0,8,leaf_lea_rdi_02bcc6e0,leaf,edge-verified,generated: return arg0 + K
 0x02bcc6f0,8,leaf_lea_rdi_02bcc6f0,leaf,edge-verified,generated: return arg0 + K
+0x02bccb00,7,leaf_mov_al_mem_02bccb00,leaf,edge-verified,
 0x02bcd300,6,leaf_mov_eax_k_02bcd300,leaf,edge-verified,
 0x02bcd5d0,8,leaf_lea_rdi_02bcd5d0,leaf,edge-verified,generated: return arg0 + K
 0x02bcd5e0,8,leaf_lea_rdi_02bcd5e0,leaf,edge-verified,generated: return arg0 + K
 0x02bcd5f0,8,leaf_lea_rdi_02bcd5f0,leaf,edge-verified,generated: return arg0 + K
 0x02bcd600,8,leaf_lea_rdi_02bcd600,leaf,edge-verified,generated: return arg0 + K
 0x02bcd610,8,leaf_lea_rdi_02bcd610,leaf,edge-verified,generated: return arg0 + K
+0x02bcdb20,7,leaf_mov_al_mem_02bcdb20,leaf,edge-verified,
 0x02bce270,5,leaf_mov_rax_02bce270,leaf,edge-verified,
 0x02bce280,5,leaf_mov_rax_02bce280,leaf,edge-verified,
 0x02bce3c0,3,leaf_mov_al_imm_02bce3c0,leaf,edge-verified,
@@ -18639,6 +18833,7 @@ address,size,name,system,status,notes
 0x02be6160,8,leaf_lea_rdi_02be6160,leaf,edge-verified,generated: return arg0 + K
 0x02be6170,8,leaf_lea_rdi_02be6170,leaf,edge-verified,generated: return arg0 + K
 0x02be6180,8,leaf_lea_rdi_02be6180,leaf,edge-verified,generated: return arg0 + K
+0x02be62a0,4,leaf_mov_al_mem_02be62a0,leaf,edge-verified,
 0x02be62b0,4,leaf_mov_eax_mem_02be62b0,leaf,edge-verified,
 0x02be62c0,5,leaf_lea_rdi_02be62c0,leaf,edge-verified,generated: return arg0 + K
 0x02be62d0,8,leaf_mov_rax_02be62d0,leaf,edge-verified,
@@ -18650,6 +18845,8 @@ address,size,name,system,status,notes
 0x02be7dc0,4,leaf_mov_eax_mem_02be7dc0,leaf,edge-verified,
 0x02be81a0,4,leaf_mov_eax_mem_02be81a0,leaf,edge-verified,
 0x02be8760,7,leaf_mov_eax_mem_02be8760,leaf,edge-verified,
+0x02be8780,7,leaf_mov_al_mem_02be8780,leaf,edge-verified,
+0x02be8790,7,leaf_mov_al_mem_02be8790,leaf,edge-verified,
 0x02be87a0,7,leaf_mov_eax_mem_02be87a0,leaf,edge-verified,
 0x02be87d0,7,leaf_mov_eax_mem_02be87d0,leaf,edge-verified,
 0x02be8810,8,leaf_mov_rax_02be8810,leaf,edge-verified,
@@ -18660,6 +18857,7 @@ address,size,name,system,status,notes
 0x02be8da0,4,leaf_mov_eax_mem_02be8da0,leaf,edge-verified,
 0x02be8f90,5,leaf_lea_rdi_02be8f90,leaf,edge-verified,generated: return arg0 + K
 0x02be8fa0,5,leaf_lea_rdi_02be8fa0,leaf,edge-verified,generated: return arg0 + K
+0x02be8fb0,4,leaf_mov_al_mem_02be8fb0,leaf,edge-verified,
 0x02be93a0,4,leaf_mov_eax_mem_02be93a0,leaf,edge-verified,
 0x02be93d0,4,leaf_mov_eax_mem_02be93d0,leaf,edge-verified,
 0x02be93e0,4,leaf_mov_eax_mem_02be93e0,leaf,edge-verified,
@@ -18669,6 +18867,10 @@ address,size,name,system,status,notes
 0x02be9720,5,leaf_lea_rdi_02be9720,leaf,edge-verified,generated: return arg0 + K
 0x02be9730,5,leaf_lea_rdi_02be9730,leaf,edge-verified,generated: return arg0 + K
 0x02be9b40,4,leaf_mov_eax_mem_02be9b40,leaf,edge-verified,
+0x02be9e50,4,leaf_mov_al_mem_02be9e50,leaf,edge-verified,
+0x02be9e60,4,leaf_mov_al_mem_02be9e60,leaf,edge-verified,
+0x02be9e70,4,leaf_mov_al_mem_02be9e70,leaf,edge-verified,
+0x02be9e80,4,leaf_mov_al_mem_02be9e80,leaf,edge-verified,
 0x02be9ff0,4,leaf_mov_eax_mem_02be9ff0,leaf,edge-verified,
 0x02bea6a0,4,leaf_mov_eax_mem_02bea6a0,leaf,edge-verified,
 0x02bea6b0,4,leaf_mov_eax_mem_02bea6b0,leaf,edge-verified,
@@ -18727,6 +18929,7 @@ address,size,name,system,status,notes
 0x02bec1e0,7,leaf_mov_eax_mem_02bec1e0,leaf,edge-verified,
 0x02bec1f0,7,leaf_mov_eax_mem_02bec1f0,leaf,edge-verified,
 0x02bec200,7,leaf_mov_eax_mem_02bec200,leaf,edge-verified,
+0x02bec240,7,leaf_mov_al_mem_02bec240,leaf,edge-verified,
 0x02bec860,4,leaf_mov_eax_mem_02bec860,leaf,edge-verified,
 0x02becd10,8,leaf_mov_rax_02becd10,leaf,edge-verified,
 0x02bece00,3,leaf_ret_zero_02bece00,leaf,edge-verified,
@@ -18740,10 +18943,12 @@ address,size,name,system,status,notes
 0x02bfbba0,3,leaf_ret_zero_02bfbba0,leaf,edge-verified,
 0x02bfbbd0,7,leaf_mov_eax_mem_02bfbbd0,leaf,edge-verified,
 0x02bfd030,7,leaf_mov_eax_mem_02bfd030,leaf,edge-verified,
+0x02bffd60,7,leaf_mov_al_mem_02bffd60,leaf,edge-verified,
 0x02bffd70,7,leaf_mov_eax_mem_02bffd70,leaf,edge-verified,
 0x02c00d30,3,leaf_ret_zero_02c00d30,leaf,edge-verified,
 0x02c01570,3,leaf_ret_zero_02c01570,leaf,edge-verified,
 0x02c01750,3,leaf_ret_zero_02c01750,leaf,edge-verified,
+0x02c098d0,7,leaf_mov_al_mem_02c098d0,leaf,edge-verified,
 0x02c0a2f0,5,leaf_mov_rax_02c0a2f0,leaf,edge-verified,
 0x02c0a300,5,leaf_mov_rax_02c0a300,leaf,edge-verified,
 0x02c0a310,8,leaf_lea_rip_02c0a310,leaf,edge-verified,
@@ -18782,7 +18987,9 @@ address,size,name,system,status,notes
 0x02c0c700,8,leaf_lea_rip_02c0c700,leaf,edge-verified,
 0x02c0c710,3,leaf_ret_zero_02c0c710,leaf,edge-verified,
 0x02c0c860,6,leaf_mov_eax_k_02c0c860,leaf,edge-verified,
+0x02c0cdc0,4,leaf_mov_al_mem_02c0cdc0,leaf,edge-verified,
 0x02c0e460,6,leaf_mov_eax_k_02c0e460,leaf,edge-verified,
+0x02c0e510,7,leaf_mov_al_mem_02c0e510,leaf,edge-verified,
 0x02c0e970,3,leaf_mov_al_imm_02c0e970,leaf,edge-verified,
 0x02c0f360,3,leaf_mov_al_imm_02c0f360,leaf,edge-verified,
 0x02c0f960,3,leaf_mov_al_imm_02c0f960,leaf,edge-verified,
@@ -18792,30 +18999,35 @@ address,size,name,system,status,notes
 0x02c107d0,8,leaf_lea_rdi_02c107d0,leaf,edge-verified,generated: return arg0 + K
 0x02c107e0,8,leaf_lea_rdi_02c107e0,leaf,edge-verified,generated: return arg0 + K
 0x02c107f0,8,leaf_lea_rdi_02c107f0,leaf,edge-verified,generated: return arg0 + K
+0x02c10e80,7,leaf_mov_al_mem_02c10e80,leaf,edge-verified,
 0x02c12470,6,leaf_mov_eax_k_02c12470,leaf,edge-verified,
 0x02c12530,8,leaf_lea_rdi_02c12530,leaf,edge-verified,generated: return arg0 + K
 0x02c12540,8,leaf_lea_rdi_02c12540,leaf,edge-verified,generated: return arg0 + K
 0x02c12550,8,leaf_lea_rdi_02c12550,leaf,edge-verified,generated: return arg0 + K
 0x02c12560,8,leaf_lea_rdi_02c12560,leaf,edge-verified,generated: return arg0 + K
 0x02c12570,8,leaf_lea_rdi_02c12570,leaf,edge-verified,generated: return arg0 + K
+0x02c12a10,7,leaf_mov_al_mem_02c12a10,leaf,edge-verified,
 0x02c13380,6,leaf_mov_eax_k_02c13380,leaf,edge-verified,
 0x02c137a0,8,leaf_lea_rdi_02c137a0,leaf,edge-verified,generated: return arg0 + K
 0x02c137b0,8,leaf_lea_rdi_02c137b0,leaf,edge-verified,generated: return arg0 + K
 0x02c137c0,8,leaf_lea_rdi_02c137c0,leaf,edge-verified,generated: return arg0 + K
 0x02c137d0,8,leaf_lea_rdi_02c137d0,leaf,edge-verified,generated: return arg0 + K
 0x02c137e0,8,leaf_lea_rdi_02c137e0,leaf,edge-verified,generated: return arg0 + K
+0x02c13bf0,7,leaf_mov_al_mem_02c13bf0,leaf,edge-verified,
 0x02c14930,6,leaf_mov_eax_k_02c14930,leaf,edge-verified,
 0x02c14990,5,leaf_lea_rdi_02c14990,leaf,edge-verified,generated: return arg0 + K
 0x02c149a0,5,leaf_lea_rdi_02c149a0,leaf,edge-verified,generated: return arg0 + K
 0x02c149b0,5,leaf_lea_rdi_02c149b0,leaf,edge-verified,generated: return arg0 + K
 0x02c149c0,5,leaf_lea_rdi_02c149c0,leaf,edge-verified,generated: return arg0 + K
 0x02c149d0,5,leaf_lea_rdi_02c149d0,leaf,edge-verified,generated: return arg0 + K
+0x02c14b10,4,leaf_mov_al_mem_02c14b10,leaf,edge-verified,
 0x02c15220,6,leaf_mov_eax_k_02c15220,leaf,edge-verified,
 0x02c154f0,8,leaf_lea_rdi_02c154f0,leaf,edge-verified,generated: return arg0 + K
 0x02c15500,8,leaf_lea_rdi_02c15500,leaf,edge-verified,generated: return arg0 + K
 0x02c15510,8,leaf_lea_rdi_02c15510,leaf,edge-verified,generated: return arg0 + K
 0x02c15520,8,leaf_lea_rdi_02c15520,leaf,edge-verified,generated: return arg0 + K
 0x02c15530,8,leaf_lea_rdi_02c15530,leaf,edge-verified,generated: return arg0 + K
+0x02c15a50,7,leaf_mov_al_mem_02c15a50,leaf,edge-verified,
 0x02c16e80,5,leaf_mov_rax_02c16e80,leaf,edge-verified,
 0x02c16e90,5,leaf_mov_rax_02c16e90,leaf,edge-verified,
 0x02c16ea0,5,leaf_mov_rax_02c16ea0,leaf,edge-verified,
@@ -18843,10 +19055,12 @@ address,size,name,system,status,notes
 0x02c1cf70,3,leaf_ret_zero_02c1cf70,leaf,edge-verified,
 0x02c1d0c0,3,leaf_ret_zero_02c1d0c0,leaf,edge-verified,
 0x02c1d0d0,3,leaf_ret_zero_02c1d0d0,leaf,edge-verified,
+0x02c1d770,4,leaf_mov_al_mem_02c1d770,leaf,edge-verified,
 0x02c1d8c0,6,leaf_mov_eax_k_02c1d8c0,leaf,edge-verified,
 0x02c1de80,4,leaf_mov_eax_mem_02c1de80,leaf,edge-verified,
 0x02c1de90,5,leaf_lea_rdi_02c1de90,leaf,edge-verified,generated: return arg0 + K
 0x02c1deb0,8,leaf_lea_rdi_02c1deb0,leaf,edge-verified,generated: return arg0 + K
+0x02c1e030,4,leaf_mov_al_mem_02c1e030,leaf,edge-verified,
 0x02c1e480,4,leaf_mov_eax_mem_02c1e480,leaf,edge-verified,
 0x02c1e680,4,leaf_mov_eax_mem_02c1e680,leaf,edge-verified,
 0x02c1e690,4,leaf_mov_eax_mem_02c1e690,leaf,edge-verified,
@@ -18856,6 +19070,9 @@ address,size,name,system,status,notes
 0x02c1e850,4,leaf_mov_eax_mem_02c1e850,leaf,edge-verified,
 0x02c1e860,4,leaf_mov_eax_mem_02c1e860,leaf,edge-verified,
 0x02c1e870,4,leaf_mov_eax_mem_02c1e870,leaf,edge-verified,
+0x02c1e880,4,leaf_mov_al_mem_02c1e880,leaf,edge-verified,
+0x02c1e890,4,leaf_mov_al_mem_02c1e890,leaf,edge-verified,
+0x02c1e8a0,4,leaf_mov_al_mem_02c1e8a0,leaf,edge-verified,
 0x02c1ea80,3,leaf_mov_al_imm_02c1ea80,leaf,edge-verified,
 0x02c1ee10,6,leaf_mov_eax_k_02c1ee10,leaf,edge-verified,
 0x02c1ee30,3,leaf_ret_zero_02c1ee30,leaf,edge-verified,
@@ -18924,9 +19141,12 @@ address,size,name,system,status,notes
 0x02c20c00,4,leaf_mov_eax_mem_02c20c00,leaf,edge-verified,
 0x02c20c10,5,leaf_lea_rdi_02c20c10,leaf,edge-verified,generated: return arg0 + K
 0x02c20c20,4,leaf_mov_eax_mem_02c20c20,leaf,edge-verified,
+0x02c21740,4,leaf_mov_al_mem_02c21740,leaf,edge-verified,
 0x02c21750,5,leaf_mov_rax_02c21750,leaf,edge-verified,
 0x02c21760,4,leaf_mov_eax_mem_02c21760,leaf,edge-verified,
 0x02c21770,4,leaf_mov_eax_mem_02c21770,leaf,edge-verified,
+0x02c21780,4,leaf_mov_al_mem_02c21780,leaf,edge-verified,
+0x02c21790,4,leaf_mov_al_mem_02c21790,leaf,edge-verified,
 0x02c217a0,5,leaf_mov_rax_02c217a0,leaf,edge-verified,
 0x02c217b0,5,leaf_mov_rax_02c217b0,leaf,edge-verified,
 0x02c21850,3,leaf_mov_al_imm_02c21850,leaf,edge-verified,
@@ -18951,6 +19171,7 @@ address,size,name,system,status,notes
 0x02c2e780,6,leaf_mov_eax_k_02c2e780,leaf,edge-verified,
 0x02c2e800,6,leaf_mov_eax_k_02c2e800,leaf,edge-verified,
 0x02c2e880,6,leaf_mov_eax_k_02c2e880,leaf,edge-verified,
+0x02c2edb0,4,leaf_mov_al_mem_02c2edb0,leaf,edge-verified,
 0x02c31ae0,8,leaf_lea_rip_02c31ae0,leaf,edge-verified,
 0x02c32c50,8,leaf_mov_rax_02c32c50,leaf,edge-verified,
 0x02c36d10,7,leaf_mov_eax_mem_02c36d10,leaf,edge-verified,
@@ -18960,6 +19181,8 @@ address,size,name,system,status,notes
 0x02c3b700,4,leaf_mov_eax_mem_02c3b700,leaf,edge-verified,
 0x02c3b710,4,leaf_mov_eax_mem_02c3b710,leaf,edge-verified,
 0x02c3b730,6,leaf_mov_eax_k_02c3b730,leaf,edge-verified,
+0x02c3b770,4,leaf_mov_al_mem_02c3b770,leaf,edge-verified,
+0x02c3c6a0,4,leaf_mov_al_mem_02c3c6a0,leaf,edge-verified,
 0x02c3d140,4,leaf_mov_eax_mem_02c3d140,leaf,edge-verified,
 0x02c3d780,4,leaf_mov_eax_mem_02c3d780,leaf,edge-verified,
 0x02c3d7f0,4,leaf_mov_eax_mem_02c3d7f0,leaf,edge-verified,
@@ -20509,6 +20732,7 @@ address,size,name,system,status,notes
 0x02cfa600,7,leaf_mov_eax_mem_02cfa600,leaf,edge-verified,
 0x02cfa610,7,leaf_mov_eax_mem_02cfa610,leaf,edge-verified,
 0x02cfd800,8,leaf_lea_rip_02cfd800,leaf,edge-verified,
+0x02cfdd50,7,leaf_mov_al_mem_02cfdd50,leaf,edge-verified,
 0x02cffe90,4,leaf_mov_eax_mem_02cffe90,leaf,edge-verified,
 0x02cffea0,4,leaf_mov_eax_mem_02cffea0,leaf,edge-verified,
 0x02cffeb0,4,leaf_mov_eax_mem_02cffeb0,leaf,edge-verified,
@@ -20665,6 +20889,7 @@ address,size,name,system,status,notes
 0x02d292d0,3,leaf_ret_zero_02d292d0,leaf,edge-verified,
 0x02d292f0,3,leaf_ret_zero_02d292f0,leaf,edge-verified,
 0x02d2a8f0,3,leaf_ret_zero_02d2a8f0,leaf,edge-verified,
+0x02d2a900,4,leaf_mov_al_mem_02d2a900,leaf,edge-verified,
 0x02d2a910,3,leaf_ret_zero_02d2a910,leaf,edge-verified,
 0x02d2a920,3,leaf_ret_zero_02d2a920,leaf,edge-verified,
 0x02d2a930,6,leaf_mov_eax_k_02d2a930,leaf,edge-verified,
@@ -20691,6 +20916,9 @@ address,size,name,system,status,notes
 0x02d44fe0,6,leaf_mov_eax_k_02d44fe0,leaf,edge-verified,
 0x02d48470,3,leaf_ret_zero_02d48470,leaf,edge-verified,
 0x02d48870,3,leaf_mov_al_imm_02d48870,leaf,edge-verified,
+0x02d48890,4,leaf_mov_al_mem_02d48890,leaf,edge-verified,
+0x02d488b0,4,leaf_mov_al_mem_02d488b0,leaf,edge-verified,
+0x02d488c0,4,leaf_mov_al_mem_02d488c0,leaf,edge-verified,
 0x02d488f0,3,leaf_ret_zero_02d488f0,leaf,edge-verified,
 0x02d48900,3,leaf_ret_zero_02d48900,leaf,edge-verified,
 0x02d4aa50,5,leaf_mov_rax_02d4aa50,leaf,edge-verified,
@@ -20736,6 +20964,7 @@ address,size,name,system,status,notes
 0x02d53150,3,leaf_ret_zero_02d53150,leaf,edge-verified,
 0x02d54ff0,5,leaf_lea_rdi_02d54ff0,leaf,edge-verified,generated: return arg0 + K
 0x02d555b0,4,leaf_mov_eax_mem_02d555b0,leaf,edge-verified,
+0x02d555d0,7,leaf_mov_al_mem_02d555d0,leaf,edge-verified,
 0x02d555f0,7,leaf_mov_eax_mem_02d555f0,leaf,edge-verified,
 0x02d55870,5,leaf_lea_rdi_02d55870,leaf,edge-verified,generated: return arg0 + K
 0x02d56c20,5,leaf_mov_rax_02d56c20,leaf,edge-verified,
@@ -21126,6 +21355,7 @@ address,size,name,system,status,notes
 0x02d6bf40,5,leaf_mov_rax_02d6bf40,leaf,edge-verified,
 0x02d6bf50,5,leaf_mov_rax_02d6bf50,leaf,edge-verified,
 0x02d6bf70,4,leaf_mov_eax_mem_02d6bf70,leaf,edge-verified,
+0x02d6bf80,4,leaf_mov_al_mem_02d6bf80,leaf,edge-verified,
 0x02d6bfc0,5,leaf_mov_rax_02d6bfc0,leaf,edge-verified,
 0x02d6bfd0,5,leaf_mov_rax_02d6bfd0,leaf,edge-verified,
 0x02d6bfe0,8,leaf_lea_rip_02d6bfe0,leaf,edge-verified,
@@ -21230,6 +21460,7 @@ address,size,name,system,status,notes
 0x02d6d040,8,leaf_lea_rip_02d6d040,leaf,edge-verified,
 0x02d6d050,3,leaf_ret_zero_02d6d050,leaf,edge-verified,
 0x02d6d070,6,leaf_mov_eax_k_02d6d070,leaf,edge-verified,
+0x02d6d110,4,leaf_mov_al_mem_02d6d110,leaf,edge-verified,
 0x02d6d3e0,5,leaf_mov_rax_02d6d3e0,leaf,edge-verified,
 0x02d6d3f0,5,leaf_mov_rax_02d6d3f0,leaf,edge-verified,
 0x02d6d400,8,leaf_lea_rip_02d6d400,leaf,edge-verified,
@@ -21766,6 +21997,7 @@ address,size,name,system,status,notes
 0x02dcd550,8,leaf_lea_rip_02dcd550,leaf,edge-verified,
 0x02dcd560,3,leaf_ret_zero_02dcd560,leaf,edge-verified,
 0x02dcd580,6,leaf_mov_eax_k_02dcd580,leaf,edge-verified,
+0x02dcf6a0,4,leaf_mov_al_mem_02dcf6a0,leaf,edge-verified,
 0x02dcfd90,4,leaf_mov_eax_mem_02dcfd90,leaf,edge-verified,
 0x02dd1a80,5,leaf_mov_rax_02dd1a80,leaf,edge-verified,
 0x02dd1a90,5,leaf_mov_rax_02dd1a90,leaf,edge-verified,
@@ -22010,15 +22242,19 @@ address,size,name,system,status,notes
 0x02e55510,3,leaf_mov_al_imm_02e55510,leaf,edge-verified,
 0x02e55b40,8,leaf_mov_rax_02e55b40,leaf,edge-verified,
 0x02e59020,8,leaf_lea_rip_02e59020,leaf,edge-verified,
+0x02e593c0,4,leaf_mov_al_mem_02e593c0,leaf,edge-verified,
 0x02e61130,6,leaf_mov_eax_k_02e61130,leaf,edge-verified,
 0x02e61140,67,frame_timing_get_wall_time_us,frame_timing,edge-verified,"Microseconds since the Unix epoch from gettimeofday as one 64-bit value; no base and no state, unlike the monotonic clocks"
 0x02e61280,101,engine_time_id,engine,edge-verified,"Wall clock as 128 bits: RAX usec|sec, RDX usec+counter+1|sec+counter as 32-bit sums, counter at 0x0570d83c read once and bumped by 2"
 0x02e613c0,23,engine_crc32_update_byte,engine,edge-verified,Folds one byte into a running reflected CRC-32 through the table at 0x04cdcf50; the caller owns the initial value and the final XOR
 0x02e613e0,44,engine_crc32_update,engine,edge-verified,Folds a buffer of length bytes into the same running CRC-32 in one pass; a zero length leaves the state untouched
 0x02e629a0,6,leaf_mov_eax_k_02e629a0,leaf,edge-verified,
+0x02e64d00,4,leaf_mov_al_mem_02e64d00,leaf,edge-verified,
+0x02e67080,7,leaf_mov_al_mem_02e67080,leaf,edge-verified,
 0x02e67090,5,leaf_lea_rdi_02e67090,leaf,edge-verified,generated: return arg0 + K
 0x02e670a0,6,leaf_mov_eax_k_02e670a0,leaf,edge-verified,
 0x02e68d30,5,leaf_mov_rax_02e68d30,leaf,edge-verified,
+0x02e6b9c0,7,leaf_mov_al_mem_02e6b9c0,leaf,edge-verified,
 0x02e6b9e0,3,leaf_ret_zero_02e6b9e0,leaf,edge-verified,
 0x02e6e0f0,3,leaf_mov_al_imm_02e6e0f0,leaf,edge-verified,
 0x02e6eae0,3,leaf_ret_zero_02e6eae0,leaf,edge-verified,
@@ -22031,7 +22267,9 @@ address,size,name,system,status,notes
 0x02e73620,8,leaf_mov_rax_02e73620,leaf,edge-verified,
 0x02e73630,8,leaf_mov_rax_02e73630,leaf,edge-verified,
 0x02e78fb0,5,leaf_lea_rdi_02e78fb0,leaf,edge-verified,generated: return arg0 + K
+0x02e7ade0,7,leaf_mov_al_mem_02e7ade0,leaf,edge-verified,
 0x02e7de20,5,leaf_mov_rax_02e7de20,leaf,edge-verified,
+0x02e7de30,4,leaf_mov_al_mem_02e7de30,leaf,edge-verified,
 0x02e82ea0,5,leaf_lea_rdi_02e82ea0,leaf,edge-verified,generated: return arg0 + K
 0x02e848e0,3,leaf_mov_al_imm_02e848e0,leaf,edge-verified,
 0x02e848f0,3,leaf_ret_zero_02e848f0,leaf,edge-verified,
@@ -23113,6 +23351,8 @@ address,size,name,system,status,notes
 0x02f7f070,8,leaf_lea_rip_02f7f070,leaf,edge-verified,
 0x02f7f080,3,leaf_ret_zero_02f7f080,leaf,edge-verified,
 0x02f7f1d0,6,leaf_mov_eax_k_02f7f1d0,leaf,edge-verified,
+0x02f7fa00,4,leaf_mov_al_mem_02f7fa00,leaf,edge-verified,
+0x02f7fa10,4,leaf_mov_al_mem_02f7fa10,leaf,edge-verified,
 0x02f7fc10,4,leaf_mov_eax_mem_02f7fc10,leaf,edge-verified,
 0x02f7fce0,5,leaf_mov_rax_02f7fce0,leaf,edge-verified,
 0x02f81200,7,leaf_mov_eax_mem_02f81200,leaf,edge-verified,
@@ -23133,9 +23373,12 @@ address,size,name,system,status,notes
 0x02f82b20,8,leaf_lea_rip_02f82b20,leaf,edge-verified,
 0x02f82b30,3,leaf_ret_zero_02f82b30,leaf,edge-verified,
 0x02f82c80,6,leaf_mov_eax_k_02f82c80,leaf,edge-verified,
+0x02f8a7b0,7,leaf_mov_al_mem_02f8a7b0,leaf,edge-verified,
 0x02f8acd0,6,leaf_mov_eax_k_02f8acd0,leaf,edge-verified,
 0x02f8ace0,5,leaf_mov_rax_02f8ace0,leaf,edge-verified,
 0x02f8d440,3,leaf_mov_al_imm_02f8d440,leaf,edge-verified,
+0x02f90250,4,leaf_mov_al_mem_02f90250,leaf,edge-verified,
+0x02f902d0,4,leaf_mov_al_mem_02f902d0,leaf,edge-verified,
 0x02f91940,3,leaf_ret_zero_02f91940,leaf,edge-verified,
 0x02f91950,3,leaf_ret_zero_02f91950,leaf,edge-verified,
 0x02f91960,3,leaf_ret_zero_02f91960,leaf,edge-verified,
@@ -23163,7 +23406,9 @@ address,size,name,system,status,notes
 0x02f97b10,3,leaf_mov_al_imm_02f97b10,leaf,edge-verified,
 0x02f97b80,5,leaf_mov_rax_02f97b80,leaf,edge-verified,
 0x02f97c60,5,leaf_mov_rax_02f97c60,leaf,edge-verified,
+0x02f99750,4,leaf_mov_al_mem_02f99750,leaf,edge-verified,
 0x02f99a40,3,leaf_ret_zero_02f99a40,leaf,edge-verified,
+0x02f99ab0,4,leaf_mov_al_mem_02f99ab0,leaf,edge-verified,
 0x02f9a7d0,3,leaf_mov_al_imm_02f9a7d0,leaf,edge-verified,
 0x02f9ad70,3,leaf_ret_zero_02f9ad70,leaf,edge-verified,
 0x02f9ad80,3,leaf_ret_zero_02f9ad80,leaf,edge-verified,
