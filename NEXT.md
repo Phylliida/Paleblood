@@ -383,3 +383,26 @@ the decode rather than by the boot.** 236,517 "entries" is the tell: a count tha
 must be found by content (ASCII runs, NID-shaped 11-char strings) rather than by a fixed stride.
 That is the next instrument: print the region's printable-string runs with their offsets, and look
 for the 686 import NIDs inside it.
+
+## The NID table, located by content: `pO96TwzOm5E#p#J` in eboot; `FxVZqBAA7ks` is NOT there
+
+Control hit, target missed -- and the miss is the finding:
+
+    eboot.elf  pO96TwzOm5E -> 0x53ecaae   ctx: ...rTXw65xmLIA#p#J.IWIBBdTHit4#p#J.cQke9UuBQOk#p#J.
+                                               pO96TwzOm5E#p#J.L-Q3LEjIbgA#p#J.rVjRvHJ0X6c#p#J...
+    eboot.elf  FxVZqBAA7ks -> MISS
+    libc.elf   FxVZqBAA7ks -> (see next)
+
+So the NID table **is** findable by content, entries are **fixed 16-byte slots** (11 chars + `#p#J` /
+`#q#q`-style 5-byte marker, then padding -- the neighbours are contiguous every 16 bytes), and the
+markers are **in the file**, not manufactured only at bind time. Good: the table is 16-byte strided,
+confirmed by adjacency rather than assumed.
+
+**And `FxVZqBAA7ks` being absent from eboot retracts a conclusion I stated two sessions ago** that
+`bind 47` proved eboot imports it. It does not: the bind dump spans **747 NIDs across more than one
+object**, while eboot's own table is 686. The row was in the dump, not in eboot. That is the same
+747-versus-686 gap, now with a concrete instance instead of a suspicion.
+
+**Rule for the file, not just the log: divide first.** 236,517 entries for a 157k-entry module, and
+747 NIDs for a 686-import object, were both arithmetic that contradicted the premise before any
+decode; `1,072 -> 1,144` was the same class.
