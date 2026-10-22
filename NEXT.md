@@ -1310,3 +1310,30 @@ dereference of `attr`**. It is produced downstream, inside what this body calls,
 **What is left is a host stack walk**: `rbp` is a host address and the chain is intact in the dump, so four
 return addresses resolved through `dladdr` name the frame that called the copy. **That is the next instrument,
 and it is the only one that can distinguish "inside `mutex_create`" from "inside glibc's own init".**
+
+## Frames: the fault is inside `malloc`, not inside `pthread_mutex_init`
+
+**Pre-registered reading, then the output.** Frame 1 was expected to be a glibc memory routine and frame 2
+either `pthread_mutex_init` ("glibc consumes a null we handed it") or `mutex_init` ("the copy is ours").
+
+    frame 0 build-release/runtime/pbboot+0x7389 (?)          <- our signal handler
+    frame 1 libc.so.6+0x419c0 (?)                            <- the restorer/trampoline
+    frame 2 libc.so.6+0xa8564 (?)                            <- the faulting instruction
+    frame 3 libc.so.6+0xa8b5d (?)
+    frame 4 libc.so.6+0xab53c (?)
+    frame 5 libc.so.6+0xabd86 (malloc)
+    in flight: #1048599 args 0x8800bfcd0 0 0x756ff2ffff20
+
+**Neither branch fired: frame 5 is `malloc`.** The interrupted chain is `mutex_create`'s `malloc` and four frames
+of glibc's own allocator internals. **So `pthread_mutex_init` was never reached, our body has not yet written to
+the guest pointer, and the null destination is inside the allocator, not in an argument we passed.**
+
+**And the attr question is settled by the recorded arguments, not by reading the body: `rsi` is exactly 0, so
+`attr` is NULL and the `TYPE_ERRORCHECK` substitution is the path taken.** The indirect shape (a non-null attr
+whose struct holds nulls) needs `rsi != 0` and cannot occur in this call.
+
+**What that leaves, and it is a smaller question: glibc's allocator is being entered with a broken state**, which
+is what a C library whose `%fs` was a *different* TCB for part of its life would look like -- tcache and the
+arena list live off `%fs`. **The test that separates "allocator broken by the earlier pre-swap entries" from
+"this call specifically": allocate and free 48 bytes at the top of the `#38` body, before anything else touches
+the heap, and see whether it faults there instead.**

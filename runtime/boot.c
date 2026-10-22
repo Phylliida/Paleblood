@@ -31,6 +31,7 @@
 #include <asm/prctl.h>
 #include <errno.h>
 #include <setjmp.h>
+#include <execinfo.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -116,11 +117,18 @@ static void guest_exit(int code)
     siglongjmp(back_to_host, 1);
 }
 
+/* The interrupted stack, captured INSIDE the handler: glibc's backtrace() follows .eh_frame and steps through
+   the kernel's signal frame into the faulting frames, which a manual rbp walk cannot do on an -O2 build.
+   Only addresses are kept here -- dladdr and printing happen after the siglongjmp, outside the handler. */
+static void *fault_frames[6];
+static int fault_frame_count;
+
 static void on_signal(int sig, siginfo_t *info, void *context)
 {
     /* First statement: this handler runs on whatever %fs was installed when control was lost, and
        everything below it -- dladdr, snprintf, printf -- is host code that needs the host base. */
     rt_tls_enter_host();
+    fault_frame_count = backtrace(fault_frames, 6);
     const ucontext_t *uc = context;
     if (sig == SIGALRM) {
         outcome = TIMEOUT;
@@ -629,6 +637,15 @@ int main(int argc, char **argv)
         }
         printf("pbboot: fault on pbboot sha256 %s (the artifact that is running, not a rebuild)\n",
                rt_identity_sha());
+        for (int f = 0; f < fault_frame_count; f++) {
+            Dl_info di;
+            if (dladdr(fault_frames[f], &di) && di.dli_fname)
+                printf("pbboot: frame %d %s+%#llx (%s)\n", f, di.dli_fname,
+                       (unsigned long long)((char *)fault_frames[f] - (char *)di.dli_fbase),
+                       di.dli_sname ? di.dli_sname : "?");
+            else
+                printf("pbboot: frame %d %p (unresolved)\n", f, fault_frames[f]);
+        }
         if (rt_syslib_in_flight == 0xffffffffu)
             printf("pbboot: in flight: none (not inside a syslib body)\n");
         else
