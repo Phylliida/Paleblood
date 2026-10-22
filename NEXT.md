@@ -406,3 +406,17 @@ object**, while eboot's own table is 686. The row was in the dump, not in eboot.
 **Rule for the file, not just the log: divide first.** 236,517 entries for a 157k-entry module, and
 747 NIDs for a 686-import object, were both arithmetic that contradicted the premise before any
 decode; `1,072 -> 1,144` was the same class.
+
+## libc.elf: which NIDs it holds, and who references its name table
+
+Measured in one call (contexts trimmed):
+
+- `_Stderr` = `H8AprKeZtNg` -- see commit body for the hit offsets and the bytes around them.
+- `_Stdout` = `2sWzhYqFH4E`, `_Stdin` = `1TDo-ImpqJc` -- likewise.
+- `pO96TwzOm5E` (`sceKernelGetDirectMemorySize`): **MISS in libc.elf**, while it HITS in eboot.
+  So the companion's expectation that libc imports it is wrong; **libc does not call it**, eboot
+  does. Presence in an object's name table is per-object and a miss is the informative outcome.
+
+Referrer search for the name-table offset `0xc3094` as `u32` and `u64` is recorded in the body; a
+table holding that value is the entry array that indexes the names, which is the structure the
+relocation walk needs.
