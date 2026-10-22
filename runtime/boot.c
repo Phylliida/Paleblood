@@ -414,12 +414,26 @@ static void resolve(object *o)
         /* The partition, not the total: a resolved slot is bundled, syslib, or a third provider nobody has
            named, and only printing it per (object, nid) can tell those apart. A total that does not equal
            the sum of its named parts is a total about nothing. */
+        /* The predicate behind each class, written where it is computed, because a residual cannot be
+           interpreted until the classes and the trampoline form are defined against the same predicate:
+             bundled            MODULE             -- a NID+library match in another mapped object, and not
+                                                     the data-unfilled case that deliberately leaves it unbound
+             syslib             RUNTIME            -- a NID+library match in rt_syslib, capability IMPLEMENTED
+             syslib-unresolved  RUNTIME_UNRESOLVED -- matched in rt_syslib, capability NOT implemented; it is
+                                                     still bound to `s->fn`, which is what the trampoline sees
+             none               NONE               -- matched in neither table, so bound[] stays 0
+           The trampoline's own predicate is `target != 0`, i.e. `bound[i] != 0`, and it is emitted only for
+           FUNCTION imports. Therefore: 126 B <=> bound != 0, and 131 B <=> bound == 0, over functions only.
+           The kind is printed beside the class so that the two populations can be intersected rather than
+           compared in aggregate. */
         if (getenv("BB_IMPORT_PROVIDER_VERBOSE"))
-            fprintf(stderr, "provider %s %s %s\n", o->label, name,
+            fprintf(stderr, "provider %s %s %s %s bound=%s\n", o->label, name,
                     o->provider[i] == MODULE            ? "bundled"
                     : o->provider[i] == RUNTIME         ? "syslib"
                     : o->provider[i] == RUNTIME_UNRESOLVED ? "syslib-unresolved"
-                                                          : "none");
+                                                          : "none",
+                    rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_DATA ? "data" : "function",
+                    (o->bound[i] || name[0] == 0) ? "" : (o->bound[i] ? "set" : "null"));
     }
 }
 

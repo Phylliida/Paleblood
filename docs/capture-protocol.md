@@ -204,3 +204,31 @@ I cannot re-run is a number I may not act on.** From here the parser prints its 
 emitted the `unimplemented` form**, most plausibly the 9 `syslib-unresolved` entries whose `fn` is null plus 4
 others — **a hypothesis, not a finding**, and the next instrument is one line per slot printing
 `<object>, <nid>, <provider>, <target == 0>`.
+
+### The residual closes to zero: 13 bound *data* imports were the whole of it
+
+The instrument now prints `<object>, <nid>, <class>, <kind>, <bound>` per import, and the predicates are
+written in `runtime/boot.c` where they are computed. Cross-tabulated over **848 rows**:
+
+```
+eboot:            bundled/function 200  bundled/data 13  syslib/function  61
+                  syslib-unresolved/function 5   none/function 400   none/data  7
+libc.elf:         bundled/function   8  syslib/function  19  syslib-unresolved/function 3  none/function  47  none/data 2
+libSceFios2.elf:  syslib/function   29  syslib-unresolved/function 1  none/function 50  none/data 3
+```
+
+- **`none` ⇒ `bound == 0`: 0 of 509 bound.** The classifier and the trampoline form answer the **same**
+  question, so there is no +21 and **no class of "resolved target the classifier called none."**
+- **`syslib-unresolved` ⇒ `bound != 0`: 9 of 9 set.** The entry is capability-unimplemented, not null-`fn`;
+  it still binds to `s->fn`. So the −4/−13 family was never the shape of it.
+- **Bound = 221 + 109 + 9 = 339, of which 13 are `data`** → bound **functions** = **326 = the 126 B count**,
+  exactly and per object (eboot 266, libc 30, Fios2 30).
+- **Unbound = 509, of which 12 are `data`** → unbound **functions** = **497 = the 131 B count**, per object
+  (eboot 400, libc 47, Fios2 50). **Data = 13 + 12 = 25**, which is 848 − 823.
+
+**My error was comparing two populations in aggregate**: the class totals include the 25 data imports and the
+trampoline totals exclude all of them, so the 13 bound data imports appeared as a phantom residual. **The
+partition is exact when intersected on `kind`; the totals were the only thing that disagreed.**
+
+**Consequence for the 60.4%:** it is right as stated and now provably so — **497 of 823 function slots**, and
+it excludes data by construction rather than by accident.
