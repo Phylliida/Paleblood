@@ -26,6 +26,12 @@
    numbers, and inventing them would be indistinguishable from having them. */
 enum { k_error_inval = 0x16, k_error_fault = 0x0e, k_error_nomem = 0x0c };
 
+/* INVARIANT, and it is not deferrable: this runtime has one address space. The guest is a single
+   mapping, so an address this arena hands out is already guest-dereferenceable and
+   sceKernelMapDirectMemory must be the IDENTITY over the arena -- it returns the physical address
+   it was given. If Map instead invented a separate virtual range, every range Allocate had
+   already handed out would become unreadable the moment anything mapped it, and the failure would
+   look like memory corruption in whichever consumer ran second. */
 enum { k_page = 0x1000u, k_arena_bytes = 0x4000000u /* 64 MiB, the model's whole budget */ };
 
 static unsigned char *arena;

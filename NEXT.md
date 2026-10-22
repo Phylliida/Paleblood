@@ -113,3 +113,21 @@ allocations recorded in a table the differential can read back.
 
 Also noted: bind-dump index 0 `P330P3dFF68` is marked UNRESOLVED in the external table, so it has
 no known name and must not be given a guessed implementation.
+
+## `FxVZqBAA7ks`: not in any table we hold, which is not the same as unnamed
+
+A libc -> libkernel import. The public NID tables are game-facing eboot imports, so libc-internal
+ones are mostly absent; two searches returned nothing. Stop looking up, start reading.
+
+**The call site is the oracle** (`libc.elf+0x27367`, ~60 bytes before it, from section-addressed
+bytes -- `harness` has no `elf_sections` helper, so find the section containing the vaddr first):
+`Allocate` takes six arguments and writes through the sixth; `Map` takes a physical address first
+and returns a pointer; `Release` takes one address and no out-param. **How many arguments are set,
+and whether one points at writable guest memory, distinguishes the family with no name at all.**
+Then read what libc does with the return: dereference means Map, compare-to-zero means status.
+
+**And `Map` must be identity over the arena** -- written into the arena file's header rather than
+here, because a later reader of the code is the one who needs it: one address space, so an arena
+address is already guest-dereferenceable, and inventing a separate virtual range would make every
+range `Allocate` had already handed out unreadable, failing as memory corruption in whichever
+consumer ran second.
