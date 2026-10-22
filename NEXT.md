@@ -1080,3 +1080,20 @@ pass over all 157,757 catalog entries decoding per entry. The dominant form is `
 **So the main thread has been reading glibc's TCB since the first guest instruction that touched it.** TLS is
 not a threads-only concern and (a) is not "threads need TLS": it is **"the boot has read the wrong TLS all
 along"**. That reframes the subsystem decision and it is why the measurement came before the scoping.
+
+## The two TLS measurements, both decisive, and they close the design question
+
+**(1) Displacement histogram: one distinct offset, `fs:[0x0]`, 16,854 times, 0 negative, 0 positive.**
+Not "mostly zero" -- **the guest reads exactly one thing through %fs: its own TCB self-pointer.** So the
+first guest TLS block needs to be valid, aligned, and have its self-pointer at offset 0, and nothing else
+about the layout is load-bearing yet. `PT_TLS` (filesz 0x220 / memsz 0x4a0) sizes the eventual static image;
+no offset in the code constrains where the pointer must sit, because there is only one offset and it is 0.
+
+**(2) `wrfsbase` is available and works: CPUID leaf 7 EBX bit 0 set (`ebx = 0x219c91a9`), and a round-trip
+test wrote a block and read it back (`fsbase 0x727a4184e740` -> to `0x6231ff781080` -> restored).** So (a) is
+feasible with a two-instruction swap per guest<->host transition, **not** an `arch_prctl` per syslib call, and
+the architecture does not have to batch guest code between host calls.
+
+**Scope this fixes:** one guest TCB block per modelled thread, self-pointer at offset 0, `wrfsbase` on entry
+to guest code, restore glibc's base on entry to any host function that may touch libc (which is all of them,
+so the restore belongs in the same place as the trampoline's call, not sprinkled per call).
