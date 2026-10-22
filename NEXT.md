@@ -643,3 +643,24 @@ been names.
 **What survives:** the three bss addresses, the measured `0x100` stride, the 0x18-strided records
 existing, and the companion's name-order correction. **What does not:** my name-pointer reading, and with
 it the "export table dump" idea in that form.
+
+## Delta resolution: 8 of 8 land inside LOAD0, one code target per object, and the mechanism is now ours
+
+Resolving each record's field2 pair as **`target = address_of_the_delta_word + value`**:
+
+    0xbf060 record:  0xb8f90 -0x9694 -> 0xaf8fc (rodata)   0xb8f94 -0x5da78 -> 0x5b51c (code)
+    0xbf160 record:  0xb8f98 -0x9654 -> 0xaf944 (rodata)   0xb8f9c -0x5d718 -> 0x5b884 (code)
+    0xbf260 record:  0xb9160 -0x86b8 -> 0xb0aa8 (rodata)   0xb9164 -0x58f88 -> 0x601dc (code)
+
+**8 for 8 land inside libc's own LOAD0**, the code targets disassemble as function prologues
+(`AWAVAUATSH` = push r15/r14/r13/r12/rbx at `0x5b884`; `UH..H.=.V` at `0x601dc`), and the rodata
+targets are not strings.
+
+**So the objects' pointer fields are stored in the file as self-relative deltas, and the interesting
+consequence is the one nobody predicted:** the `__sFILE` objects are in bss and read as zeros, while
+**the wiring that must fill them is present and resolvable in the file.** A loader that maps the segment
+and applies no relocation leaves them zero -- **which is exactly the null at `+0x28` we observe.**
+
+**This is no longer a guest-side question.** The next instrument is our own code: does `boot.c`'s
+relocation pass run for modules other than eboot, and does anything treat a zero word as "unset" and
+skip it?
