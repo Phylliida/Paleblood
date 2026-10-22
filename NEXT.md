@@ -839,3 +839,26 @@ files are globbed" is a claim about one directory, and I had been quoting it abo
 **Pre-registration scored: new `unimplemented` NID, not the `_write` SIGSEGV** -- `6ULAa0fq4jA`, which
 `symbols/import_names.csv:145` already names `scePthreadRwlockInit` (bind 58). **The stdio wall did not
 reappear, so the panic path was its only caller so far.**
+
+## The handle table landed, and the guard nobody had seen fire fired on the right thing
+
+`runtime/syslib/pthread_rwlock.c`: guest storage keeps **8 opaque bytes** (index + magic `PTWH`), the host
+`pthread_rwlock_t` lives in a 32-row side table under its own lock, and a stale or zeroed handle
+**refuses and prints the handle** rather than locking freed memory. Built as a family so mutex/once/cond
+land on the same table instead of four ad hoc globals. Attribute objects are not modelled and are not
+read; that is written in the code, not implied.
+
+**Scored:** 34 -> **40 implemented**, 435 -> **429 unbound**, called 28 -> **36**, next stop
+`188x57JYp0g` = **`sceKernelCreateSema`** (import_names.csv:148, bind 148) -- so the pthread cluster
+prediction holds one more link.
+
+**And the structural data refusal from two commits ago fired for the first time**, naming its own NIDs:
+
+    eboot imports 2WVBaSdGIds#q#q from libc.elf: provider=data-unfilled
+    eboot imports TVfbf1sXt0A#q#q from libc.elf: provider=data-unfilled
+
+`2WVBaSdGIds` = `_ZSt3cin`, `TVfbf1sXt0A` = `_ZSt4cerr` -- **C++ stream objects, which live in .bss by
+construction.** So the predicate (past `p_filesz`, inside `p_memsz`) selected exactly the class it was
+written for, on the first boot that reached it, and it did so by naming a mechanism rather than an
+address window. **A guard whose first firing is a known mechanism is evidence; a guard whose first firing
+is a mystery is a bug report about the guard.**
