@@ -30,6 +30,16 @@ import thunks, corrected down from six by looking). `_init_env` landed at `f1919
 Board: 21,128 / 157,757 = 13.39% edge-verified incl. verified; 21 verified; 30 approvals against
 21,086 clean rows; 0 of 528 `zero_init`. **`verified` has not moved in thirty slices.**
 
+## Debt 0 (highest value, cheapest): make boot.py unable to clobber a table
+
+`boot.py` has overwritten tracked tables with raw NIDs **twice** -- the 223-row `5f50aac` and
+again today (`symbols/imports.csv`, `symbols/module_functions.csv`, both restored from HEAD).
+Both were caught by `git status` after the fact and **never by a gate**, so vigilance is not the
+fix: `boot.py` must **refuse to write when a raw NID would land and `--nids` was not given**, or
+write to a temp path and rename only on a clean table -- the staging discipline
+`static_guard_gen.apply()` already uses, because a writer that cannot undo trusts itself.
+Cost: one guard. It has already cost two recoveries.
+
 ## Carried debts (restored — `cat >` truncated the previous NEXT.md)
 
 The earlier NEXT.md was overwritten by a heredoc. Its content is not in this file, and the commit
