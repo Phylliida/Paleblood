@@ -290,3 +290,41 @@ proposal: it is a **defect that had already landed** — `rip_add_store` 362 + `
 Measured with the new tooth, over the unlanded leaf set: **5,423 transcribable · 4,097 position
 independent (the honest size of ask 7) · 1,326 address-dependent** — those 1,326 need C bodies
 computing `image_base + K`, which is exactly how the 8,072 `lea rax,[rip+K]` members were done.
+
+### 1j (v) — pre-registration for ask 7, written before the run exists
+
+If 1j is ratified, the landing run is expected, to the unit:
+
+| quantity | now | after 4,097 | source |
+|---|---|---|---|
+| edge-verified incl. verified | 33,488 | **37,585** | functions.csv status tally |
+| ledger rows | 33,589 | **37,686** | verification.csv (**surplus stays 101**) |
+| bytes | 276,841 | **316,323** | sum of the members' own sizes (39,482 B) |
+| byte-identical | 11,112 | **15,209** | verification.csv `cases='bytes'` |
+
+Batches: **9** (8 × 500 + 97), one digest each, so one bad member decays ~500 rows and names them.
+
+Two enumerators, named rather than averaged: the **leaf census** (`C.members`) gives **4,097 / 39,482 B**;
+the **size-band census** over the whole catalogue gives **4,099 / 39,488 B** for 1..16 B. They differ by
+**two members**, by construction: one enumerates *leaves*, the other every unlanded catalogue row in the
+band. Ask 7 covers the leaf population, 4,097.
+
+### 1j (vi) — the >16 B tier, measured before anything is written
+
+`tools/census_band.py` applies the §1h + 1j(iv) filter to unlanded catalogue rows by size band:
+
+| band | unlanded | transcribable + position independent | yield | bytes |
+|---|---|---|---|---|
+| 1..16 | 12,578 | 4,099 | 32.6% | 39,488 |
+| 17..24 | 4,846 | 977 | 20.2% | 19,484 |
+| 25..32 | 6,760 | 433 | 6.4% | 12,426 |
+| 33..48 | 8,696 | 490 | 5.6% | 19,412 |
+| 49..64 | 8,819 | 237 | 2.7% | 13,219 |
+| 65..96 | 11,523 | 245 | 2.1% | 19,355 |
+| 97..128 | 8,982 | 111 | 1.2% | 12,188 |
+
+**2,493 rows above 16 B** (2,137 of them in 17..64), not the ~5,600 a flat 5% projected: the 5% holds
+as an *average* of a distribution that decays from 20.2% to 1.2% inside the first 128 bytes. **The
+cheap part of the >16 B tier is the part immediately above the boundary** — and above ~128 B, single-
+block, no-call, position-independent bodies are rare enough that the leaf tier is still the cheapest
+supply in the catalogue.
