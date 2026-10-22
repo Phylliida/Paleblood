@@ -60,3 +60,36 @@ naming it.
 
 Both were cheap to fix now and expensive after the first capture exists, because **the first capture is the
 format everything else copies.**
+
+## The snapshot is a `call` inside the stub, before the body — design pinned, not yet emitted
+
+**A post-body snapshot is silently wrong.** The body may write through its own pointer arguments, so
+capturing after `call r10` returns replays a **mutated** input while looking perfectly correct: the
+differential then compares two bodies over post-image bytes, and the difference either names the wrong side
+or reports an agreement that means nothing. **The snapshot must run before the body, inside the stub.**
+
+Byte plan for the hook path (`rt_write_boundary_stub`, `in_flight_addr == 0`), in order:
+
+1. `movabs r10, snapshot` — the capture function's address, a second immediate alongside the target's.
+2. `push rdi/rsi/rdx/rcx/r8/r9` — the *entry* values of the caller-saved argument registers, pushed **while
+   they still hold the guest's values**; they are what the capture records and what the body must still see.
+3. `movabs r11, host_fs` · `wrfsbase r11` — **before the snapshot call, not after**: the snapshot is ordinary
+   C and touches `errno`, so on the guest TCB its first libc access faults exactly as the import path did
+   (`libc+0x8ea99`, `movaps`, `si_addr = 0`).
+4. `push rbx; mov rbx,rsp; and rsp,-16; call r10; mov rsp,rbx; pop rbx` — the same alignment idiom already
+   in the stub, because `and rsp,-16` handles the pushes as well.
+5. `pop r8/r9/rcx/rdx/rsi/rdi` in reverse — the body now sees the guest's own entry values.
+6. `call <target>`, then `wrfsbase guest`, then `ret` as today.
+
+**Only the register save/restore and the two `wrfsbase`s are hand-emitted; all copying is C**, so the
+capture stays a normal function that can be tested with none of this machinery in the way. Cost: one more
+`movabs` (10 B), six pushes and six pops (12 B), and a second `call` (3 B) — **`rt_boundary_stub_size` must
+be recomputed and the capacity refusal re-proved with the sentinel**, since the last emitter defect was a
+bound nine bytes short of its own product. `TRAMPOLINE_SIZE` is 220 and the import path's occupancy has to
+be printed (`BB_TRAMPOLINE_VERBOSE=1`) before this lands.
+
+**The falsifiable test, and it needs no game:** a body that writes through its own pointer argument —
+`*(uint64_t *)rdi = 0xdeadbeef` — with the snapshot taken before the body. **Assert the captured bytes are
+the pre-call ones.** Run the same case with the snapshot moved after the call and it must **fail**, or the
+test is measuring the harness rather than the ordering. **That mutation is exactly what a post-body design
+absorbs silently**, which is why the negative control is the load-bearing half.
