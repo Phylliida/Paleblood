@@ -119,16 +119,24 @@ static void guest_exit(int code)
 
 /* The interrupted stack, captured INSIDE the handler: glibc's backtrace() follows .eh_frame and steps through
    the kernel's signal frame into the faulting frames, which a manual rbp walk cannot do on an -O2 build.
-   Only addresses are kept here -- dladdr and printing happen after the siglongjmp, outside the handler. */
+   Only addresses are kept here -- dladdr and printing happen after the siglongjmp, outside the handler.
+
+   OPT-IN, because backtrace() is not async-signal-safe: it walks the link map and takes glibc's
+   dl_load_lock, and a fault that lands while the main thread holds that lock deadlocks *inside* the
+   handler. It presents as a subprocess timeout with no output on a loaded machine and as a 4 ms pass
+   when run alone -- which is how ctest caught it once and a standalone suite run did not. Everything
+   else in this handler is a register store, a ucontext read, rt_tls_enter_host (one wrfsbase) and the
+   siglongjmp; the formatting below runs after it, on the normal stack. */
 static void *fault_frames[6];
 static int fault_frame_count;
+static int fault_backtrace_enabled;
 
 static void on_signal(int sig, siginfo_t *info, void *context)
 {
     /* First statement: this handler runs on whatever %fs was installed when control was lost, and
        everything below it -- dladdr, snprintf, printf -- is host code that needs the host base. */
     rt_tls_enter_host();
-    fault_frame_count = backtrace(fault_frames, 6);
+    fault_frame_count = fault_backtrace_enabled ? backtrace(fault_frames, 6) : 0;
     const ucontext_t *uc = context;
     if (sig == SIGALRM) {
         outcome = TIMEOUT;
@@ -458,6 +466,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "pbboot: heap probe at init (before any guest code): malloc(48) = %p\n", p);
         free(p);
     }
+    fault_backtrace_enabled = getenv("BB_FAULT_BACKTRACE") != NULL;
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
     int timeout = 30, trace = 0, list = 0;
     for (int i = 1; i < argc; i++) {
@@ -704,7 +713,12 @@ int main(int argc, char **argv)
         }
         printf("pbboot: fault on pbboot sha256 %s (the artifact that is running, not a rebuild)\n",
                rt_identity_sha());
-        {
+        /* The %fs/stub dump below is an instrument, not a report: it proved the WRGSBASE fix and the stub
+           layout, and that question is closed. Ungated, it ran on every fault, read objects[1] on a
+           single-object image, and faults itself -- re-entering this path forever while stdout stayed
+           buffered, which reads as a hang (12 of 12 on a synthetic ELF, and ctest's 60 s timeout).
+           An instrument left in a report is a defect the report cannot show. */
+        if (getenv("BB_FAULT_STUB_DUMP") && object_count > 1 && objects[1].tramp) {
             /* The stub's two %fs bases are imm64 literals in the instruction stream, so the question "did it
                write the host base" is answered by reading them. Imm64s make a wrong value silent; a
                (%rip)-relative load would make it impossible. */
@@ -723,7 +737,7 @@ int main(int argc, char **argv)
                     printf("pbboot: stub movabs r11 @%d = %#llx\n", b2, (unsigned long long)imm);
                 }
         }
-        {
+        if (getenv("BB_FAULT_STUB_DUMP")) {
             uint64_t live_fs = 0;
             __asm__ volatile("rdfsbase %0" : "=r"(live_fs));
             printf("pbboot: stub pre-write fs %#llx\n", (unsigned long long)rt_stub_fs_pre);
@@ -736,6 +750,12 @@ int main(int argc, char **argv)
                    (unsigned long long)live_fs,
                    rt_tls_host_base() == rt_tls_guest_base() ? "  <-- HOST FS IS THE GUEST BLOCK" : "");
         }
+        /* Absence must be explained where it is observed: an empty frame list here means the
+           backtrace was not captured, not that the fault had no stack. */
+        if (fault_frame_count == 0)
+            printf("pbboot: no frames captured (backtrace() is off by default: it takes dl_load_lock "
+                   "inside a signal handler and deadlocks under load; set BB_FAULT_BACKTRACE=1 when "
+                   "the frames are worth that hazard)\n");
         for (int f = 0; f < fault_frame_count; f++) {
             Dl_info di;
             if (dladdr(fault_frames[f], &di) && di.dli_fname)

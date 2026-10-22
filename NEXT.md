@@ -1474,10 +1474,19 @@ a guest execution. The hook→host transition has literally never run.
   `N installed` counts writes. `test/test_host_hooks.py` exercises all four cases by compiling the
   callback against a stand-in image.
 
-**Open, load-dependent:** `ctest -R tools` failed once at 130 s with `test_fault_is_reported_with_offset`
-timing out (60 s subprocess limit); the same tree passes `307 tests OK in 69.6 s` standalone, and that
-test alone passes in 4 ms. `on_signal`/`rt_fault` call `dladdr` and `printf` from a signal handler —
-not async-signal-safe, and a plausible deadlock under load. Do not claim ctest green until it is fixed.
+**The "load-dependent flake" was neither load-dependent nor a deadlock — it was a leftover diagnostic
+plus a stale binary.** `test_tools.Boot` defaulted to `build/runtime/pbboot`, a **two-day-old 64,200-byte
+binary** (`sha256 6d926320c71b`), so the suite passed for days against an artifact nobody had rebuilt;
+ctest passes `BB_PBBOOT=build-release/...`, which is why only ctest saw it. Against the current binary the
+synthetic one-object ELF hangs **12 of 12**, deterministically: the fault path contained an ungated
+instrument (`int k = 1; objects[k].tramp + TRAMPOLINE_SIZE * 38`, a 90-byte hexdump of the stub's imm64
+`%fs` bases) that reads `objects[1]` on an image with one object, faults inside the reporting path, and
+re-enters it forever while stdout stays buffered — which looks exactly like a hang at the next printf.
+Fixed: that dump and the `%fs` dump are behind `BB_FAULT_STUB_DUMP`, bounded by `object_count > 1 &&
+objects[1].tramp`; `backtrace()` in the handler is behind `BB_FAULT_BACKTRACE` (it takes `dl_load_lock`
+in a signal handler, and although it was not this bug it is a real one); an empty frame list now says
+*why* it is empty; the test takes the child's partial output on timeout; and the pbboot default is
+`build-release` first. `ctest` **15/15 green, 84.06 s**; suite **307 OK, 70.4 s**.
 
 **Recorder (original trigger, still the second half).** The in-game capture path is blocked on boot
 reaching past the `scePthreadCreate` wall

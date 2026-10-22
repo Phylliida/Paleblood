@@ -44,6 +44,13 @@ def _install_mode_hosts():
     A pool B body is shorter than the 14-byte absolute jump a hook needs, so the differential
     verifies it by calling the replacement as a host symbol. Declaring that is the only way past
     the hooks-entry requirement; an absent declaration still refuses.
+
+    This is a reason, not a policy. `jmp qword ptr [rip+0]` plus its target is 14 bytes; the
+    smallest hookable row in game/hooks.csv is 16 (then 18, 19, 20, 21, 22; largest 3,222), so every
+    declared hook fits — while pool B's shapes do not even fit a 5-byte `jmp rel32` (`xor eax,eax;
+    ret` is 3 bytes, `mov rax,[rdi+K]; ret` is 6 to 8). Patching one would overwrite the next
+    function's first instruction and the run would stay green, which is why no size floor lift is
+    ever coming: the instruction is too short to hold a jump, not merely short of our preference.
     """
     import csv as _csv
     import pathlib as _pathlib

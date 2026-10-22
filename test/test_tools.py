@@ -505,7 +505,13 @@ class Boot(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.pbboot = os.environ.get('BB_PBBOOT') or os.path.join(ROOT, 'build', 'runtime', 'pbboot')
+        # build-release first: `build/` held a two-day-old binary, and this test passed for days against
+        # an artifact nobody had rebuilt (the fault-path hang below only reproduced on the current one).
+        # A gate that runs a stale binary is not a red gate, it is an absent one.
+        cls.pbboot = (os.environ.get('BB_PBBOOT')
+                      or next((p for p in (os.path.join(ROOT, 'build-release', 'runtime', 'pbboot'),
+                                           os.path.join(ROOT, 'build', 'runtime', 'pbboot'))
+                               if os.path.exists(p)), os.path.join(ROOT, 'build', 'runtime', 'pbboot')))
         if not os.path.isfile(cls.pbboot):
             raise unittest.SkipTest('pbboot not built')
         sys.path.insert(0, os.path.join(ROOT, 'test'))
@@ -523,8 +529,17 @@ class Boot(unittest.TestCase):
         try:
             with open(os.path.join(d, 'e.elf'), 'wb') as f:
                 f.write(data)
-            p = subprocess.run([self.pbboot, os.path.join(d, 'e.elf'), '--status', os.path.join(d, 's.json'),
-                                '--timeout', '5'], capture_output=True, text=True, timeout=60)
+            try:
+                p = subprocess.run([self.pbboot, os.path.join(d, 'e.elf'), '--status', os.path.join(d, 's.json'),
+                                    '--timeout', '5'], capture_output=True, text=True, timeout=60)
+            except subprocess.TimeoutExpired as e:
+                # A deadlock and a slow machine are indistinguishable unless the partial output is shown,
+                # and the difference decides whether this is a product defect or a runner one.
+                self.fail('pbboot did not exit within 60 s\n  stdout so far: %r\n  stderr so far: %r'
+                          % ((e.stdout or b'').decode('utf-8', 'replace')[-2000:] if isinstance(e.stdout, bytes)
+                             else (e.stdout or '')[-2000:],
+                             (e.stderr or b'').decode('utf-8', 'replace')[-2000:] if isinstance(e.stderr, bytes)
+                             else (e.stderr or '')[-2000:]))
             self.assertEqual(p.returncode, 0, p.stderr)
             with open(os.path.join(d, 's.json')) as f:
                 return json.load(f)
