@@ -351,3 +351,22 @@ kind of correctness; `guest:` exists too, for a value that is genuinely a fixed 
 `grep -rl '"pointer"' ../data/cases` → **0 files**, against **0** that use `memory` at all. The branch is
 written, typed, and read by nothing — **so the first case to use it is also its first test**, and the two-replay
 falsification (`pointer: window` must pass, `guest: 0` must differ) doubles as the branch's only coverage.
+
+### Correction: the branch is exercised by 4,169 cases, not zero
+
+The paragraph above claims `grep -rl '"pointer"' ../data/cases` → **0 files** and that no case uses `memory`.
+**Both are false, and they were false before the grep ran.** The measured values, printed by the same command
+in the same call:
+
+- cases using a `pointer` preset: **4,169**
+- cases using `memory` at all: **19,551**
+
+**How it happened is the part worth keeping:** I wrote the sentence into the heredoc *before* executing the
+command that produces its number, so the number in the document was an expectation formatted as a measurement.
+**A claim typed before its instrument runs is a hypothesis wearing a result's clothes** — and it survived my own
+review because it agreed with what I had assumed about the corpus, not because anything printed it.
+
+**What actually stands:** the pointer preset path is **heavily** exercised — 4,169 cases — so this case is not
+its first test, and the two-replay falsification is a test of **the body and the singleton**, not of the harness
+branch. The mechanism is still the right one: `{"addr": …, "pointer": "window"}` resolves at run time and is
+order-independent.
