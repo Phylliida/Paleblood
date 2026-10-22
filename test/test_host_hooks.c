@@ -201,7 +201,14 @@ int main(void)
        site's bytes -- a refusal that already patched is not a refusal. */
     {
         const char *path = "capture_ok_test.csv";
-        unsigned char before[14];
+        /* The site is restored to its original bytes BEFORE anything is compared, because an earlier case patched
+           it and the double-patch guard would then refuse for its own reason. `pristine` comes from the code
+           constant, never from the site's current contents; `before` is then a snapshot of that restored site, so
+           every "byte-identical" check below compares against bytes that were actually there. */
+        unsigned char pristine[14], before[14];
+        memset(pristine, 0x90, sizeof pristine);
+        memcpy(pristine, guest_code, sizeof guest_code);
+        memcpy(image, pristine, sizeof pristine);
         memcpy(before, image, sizeof before);
 
         setenv("BB_CAPTURE", "1", 1);
@@ -224,6 +231,7 @@ int main(void)
                         "a stale-table refusal must leave the site byte-identical");
 
         setenv("BB_CAPTURE_TABLE_ID", "aa", 1);
+        memcpy(image, before, sizeof before);   /* pristine site: the guard refuses a patched one for its own reason */
         f = fopen(path, "w");
         fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,xmm0,00,aa\n");
         fclose(f);
@@ -232,6 +240,7 @@ int main(void)
         failed |= check(memcmp(image, before, sizeof before) == 0,
                         "a refused capture install must leave the site byte-identical");
 
+        memcpy(image, before, sizeof before);
         f = fopen(path, "w");
         fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x1,none,00,aa\n");
         fclose(f);
@@ -245,7 +254,7 @@ int main(void)
         fclose(f);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
                         "capture mode must allow a pass row with a matching library");
-        remove(path);
+        remove(path);   /* the allowed case leaves the site patched; later cases restore it themselves */
         unsetenv("BB_CAPTURE");
         unsetenv("BB_CAPTURE_OK");
         unsetenv("BB_CAPTURE_TABLE_ID");

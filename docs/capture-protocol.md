@@ -672,3 +672,30 @@ removed; the cases now fail the run rather than a local variable nobody reads.
 **`BB_PLUGIN` is not implemented yet and says so:** there is no `dlopen` in `pbboot` to give a path to, and a
 mandatory variable with no consumer is a comment with a getenv call in it. It lands with the call site, mandatory
 and refusing on absence, for the `BB_PBBOOT` reason: **a searched default manufactures agreement.**
+
+### Every install now claims a site, and the count of claims is printed
+
+Per-site guard in `install_hook`, one memcmp and one byte test: **a site that already begins `0xe9`, `0xcc` or
+`0xff` is refused**, because patching over a patch hides the first one, and `0xff` is the `ff 25` absolute jump this
+runtime writes. The startup line carries the claims:
+
+```text
+capture: mode=off table=- hooks_installed=1 sites_checked=2 sites_refused=0
+```
+
+**The half that is missing is named:** the catalog expectation. `install_hook` does not read `functions.csv`, so
+`sites_checked` counts **bounds + double-patch** checks today, not prologue-versus-catalog checks. `rt_site_matches`
+is the function that would do the second, and it needs a `site_ok.csv`-shaped table the installer can read — the
+same compute-in-tool / freeze-in-file / refuse-absent shape as `install_mode.csv` and `capture_ok.csv`.
+
+**Three of my own defects in one block, all the same shape — a fixture that was not what I said it was:**
+
+1. `before` snapshotted the site **after an earlier case had already patched it**, so "pristine restore" restored a
+   patch and the new guard refused for a reason unrelated to the table. Fixed by deriving the original bytes from
+   `guest_code[]` **and restoring before snapshotting** — `pristine` (derived) and `before` (observed after restore)
+   are two subjects, and one array cannot be both.
+2. A local `int failed` shadowed the file-scope flag, so `check()` set its flag while every case in the function
+   read a variable nobody else saw. **`-Wshadow -Werror=shadow` is now on the test target** — the only defence that
+   runs before the suite does.
+3. Non-`none` verdicts and missing rows share an exit path, so the counters cannot yet say which refusal fired;
+   the messages do, and **`sites_refused` is a total, not a partition.**

@@ -140,6 +140,7 @@ static int capture_allowed(uint64_t offset)
 }
 
 static unsigned installed_count;   /* what the startup line reports and what the game run can be compared to */
+static unsigned sites_checked, sites_refused;   /* every install is a claim about a site; count the claims */
 
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
@@ -148,6 +149,18 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         return -1;
 
     if (!capture_allowed(offset)) return -1;
+
+    /* One memcmp per site, and it is the check that matters: a site whose bytes are not what the caller expected
+       is a patch into a different function. It reads back perfectly, passes the exec check, and fires at a site
+       nobody selected -- the 16 KiB bias class. A site that is already a jump is refused too: patching over a
+       patch hides the first one. */
+    sites_checked++;
+    if (guest_image[offset] == 0xe9 || guest_image[offset] == 0xcc || guest_image[offset] == 0xff) {
+        sites_refused++;
+        fprintf(stderr, "hook: refusing 0x%llx: site begins 0x%02x, which is already a patch or a trap\n",
+                (unsigned long long)offset, (unsigned)guest_image[offset]);
+        return -1;
+    }
 
     if (!region_is_executable(guest_image + offset, ABSOLUTE_JUMP_SIZE)) {
         fprintf(stderr, "hook: refusing to patch 0x%llx: the 14 bytes at 0x%llx are not in an "
@@ -275,8 +288,9 @@ int rt_host_hooks_initialize(rt_host *host)
             FILE *probe = fopen(path, "r");
             if (probe) { present = 1; fclose(probe); }
         }
-        fprintf(stderr, "capture: mode=%s table=%s hooks_installed=%u\n",
-                on ? "on" : "off", on ? (present ? path : "absent") : "-", installed_count);
+        fprintf(stderr, "capture: mode=%s table=%s hooks_installed=%u sites_checked=%u sites_refused=%u\n",
+                on ? "on" : "off", on ? (present ? path : "absent") : "-", installed_count, sites_checked,
+                sites_refused);
     }
     return 0;
 }

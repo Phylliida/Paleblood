@@ -46,6 +46,8 @@ add_test(NAME snapshot_stub COMMAND test_snapshot_stub)
 
 add_executable(test_guest_mem test/test_guest_mem.c runtime/guest_mem.c runtime/process.c)
 target_include_directories(test_guest_mem PRIVATE runtime/include)
+# A test whose failure flag is shadowed is green forever, and nothing before the suite would say so.
+target_compile_options(test_guest_mem PRIVATE -Wshadow -Werror=shadow)
 add_test(NAME guest_mem COMMAND test_guest_mem)
 add_executable(test_capture test/test_capture.cpp)
 target_link_libraries(test_capture bbrt)

@@ -21,6 +21,10 @@ family share one computation. Measured: 2 m 18 s -> 2.2 s for 21,128 rows.
 
 Exit 0 when every pin still describes the tree. --root checks a staged tree (the pre-commit hook
 extracts one with `git checkout-index`).
+
+A defining file is a tree-wide cost: add helpers to a file that pins nothing. The pin set is a constraint on where
+code may live, not only on what it does -- putting two static inline helpers in `guest.h` turned ctest red for every
+pinned function that includes it, and moving them to a header nothing pins fixed it without re-recording a pin.
 """
 import argparse
 import csv
