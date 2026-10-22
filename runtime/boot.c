@@ -88,6 +88,7 @@ static volatile enum outcome outcome = RUNNING;
 static volatile uint32_t stopped_at;            /* object << 20 | import index of the unimplemented call */
 static volatile uint64_t stopped_from;          /* the guest's return address of that call */
 static volatile uint64_t fault_rip, fault_address;
+static volatile uint64_t fault_regs[16];
 static volatile int fault_signal;
 static volatile int exit_code;
 
@@ -118,6 +119,10 @@ static void on_signal(int sig, siginfo_t *info, void *context)
         fault_signal = sig;
         fault_address = (uint64_t)(uintptr_t)info->si_addr;
     }
+    /* Registers, not reasoning about instructions "a few bytes before" the PC: si_addr plus RIP plus the
+       operand registers answer, in one run, whether the deref used a null base, whether it was an indirect
+       call through a null slot, or whether si_addr was never the operand. */
+    for (int r = 0; r < 16; r++) fault_regs[r] = (uint64_t)uc->uc_mcontext.gregs[r];
     fault_rip = (uint64_t)uc->uc_mcontext.gregs[REG_RIP];
     siglongjmp(back_to_host, 1);
 }
@@ -550,6 +555,19 @@ int main(int argc, char **argv)
         } else {
             printf("pbboot: fault pc 0x%llx (no module resolved)\n", (unsigned long long)fault_rip);
         }
+        printf("pbboot: fault on pbboot sha256 %s (the artifact that is running, not a rebuild)\n",
+               rt_identity_sha());
+        printf("pbboot: fault regs rax %llx rbx %llx rcx %llx rdx %llx\n"
+               "pbboot: fault regs rsi %llx rdi %llx rbp %llx rsp %llx\n"
+               "pbboot: fault regs r8 %llx r9 %llx r10 %llx r11 %llx r12 %llx r13 %llx r14 %llx r15 %llx\n",
+               (unsigned long long)fault_regs[REG_RAX], (unsigned long long)fault_regs[REG_RBX],
+               (unsigned long long)fault_regs[REG_RCX], (unsigned long long)fault_regs[REG_RDX],
+               (unsigned long long)fault_regs[REG_RSI], (unsigned long long)fault_regs[REG_RDI],
+               (unsigned long long)fault_regs[REG_RBP], (unsigned long long)fault_regs[REG_RSP],
+               (unsigned long long)fault_regs[REG_R8], (unsigned long long)fault_regs[REG_R9],
+               (unsigned long long)fault_regs[REG_R10], (unsigned long long)fault_regs[REG_R11],
+               (unsigned long long)fault_regs[REG_R12], (unsigned long long)fault_regs[REG_R13],
+               (unsigned long long)fault_regs[REG_R14], (unsigned long long)fault_regs[REG_R15]);
     }
     if (outcome == TIMEOUT) printf(" after %d s, at %s", timeout, at);
     if (outcome == EXITED) printf(" with code %d", exit_code);

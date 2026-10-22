@@ -1008,3 +1008,25 @@ retargeted stub, (c) `si_addr` for this signal is not the faulting operand.
 faulted (`dcbd016910d0`) no longer existed on disk. **A symbol resolved against a rebuild is a name for a
 different artifact** -- the sha256 discipline applied to the disassembler -- so the handler must print the
 run's identity beside the PC, and the binary must be kept for the run that faulted.
+
+## The register dump answered it in one run: the semaphore model's signature is wrong
+
+Run `sha256 99e5f8a4d413`, binary kept at `build-release/kept/99e5f8a4d413`:
+
+```
+fault pc pbboot+0xadfb   (r11 = 0x63fa08c74df0, so RIP = r11 + 0xb, i.e. the trampoline target + 0xb)
+regs rax 0  rbx 750e26c36668  rcx 1  rdx 0
+regs rsi 1  rdi 53454d4100000012  rbp 750e67bfe3b0  rsp 750e67bfe3a0
+regs r8 1  r9 0 r10 0 r11 63fa08c74df0 r12 8056a2748 r13 ... r14 ffffffff r15 ...
+```
+
+**`rdi = 0x53454d4100000012` is `HANDLE_MAGIC ("SEMA") | (index 18 + 1)` -- a semaphore handle, and the first
+argument our `sema_wait` dereferenced as a pointer.** So the guest passes **`sceKernelWaitSema(semaId, need,
+timeout)` with the handle by value**, and our model's signature `(int64_t storage, ...)` treats it as the
+address of a handle word: **the fault is a signature mismatch, not a bad handle.** `rsi = 1` (the count asked
+for) and `rdi` holding a live handle both agree.
+
+**Second finding, about the instrument itself: `si_addr` printed `0x0` while the operand was
+`0x53454d4100000012`.** So (c) was right -- the reported address is not the faulting operand here -- and a
+fault report must print **both** `si_addr` and the register a load could have used, or the two will keep
+being confused. That is the third time in this campaign that a report named one thing and meant another.

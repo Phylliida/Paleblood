@@ -79,15 +79,24 @@ static int sha256_file(const char *path, unsigned char out[32])
     return 0;
 }
 
-void rt_announce_identity(void)
+static char identity_hex[13];
+
+const char *rt_identity_sha(void)
 {
+    /* Computed once and kept, so any later report -- including a signal handler -- can name the artifact
+       that is running instead of a rebuild of it. */
+    if (identity_hex[0]) return identity_hex;
     unsigned char d[32];
     if (sha256_file("/proc/self/exe", d) != 0) {
-        fprintf(stderr, "pbboot: identity: cannot read /proc/self/exe\n");
-        return;
+        snprintf(identity_hex, sizeof identity_hex, "unreadable");
+        return identity_hex;
     }
-    printf("pbboot sha256 ");
-    for (int i = 0; i < 6; i++) printf("%02x", d[i]);
-    printf("\n");
+    for (int i = 0; i < 6; i++) snprintf(identity_hex + i * 2, 3, "%02x", d[i]);
+    return identity_hex;
+}
+
+void rt_announce_identity(void)
+{
+    printf("pbboot sha256 %s\n", rt_identity_sha());
     fflush(stdout);
 }
