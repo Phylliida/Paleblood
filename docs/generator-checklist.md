@@ -38,3 +38,29 @@ the decompiler's C names its locals and types them, so no human decides whether 
 carries the class at `0x414350`. Generation is 130x cheaper per function and structurally immune
 to the defect the hand path spent two turns localising. The arithmetic says generate; the defect
 taxonomy says the same thing for a different reason.
+
+## The rodata extent, measured as two bounds (reachability, not pattern)
+
+Sweeping all 65,536 units through the A-site lookup chain against table `0x02fc5120`:
+
+* **reachability lower bound: 608 words.** First lookup asks at most index 255; the second asks
+  at most index **607** (`entry + ((unit >> 4) & 0xff)`), and **80 distinct indices past the
+  derived 384 are actually asked for.** So `max(bases)+16` = 384 is short by at least 224 words,
+  and the units that read past it are not hypothetical.
+* **plausible upper bound: NOT ESTABLISHED.** The measure I used -- "longest run of values <= 3
+  from index 0" -- returns 5 for table A and 0 for table B, which is nonsense on its face, so it
+  is a broken measure rather than a bound. The earlier observation stands on its own: values past
+  word 400 include 63,901, so the array ends somewhere in 544..783 by the earlier reading, and
+  that reading is now the only one I have.
+
+608 sits inside the 544..783 uncertainty band, so **the honest state is that I cannot yet say
+whether the original stays inside its own table.** If required <= true end, the extent is settled
+and the pin is real. If required > true end, the original reads past its table for some inputs
+and the body must reproduce that read -- a finding about the binary, not a tool bug, and the
+second time in this pilot that "the table is bigger" was the answer.
+
+Class distribution over the unit domain: **63,232 class 0, 256 class 1, 2,048 class 2** -- so the
+two-level arm is reached by 2,048 units, not the 600 I had been quoting for class 1 alone.
+
+Next: locate the true end by structure (where the stride/class-code pattern breaks), then emit
+both headers with the derived extent replaced by reachability + located end, and re-pin.
