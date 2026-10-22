@@ -96,3 +96,36 @@ about. That is why this one stays a question rather than a decision.
 Recorded before the session boundary so the answer is a decision rather than a reading task.
 Numbers here are the ones the tools print; where a figure is carried rather than measured, it is
 labelled as carried in the packet it comes from.
+
+## Delegation to host libc: the fork the 703-name table created
+
+703 named imports is a strategy question, not a task list. One address space, and guest addresses
+are already host-dereferenceable, so a large class of these could be delegated to host libc rather
+than hand-written.
+
+**The line, drawn once and applied per family:**
+
+- **Delegate** -- stream, string and formatting calls: stateless, no cross-ABI structs, no ownership
+  handed across the boundary (`memcpy`, `strlen`, `printf`, `vsnprintf`, and the `_Stdout` /
+  `_Stderr` objects only if they are used as opaque handles).
+- **Never delegate** -- the allocator and `FILE*` interop. libc.elf runs its own heap; two
+  allocators over one region corrupt silently, and a `FILE*` from one libc passed to the other is
+  the same failure with a different signature. `malloc`/`free`/`realloc` stay ours, and so does
+  anything that hands a stream object across.
+
+Status: **unanswered, and now hot** -- it gates a family rather than a function. The answer needed
+is yes/no on the split above, not on delegation in general.
+
+## Three import counts, three populations -- do not quote any of them alone
+
+Measured in one call, none of the three agreeing:
+
+| figure | population |
+|---|---|
+| 686 | eboot's imports, as the boot reports |
+| 747 | NIDs in `docs/bind-order-eboot.txt`, which spans more than eboot |
+| 673 / 76 / 80 | rows in `symbols/imports.csv` for eboot / libc.elf / libSceFios2.elf |
+
+The residual `747 - 686 = 61` is **not** libc.elf's import count: `imports.csv` gives libc.elf 76.
+So the span hypothesis is unconfirmed and the three figures must be reconciled to one partition
+before any of them is quoted, exactly as `21,130` and the 652 were.
