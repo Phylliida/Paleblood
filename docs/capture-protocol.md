@@ -232,3 +232,36 @@ partition is exact when intersected on `kind`; the totals were the only thing th
 
 **Consequence for the 60.4%:** it is right as stated and now provably so — **497 of 823 function slots**, and
 it excludes data by construction rather than by accident.
+
+### Which registers are buffers: derived from the body, not from "points inside eboot"
+
+Memory-base registers in the first target's 112 instructions, names taken from `md.reg_name()` and never from
+a declared constant:
+
+```
+rip 23 uses (widest 8)   rax  6 (8)   rbp 5 (8)   r13 5 (8)   r12 4 (8)   rdi 4 (8)   r15 2 (8)   rbx 1 (1)
+```
+
+**Among the six argument registers, exactly one is a memory base: `rdi`, 4 uses, widest access 8 bytes.** So
+`rsi`, `rdx`, `rcx`, `r8`, `r9` are **scalars** for this body, and **that is the `arg kind` answer for this
+function, derived rather than guessed** — the third time this derivation has fallen out of something already
+in hand.
+
+Two consequences, both load-bearing:
+
+- **The capture snapshots `rdi` as a buffer and nothing else.** Anything else that happens to point inside
+  eboot is junk that the replay would present as an input region the game never used.
+- **`size_assumed` for that buffer is now a bound, not a guess:** widest access through `rdi` is **8 bytes**,
+  so a region of 64 is an 8× margin on a measured 8, and the field says so.
+
+**And one subtlety the table exposes:** `rax`, `r13`, `r12`, `r15` are used as bases but `r15` is loaded from
+a rip-relative global at `0x2418d31` before any use, i.e. **written by the body before it is read**. A
+callee-saved register used as a base is an **input** only if the body reads it before writing it; deriving the
+input set means checking the first access's direction, not just the register's name. For this function the
+answer is **one pointer argument, `rdi`**, and five scalars.
+
+**Not yet built, and stated so:** the wrapper that calls the snapshot, and the label proof — **a fault inside
+the snapshot must report `capture`, not the guest**, because "fault in capture" and "fault in body" have
+opposite meanings for whether the capture is evidence at all. Its negative control is a deliberately wild
+pointer: the run must say `capture`, exit clean, and **leave no half-written JSON, since a partial file that
+parses is worse than none.**
