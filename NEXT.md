@@ -703,3 +703,22 @@ premise, and it is one grep (`objects[...] = ` population), not a boot.
 **`KIND_LOCAL` is `image + r->value`, which is exactly the self-relative scheme the descriptors encode**
 -- so the descriptors and the loader agree, and if the objects were reachable by a relocation the
 mechanism would work.
+
+## The RELA decode is garbage: my vaddr->offset mapping is refuted, not the addend convention
+
+    DT_SCE_RELA 0x162c8  size 0xbd60  entries 2020
+    [0] off=0x3b841b04d8d48ff type=0      addend=-0x76befffff67d171e
+    [1] off=0xdb0007871905d9c7 type=9276  addend=+0x35e800000003beff
+
+`48 8d ...` is `lea` -- **these are code bytes, not relocation entries.** The `0x4000 + vaddr` mapping I
+applied is wrong for this region, so **the addend-convention test the companion proposed has not run.**
+
+**The missing predicate, stated as a rule:** a relocation record has `type < 40` and `r_offset` inside the
+image. **Entry 0 has type 0 (plausible) and an r_offset 60 bits wide (impossible); entry 1's type is
+9,276.** **A decode whose validity predicate fails on entry 1 must be discarded before entry 0 is quoted**
+-- the same density check that caught 37.3 bytes per instruction, applied to a record stream instead of
+an instruction stream.
+
+**Next call is the program headers, printed, before anything is decoded from them** (`p_type, p_offset,
+p_vaddr, p_filesz, p_memsz` for every header) -- **the mapping has now cost me four decode attempts and
+has never once been printed beside the result that depends on it.**
