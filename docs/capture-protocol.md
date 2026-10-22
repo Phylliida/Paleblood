@@ -370,3 +370,26 @@ review because it agreed with what I had assumed about the corpus, not because a
 its first test, and the two-replay falsification is a test of **the body and the singleton**, not of the harness
 branch. The mechanism is still the right one: `{"addr": …, "pointer": "window"}` resolves at run time and is
 order-independent.
+
+### The number now has a second reader that runs
+
+`test/test_doc_numbers.py` recomputes the corpus counts this document quotes — **4,169** cases carrying a
+`pointer` preset and **19,551** carrying `memory` — from `../data/cases`, and asserts both appear here. It
+refuses a sweep that matches fewer than 100 cases, so a broken predicate cannot pass as agreement.
+
+**Proved by making it red:** with the document changed to `4,170`, the test fails
+(`docs/capture-protocol.md does not quote 'pointer' as 4,169`); restored, it passes. **A doc gate that has only
+been green is a paragraph** — the same rule as every other guard in this tree.
+
+### The wrapper lands in two commits, because the failure modes are disjoint
+
+- **Commit A — plumbing, no snapshot.** A hook-only wrapper whose entire body is `movabs r11,host_fs` ·
+  `wrfsbase r11` · `jmp rel32` to an **unmodified** boundary stub, plus `rt_snapshot_stub_size()`, the
+  `|wrapper_end − stub_start| < 2^31` assertion and the `0xcc` sentinel capacity refusal. Proved end to end:
+  the hook installs, the guest enters the wrapper, the body runs, the guest returns.
+- **Commit B — the capture.** Six pushes, the `wrfsbase`, the `call snapshot`, six pops, then the body.
+
+**A can fail by emitting a wrong jump form or a wrong distance; B can fail by clobbering an argument register.**
+In one commit a failure in B reads as a failure in A. **A gate and its first client never land together, and
+here the wrapper is the gate for the capture** — after A, the capture is a one-line change to a proven path,
+which is the cheapest a first capture can ever be.

@@ -46,6 +46,24 @@ def declared_words(header):
     return len(re.findall(r"0x[0-9a-fA-F]+", body))
 
 
+# docs/capture-protocol.md quotes two corpus numbers about the case format. I typed them into the document
+# before running the command that produces them and got both wrong (0 and 0 against 4,169 and 19,551); a
+# second reader that runs is the structural answer, so the numbers are recomputed here from ../data/cases.
+CAPTURE_CLAIMS = [
+    ("docs/capture-protocol.md", "4,169", "pointer"),
+    ("docs/capture-protocol.md", "19,551", "memory"),
+]
+
+
+def corpus_cases_mentioning(key):
+    """Cases under ../data/cases whose JSON text mentions `key` -- the same predicate the doc's command used."""
+    n = 0
+    for path in (ROOT.parent / "data" / "cases").rglob("*.json"):
+        if '"' + key + '"' in path.read_text(errors="replace"):
+            n += 1
+    return n
+
+
 class DocNumbersMatchTheTree(unittest.TestCase):
     def test_family_counts(self):
         for doc, quoted, prefix in FAMILY_CLAIMS:
@@ -62,6 +80,15 @@ class DocNumbersMatchTheTree(unittest.TestCase):
                 truth = "{:,} bytes = {}".format(words * 2, words)
                 self.assertEqual(truth, phrase, "%s declares %s" % (header, truth))
                 self.assertIn(phrase, checklist, "the checklist no longer states %r" % phrase)
+
+    def test_capture_protocol_corpus_counts(self):
+        """A number the document asks a reader to act on, recomputed -- the doc claimed 0 and 0 for these."""
+        for doc, written, key in CAPTURE_CLAIMS:
+            text = (ROOT / doc).read_text()
+            n = corpus_cases_mentioning(key)
+            self.assertGreater(n, 100, f"predicate {key!r} matched only {n} cases: a zero sweep is not agreement")
+            self.assertIn(f"{n:,}", text, f"{doc} does not quote {key!r} as {n:,}")
+            self.assertIn(written, text, f"{doc} does not carry the recorded figure {written}")
 
 
 if __name__ == "__main__":
