@@ -1428,7 +1428,30 @@ first experience of this repo should not be that.
 
 ## Triggers (write the condition, not the intention)
 
-**Recorder.** The in-game capture path is blocked on boot reaching past the `scePthreadCreate` wall
+**Recorder — measured, this slice, not assumed.** The sentence below was an assumption for thirty
+slices: *nothing replaced runs before the wall*. Two measurements, both reproducible:
+
+* **Static reachability** (`tools/guest_reach.py --root .`, BFS from `entry 0x004000a0` over the
+  443,298 `direct` edges of `data/exports/edges.csv`, 164,953 `unresolved_indirect` excluded):
+  770 addresses reachable, and **4 hook addresses are resolved callees at depth 2–3** —
+  `0x02418d20 frame_timing_frame_step` at **depth 2**, `frame_timing_flipper_init`,
+  `frame_timing_pace_frame`, `frame_timing_task_frame_024512a0` at **depth 3**. A replaced function
+  is **two call edges** from the entry point, so "far from a capture" is not what the graph says.
+* **Hooks are installed by nobody in a boot run.** `runtime/CMakeLists.txt:12` builds `pbboot` from
+  `boot.c loader.c nid.c identity.c guest_mem.c process.c tls.c ${PB_SYSLIB}`; `plugin.c`, `hooks.c`
+  and `host_hooks.c` are in `bbrt` only. A run to the wall prints **no `bbgame: N hook(s) installed`
+  line at all**, and `BB_HOOK_SKIP=frame_timing_frame_step,frame_timing_flipper_init,
+  frame_timing_pace_frame,frame_timing_task_frame_024512a0` produces a run **identical after address
+  normalisation** (same imports, same wall, same fault). Zero hooks installed is the mechanism.
+
+So the first blocker is **not the wall and not the missing caller in `runtime/hooks.c`: it is that the
+boot path never loads the plugin.** The next step for the recorder is therefore: link/load `libbbgame`
+into the boot path, install the 1,737 hooks, and read `bbgame: N hook(s) installed` plus whether any
+of the four depth-2/3 bodies fires before the wall. If one fires, wire the caller and take the first
+capture — the differential harness proves the body, the boot run would prove the reach.
+
+**Recorder (original trigger, still the second half).** The in-game capture path is blocked on boot
+reaching past the `scePthreadCreate` wall
 (`runtime/syslib/pthread_sema.c`, the designed fatal stop). **When the boot runs past that wall, the
 next slice is the caller in `runtime/hooks.c`** — `rt_capture_begin`/`rt_capture_write` still have no
 caller outside tests, so no capture can happen at all. Not more boot work: boot is then done enough,
