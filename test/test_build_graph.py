@@ -11,6 +11,15 @@ CMAKE = ROOT / "runtime/CMakeLists.txt"
 
 
 class BuildGraphTest(unittest.TestCase):
+    def test_pbboot_links_what_its_plugin_path_needs(self):
+        """The build-graph class, fourth appearance: a file that must be in a list, and a run that silently does
+        nothing when it is not. `dlopen`/`dlsym` live in libdl, and `bbrt` already links it."""
+        text = CMAKE.read_text()
+        self.assertRegex(text, r"target_link_libraries\(pbboot PRIVATE[^)]*\bdl\b",
+                         "pbboot must link dl: the plugin path calls dlopen/dlsym")
+        self.assertIn("boundary_stub.c", text, "the emitter must be in pbboot's source list")
+        self.assertIn("plugin.c", text, "the plugin must be in the build graph, or the capture path installs nothing")
+
     def test_every_source_is_named_or_globbed(self):
         text = CMAKE.read_text()
         named = set(re.findall(r"[\w./-]+\.c\b", text))

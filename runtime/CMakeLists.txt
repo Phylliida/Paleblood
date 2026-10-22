@@ -13,3 +13,6 @@ add_executable(pbboot boot.c loader.c nid.c identity.c guest_mem.c process.c tls
 target_include_directories(pbboot PRIVATE include)
 
 target_link_options(pbboot PRIVATE -rdynamic)
+# dlopen/dlsym for the plugin path: bbrt already links it, and a missing -ldl fails at link time only
+# once something calls dlopen -- which is exactly the file that must not be silently absent.
+target_link_libraries(pbboot PRIVATE dl)

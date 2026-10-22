@@ -65,6 +65,14 @@ int bbgame_init(const rt_host *host)
                 "unset one rather than guessing which wins\n");
         return 1;
     }
+    /* `hooks_installed=0` with capture on reads identically to "no row" and "not on the path", and the third
+       cause is a host whose install_hook is somebody else's callback (the harness passes `lambda o,s,t: 0`,
+       which installs nothing and succeeds). Name the callback so one failing run says which of the three it
+       was, and say it again if every selected hook reported success while nothing was installed. */
+    fprintf(stderr, "capture: installer=%s mode=%s\n",
+            host->install_hook ? "provided" : "absent",
+            (getenv("BB_CAPTURE") && *getenv("BB_CAPTURE") && *getenv("BB_CAPTURE") != '0') ? "on" : "off");
+
     rt_image = host->image;
     /* The bounds every system-library handler validates against are declared HERE, in the one function
        that is told what image the guest is mapped at, in both callers: the harness (which has no boot)
@@ -93,5 +101,8 @@ int bbgame_init(const rt_host *host)
     }
     fprintf(stderr, "bbgame: installed %u of %u selected (%s)\n", installed, selected,
             (only && *only) ? "BB_HOOK_ONLY" : "all hooks");
+    if (selected && !host->install_hook)
+        fprintf(stderr, "bbgame: %u hook(s) selected and none installed: the host's install_hook is NULL, which "
+                        "is a callback problem and not a table or wiring problem\n", selected);
     return rt_probes_install(host->image, host->image_size);
 }

@@ -610,3 +610,37 @@ Five cases in `test_host_hooks`, and **every refusal is checked against the site
 **And my own test caught the shape change before the commit did:** `address, verdict, digest = row.split(",")`
 raised **`ValueError: too many values to unpack (expected 3)`** the moment the fourth column landed — **a test
 that pins a table's width goes red when the width changes, which is the correct behaviour and not an accident.**
+
+### The rebuild negative arrived by itself, and the installer's identity is printed
+
+Adding `-ldl` to `pbboot` **relinked `libbbgame.so`**, and the regenerating test went red on its own:
+
+```text
+FAIL: test_the_committed_table_matches_a_fresh_scan
+so_sha256 before: d4a953757915ead3   after: f5bd9fc16437c473
+body rows unchanged (address, verdict, digest identical)
+```
+
+**That is the negative control, unplanned and therefore better evidence than a staged one:** a rebuild without a
+regeneration **does** turn the table red, and only the `so_sha256` column moved — the per-row body digests were
+unaffected because rebuilding the library does not edit the game's bytes. Regenerated; the diff was exactly one
+column.
+
+**`bbgame_init` now names the installer before it uses it:**
+
+```text
+capture: installer=provided mode=on
+```
+
+`hooks_installed=0` with capture on reads identically to "no row" and "not on the path"; the third cause is a host
+whose `install_hook` is somebody else's callback — **`tools/harness.py:739` passes `lambda o, s, t: 0`, which
+installs nothing and returns success** — so the failing run now says which of the three it was, and a second line
+fires if hooks were selected while `install_hook` is NULL: *"a callback problem and not a table or wiring problem."*
+
+**Build graph, fourth appearance:** `pbboot` gains `-ldl` (for `dlopen`/`dlsym` on the plugin path, which `bbrt`
+already links) and `test_build_graph.py` asserts the link list. **The weak half is named rather than hidden:**
+`plugin.c` and `boundary_stub.c` are in `bbrt`'s source list, **not `pbboot`'s**, so that assertion is satisfied by
+the library and does not yet cover the executable. The concrete measurement: **`nm -D build-release/runtime/pbboot
+| grep -c bbgame_init` → 0.** Until `pbboot` links the plugin, the capture path in the game cannot install a hook,
+and **the ordering to assert — image mapped and `rt_process.image` set → hooks installed → guest TLS entered →
+`run_guest` — is unassertable because step two does not exist there.**
