@@ -50,7 +50,7 @@
 #define STACK_SIZE (16u << 20)
 /* 104 bytes of stub: prologue, mark, in-flight index and the three argument words, the target call between
    two %fs writes, and the clear before returning. */
-#define TRAMPOLINE_SIZE 128
+#define TRAMPOLINE_SIZE 160
 
 static const struct {
     const char *name;
@@ -187,6 +187,9 @@ static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void
    returned" are different readings rather than the same one -- a stale index is a claim, not a measurement. */
 volatile uint32_t rt_syslib_in_flight = 0xffffffffu;
 volatile uint64_t rt_syslib_args[3];
+/* Read back inside the stub, immediately after the host swap: a wrfsbase that does not take is otherwise
+   indistinguishable from one that does. */
+volatile uint64_t rt_stub_fs;
 
 static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target)
 {
@@ -218,6 +221,14 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
     *p++ = 0x49, *p++ = 0xba, memcpy(p, &target, 8), p += 8;          /* movabs r10, target */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &hostbase, 8), p += 8;         /* movabs r11, host %fs base */
     *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
+    {
+        const uint64_t fsg = (uint64_t)(uintptr_t)&rt_stub_fs;
+        *p++ = 0x50;                                                   /* push rax */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &fsg, 8), p += 8;          /* movabs r11, &rt_stub_fs */
+        *p++ = 0xf3, *p++ = 0x48, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xc0; /* rdfsbase rax -- read it back */
+        *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
+        *p++ = 0x58;                                                   /* pop rax */
+    }
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
     *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
@@ -643,8 +654,29 @@ int main(int argc, char **argv)
         printf("pbboot: fault on pbboot sha256 %s (the artifact that is running, not a rebuild)\n",
                rt_identity_sha());
         {
+            /* The stub's two %fs bases are imm64 literals in the instruction stream, so the question "did it
+               write the host base" is answered by reading them. Imm64s make a wrong value silent; a
+               (%rip)-relative load would make it impossible. */
+            int k = 1;
+            unsigned char *t = objects[k].tramp + TRAMPOLINE_SIZE * 38;
+            printf("pbboot: stub obj %d #38:", k);
+            for (int b2 = 0; b2 < 90; b2++) {
+                if (b2 && b2 % 15 == 0) printf("\n                ");
+                printf(" %02x", t[b2]);
+            }
+            printf("\n");
+            for (int b2 = 0; b2 + 10 <= 90; b2++)
+                if (t[b2] == 0x49 && t[b2 + 1] == 0xbb) {
+                    uint64_t imm;
+                    memcpy(&imm, t + b2 + 2, 8);
+                    printf("pbboot: stub movabs r11 @%d = %#llx\n", b2, (unsigned long long)imm);
+                }
+        }
+        {
             uint64_t live_fs = 0;
             __asm__ volatile("rdfsbase %0" : "=r"(live_fs));
+            printf("pbboot: stub readback %#llx (host base %#llx)\n",
+                   (unsigned long long)rt_stub_fs, (unsigned long long)rt_tls_host_base());
             printf("pbboot: fs host %#llx guest %#llx live %#llx%s\n",
                    (unsigned long long)rt_tls_host_base(), (unsigned long long)rt_tls_guest_base(),
                    (unsigned long long)live_fs,

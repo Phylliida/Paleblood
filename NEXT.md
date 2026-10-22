@@ -1355,3 +1355,20 @@ call inside a body faults -- because glibc's tcache and arena pointers live off 
 guest block, which holds a self-pointer and zeros.** The heap probe moved the fault to the *first* heap use in
 guest-triggered code and named it `in flight: #38`, which is what a wrong `%fs` predicts and what "corrupted
 heap" does not.
+
+## The stub's own readback: the host imm64 is correct, the `wrfsbase` executes, and `%fs` is unchanged
+
+    stub obj 1 #38: ... 49 bb 40 17 80 3e a8 77 00 00  f3 49 0f ae db  50 49 bb ...
+                             ^ movabs r11, 0x77a83e801740   ^ wrfsbase r11  ^ push rax
+    stub readback 0x651e4ea01c80 (host base 0x77a83e801740)      <- NOT host
+    in-body fs 0x651e4ea01c80                                    <- the guest block
+    fs host 0x77a83e801740 guest 0x651e4ea01c80 live 0x77a83e801740   <- host, in the handler
+
+**So: the baked value is right (case 3 of the three, not a stale emitter), the `wrfsbase` is emitted with its
+mandatory F3 and the right ModRM, and the base is unchanged five bytes later.** And the *handler's* `wrfsbase`
+does take, since the report reads the host base while the body left `%fs` on the guest block.
+
+**And `probe_fsgsbase()` cannot fail.** It reads `%fs`, writes that same value back, reads again, and sets
+`have_wrfsbase = 1` when the two are equal -- true for a working write and for a silently ignored one.
+It is the `promote.py` shape: a check whose failure mode is unreachable, gating a startup refusal that has
+therefore never fired.
