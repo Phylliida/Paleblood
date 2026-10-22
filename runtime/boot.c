@@ -24,6 +24,7 @@
 #include "runtime/nid.h"
 #include "runtime/process.h"
 #include "runtime/identity.h"
+#include "runtime/tls.h"
 #include "runtime/syslib.h"
 
 #include <asm/prctl.h>
@@ -104,6 +105,9 @@ static __attribute__((noinline)) void unimplemented(uint32_t which)
 
 static void guest_exit(int code)
 {
+    /* The guest calls this, so it arrives with the guest block in %fs. One line, no pair: the siglongjmp
+       returns into host code, which must find the host base already restored. */
+    rt_tls_enter_host();
     exit_code = code;
     outcome = EXITED;
     siglongjmp(back_to_host, 1);
@@ -111,6 +115,9 @@ static void guest_exit(int code)
 
 static void on_signal(int sig, siginfo_t *info, void *context)
 {
+    /* First statement: this handler runs on whatever %fs was installed when control was lost, and
+       everything below it -- dladdr, snprintf, printf -- is host code that needs the host base. */
+    rt_tls_enter_host();
     const ucontext_t *uc = context;
     if (sig == SIGALRM) {
         outcome = TIMEOUT;

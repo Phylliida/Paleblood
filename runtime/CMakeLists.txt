@@ -9,7 +9,7 @@ target_include_directories(pbloader PUBLIC include)
 file(GLOB PB_SYSLIB CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/syslib/*.c)
 # -rdynamic so dladdr can name pbboot's own symbols when it faults; a raw offset is a number
 # without a subject.
-add_executable(pbboot boot.c loader.c nid.c identity.c guest_mem.c process.c ${PB_SYSLIB})
+add_executable(pbboot boot.c loader.c nid.c identity.c guest_mem.c process.c tls.c ${PB_SYSLIB})
 target_include_directories(pbboot PRIVATE include)
 
 target_link_options(pbboot PRIVATE -rdynamic)

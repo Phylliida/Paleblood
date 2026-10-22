@@ -1135,3 +1135,23 @@ Enumerated before wiring, as agreed:
 **So the count is four, my expectation was three, and by the rule we agreed the wiring waits.** The finding is
 that the boundary is not a place but a *property of who is executing*, and the emission of the trampoline is a
 separate edit from the pair around `rt_boot_call`.
+
+## Both one-line sites landed, criterion held, and the stub's register hazard is recorded
+
+`rt_fault`'s first statement is `rt_tls_enter_host()`; `guest_exit` is one line, no pair, because its
+`siglongjmp` lands in host code that must find the host base already restored. `tls.c` is now in the
+`pbboot` target -- **it was not: `runtime/CMakeLists.txt:12` names files explicitly and I had never added
+it, so the module from the previous commit was not compiled at all until now** (the same "a new directory is
+not a new file" family, one layer over).
+
+Run: **still stops at `scePthreadCreate` with `called 66`.** The criterion held -- and it proves nothing about
+the swap being right, only that the two one-line sites changed nothing, which is what they should do while
+`rt_tls_enter_guest()` is still unwired.
+
+**The stub hazard, recorded before the emission changes: `jmp` -> stub -> `call hostfn` -> restore -> `ret`
+makes the restore a call into our C, which clobbers `rax`, `rdx`, `rcx`, `r8-r11` and possibly `xmm0` --
+exactly where the guest's return value lives, and a 128-bit return legally uses `rax:rdx`.** So the stub saves
+`rax`, `rdx` and `xmm0` around the restore and restores them before `ret`; otherwise **the first 64-bit
+syslib return comes back garbage only on the TLS-restored path, which reads as a wrong implementation rather
+than a wrong stub.** Taking the stub over "call `rt_tls_enter_guest()` at the end of every syslib function":
+the second is one site per entry, which is the shape this campaign has spent itself eliminating.

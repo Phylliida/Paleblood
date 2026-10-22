@@ -13,9 +13,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/prctl.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
-#define TLS_AREA_ARCH_SET_FS 0x1002
+
 #define RT_TLS_BLOCK_BYTES 0x1000u /* PT_TLS says filesz 0x220 / memsz 0x4a0; one page covers it with slack */
 
 static unsigned char guest_block[RT_TLS_BLOCK_BYTES] __attribute__((aligned(64)));
@@ -54,8 +55,9 @@ void rt_tls_enter_guest(void)
         return;
     }
     unsigned long base = (unsigned long)(uintptr_t)guest_block;
-    if (prctl(PR_SET_ARCH_SET_FS, 0, 0, &base) != 0)
-        fprintf(stderr, "pbboot: tls: arch_prctl set_fs failed\n");
+    /* glibc's headers have no ARCH_SET_FS; the fallback is raw syscall 158 with 0x1002. */
+    long r = syscall(158, 0x1002UL, &base);
+    if (r != 0) fprintf(stderr, "pbboot: tls: arch_prctl(ARCH_SET_FS) failed (%ld)\n", r);
 }
 
 void rt_tls_enter_host(void)
@@ -65,6 +67,6 @@ void rt_tls_enter_host(void)
         return;
     }
     unsigned long base = host_fsbase;
-    if (prctl(PR_SET_ARCH_SET_FS, 0, 0, &base) != 0)
-        fprintf(stderr, "pbboot: tls: arch_prctl restore failed\n");
+    long rc = syscall(158, 0x1002UL, &base);
+    if (rc != 0) fprintf(stderr, "pbboot: tls: arch_prctl restore failed (%ld)\n", rc);
 }
