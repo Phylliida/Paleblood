@@ -93,3 +93,14 @@ set_tests_properties(
   float_flags progress_readme check_pins
   PROPERTIES TIMEOUT 120)
 set_tests_properties(tools PROPERTIES TIMEOUT 300)
+
+# The loader, proved before pbboot has a caller. A test-built .so is the endpoint; the wiring, the installer
+# identity and every failure mode are exercised in the test binary, so pbboot's change is one call and one entry.
+add_library(test_plugin_noinit SHARED test/test_plugin_noinit.c)
+add_library(test_plugin_good SHARED test/test_game_plugin.c)
+target_include_directories(test_plugin_good PRIVATE runtime/include)
+add_executable(test_plugin_load test/test_plugin_load.c runtime/plugin_load.c runtime/host_hooks.c
+               runtime/boundary_stub.c runtime/process.c)
+target_include_directories(test_plugin_load PRIVATE runtime/include)
+target_link_libraries(test_plugin_load PRIVATE dl)
+add_test(NAME plugin_load COMMAND test_plugin_load $<TARGET_FILE:test_plugin_noinit> $<TARGET_FILE:test_plugin_good>)

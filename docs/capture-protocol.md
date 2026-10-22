@@ -760,3 +760,37 @@ evidence about **all 1,737 sites**, where a single-site test is evidence about o
 both sides — `install_mode.csv: <addr> is hook mode but no game/hooks.csv entry`, and `functions.csv: <name> is
 <status> with neither a … entry nor an install_mode row saying host`. **Asserting one would have encoded the
 empty-table era.** The test now asserts the pair, requires both to name the site, and says why.
+
+### The loader is proved before pbboot has a caller, and four causes print four sentences
+
+`rt_boot_load_plugin(image, image_size, path, &installed)` in `runtime/plugin_load.c`: configure a **real**
+installer → `dlopen(path, RTLD_NOW | RTLD_LOCAL)` → `dlsym("bbgame_init")` → call it → report the count. **The
+endpoint is a test-built `.so`, exercised in a test binary**, so pbboot's change collapses to one call and one CMake
+entry, and **the first pbboot run is not also the first execution of the loader path.**
+
+**Four causes, four sentences**, because the person reading the log gets one line:
+
+```text
+plugin: dlopen failed: <path>: <dlerror>
+plugin: <path> does not export bbgame_init
+plugin: bbgame_init returned 0 and installed 0 hooks: nothing is patched
+plugin: installer=NULL after initialize: the plugin would count hooks and install none
+```
+
+plus `capture: installer=default hooks_installed=N` on the success path. `test_plugin_load` covers **missing file**,
+**library that exports nothing**, **good plugin installing exactly one hook**, and **a NULL path refused before it
+reaches `dlopen`** — four cases, and the count is asserted, not printed.
+
+**Two of my own defects, both caught by a gate rather than by me:**
+
+1. I wrote the stub plugin to **`test/test_plugin.c`, which already existed** as the `bbgame_init` unit test, and
+   clobbered it. `git checkout` restored it; the library source is now `test/test_game_plugin.c` and the existing
+   `test_plugin` target still points at the original file. **A new file whose name I chose without listing the
+   directory is how a tracked file disappears.**
+2. `rt_host` was `memset` to zero including `version`, so `rt_host_hooks_initialize` refused every case with
+   *"the installer could not be configured"* — **the version field is checked, so zero is not a default.** Third
+   time in this campaign that an unset field read as a pass-shaped silence.
+
+**And the patched page is now checked for *writability* before the executable check** — symmetric to the existing
+test, one `/proc/self/maps` walk, and it yields `hook: refusing 0x…: the page is not writable, so the patch would
+fault in memcpy` instead of a SIGSEGV attributed to whatever runs next.

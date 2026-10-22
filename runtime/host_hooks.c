@@ -59,6 +59,27 @@ static unsigned char *stub_alloc(size_t n)
    readback proves the bytes, not the mapping. Ask /proc/self/maps about the page the patch lands in,
    and fail closed if the answer cannot be read. This is the "N installed counts writes" defect one
    level up, and it is cheap here for the same reason it is expensive later. */
+/* Symmetric with the executable check: same /proc/self/maps walk, looking for 'w'. A read-only page reads back
+   perfectly and faults inside memcpy, which is a SIGSEGV attributed to the body if the body is what runs next. */
+static int region_is_writable(void *addr, unsigned long n)
+{
+    FILE *maps = fopen("/proc/self/maps", "r");
+    if (!maps) return 0;
+    char line[512];
+    unsigned long target = (unsigned long)addr;
+    while (fgets(line, sizeof line, maps)) {
+        unsigned long lo = 0, hi = 0;
+        char perms[8] = {0};
+        if (sscanf(line, "%lx-%lx %7s", &lo, &hi, perms) != 3) continue;
+        if (target >= lo && target + n <= hi) {
+            fclose(maps);
+            return perms[1] == 'w';
+        }
+    }
+    fclose(maps);
+    return 0;
+}
+
 static int region_is_executable(const void *address, size_t length)
 {
     FILE *maps = fopen("/proc/self/maps", "r");
@@ -146,6 +167,8 @@ static unsigned installed_count;   /* what the startup line reports and what the
    the catalog) -- are opposite diagnoses with the same symptom. */
 static unsigned sites_checked, sites_already_patched, sites_mismatched, sites_unlisted;
 
+unsigned rt_host_hooks_installed_count(void) { return installed_count; }
+
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
     if (!guest_image || !target || size < ABSOLUTE_JUMP_SIZE || offset > guest_image_size ||
@@ -215,6 +238,13 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         return -1;
     }
 
+    /* Writable first: a read-only page reads back correctly and faults inside memcpy, and the SIGSEGV would be
+       attributed to whatever runs next. Named refusal instead of a crash with an innocent suspect. */
+    if (!region_is_writable(guest_image + offset, ABSOLUTE_JUMP_SIZE)) {
+        fprintf(stderr, "hook: refusing 0x%llx: the page is not writable, so the patch would fault in memcpy\n",
+                (unsigned long long)offset);
+        return -1;
+    }
     if (!region_is_executable(guest_image + offset, ABSOLUTE_JUMP_SIZE)) {
         fprintf(stderr, "hook: refusing to patch 0x%llx: the 14 bytes at 0x%llx are not in an "
                 "executable mapping, so the patch would read back and never fire\n",
