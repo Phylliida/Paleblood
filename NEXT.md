@@ -1401,3 +1401,14 @@ with **rbx** carrying the guest's rsp because it is callee-saved and because a g
 a body re-enters another import -- the global version was tried first and hung at libc.elf+0x59ca1.
 
 Result: the `scePthreadCreate` wall now prints its full sentence and stops the run on purpose.
+
+## memsz verified against the headers, not against the strings
+
+    libc.elf     PT_TLS file 0xbc018 vaddr 0xb8018 filesz 0x220 memsz 0x4a0   <- what tls.c and the wall use
+    eboot.elf    PT_TLS file 0x50e0040 vaddr 0x50dc040 filesz 0x0 memsz 0x750 <- never read by any code
+    libSceFios2  PT_TLS file 0x50018  vaddr 0x4c018  filesz 0x0 memsz 0x40   <- never read by any code
+
+The `0xa4a` in my last report was a transposition **I** typed; the source, the wall and the ELF agree on `0x4a0`.
+But the check surfaced the real fact: **three modules carry PT_TLS and the runtime models one of them**, and the
+layout's `guest_memsz` starts as a hardcoded `0x4a0` default rather than a value read from the object it is
+laying out -- the same shape as every other constant in this runtime that turned out to be a memory.
