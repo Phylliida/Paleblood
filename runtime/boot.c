@@ -190,6 +190,7 @@ volatile uint64_t rt_syslib_args[3];
 /* Read back inside the stub, immediately after the host swap: a wrfsbase that does not take is otherwise
    indistinguishable from one that does. */
 volatile uint64_t rt_stub_fs;
+volatile uint32_t rt_stub_which;
 
 static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target)
 {
@@ -227,6 +228,11 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         *p++ = 0x49, *p++ = 0xbb, memcpy(p, &fsg, 8), p += 8;          /* movabs r11, &rt_stub_fs */
         *p++ = 0xf3, *p++ = 0x48, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xc0; /* rdfsbase rax -- read it back */
         *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
+        {
+            const uint64_t wg = (uint64_t)(uintptr_t)&rt_stub_which;
+            *p++ = 0x49, *p++ = 0xbb, memcpy(p, &wg, 8), p += 8;       /* movabs r11, &rt_stub_which */
+            *p++ = 0x41, *p++ = 0xc7, *p++ = 0x03, memcpy(p, &which, 4), p += 4; /* mov [r11], which */
+        }
         *p++ = 0x58;                                                   /* pop rax */
     }
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
@@ -675,8 +681,10 @@ int main(int argc, char **argv)
         {
             uint64_t live_fs = 0;
             __asm__ volatile("rdfsbase %0" : "=r"(live_fs));
-            printf("pbboot: stub readback %#llx (host base %#llx)\n",
-                   (unsigned long long)rt_stub_fs, (unsigned long long)rt_tls_host_base());
+            printf("pbboot: probe says wrfsbase %s\n", rt_tls_uses_wrfsbase() ? "WORKS" : "unavailable");
+            printf("pbboot: stub readback %#llx which #%u (host base %#llx)\n",
+                   (unsigned long long)rt_stub_fs, rt_stub_which,
+                   (unsigned long long)rt_tls_host_base());
             printf("pbboot: fs host %#llx guest %#llx live %#llx%s\n",
                    (unsigned long long)rt_tls_host_base(), (unsigned long long)rt_tls_guest_base(),
                    (unsigned long long)live_fs,

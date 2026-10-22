@@ -9,5 +9,6 @@ void rt_tls_enter_guest(void);
 void rt_tls_enter_host(void);
 extern uint64_t rt_tls_guest_base_v;
 extern uint64_t rt_tls_host_base_v;
+int rt_tls_uses_wrfsbase(void);
 uint64_t rt_tls_host_base(void);
 uint64_t rt_tls_guest_base(void);

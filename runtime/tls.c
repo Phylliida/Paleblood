@@ -49,9 +49,13 @@ static void probe_fsgsbase(void)
     if (!__get_cpuid_count(7, 0, &a, &b, &c, &d) || (b & 1u) == 0) return;
     unsigned long before = 0, after = 0;
     asm volatile("rdfsbase %0" : "=r"(before));
-    asm volatile("wrfsbase %0" ::"r"(before));
+    /* Write a DIFFERENT canonical value and restore: writing back the value just read is equal whether the
+       instruction worked or was ignored, which made this probe unable to fail. */
+    const unsigned long probe = before ^ (1UL << 8);
+    asm volatile("wrfsbase %0" ::"r"(probe));
     asm volatile("rdfsbase %0" : "=r"(after));
-    if (after == before) have_wrfsbase = 1;
+    asm volatile("wrfsbase %0" ::"r"(before));
+    if (after == probe) have_wrfsbase = 1;
     /* One stub, one ABI. The trampoline inlines wrfsbase because a C call between the guest's jump and
        the target would eat every caller-saved argument register; a second stub for the arch_prctl path
        would be a code path that only runs on some machines. So absence is a refusal at startup. */
@@ -115,6 +119,8 @@ void rt_tls_enter_guest(void)
     long r = syscall(158, 0x1002UL, &base);
     if (r != 0) fprintf(stderr, "pbboot: tls: arch_prctl(ARCH_SET_FS) failed (%ld)\n", r);
 }
+
+int rt_tls_uses_wrfsbase(void) { return have_wrfsbase; }
 
 void rt_tls_enter_host(void)
 {

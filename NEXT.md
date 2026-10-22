@@ -1372,3 +1372,20 @@ does take, since the report reads the host base while the body left `%fs` on the
 `have_wrfsbase = 1` when the two are equal -- true for a working write and for a silently ignored one.
 It is the `promote.py` shape: a check whose failure mode is unreachable, gating a startup refusal that has
 therefore never fired.
+
+## Stride refuted, slot proved, and the write still does not take: it is a code-location fact
+
+All four uses of `TRAMPOLINE_SIZE` read the same macro (`:53`, `:390` binding, `:510` mmap, `:519` emitter), so a
+guest jumping into the middle of a stub is ruled out statically. The `which` token then closed the other half:
+
+    probe says wrfsbase WORKS          <- discriminating probe (writes a DIFFERENT value, restores)
+    stub readback 0x636645ce0c80 which #1048614 (host base 0x743f7f001740)
+
+`#1048614` = object 1, import 38 -- **the stub that ran is the stub I dumped.** Its host-base imm64 is correct,
+its `wrfsbase` carries F3 and /3-r11, the instruction is reached (the `which` store after it executes), and five
+bytes later `%fs` is still the guest block -- while the same instruction works at init and in the handler.
+
+**Next discriminator, and it separates the two remaining causes: emit the same six bytes into an ordinary
+malloc'd RWX buffer in `main` and call it.** If it no-ops there too, the cause is the hand-emitted form or the
+mapping; if it works, the cause is something about the stub region or the caller. **The instruction is the same
+in both places, so whichever variable moves between them is the one that matters.**
