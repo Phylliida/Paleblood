@@ -47,7 +47,9 @@
 #define MODULE_STRIDE 0x4000000ull
 #define MAX_OBJECTS 16
 #define STACK_SIZE (16u << 20)
-#define TRAMPOLINE_SIZE 64
+/* 104 bytes of stub: prologue, mark, in-flight index and the three argument words, the target call between
+   two %fs writes, and the clear before returning. */
+#define TRAMPOLINE_SIZE 128
 
 static const struct {
     const char *name;
@@ -172,6 +174,12 @@ static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void
 /* Each import's call goes through a trampoline: mark it called, then jump to the provider, or
    into unimplemented() with the object and import. r11 is scratch in the System V convention and
    carries no argument; rax is left alone (variadic calls pass a count in al). */
+/* Which syslib body is executing, and the three argument words it received. Set by the shared prologue and
+   CLEARED before the stub returns, so "the fault happened inside #39" and "the fault happened after #39
+   returned" are different readings rather than the same one -- a stale index is a claim, not a measurement. */
+volatile uint32_t rt_syslib_in_flight = 0xffffffffu;
+volatile uint64_t rt_syslib_args[3];
+
 static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target)
 {
     unsigned char *p = t;
@@ -180,6 +188,16 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
     const uint64_t guestbase = rt_tls_guest_base();
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &m, 8), p += 8;                /* movabs r11, mark */
     *p++ = 0x41, *p++ = 0xc6, *p++ = 0x03, *p++ = 0x01;               /* mov byte [r11], 1 */
+    {
+        const uint64_t inf = (uint64_t)(uintptr_t)&rt_syslib_in_flight;
+        const uint64_t arg = (uint64_t)(uintptr_t)&rt_syslib_args;
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &inf, 8), p += 8;          /* movabs r11, &in_flight */
+        *p++ = 0x41, *p++ = 0xc7, *p++ = 0x03, memcpy(p, &which, 4), p += 4; /* mov dword [r11], which */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &arg, 8), p += 8;          /* movabs r11, &args */
+        *p++ = 0x49, *p++ = 0x89, *p++ = 0x7b, *p++ = 0x00;            /* mov [r11+0], rdi */
+        *p++ = 0x49, *p++ = 0x89, *p++ = 0x73, *p++ = 0x08;            /* mov [r11+8], rsi */
+        *p++ = 0x49, *p++ = 0x89, *p++ = 0x53, *p++ = 0x10;            /* mov [r11+16], rdx */
+    }
     if (!target) {
         *p++ = 0xbf, memcpy(p, &which, 4), p += 4;                     /* mov edi, which */
         target = (uint64_t)(uintptr_t)unimplemented;
@@ -195,7 +213,14 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
     *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
+    {
+        const uint64_t inf = (uint64_t)(uintptr_t)&rt_syslib_in_flight;
+        const uint32_t none = 0xffffffffu;
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &inf, 8), p += 8;          /* movabs r11, &in_flight */
+        *p++ = 0x41, *p++ = 0xc7, *p++ = 0x03, memcpy(p, &none, 4), p += 4; /* cleared: none in flight */
+    }
     *p++ = 0xc3;                                                       /* ret */
+    if ((size_t)(p - t) > TRAMPOLINE_SIZE) rt_fatal("trampoline", "stub exceeds TRAMPOLINE_SIZE");
 }
 
 typedef struct {
@@ -604,6 +629,12 @@ int main(int argc, char **argv)
         }
         printf("pbboot: fault on pbboot sha256 %s (the artifact that is running, not a rebuild)\n",
                rt_identity_sha());
+        if (rt_syslib_in_flight == 0xffffffffu)
+            printf("pbboot: in flight: none (not inside a syslib body)\n");
+        else
+            printf("pbboot: in flight: #%u args %#llx %#llx %#llx\n", rt_syslib_in_flight,
+                   (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
+                   (unsigned long long)rt_syslib_args[2]);
         printf("pbboot: fault regs rax %llx rbx %llx rcx %llx rdx %llx\n"
                "pbboot: fault regs rsi %llx rdi %llx rbp %llx rsp %llx\n"
                "pbboot: fault regs r8 %llx r9 %llx r10 %llx r11 %llx r12 %llx r13 %llx r14 %llx r15 %llx\n",

@@ -1295,3 +1295,18 @@ staying silent -- and a refusal that does not fire is evidence about reachabilit
 trampoline prologue (`mov dword [rip+idx], imm32`) and printed by the fault handler.** Ten bytes in a stub with
 sixteen spare. **Then the body is named instead of inferred from a register set, and no register can tell a
 caller's NULL from my arithmetic after the fact.**
+
+## In flight, named: #23 scePthreadMutexInit -- and the null is produced inside it
+
+The instrument works and it is not the answer I expected: **`in flight: #1048599`** (packed `k << 20 | i` =
+object 1, import 23), **args `0x8800bfcd0 0 0x774b3cffff20`**. So the fault is inside
+**`scePthreadMutexInit`**, whose first argument is a valid libc-image pointer and whose **second is NULL**.
+#38 and #39 completed and returned; the heap and proc-param hypotheses were never on the fault path.
+
+**And the body is correct about the NULL attr** -- `mutex_init` does `attr ? *attr : NULL` and substitutes
+`TYPE_ERRORCHECK` -- so the null that glibc receives is **not the guest's argument, and not an unguarded
+dereference of `attr`**. It is produced downstream, inside what this body calls, or on its return path.
+
+**What is left is a host stack walk**: `rbp` is a host address and the chain is intact in the dump, so four
+return addresses resolved through `dladdr` name the frame that called the copy. **That is the next instrument,
+and it is the only one that can distinguish "inside `mutex_create`" from "inside glibc's own init".**
