@@ -361,3 +361,25 @@ entry count for an 11-char-NID-shaped table: 0x6100000d=0x1010000003e pairs with
 
 **Second route, now the primary one:** `eboot`'s `PT_SCE_RELA` names the exact slot for `_Stdout`
 (the data analogue of the GOT-slot join). Two routes, one answer.
+
+## eboot's `PT_SCE_RELA` is not 24-byte Rela entries -- and `_Stdout` is not in eboot by name
+
+Two measurements, both fatal to the plan I was about to execute.
+
+**1. `_Stdout\0` does not appear anywhere in `eboot.elf`** (`d.find` over the whole file: no hits).
+So eboot's import table does **not** carry symbol names -- consistent with `module_functions.csv`
+holding raw NIDs and with names having to come from a database or a hash sweep. **Any route keyed on
+the string `_Stdout` in eboot is dead before it starts.** Key on the NID (`2sWzhYqFH4E`) instead.
+
+**2. Decoding `PT_SCE_RELA` (off `0x53e9b40`, filesz `0x569d78`) at a 24-byte stride yields ASCII**:
+`r_offset` fields read `6c62 6553 ...` = `"libSce...prx"`, and successive entries spell
+`libSceVideoOut.prx`, `libSceNet.prx`, `libSceAudioOut.prx`, `libSceHttp.prx`, `libSceSysmodule...`.
+**That region is a string table of library names, not relocations.** The 0x18 tags seen in
+`libc.elf` describe its own tables; **assuming 0x18 here was the remembered-constant error, caught by
+the decode rather than by the boot.** 236,517 "entries" is the tell: a count that large for a
+157k-entry module was a stride that did not divide the data.
+
+**So the SCE dynlib data is a mixed region** -- names, NID arrays and relocation words -- whose layout
+must be found by content (ASCII runs, NID-shaped 11-char strings) rather than by a fixed stride.
+That is the next instrument: print the region's printable-string runs with their offsets, and look
+for the 686 import NIDs inside it.
