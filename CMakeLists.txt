@@ -22,7 +22,7 @@ add_subdirectory(game)
 add_executable(test_hooks test/test_hooks.c)
 target_link_libraries(test_hooks bbrt)
 add_test(NAME hooks COMMAND test_hooks)
-add_executable(test_plugin test/test_plugin.c runtime/plugin.c runtime/hooks.c)
+add_executable(test_plugin test/test_plugin.c runtime/plugin.c runtime/hooks.c runtime/process.c)
 target_include_directories(test_plugin PRIVATE runtime/include)
 add_test(NAME plugin COMMAND test_plugin)
 

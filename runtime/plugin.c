@@ -5,6 +5,7 @@
 #include "runtime/guest.h"
 #include "runtime/host.h"
 #include "runtime/hooks.h"
+#include "runtime/process.h"
 #include "runtime/probe.h"
 
 unsigned char *rt_image;
@@ -65,6 +66,13 @@ int bbgame_init(const rt_host *host)
         return 1;
     }
     rt_image = host->image;
+    /* The bounds every system-library handler validates against are declared HERE, in the one function
+       that is told what image the guest is mapped at, in both callers: the harness (which has no boot)
+       and the game path. boot.c sets the same fields on its own path. Without this the harness path left
+       them NULL, and the check admitted every address through an unsigned underflow -- a guard whose
+       subject was never initialised is a licence. */
+    rt_process.image = host->image;
+    rt_process.image_size = host->image_size;
     if (rt_hooks_install(game_hooks, game_hook_count))
         return 1;
     unsigned installed = 0, selected = 0;

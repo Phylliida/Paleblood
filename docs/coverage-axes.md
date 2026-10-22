@@ -80,3 +80,23 @@ mapped, and the disagreement it exists to catch is real rather than decorative.
 trampoline's prologue and cleared by the boundary stub's bookkeeping tail; a body that faults never runs
 the tail, so the value at a fault is **the import that was in flight**, which is the intended reading —
 but silence after a fault means *stale*, not *settled*, and must not be read as "nothing was in flight".
+
+## What the bounds guard was doing on the harness path: nothing, and no row depended on it
+
+`rt_guest_write_ok` has **eight callers, all of them system-library handlers** (`kernel.c`, `clock.c`,
+`pthread_sema.c`, `appcontent.c`); `grep -rn 'rt_guest_write_ok\|rt_guest_ptr_ok'` over every replaced body
+finds **none**. So no leaf family ever consulted it: `mov rax,[rdi+K];ret` and its siblings are compared on
+their returned values and their buffers, and the guard's state cannot change a recorded verdict. **The
+21,128 `edge-verified` rows stand.**
+
+What the differential does guarantee is stated where `edge-verified` is defined: **output equality over
+authored cases.** What it does **not** guarantee, and must not be implied anywhere: that every memory access
+of a replacement body was range-validated. On the harness path the guard was **inert** — its subject
+`rt_process.image` was NULL, so it admitted every address through an unsigned underflow — and on the boot
+path it covered the image only. Two different states, one function, and neither is the guarantee a reader
+would infer from the name.
+
+The subject is now declared in the one function that is told what the image is, in both callers:
+`bbgame_init` sets `rt_process.image`/`image_size` from `host->image`, as `boot.c` does on its own path.
+**A guard whose subject is never initialised is a licence, not a guard,** and this one had been a licence
+on exactly the path the campaign's evidence comes from.
