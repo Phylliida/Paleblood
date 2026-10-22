@@ -503,3 +503,28 @@ what is wrong, not the stride.
 (`_flags`, `_file`, and `_read`/`_seek`/`_write`), not find them -- the case-1 answer -- because a
 bss object is zero at load and libc's `_initstdio` would have filled it, which means the fault is
 either that init did not run or that eboot bound the slot before it did.
+
+## Correction to my own tag table: `DT_INIT_ARRAYSZ` is 0, so libc has no init to run
+
+Re-reading the dump I committed two sessions ago, with names attached this time:
+
+    DT_INIT          = 0x0
+    DT_INIT_ARRAY    = 0xbecc0   (a bss address)
+    DT_INIT_ARRAYSZ  = 0x0       <-- this is the value I failed to read
+    DT_FINI_ARRAY    = 0xbecc0
+    DT_FINI_ARRAYSZ  = 0x0
+    DT_PLTGOT        = 0xbecb8
+
+I recorded "DT_INIT_ARRAY(25)/_SZ(27)" as *present* and never printed the pair's value, and **the size
+is zero**. So the array at `0xbecc0` has **no entries**: there is nothing for a loader to call it with,
+and the companion's check 2 ("does the runtime call each module's init array") is answered *structurally*
+-- there is no array to run, whatever the runtime does.
+
+That makes three readings collapse to one: libc has **no `DT_INIT`, and a zero-length init array**, so
+`_initstdio` is not reachable through dynamic tags at all. Either it is called from eboot's init, or
+stdio initialises lazily on first use inside the guest's own code path -- and in the latter case the
+zeroed `__sFILE` at `0xbf160` is expected, and the fault is in whoever dereferences `_write` before
+lazy init.
+
+**A tag name recorded without its value is a claim, not a measurement** -- the same defect as the
+`boundary_confidence` DISTINCT/`ghidra-export-entry-size` mismatches.
