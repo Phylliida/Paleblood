@@ -76,7 +76,7 @@ def main(argv=None):
         digest, so, n, matched = corpus_digest(a.lib, a.elf, members)
         if matched != n:
             print(f'BYTE DIGEST REFUSED: only {matched} of {n} members are byte-identical; a row '
-                  'citing this digest would claim equality it does not have')
+                  f'citing this digest would claim equality it does not have (so_sha256={so[:16]})')
             return 1
         print(f'digest={digest} so_sha256={so[:16]} members={n} matched={matched}')
         return 0

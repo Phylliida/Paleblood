@@ -137,3 +137,19 @@ byte-backed members with 22,376 differentially-backed ones, and the first questi
 14.20% is "which of these actually ran?" **Owed:** the byte-assertion corpus digest for
 `cases_sha256` (a hash over `(address, executed bytes)` pairs), and one `record_many` call proving
 the path accepts `cases='bytes'` — the test above proves the vocabulary, not the writer.
+
+### 1c. The digest decays in one direction and holds in the other — measured, not argued
+
+Four builds of the same member set, `bb_asm_pilot_004034f0` against `0x004034f0`:
+
+| build | digest | so_sha256 | outcome |
+|---|---|---|---|
+| baseline | `15f7205eb6957de7` | `4f485606570ce154` | matched 1 of 1 |
+| comment-only edit | `15f7205eb6957de7` | `4f485606570ce154` | **identical — the control** |
+| `movb $2` | — | `609b0f848c2e2e81` | **refused, 0 of 1 identical** |
+| restored | `15f7205eb6957de7` | `4f485606570ce154` | back to baseline exactly |
+
+**The second row is the one that makes the first four worth anything:** without it, a digest that
+moved on every build would look exactly like a correct one. And the fourth proves the build is
+reproducible for this purpose — same sources, same bytes, same digest. ±1, the mutant discipline,
+applied to a build rather than to an instruction.
