@@ -1155,3 +1155,19 @@ exactly where the guest's return value lives, and a 128-bit return legally uses 
 syslib return comes back garbage only on the TLS-restored path, which reads as a wrong implementation rather
 than a wrong stub.** Taking the stub over "call `rt_tls_enter_guest()` at the end of every syslib function":
 the second is one site per entry, which is the shape this campaign has spent itself eliminating.
+
+## The stub landed and the criterion fired -- earlier, which is the layout error it was written to catch
+
+`write_trampoline` now emits: `movabs r11, mark; mov byte [r11],1; movabs r10, target; movabs r11, host >fs;
+wrfsbase r11; call r10; movabs r11, guest >fs; wrfsbase r11; ret`, `TRAMPOLINE_SIZE` 48 -> 64, and
+`rt_tls_init()` runs before any trampoline exists because the stub inlines both bases. **No C call sits between
+the guest's jump and the target, so no caller-saved argument register is touched and `r11` is the only scratch
+-- free by the ABI.** FSGSBASE absence is a startup refusal, not a second stub: **one stub, one ABI.**
+
+**Run `2e1bef9d1536`: `imports called 1`, then `signal 4` at a host address in `libc.elf`'s mapping.**
+Pre-registered criterion said **earlier is a TLS-layout error**, and it is earlier -- 1 call against 66. So the
+swap is not neutral and the guest's own use of the TCB is what changes. `rdi 0`, `rsi 0`, `r12/r13` pointing
+into the module image; the fault is `SIGILL`, which is an illegal *instruction*, not a bad load -- so the guest
+likely took a pointer out of the block or from a path that previously returned glibc's TCB and reached code
+that is not code. Next measurement: dump the guest block before the entry call and the first `fs:` access
+after it, and read the guest instructions between the first `fs:[0]` read and the fault rather than guessing.

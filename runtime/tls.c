@@ -8,6 +8,7 @@
    instructions. The architecture is checked at init rather than assumed, so pbboot does not become a binary
    that only runs on CPUs with FSGSBASE: without it the same swap costs an arch_prctl. */
 #include "runtime/tls.h"
+#include "runtime/process.h"
 
 #include <cpuid.h>
 #include <stdint.h>
@@ -34,6 +35,12 @@ static void probe_fsgsbase(void)
     asm volatile("wrfsbase %0" ::"r"(before));
     asm volatile("rdfsbase %0" : "=r"(after));
     if (after == before) have_wrfsbase = 1;
+    /* One stub, one ABI. The trampoline inlines wrfsbase because a C call between the guest's jump and
+       the target would eat every caller-saved argument register; a second stub for the arch_prctl path
+       would be a code path that only runs on some machines. So absence is a refusal at startup. */
+    if (!have_wrfsbase)
+        rt_fatal("FSGSBASE", "this CPU or kernel does not allow user-mode wrfsbase, so guest %fs cannot be "
+                             "swapped between guest and host code at syslib call boundaries");
 }
 
 void rt_tls_init(void)
@@ -47,6 +54,10 @@ void rt_tls_init(void)
 }
 
 int rt_tls_have_wrfsbase(void) { return have_wrfsbase; }
+
+uint64_t rt_tls_host_base(void) { return (uint64_t)host_fsbase; }
+
+uint64_t rt_tls_guest_base(void) { return (uint64_t)(uintptr_t)guest_block; }
 
 void rt_tls_enter_guest(void)
 {

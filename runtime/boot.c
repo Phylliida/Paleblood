@@ -46,7 +46,7 @@
 #define MODULE_STRIDE 0x4000000ull
 #define MAX_OBJECTS 16
 #define STACK_SIZE (16u << 20)
-#define TRAMPOLINE_SIZE 48
+#define TRAMPOLINE_SIZE 64
 
 static const struct {
     const char *name;
@@ -171,14 +171,26 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
 {
     unsigned char *p = t;
     const uint64_t m = (uint64_t)(uintptr_t)mark;
+    const uint64_t hostbase = rt_tls_host_base();
+    const uint64_t guestbase = rt_tls_guest_base();
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &m, 8), p += 8;                /* movabs r11, mark */
     *p++ = 0x41, *p++ = 0xc6, *p++ = 0x03, *p++ = 0x01;               /* mov byte [r11], 1 */
     if (!target) {
         *p++ = 0xbf, memcpy(p, &which, 4), p += 4;                     /* mov edi, which */
         target = (uint64_t)(uintptr_t)unimplemented;
     }
-    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &target, 8), p += 8;          /* movabs r11, target */
-    *p++ = 0x41, *p++ = 0xff, *p++ = 0xe3;                             /* jmp r11 */
+    /* The stub inlines the %fs swap instead of calling rt_tls_enter_host(): a C call between the guest's
+       jump and the target would clobber every caller-saved argument register (rdi, rsi, rdx, rcx, r8, r9,
+       xmm0-7), so the guest's arguments would arrive as garbage -- a defect already paid for once. r11 is
+       caller-saved, so the guest cannot hold anything live in it across a call: it is free by the ABI.
+       No saves, no restores, and no hazard on either the argument or the return path. */
+    *p++ = 0x49, *p++ = 0xba, memcpy(p, &target, 8), p += 8;          /* movabs r10, target */
+    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &hostbase, 8), p += 8;         /* movabs r11, host %fs base */
+    *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;                /* wrfsbase r11 */
+    *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
+    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
+    *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;                /* wrfsbase r11 */
+    *p++ = 0xc3;                                                       /* ret */
 }
 
 typedef struct {
@@ -349,6 +361,7 @@ static const char *usage =
 int main(int argc, char **argv)
 {
     rt_announce_identity();
+    rt_tls_init(); /* must precede every trampoline: the stub inlines the two bases */
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
     int timeout = 30, trace = 0, list = 0;
     for (int i = 1; i < argc; i++) {
