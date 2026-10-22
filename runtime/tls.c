@@ -47,8 +47,18 @@ void rt_tls_init(void)
 {
     probe_fsgsbase();
     asm volatile("rdfsbase %0" : "=r"(host_fsbase));
+    /* EXPERIMENT, one build: seed the guest block with the process's own TCB so the guest sees byte-for-byte
+       what it saw before the swap, and only the self-pointer's identity differs. If the boot returns to
+       called 66 the guest reads TCB fields and this block must become a declared layout; if it still faults at
+       1 the guest does arithmetic on the pointer (variant II) and the block needs a static image before it.
+       The copy is a stopgap: it is the host's TCB, whose contents are glibc's business, so it must not survive
+       past threads. */
     memset(guest_block, 0, sizeof guest_block);
-    *(uint64_t *)guest_block = (uint64_t)(uintptr_t)guest_block; /* the only field the guest reads */
+    {
+        const unsigned char *src = (const unsigned char *)(uintptr_t)host_fsbase;
+        memcpy(guest_block + 8, src + 8, RT_TLS_BLOCK_BYTES < 0x4a0 ? RT_TLS_BLOCK_BYTES - 8 : 0x4a0 - 8);
+    }
+    *(uint64_t *)guest_block = (uint64_t)(uintptr_t)guest_block; /* the guest's own self-pointer */
     fprintf(stderr, "pbboot: tls: guest block at %p, self-pointer set, swap via %s\n", (void *)guest_block,
             have_wrfsbase ? "wrfsbase" : "arch_prctl");
 }

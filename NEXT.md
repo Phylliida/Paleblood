@@ -1171,3 +1171,16 @@ into the module image; the fault is `SIGILL`, which is an illegal *instruction*,
 likely took a pointer out of the block or from a path that previously returned glibc's TCB and reached code
 that is not code. Next measurement: dump the guest block before the entry call and the first `fs:` access
 after it, and read the guest instructions between the first `fs:[0]` read and the fault rather than guessing.
+
+## The TCB-copy experiment: still `SIGILL` at `called 1` -- so the guest does arithmetic on the pointer
+
+A copy of the process's own TCB (first `0x4a0`, self-pointer rewritten to the block) is byte-for-byte what the
+guest saw before the swap, and it **still faults at `called 1`, `signal 4`.** So the guest is not reading TCB
+fields and finding ours empty: **it takes `fs:[0]` and reaches *below* it**, which is variant II -- `[static
+image][pad][TCB]` with `%fs` at the end -- and an aligned block with nothing before it is the wrong shape.
+
+**The detail that argues for variant II over "a different field path": the fault pc ends in the same low bits
+in both runs (`...d9a2`, `...89a2`, module bases different).** A fixed guest location reached twice, after a
+pointer taken from `%fs`: **the same arithmetic landed on the same static-TLS slot, and what is there is not
+code.** Not yet a conclusion -- the two runs used different binaries -- but it is the one number that should be
+checked by resolving the pc against the kept artifact's module base before the layout is written.
