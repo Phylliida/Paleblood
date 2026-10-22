@@ -5,6 +5,12 @@ what I recommend, and what it costs if I am wrong. **The wall is 30 approvals ag
 clean rows**; four of these five questions are what stand between here and reviewing the families
 that already have evidence.
 
+**The five "unblocks" figures are not additive.** They sum to 28,797 against a clean-row
+population of **21,086**: the `ret` members live inside the four families named in question 1, and
+the SSE answer changes which of them can ship at all. **Union, not sum -- the ceiling is 21,086,
+and each answer releases a subset of it.** A reader who adds them gets a number larger than
+exists, which is the defect this campaign keeps paying for.
+
 ---
 
 ## 1. Approve the four family shape packets?
