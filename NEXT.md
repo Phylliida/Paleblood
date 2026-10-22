@@ -420,3 +420,22 @@ Measured in one call (contexts trimmed):
 Referrer search for the name-table offset `0xc3094` as `u32` and `u64` is recorded in the body; a
 table holding that value is the entry array that indexes the names, which is the structure the
 relocation walk needs.
+
+## libc.elf's SCE dynlib blob: address arrays located by content
+
+Scan of `0xc2cc0..0xe7ad0` for fixed-stride runs of pointers landing inside libc's own LOAD ranges --
+**80 runs of 16 or more**. The first and largest is at **`0xd9040`: 128 entries of 32 bytes**, each of
+the shape
+
+    0x0, 0xb8aa8, 0x8, 0x81e10      (flags?, name-or-attr, size 8, address)
+
+with the fourth quad landing in libc's text (`0x81e10 < 0xb7924`). **That is an export/symbol entry
+array found by content, with no reference format and no 24-byte assumption.**
+
+Second run at `0xd9460` (98 entries) and a third at `0xd9880` (23) follow the same shape, so the blob
+holds several such arrays rather than one.
+
+Note `0xb8aa8` is *not* the name table (which lives at file offset 0xc3xxx, and this segment's
+vaddr == offset): the second quad points into libc's data segment, so it is an attribute or a cookie,
+not `st_name`. **Which quad names the symbol is the open question**, and the name table at 0xc3xxx
+being contiguous with the stdio NIDs means the link is by ordinal or by a separate index array.
