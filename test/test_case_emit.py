@@ -81,6 +81,31 @@ class CaseEmit(unittest.TestCase):
         self.assertNotIn('rdi', case['args'])
         self.assertEqual(case['uncovered'], ['rdi: 0x400100 in eboot (no bytes captured)'])
 
+    def test_the_object_table_is_read_from_a_file_and_must_be_a_partition(self):
+        table = 'name,guest_start,size,kind\neboot,0x00400000,8388608,eboot\nlibc.elf,0x80400000,262144,module\n'
+        with tempfile.TemporaryDirectory(dir=os.path.dirname(__file__)) as d:
+            path = os.path.join(d, 'objects.csv')
+            open(path, 'w').write(table)
+            objects = case_emit.load_objects(path)
+        self.assertEqual([o['name'] for o in objects], ['eboot', 'libc.elf'])
+        self.assertEqual(objects[1]['size'], 262144)
+        self.assertEqual(case_emit.overlapping(objects), [])
+        # and the defect the fixture above taught: an overlapping table is detected, not absorbed
+        bad = case_emit.load_objects.__wrapped__ if hasattr(case_emit.load_objects, '__wrapped__') else None
+        del bad
+        overlapping = [{'name': 'a', 'base': 0x400000, 'size': 0x100000},
+                       {'name': 'b', 'base': 0x480000, 'size': 0x100}]
+        self.assertEqual(len(case_emit.overlapping(overlapping)), 1)
+
+    def test_the_first_capture_target_is_hand_authored_and_that_travels_with_the_record(self):
+        # The first target is one of the 21 `verified` rows and its origin is hand, so
+        # the first runtime-witnessed event says nothing about the generated majority. The record must
+        # carry that, or the count will imply something the event does not support.
+        objects = [{'name': 'eboot', 'base': 0x400000, 'size': 0x2f00000}]
+        case = case_emit.emit_capture('0x00e01000', {'rdi': 0x10}, objects,
+                                      note='origin=hand; target is a verified row')
+        self.assertIn('origin=hand', case['note'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -641,6 +641,27 @@ int main(int argc, char **argv)
     for (int k = 0; k < (int)(sizeof objects / sizeof objects[0]); k++) {
         if (!objects[k].elf) continue;
         fprintf(stderr, "pbboot: image %d at host %p\n", k, (void *)objects[k].image);
+        /* The object table goes to a FILE, because the print is for the operator and the file is for the
+           tool: an emitter that parses a log line breaks silently the first time the line is reworded --
+           every pointer becomes "uncovered" and the capture then looks clean. Guest start is the same
+           number the catalog uses, so a captured pointer joins it directly. */
+        {
+            static int wrote_table;
+            if (!wrote_table) {
+                wrote_table = 1;
+                FILE *t = fopen("symbols/objects.csv", "w");
+                if (t) {
+                    fprintf(t, "name,guest_start,size,kind\n");
+                    for (size_t m = 0; m < object_count; m++)
+                        fprintf(t, "%s,0x%08llx,%llu,%s\n",
+                                objects[m].label ? objects[m].label : "?",
+                                (unsigned long long)(((uintptr_t)objects[m].image - (m ? MODULE_BASE : GUEST_BASE)) + RT_EBOOT_BASE),
+                                (unsigned long long)objects[m].size,
+                                m == 0 ? "eboot" : "module");
+                    fclose(t);
+                }
+            }
+        }
         for (int i = 0; i < (int)objects[k].imports; i++)
             if (objects[k].called[i]) fprintf(stderr, "pbboot: entered #%d %s:%s\n", i, rt_elf_import_library(objects[k].elf, i) ? rt_elf_import_library(objects[k].elf, i) : "?", rt_elf_import_name(objects[k].elf, i) ? rt_elf_import_name(objects[k].elf, i) : "?");
     }

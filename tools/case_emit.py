@@ -16,6 +16,7 @@ Two rules are encoded rather than documented:
 """
 from __future__ import annotations
 
+import csv
 import json
 
 SCHEMA = 1
@@ -67,7 +68,7 @@ def classify(pointer: int, objects: list[dict]) -> str | None:
 
 def emit_capture(pc: str, registers: dict[str, int], objects: list[dict],
                  buffers: dict[str, dict] | None = None, replayed: str = 'eboot',
-                 returns: str = 'i64') -> dict:
+                 returns: str = 'i64', note: str = '') -> dict:
     """Emit a case from captured entry state, reporting every pointer the replay cannot speak for.
 
     `buffers` is keyed by object-qualified name (`eboot:0x10`) so a caller can supply bytes for the
@@ -90,4 +91,31 @@ def emit_capture(pc: str, registers: dict[str, int], objects: list[dict],
         else:
             uncovered.append(f'{name}: 0x{value:x} in {owner}')
     used = {k: buffers[k] for k in sorted(buffers or {}) if f'buf:{k}' in emitted.values()}
-    return emit(pc, emitted, used, returns=returns, uncovered=uncovered)
+    return emit(pc, emitted, used, returns=returns, uncovered=uncovered, note=note)
+
+
+def load_objects(path: str = 'symbols/objects.csv') -> list[dict]:
+    """Read the object table the loader wrote. A tool reads a file; a person reads the log.
+
+    `symbols/objects.csv` is `name,guest_start,size,kind`, written by `runtime/boot.c` once per boot. An
+    emitter that parsed the printed line instead would break silently: a reworded print turns every pointer
+    into `uncovered`, and a capture with no coverage still reproduces.
+    """
+    objects: list[dict] = []
+    with open(path, newline='', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            objects.append({'name': row['name'], 'base': int(row['guest_start'], 16),
+                            'size': int(row['size']), 'kind': row['kind']})
+    # Sorted by base so classification is a function of the table, not of the order the file happened to
+    # be written in; and the caller can assert the ranges do not overlap, which is what they must be.
+    return sorted(objects, key=lambda o: o['base'])
+
+
+def overlapping(objects: list[dict]) -> list[str]:
+    """Names whose ranges are not a partition. A table with an overlap classifies by first match, which is
+    correct behaviour over a defective table -- so the defect has to be detected here, not absorbed."""
+    bad = []
+    for a, b in zip(objects, objects[1:]):
+        if a['base'] + a['size'] > b['base']:
+            bad.append(f"{a['name']} [{a['base']:#x},+{a['size']}) overlaps {b['name']} at {b['base']:#x}")
+    return bad

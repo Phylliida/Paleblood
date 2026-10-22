@@ -139,3 +139,23 @@ proof as a check that has never fired on its subject.
 
 `0x02418d20 frame_timing_frame_step` is in `symbols/functions.csv` at **467 bytes, status `verified`** — so
 `id == address` joins the ledger row instead of 404-ing at replay time.
+
+## The object table is a file, and the first capture is on a hand-authored row
+
+`runtime/boot.c` now writes **`symbols/objects.csv`** (`name,guest_start,size,kind`) once per boot, and
+`case_emit.load_objects()` reads it. **The print stays for the operator; the file is for the tool** — an
+emitter parsing a log line breaks silently the first time the line is reworded: every pointer becomes
+`uncovered` and the capture then looks clean. Same reasoning as `imports.csv`: a log line is a fact about one
+run. `load_objects()` sorts by base, and `overlapping()` reports a table that is not a partition instead of
+absorbing it, because first-match classification is correct behaviour over a defective table.
+
+The writer lives where the bases are decided, and guest start is **the image delta from its own mapping base
+plus `RT_EBOOT_BASE`** — the number the catalog uses, so a captured pointer joins it directly. The file does
+not exist until a boot runs; until then the emitter's contract is proved against a synthetic table.
+
+**The first capture target is `hand`, not generated.** `replacement_origins.csv` records the row's origin as
+`hand`, so the first `runtime-witnessed` event is on hand-authored C and **says nothing about the generated
+majority**. The capture's record carries `origin=hand` in `note`, because a count that does not carry that
+will imply a claim the event cannot support. On the other hand, the row is one of the 21 `verified` rows, so
+a surprise there is a surprise about **integration, not decompilation** — which is the axis the capture
+exists to measure, and the two claims stay separable.

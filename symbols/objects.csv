@@ -1,0 +1,3 @@
+name,guest_start,size,kind
+eboot,0x00400000,8192,eboot
+m.elf,0x00400000,4096,module
