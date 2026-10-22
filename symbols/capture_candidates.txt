@@ -1,0 +1,3 @@
+# Bodies the capture wrapper may be installed at. Each row of capture_ok.csv carries the sha256 of the
+# bytes scanned, so an edited body refuses instead of matching a stale verdict.
+0x02418d20

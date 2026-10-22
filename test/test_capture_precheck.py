@@ -7,7 +7,7 @@ import unittest
 # way the rest of the suite does rather than relying on where I happened to run it from.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
 
-from capture_precheck import scan, verdict
+from capture_precheck import scan, verdict, write_table, TABLE
 
 
 class CaptureRefusesVolatileXmm(unittest.TestCase):
@@ -25,6 +25,22 @@ class CaptureRefusesVolatileXmm(unittest.TestCase):
         found = scan(bytes.fromhex("488b07c3"))
         self.assertEqual(set(), found["xmm"])
         self.assertIn("rdi", found["bases"])
+
+    def test_the_committed_table_matches_a_fresh_scan(self):
+        """The staleness guard: regenerate and diff, so an edited body or a new candidate is a red test rather
+        than an install-time refusal in the game -- and the row's sha256 is the key that makes it expire."""
+        self.assertTrue(TABLE.exists(), f"no table at {TABLE}: generate it with --table")
+        fresh = write_table()
+        committed = TABLE.read_text()
+        self.assertEqual(committed, fresh,
+                         "symbols/capture_ok.csv is stale: regenerate with `capture_precheck.py --table`")
+        rows = [r for r in committed.splitlines()[1:] if r]
+        self.assertGreater(len(rows), 0, "the table must carry at least one candidate row")
+        for row in rows:                                  # a row must be a verdict plus a key, never one alone
+            address, verdict, digest = row.split(",")
+            self.assertTrue(address.startswith("0x"), row)
+            self.assertIn(verdict, ("none",), row)         # candidates are the bodies we intend to capture
+            self.assertRegex(digest, r"^[0-9a-f]{64}$", row)
 
     def test_scanning_nothing_is_not_a_pass(self):
         ok, why = verdict(b"")

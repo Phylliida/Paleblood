@@ -79,11 +79,54 @@ static int region_is_executable(const void *address, size_t length)
     return executable;
 }
 
+/* The capture wrapper saves six GPRs and not xmm0-7, so it must not be installed at a body that uses them.
+   The scan lives in tools/capture_precheck.py (one Capstone binding, never two); the FILE is the contract and
+   the installer refuses absent -- the shape symbols/install_mode.csv already uses. Each row carries the sha256
+   of the bytes scanned, so an edited body stops matching; the C side cannot recompute that hash, and the test
+   that regenerates the table is the instrument that does. */
+static int capture_allowed(uint64_t offset)
+{
+    if (!getenv("BB_CAPTURE")) return 1;    /* not a capture install: A's proven wrapper, no table needed */
+
+    const char *path = getenv("BB_CAPTURE_OK");
+    if (!path || !*path) path = "symbols/capture_ok.csv";
+    FILE *table = fopen(path, "r");
+    if (!table) {
+        fprintf(stderr, "capture: no table at %s: refusing to install at 0x%llx; nothing is recorded\n",
+                path, (unsigned long long)offset);
+        return 0;
+    }
+    char line[256];
+    int seen = 0;
+    while (fgets(line, sizeof line, table)) {
+        unsigned long long addr = 0;
+        char verdict[64] = {0};
+        if (sscanf(line, "0x%llx,%63[^,]", &addr, verdict) != 2) continue;   /* header and blanks */
+        if (addr != offset) continue;
+        seen = 1;
+        if (strcmp(verdict, "none") != 0) {
+            fprintf(stderr, "capture: refusing to install at 0x%llx: %s\n", (unsigned long long)offset,
+                    verdict);
+            fclose(table);
+            return 0;
+        }
+    }
+    fclose(table);
+    if (!seen) {
+        fprintf(stderr, "capture: no row for 0x%llx in %s: refusing; nothing is recorded\n",
+                (unsigned long long)offset, path);
+        return 0;
+    }
+    return 1;
+}
+
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
     if (!guest_image || !target || size < ABSOLUTE_JUMP_SIZE || offset > guest_image_size ||
         size > guest_image_size - offset)
         return -1;
+
+    if (!capture_allowed(offset)) return -1;
 
     if (!region_is_executable(guest_image + offset, ABSOLUTE_JUMP_SIZE)) {
         fprintf(stderr, "hook: refusing to patch 0x%llx: the 14 bytes at 0x%llx are not in an "
