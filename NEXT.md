@@ -472,3 +472,34 @@ that are also segment offsets before they are read as addresses.
 
 Next: walk the 24-byte table from `0xcd140` for entries whose address lands in the stdio neighbourhood,
 and join by ordinal to the contiguous `_Stderr`/`_Stdout`/`_Stdin` names at `0xc3c34..0xc3c54`.
+
+## The stride join, run over all 112: three bss addresses 0x100 apart
+
+Excluding the phdr-field hit leaves 112 pointers into the bss tail. Scanning them in file order for
+constant deltas (n >= 3) gives exactly two overlapping runs, both at file offset `0xd9928`/`0xd99d0`
+and both **delta `0x100`**:
+
+    0xbf060, 0xbf160, 0xbf260        (i.e. 0xbf060 + k*0x100, k = 0..2)
+
+**That is the shape `__sF[0..2]` must have** -- three contiguous objects whose separation *measures*
+`sizeof(__sFILE) = 256` rather than assuming it. Under FreeBSD's ordering `__sF[0]=stdin`,
+`__sF[1]=stdout`, `__sF[2]=stderr`, so the candidate mapping is
+
+    _Stdin  0xbf060   (__sF[0], _file 0)
+    _Stdout 0xbf160   (__sF[1], _file 1)
+    _Stderr 0xbf260   (__sF[2], _file 2)
+
+**All three are inside the bss tail, so their file image is zero -- which is why the earlier `.data`
+scan found nothing, and why `_flags`/`_file` cannot be read from the file at all.** The 0x100 stride is
+the only evidence available without a dump, and it is exactly the evidence the companion asked for.
+
+**Test that would falsify it cheaply:** the export table should carry these three addresses in three
+consecutive entries (they are consecutive objects, and the names are consecutive NIDs). If the export
+array at `0xd9040`/`0xd9928` shows them in the `_Stdin`/`_Stdout`/`_Stderr` order above, the mapping
+is confirmed by an independent join; if it shows them in another order, the ordering assumption is
+what is wrong, not the stride.
+
+**Consequence for the fault either way:** if these are the objects, the runtime must **populate** them
+(`_flags`, `_file`, and `_read`/`_seek`/`_write`), not find them -- the case-1 answer -- because a
+bss object is zero at load and libc's `_initstdio` would have filled it, which means the fault is
+either that init did not run or that eboot bound the slot before it did.
