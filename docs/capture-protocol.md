@@ -644,3 +644,31 @@ the library and does not yet cover the executable. The concrete measurement: **`
 | grep -c bbgame_init` → 0.** Until `pbboot` links the plugin, the capture path in the game cannot install a hook,
 and **the ordering to assert — image mapped and `rt_process.image` set → hooks installed → guest TLS entered →
 `run_guest` — is unassertable because step two does not exist there.**
+
+### The bias is one function now, and a shared header is not where a helper goes
+
+`runtime/include/runtime/site_guard.h` holds two static inline functions and nothing else:
+
+- **`rt_image_offset(guest) = guest − 0x400000`** — the offset `install_hook` takes. The file bias
+  (`guest − 0x3fc000`) and the host mapping at `0x800000000` are different numbers for different spaces.
+- **`rt_site_matches(image, size, guest, expected, n)`** — compares the bytes at the image offset against what the
+  catalog says the address holds, **refusing on a short image, an empty expectation, or any mismatch.** *Nothing to
+  compare is not agreement.*
+
+Four cases in `test_guest_mem`: the image offset uses `RT_SITE_EBOOT_BASE`; it differs from the file bias by
+exactly **`0x4000`**; a matching prologue at image offset `0x4000` passes; **the same expectation probed 16 KiB
+lower refuses** — the shift that reads back, passes the exec check, and fires at a site nobody selected.
+
+**This header exists separately because of what I broke first:** I put both functions in `guest.h`, built, and
+`ctest` went from 17/17 to **15/17** — `validate_functions` and `check_pins` failed, because `guest.h` is a
+**defining file for pinned functions**, so editing it stales every `source_hash` that includes it. **The shared-file
+pin is a deliberate tree-wide decision; a helper is not allowed to spend it.** Reverted `guest.h` untouched and
+moved the helpers out, and both gates went green without a single pin being re-recorded.
+
+Also: `check()` in `test_guest_mem.c` **returns void and sets a file-scope flag**, so `failed |= check(...)` was a
+type error, and a local `int failed` of the same name would have **silenced every case in the function**. Both
+removed; the cases now fail the run rather than a local variable nobody reads.
+
+**`BB_PLUGIN` is not implemented yet and says so:** there is no `dlopen` in `pbboot` to give a path to, and a
+mandatory variable with no consumer is a comment with a getenv call in it. It lands with the call site, mandatory
+and refusing on absence, for the `BB_PBBOOT` reason: **a searched default manufactures agreement.**
