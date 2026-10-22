@@ -622,3 +622,24 @@ table** -- so there are two independent name stores and I had been reading the o
 
 **Rule that this earns:** a label inferred from a platform convention is a hypothesis; this file has now
 contradicted FreeBSD ordering once, and the contradiction was in a dump I had already printed.
+
+## Refuted: the second field is not a name pointer, and my own read produced 4 KB of binary
+
+    field2 = 0xb8f90  ->  hex 4c 69 ff ff 88 25 fa ff  ...   printable 0/16
+
+**Not a string.** The bytes are 8-byte displacement-shaped values, not names, so **`{value, name_pointer,
+attrs}` was my hypothesis and the file says no.** The control I ran -- `nid(name)` for each row, searched
+for in the `0xc3xxx` name table -- found **no matches**, which is consistent with the names never having
+been names.
+
+**Two instrument lessons, both mine.**
+1. **A string read with no length bound and no printability test produced a 4 KB latin1 dump** -- the
+   terminal filled with binary because I asked for `d[o:d.index(0,o)]` on a region that has no NUL for
+   kilobytes. **Bound every string read (`o+64`) and require printable bytes before believing it.**
+2. **My table walk's predicate was wrong**: `isrec` accepted two records then stopped, against a region
+   where the earlier 0x18-stride scan found at least 19 address-bearing rows. **A predicate that
+   classifies 2 of 19 as records is measuring itself.**
+
+**What survives:** the three bss addresses, the measured `0x100` stride, the 0x18-strided records
+existing, and the companion's name-order correction. **What does not:** my name-pointer reading, and with
+it the "export table dump" idea in that form.
