@@ -113,6 +113,25 @@ int main(void)
                     "address skip must omit only the selected hook and continue initialization");
     failed |= check(unsetenv("BB_HOOK_SKIP") == 0, "hook skip setting must be removed after the test");
 
+    /* The first capture installs exactly one hook, selected by address: nothing else can fire earlier
+       and divert the guest, so a divergence has one candidate instead of 1,737. */
+    reset_observations();
+    failed |= check(setenv("BB_HOOK_ONLY", "0x00402000", 1) == 0,
+                    "single-hook selection must be configurable");
+    failed |= check(bbgame_init(&host) == 0, "host must initialize with BB_HOOK_ONLY");
+    failed |= check(installed_count == 1 && installed[0].offset == 0x2000 && probe_count == 1,
+                    "BB_HOOK_ONLY must install one of the selected hooks and nothing else");
+
+    /* One filter, two directions: setting both is refused, not resolved. Two expressions of one filter
+       disagree the first time both are set, and the disagreement looks like a hook that did not fire. */
+    reset_observations();
+    failed |= check(setenv("BB_HOOK_SKIP", "replacement_one", 1) == 0,
+                    "the second direction must be settable alongside");
+    failed |= check(bbgame_init(&host) != 0, "both directions set at once must be refused");
+    failed |= check(installed_count == 0 && probe_count == 0, "a refused selection must install nothing");
+    failed |= check(unsetenv("BB_HOOK_SKIP") == 0 && unsetenv("BB_HOOK_ONLY") == 0,
+                    "both selection settings must be removed after the test");
+
     reset_observations();
     install_error = 1;
     failed |= check(bbgame_init(&host) != 0, "hook installation failure must abort initialization");

@@ -42,3 +42,24 @@ problem with a schema attached.
 entry, and that entry is `frame_dummy` (`nm -C` finds no `_GLOBAL__sub_I`), the CRT stub that only exists
 to register the tm-clone table. There are no named or unnamed initialisers in the plugin, so a hook is
 installed by an explicit call, never as a side effect of loading the library.
+
+## Symbol interposition: measured, not assumed
+
+`nm -D --defined-only` over both binaries, intersected: **empty.** `pbboot` exports 59 dynamic symbols,
+`libbbgame.so` 21,139, and **no name is defined in both** — so nothing is resolved by load order and
+nothing is shadowed. The plugin references **no `rt_*` or `guest*` symbol at all** (`nm -D | awk '$1=="U"'
+| grep -E ' rt_|guest'` is empty), and `pbboot` is a **PIE executable, not exported** (`FLAGS_1: PIE`, no
+`-rdynamic`), so a plugin could not bind to its symbols even if it wanted to.
+
+The consequence for this document is the opposite of the concern and just as load-bearing: **there is no
+split state to shadow, and there is also no shared `rt_guest_read_ok`.** The bodies validate against
+whatever bounds their own image of the mapping carries — the plugin's `rt_image` from `host->image` — so
+the in-game capture's validity rests on `host->image` being the boot's mapped image, which is exactly what
+the printed base comparison asserts before installing. **No interposition means no free agreement: the
+assertion is the only thing that could make them agree, which is why it fails closed.**
+
+**Lazy binding:** neither binary has `BIND_NOW` (`readelf -d` shows only `FLAGS_1: PIE` on both), so a
+first call inside an installed body can resolve lazily. A hook that fires before its callee's PLT entry
+has been resolved performs that resolution *inside the guest's thread* on the host `%fs` the boundary stub
+restored — which would read as a body defect. `LD_BIND_NOW=1` on any run whose purpose is a capture, and
+say so in the run's own log.
