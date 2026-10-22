@@ -235,3 +235,20 @@ widest memory access of **8 bytes** and no SIMD in its shape, so `WIDEST_ACCESS_
 region is a multiple of it (16 / 64 / 128 all are). **64 bytes picked by feel would be a remembered constant
 wearing a field name.** The harness has no poison convention of its own — `verify.py`'s "canary" is a
 falsification check on the comparison, not a fill value — so this field and its constant are new here.
+
+**The 112 instructions cover 466 of 467 bytes.** Capstone stops one byte short of the member's end — the
+residual is the last byte, and **a one-byte window cannot contain a memory operand**, so the measured
+`WIDEST_ACCESS_BYTES = 8` stands (accesses seen: 1 B ×1, 4 B ×1, 8 B ×48). The gap is named rather than
+rounded away, and a test now decodes the whole member and fails if the decode is a prefix claim.
+
+### A run after the hook has two outcomes, and both are recorded
+
+1. **The capture** — entry PC, GPRs, and the buffers with their poisoned `size_assumed` regions.
+2. **Where the boot ends afterwards**, printed with the same identity line as any other run so the two are
+   comparable. Three cases, three attributions: **the wall moved** → the body ran and the guest acted on its
+   return value (this is the `runtime-witnessed` evidence); **a new fault elsewhere** → **the divergence is
+   the body's, and is attributed to the body, not the runtime**, or the next slice debugs a runtime behaving
+   correctly under a wrong return; **`hook installed, never fired`** → a finding about the **graph**, not a
+   failed slice, because the depth-2 claim comes from `edges.csv` and **164,953 unresolved indirect edges**
+   mean execution can take a path the graph does not model. The number to print in that case is **how far
+   the guest got**, not that nothing happened.

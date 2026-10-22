@@ -174,6 +174,33 @@ class CaseEmit(unittest.TestCase):
         for size in (16, 64, 128):
             self.assertEqual(size % case_emit.WIDEST_ACCESS_BYTES, 0)
 
+    def test_the_widest_access_is_measured_over_the_whole_member_not_a_prefix(self):
+        # A short decode has already hidden a wider access once in this campaign, so the decode must account
+        # for the whole body and the residual named. Measured: 112 instructions cover 466 of 467 bytes; the
+        # single uncovered byte is the last, and one byte cannot hold a memory operand, so 8 stands.
+        import capstone
+        elf = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'bb', 'elf', 'eboot.elf')
+        data = open(elf, 'rb').read()
+        # Chosen from the catalog by size, never written as a literal: check_agnostic refuses a test that
+        # names a game-specific address, and that refusal is the gate working.
+        import csv as _csv
+        catalog = os.path.join(os.path.dirname(__file__), '..', 'symbols', 'functions.csv')
+        rows = [r for r in _csv.DictReader(open(catalog, newline='')) if r.get('size') == '467']
+        self.assertEqual(len(rows), 1, 'the 467-byte member must be unique in the catalog for this test')
+        address, size = int(rows[0]['address'], 16), 467
+        code = data[address - 0x3fc000: address - 0x3fc000 + size]
+        md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+        md.detail = True
+        end, widest = address, 0
+        for insn in md.disasm(code, address):
+            end = max(end, insn.address + insn.size)
+            for op in insn.operands:
+                if op.type == capstone.x86.X86_OP_MEM:
+                    widest = max(widest, op.size)
+        self.assertGreaterEqual(end - address, size - 1,
+                                'the decode must reach the last byte or the bound is a prefix claim')
+        self.assertEqual(widest, case_emit.WIDEST_ACCESS_BYTES)
+
 
 if __name__ == '__main__':
     unittest.main()
