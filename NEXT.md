@@ -817,3 +817,25 @@ never implemented: **Map is the identity over the arena**, because this runtime 
 line came from an **earlier build**, so it was two builds, not two paths -- **and that means the
 stash-baseline comparison I reported as "identical" compared a binary whose objects had not all
 relinked. The baseline must be re-run clean before that claim is repeated.**
+
+## Map landed as the identity, the run now names itself, and the pre-registration held
+
+    pbboot sha256 b3c4f7fd5232
+    unimplemented: eboot calls libkernel 6ULAa0fq4jA at eboot+0x207f2d8
+    213 bundled, 34 implemented, 4 unresolved, 435 unbound, called 28
+
+**Map: identity or refusal.** Returned `*addr == arena_base + directMemoryStart`, computed as the same
+value Allocate handed out -- never "somewhere in the arena". A non-null hint that differs is refused with
+both addresses printed; `prot`/`flags` are **logged, never obeyed**, and `mprotect` is never called,
+because our pages are already RW and honouring a read-only request would break the identity at the next
+writer.
+
+**The identity line paid for itself on its first build:** `identity.c` sits at `runtime/`, where the only
+`CONFIGURE_DEPENDS` glob in `runtime/CMakeLists.txt:9` does not reach (it covers `syslib/*.c`), so the
+compiler never saw the file and the failure was an **undefined reference at link** -- not a stale build,
+a missing source. `add_executable(pbboot ...)` now names it. **A glob is scoped to its directory; "new
+files are globbed" is a claim about one directory, and I had been quoting it about a tree.**
+
+**Pre-registration scored: new `unimplemented` NID, not the `_write` SIGSEGV** -- `6ULAa0fq4jA`, which
+`symbols/import_names.csv:145` already names `scePthreadRwlockInit` (bind 58). **The stdio wall did not
+reappear, so the panic path was its only caller so far.**

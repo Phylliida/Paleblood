@@ -23,6 +23,7 @@
 #include "runtime/loader.h"
 #include "runtime/nid.h"
 #include "runtime/process.h"
+#include "runtime/identity.h"
 #include "runtime/syslib.h"
 
 #include <asm/prctl.h>
@@ -334,6 +335,7 @@ static const char *usage =
 
 int main(int argc, char **argv)
 {
+    rt_announce_identity();
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
     int timeout = 30, trace = 0, list = 0;
     for (int i = 1; i < argc; i++) {

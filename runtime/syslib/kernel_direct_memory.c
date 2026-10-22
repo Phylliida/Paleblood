@@ -82,3 +82,34 @@ static int kernel_release_direct_memory(int64_t start, size_t len)
     return 0;
 }
 RT_SYSLIB("libkernel", sceKernelReleaseDirectMemory, kernel_release_direct_memory);
+
+/* Map is the identity, and that is the whole model: an address this arena handed out is already a host
+   address, so mapping it yields the same value. Three consequences, each a refusal rather than a rescue:
+     - a non-null hint that differs from the identity is refused, because silently relocating would
+       invalidate every range Allocate had already handed out;
+     - prot is logged, never obeyed, and mprotect is never called: our pages are already read-write and
+       honouring a read-only request would violate the identity at the next writer;
+     - a range that does not lie inside the arena is refused, because the identity is only defined over
+       memory this model owns. */
+static int kernel_map_direct_memory(int64_t addr_out, size_t len, int prot, int flags, int64_t start,
+                                    size_t alignment)
+{
+    (void)alignment;
+    if (addr_out == 0) return k_error_fault;
+    if (!arena) return k_error_inval; /* no base yet: nothing to be the identity of */
+    int64_t *out = (int64_t *)(uintptr_t)addr_out;
+    int64_t base = (int64_t)(uintptr_t)arena;
+    if (start < base || (size_t)(start - base) > arena_bytes || len > arena_bytes - (size_t)(start - base))
+        return k_error_inval;
+    if (*out != 0 && *out != start) {
+        fprintf(stderr, "pbboot: direct memory: Map refused, hint %p is not the identity %p\n",
+                (void *)(uintptr_t)*out, (void *)(uintptr_t)start);
+        return k_error_inval;
+    }
+    if (prot != (PROT_READ | PROT_WRITE) || flags != 0)
+        fprintf(stderr, "pbboot: direct memory: Map start=%p len=%zu prot=%d flags=%d (logged, not obeyed)\n",
+                (void *)(uintptr_t)start, len, prot, flags);
+    *out = start;
+    return 0;
+}
+RT_SYSLIB("libkernel", sceKernelMapDirectMemory, kernel_map_direct_memory);
