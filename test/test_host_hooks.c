@@ -196,17 +196,36 @@ int main(void)
         failed |= check(wrgsbase == 0, "%fs must never be written with wrgsbase (/3 = 0xdb)");
     }
 
-    /* Capture mode: the table is the contract. Two refusals and one allowance, and every refusal is
-       checked against the site's bytes -- a refusal that already patched is not a refusal. */
+    /* Capture mode: the table is the contract. The .so identity is mandatory (a default would manufacture
+       agreement with a stale table), the verdict must be `none`, and every refusal is checked against the
+       site's bytes -- a refusal that already patched is not a refusal. */
     {
         const char *path = "capture_ok_test.csv";
-        unsigned char before[14];   /* the absolute jump the site gets patched with */
+        unsigned char before[14];
         memcpy(before, image, sizeof before);
+
         setenv("BB_CAPTURE", "1", 1);
         setenv("BB_CAPTURE_OK", path, 1);
 
         FILE *f = fopen(path, "w");
-        fprintf(f, "address,xmm_used,scanned_sha256\n0x0,xmm0,00\n");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,none,00,aa\n");
+        fclose(f);
+
+        unsetenv("BB_CAPTURE_TABLE_ID");
+        failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
+                        "capture mode must refuse when BB_CAPTURE_TABLE_ID is unset");
+        failed |= check(memcmp(image, before, sizeof before) == 0,
+                        "a missing-id refusal must leave the site byte-identical");
+
+        setenv("BB_CAPTURE_TABLE_ID", "bb", 1);
+        failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
+                        "capture mode must refuse a table derived from a different library");
+        failed |= check(memcmp(image, before, sizeof before) == 0,
+                        "a stale-table refusal must leave the site byte-identical");
+
+        setenv("BB_CAPTURE_TABLE_ID", "aa", 1);
+        f = fopen(path, "w");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,xmm0,00,aa\n");
         fclose(f);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
                         "capture mode must refuse a non-none verdict");
@@ -214,7 +233,7 @@ int main(void)
                         "a refused capture install must leave the site byte-identical");
 
         f = fopen(path, "w");
-        fprintf(f, "address,xmm_used,scanned_sha256\n0x1,none,00\n");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x1,none,00,aa\n");
         fclose(f);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
                         "capture mode must refuse an address with no row");
@@ -222,14 +241,15 @@ int main(void)
                         "a missing-row refusal must leave the site byte-identical");
 
         f = fopen(path, "w");
-        fprintf(f, "address,xmm_used,scanned_sha256\n0x0,none,00\n");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,none,00,aa\n");
         fclose(f);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
-                        "capture mode must allow a pass row");
+                        "capture mode must allow a pass row with a matching library");
         remove(path);
         unsetenv("BB_CAPTURE");
         unsetenv("BB_CAPTURE_OK");
-        memset(image, 0x90, 14);   /* leave the site as later cases expect it */
+        unsetenv("BB_CAPTURE_TABLE_ID");
+        memset(image, 0x90, 14);
     }
 
     /* Live guest %fs: the 14 bytes must point at a stub, not at the replacement, and executing the

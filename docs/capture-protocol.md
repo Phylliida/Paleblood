@@ -580,3 +580,33 @@ immediate segfault with **zero output**, which is why the first symptom was an e
 **Residual, named:** C cannot recompute a sha256, so the digest column is enforced by the regenerating ctest, not
 by the installer. **A mutated digest does not refuse at install time, and the test that regenerates the table is
 the instrument that makes that safe.**
+
+### The install-time key is a string comparison, and it catches the whole table
+
+C cannot hash a body — **its extent is unknown, so a C-side hash would silently cover a prefix or read past the
+end**, the finding that already cost this campaign a slice — and it should not hash the `.so` either. It needs to
+**compare**, not compute.
+
+- The table gains **`so_sha256`**, one value repeated per row: the `libbbgame.so` the rows were derived from,
+  hashed by the tool that already has sha256.
+- The run wrapper sets **`BB_CAPTURE_TABLE_ID`** to that same value. `install_hook` compares strings and refuses on
+  mismatch, **printing both**.
+- **Mandatory in capture mode, absence refuses** — the shape `BB_PBBOOT` already uses, because **a default here
+  would manufacture agreement with a table nobody regenerated.**
+- **Stronger than per-row digests:** it catches the entire table going stale after a rebuild, which is the failure
+  mode that actually happens. The per-row digest stays a **generation-time** check, enforced by the regenerating
+  ctest.
+
+Five cases in `test_host_hooks`, and **every refusal is checked against the site's bytes**:
+
+| case | expectation |
+| --- | --- |
+| `BB_CAPTURE_TABLE_ID` unset | **refused**, site byte-identical |
+| id `bb` against a table derived from `aa` | **refused**, site byte-identical |
+| verdict `xmm0`, id matching | **refused**, site byte-identical |
+| no row for the address, id matching | **refused**, site byte-identical |
+| row `none`, id matching | **allowed**, install returns 0 |
+
+**And my own test caught the shape change before the commit did:** `address, verdict, digest = row.split(",")`
+raised **`ValueError: too many values to unpack (expected 3)`** the moment the fourth column landed — **a test
+that pins a table's width goes red when the width changes, which is the correct behaviour and not an accident.**

@@ -96,12 +96,31 @@ static int capture_allowed(uint64_t offset)
                 path, (unsigned long long)offset);
         return 0;
     }
-    char line[256];
+    /* The run wrapper passes the digest of the library the table was derived from. C cannot hash a body (its
+       extent is unknown) and should not hash the .so either -- it compares a string, and the comparison catches
+       the whole table going stale after a rebuild, which is the failure mode that actually happens. Mandatory in
+       capture mode: a default here would manufacture agreement with a table nobody regenerated. */
+    const char *want = getenv("BB_CAPTURE_TABLE_ID");
+    if (!want || !*want) {
+        fprintf(stderr, "capture: BB_CAPTURE_TABLE_ID is unset: refusing; it is mandatory in capture mode and a "
+                        "default would manufacture agreement with a stale table\n");
+        fclose(table);
+        return 0;
+    }
+    char line[512];
     int seen = 0;
     while (fgets(line, sizeof line, table)) {
         unsigned long long addr = 0;
         char verdict[64] = {0};
-        if (sscanf(line, "0x%llx,%63[^,]", &addr, verdict) != 2) continue;   /* header and blanks */
+        char body_sha[80] = {0};
+        char so_sha[80] = {0};
+        if (sscanf(line, "0x%llx,%63[^,],%79[^,],%79[^,\n]", &addr, verdict, body_sha, so_sha) != 4) continue;
+        if (strcmp(so_sha, want) != 0) {
+            fprintf(stderr, "capture: table was derived from libbbgame.so %s but the run says %s: refusing; "
+                            "regenerate with `capture_precheck.py --table`\n", so_sha, want);
+            fclose(table);
+            return 0;
+        }
         if (addr != offset) continue;
         seen = 1;
         if (strcmp(verdict, "none") != 0) {

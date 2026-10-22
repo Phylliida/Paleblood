@@ -37,10 +37,12 @@ class CaptureRefusesVolatileXmm(unittest.TestCase):
         rows = [r for r in committed.splitlines()[1:] if r]
         self.assertGreater(len(rows), 0, "the table must carry at least one candidate row")
         for row in rows:                                  # a row must be a verdict plus a key, never one alone
-            address, verdict, digest = row.split(",")
+            address, verdict, digest, so = row.split(",")
             self.assertTrue(address.startswith("0x"), row)
             self.assertIn(verdict, ("none",), row)         # candidates are the bodies we intend to capture
             self.assertRegex(digest, r"^[0-9a-f]{64}$", row)
+            # The install-time key: one value for the library the rows came from, compared as a string by C.
+            self.assertRegex(so, r"^[0-9a-f]{64}$", row)
 
     def test_scanning_nothing_is_not_a_pass(self):
         ok, why = verdict(b"")

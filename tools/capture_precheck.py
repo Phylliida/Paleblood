@@ -18,6 +18,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CANDIDATES = ROOT / "symbols" / "capture_candidates.txt"
 TABLE = ROOT / "symbols" / "capture_ok.csv"
+LIB = ROOT / "build-release" / "game" / "libbbgame.so"
 ELF = ROOT.parent / "data" / "bb" / "elf" / "eboot.elf"
 EBOOT_BASE = 0x400000          # image = guest - EBOOT_BASE
 FILE_BIAS = 0x3fc000           # file  = guest - FILE_BIAS
@@ -77,6 +78,13 @@ def table_rows() -> list[tuple[str, str, str]]:
     and the capture refuses -- the same expiry-by-content trick that makes a shape approval invalidate itself.
     An address-keyed table goes stale silently; this one cannot.
     """
+    # The installer cannot hash a body in C -- its extent is unknown, and hashing "the body" would hash a prefix
+    # or read past it. It cannot hash the .so either. What it CAN do is compare a string: the tool hashes the
+    # library these rows were derived from, and the run wrapper passes that same value in. A stale table then
+    # refuses before a single byte is patched, which catches the whole table going stale after a rebuild.
+    if not LIB.exists():
+        raise SystemExit(f"no {LIB}: the table's so_sha256 would be a guess")
+    so = hashlib.sha256(LIB.read_bytes()).hexdigest()
     elf = ELF.read_bytes()
     rows = []
     for line in CANDIDATES.read_text().splitlines():
@@ -85,12 +93,13 @@ def table_rows() -> list[tuple[str, str, str]]:
         address = int(line.strip(), 16)
         code = elf[address - FILE_BIAS : address - FILE_BIAS + _body_size(address)]
         ok, why = verdict(code)
-        rows.append((f"0x{address:08x}", "none" if ok else why.split(" ")[0], hashlib.sha256(code).hexdigest()))
+        rows.append((f"0x{address:08x}", "none" if ok else why.split(" ")[0],
+                     hashlib.sha256(code).hexdigest(), so))
     return rows
 
 
 def write_table() -> str:
-    return "address,xmm_used,scanned_sha256\n" + "".join(",".join(r) + "\n" for r in table_rows())
+    return "address,xmm_used,scanned_sha256,so_sha256\n" + "".join(",".join(r) + "\n" for r in table_rows())
 
 
 def main(argv: list[str]) -> int:
