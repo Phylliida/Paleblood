@@ -977,3 +977,15 @@ changed.
 
 Scored: 51 -> **52 implemented**, 417 -> **416 unbound**, called 48 -> **55** (seven calls into the
 modelled path). Next stop is on the following line of the run.
+
+### Correction, same slice: the guest did not continue -- it faulted
+
+The first version of `boot_history.csv` row 9 said "guest continued" and that was **false**: the run ended
+`signal 11 at host+0x615b94b659ab, address 0x0` after reading parameter ids 0x0 and 0x1, **five AppParamGetInt
+lines in total, i.e. two ids read more than once each**. The milestone line still printed, because it is the
+*entry* milestone and prints before the guest runs.
+
+**So the modelled success did not gate the immediate path, and the next thing the guest did depends on a
+pointer it does not have** -- which is the `__sFILE` absence family again (`address 0x0`, second occurrence),
+not a pthread or sysmodule stop. Recorded as row 10 rather than folded into row 9, because **a history row
+that is edited to look right stops being a history.**
