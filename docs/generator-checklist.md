@@ -39,6 +39,28 @@ carries the class at `0x414350`. Generation is 130x cheaper per function and str
 to the defect the hand path spent two turns localising. The arithmetic says generate; the defect
 taxonomy says the same thing for a different reason.
 
+## The rodata extent: 384 words, closing exactly (my "608" was an instrument artifact)
+
+The layout, read off the code rather than inferred: **256 level-1 words followed by 16-word
+blocks**, each class-2 entry naming one block via `bextr(r15, 0x404)` = bits 4..7 of the unit, so
+`base + 15` is the largest index a block can be asked for. `bt esi, edi` then tests a single bit
+of a level-2 word, which is why those words hold large patterns like 63,901 and why any
+"plausible class code" test past index 255 is measuring level-2 data against a level-1 criterion.
+
+Measured on table A (`0x02fc5120`): level-1 values >= 2 are **8 distinct, min 256, max 368, all
+multiples of 16**, occupying 256..383 = 8 blocks x 16 = 128 words, and **368 + 16 = 384** -- the
+derived extent, closing with no remainder. Max requested index is therefore <= 383 < 384.
+
+Two of my own numbers were artifacts and are withdrawn: a sweep printing "max requested 607" and
+"80 indices past the derived 384" contradicts `e1 <= 368` by arithmetic, so the instrument was
+wrong; and 608 (and "the derivation is short") came from that same bad input. A derivation
+cannot confirm its own input.
+
+**Gate: membership in the union of declared blocks, not `< extent`** -- `< 384` admits an index
+landing in a hole between blocks, which a future non-contiguous table would hit. And **table B
+(`0x02fc4a40`, 880 words, index source `0x41419d`) has never had this closure run at all**; the
+same instrument must derive and gate both, per table, before either pin is called real.
+
 ## The rodata extent, measured as two bounds (reachability, not pattern)
 
 Sweeping all 65,536 units through the A-site lookup chain against table `0x02fc5120`:
