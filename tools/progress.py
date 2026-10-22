@@ -162,6 +162,13 @@ def ledger(root: str) -> dict | None:
     # and this is how many of those claims nobody can re-check.
     unrerun = {r['function'] for r in rows if r.get('cases_sha256') == 'unavailable'}
     out['unrerunnable'] = len(unrerun)
+    # The evidence kind lives in the row's `cases` field. A `bytes` row says "the replacement's
+    # executed bytes equal the original extent's" -- nothing ran. Printing the split beside the
+    # headline is what stops it merging differentially-backed members with byte-backed ones,
+    # because the first question anyone asks of a coverage number is which of them ran.
+    byte_backed = {r['function'] for r in rows if r['cases'] == 'bytes'}
+    out['byte_backed'] = len(byte_backed)
+    out['differential_backed'] = out['functions'] - len(byte_backed)
     fpath = os.path.join(root, 'symbols', 'functions.csv')
     if os.path.isfile(fpath):
         verified = {r['name'] for r in read_csv(fpath) if r['status'] == 'verified'}
@@ -194,6 +201,8 @@ def burndown_line(d: dict) -> str:
     parts = [
         rung('verified', v),
         rung('edge-verified incl. verified', e),
+        (f'evidence: {d["ledger"]["differential_backed"]} differential / '
+         f'{d["ledger"]["byte_backed"]} byte-identical' if d.get('ledger') else 'evidence: -'),
         rung('replaced', r),
     ]
     if d.get('origins'):
