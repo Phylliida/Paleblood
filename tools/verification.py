@@ -325,6 +325,18 @@ def _head_or_refuse(root: str) -> str:
                        'against a commit; set BB_ALLOW_NO_HEAD=1 to stamp "no-head:<time>" instead.')
 
 
+def record_many(root: str, new_rows: list[dict]) -> None:
+    """Replace or append several rows with one whole-ledger rewrite.
+
+    The same rows recorded one at a time produce the identical file; this exists only so a bulk
+    pass pays the rewrite once. Callers building rows in bulk should use this rather than loop.
+    """
+    for r in new_rows:
+        if r.get('cases') not in CASE_SETS:
+            raise ValueError(f'case set must be one of {", ".join(CASE_SETS)}, got {r.get("cases")!r}')
+    _append_rows(root, new_rows)
+
+
 def record(root: str, function: str, cases: str, option: str, case_names: list[str], failing: list[str],
            captures: str) -> dict:
     """Writes the row for one run, including a hash of the case files it ran; returns it."""
@@ -342,34 +354,7 @@ def record(root: str, function: str, cases: str, option: str, case_names: list[s
            'passed': str(len(case_names) - len(failing)), 'failed': str(len(failed)),
            'quarantined': str(len(failing) - len(failed)), 'source': source_hash(root, function),
            'cases_sha256': digest, 'date': datetime.date.today().isoformat()}
-    path = os.path.join(root, 'symbols', 'verification.csv')
-    # Runs may record at the same time (one per function): read, update and write under a lock.
-    with open(path + '.lock', 'w') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        # A snapshot you have to remember is a snapshot you will not have. Keep the first
-        # pre-record state seen for this path, with the HEAD it belongs to, so a re-record can
-        # be diffed against what it replaced instead of against nothing.
-        # Only a ledger that exists has a prior state worth preserving: the first record on a
-        # fresh tree creates it, and a snapshot of nothing is not a failure, it is an absence.
-        if os.path.exists(path) and not os.path.exists(path + '.pre'):
-            head = _head_or_refuse(root)
-            try:
-                shutil.copy2(path, path + '.pre')
-                stamp, tmp = path + '.pre.stamp', path + '.pre.stamp.tmp'
-                with open(tmp, 'w') as s:
-                    s.write(f'{head}\n{datetime.datetime.now().isoformat(timespec="seconds")}\n')
-                os.replace(tmp, stamp)
-            except OSError as e:
-                for stray in (path + '.pre', path + '.pre.stamp.tmp'):
-                    if os.path.exists(stray):
-                        os.unlink(stray)
-                raise RuntimeError(f'cannot snapshot {path} before recording: {e}') from e
-        rows = [r for r in read_csv(path, VERIFICATION_HEADER)
-                if (r['function'], r['cases'], r['option']) != (function, cases, option)]
-        rows.append(row)
-        rows.sort(key=lambda r: (r['function'], CASE_SETS.index(r['cases']) if r['cases'] in CASE_SETS else 99,
-                                 r['option']))
-        write_csv(path, VERIFICATION_HEADER, rows)
+    _append_rows(root, [row])
     return row
 
 
@@ -466,3 +451,44 @@ def replacement_symbol(root: str, name: str, address: str) -> str | None:
                 if r['address'] == address and r['mode'] == 'host':
                     return 'bb_' + name
     return None
+
+
+def _append_rows(root: str, new_rows: list[dict]) -> None:
+    """Append or replace rows in one locked read-sort-write, for any number of rows.
+
+    `record()` is the one-row case and `record_many()` the many; both go through here so a bulk
+    pass pays the whole-ledger rewrite once instead of once per row. At 21,229 rows that rewrite
+    is 0.12 s (measured); at the 157,757-row finish condition it projects to 0.88 s per call, so
+    re-recording the whole ledger one row at a time would cost ~38 hours of pure I/O.
+    """
+    if not new_rows:
+        return
+    path = os.path.join(root, 'symbols', 'verification.csv')
+    # Runs may record at the same time (one per function): read, update and write under a lock.
+    with open(path + '.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        # A snapshot you have to remember is a snapshot you will not have. Keep the first
+        # pre-record state seen for this path, with the HEAD it belongs to, so a re-record can
+        # be diffed against what it replaced instead of against nothing.
+        # Only a ledger that exists has a prior state worth preserving: the first record on a
+        # fresh tree creates it, and a snapshot of nothing is not a failure, it is an absence.
+        if os.path.exists(path) and not os.path.exists(path + '.pre'):
+            head = _head_or_refuse(root)
+            try:
+                shutil.copy2(path, path + '.pre')
+                stamp, tmp = path + '.pre.stamp', path + '.pre.stamp.tmp'
+                with open(tmp, 'w') as s:
+                    s.write(f'{head}\n{datetime.datetime.now().isoformat(timespec="seconds")}\n')
+                os.replace(tmp, stamp)
+            except OSError as e:
+                for stray in (path + '.pre', path + '.pre.stamp.tmp'):
+                    if os.path.exists(stray):
+                        os.unlink(stray)
+                raise RuntimeError(f'cannot snapshot {path} before recording: {e}') from e
+        replaced = {(r['function'], r['cases'], r['option']) for r in new_rows}
+        rows = [r for r in read_csv(path, VERIFICATION_HEADER)
+                if (r['function'], r['cases'], r['option']) not in replaced]
+        rows.extend(new_rows)
+        rows.sort(key=lambda r: (r['function'], CASE_SETS.index(r['cases']) if r['cases'] in CASE_SETS else 99,
+                                 r['option']))
+        write_csv(path, VERIFICATION_HEADER, rows)

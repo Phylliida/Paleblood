@@ -39,50 +39,26 @@ carries the class at `0x414350`. Generation is 130x cheaper per function and str
 to the defect the hand path spent two turns localising. The arithmetic says generate; the defect
 taxonomy says the same thing for a different reason.
 
-## The rodata extent: 384 words, closing exactly (my "608" was an instrument artifact)
+## The rodata extent: two different subjects, and only one of them is settled
 
-The layout, read off the code rather than inferred: **256 level-1 words followed by 16-word
-blocks**, each class-2 entry naming one block via `bextr(r15, 0x404)` = bits 4..7 of the unit, so
-`base + 15` is the largest index a block can be asked for. `bt esi, edi` then tests a single bit
-of a level-2 word, which is why those words hold large patterns like 63,901 and why any
-"plausible class code" test past index 255 is measuring level-2 data against a level-1 criterion.
+Earlier versions of this file carried numbers that contradicted each other, because they answered different
+questions without saying so. Separated:
 
-Measured on table A (`0x02fc5120`): level-1 values >= 2 are **8 distinct, min 256, max 368, all
-multiples of 16**, occupying 256..383 = 8 blocks x 16 = 128 words, and **368 + 16 = 384** -- the
-derived extent, closing with no remainder. Max requested index is therefore <= 383 < 384.
+* **Declared extent (settled, recomputable).** `game/large/rodata_pairs_02fc5120.h` holds **768 bytes = 384
+  words**; `game/large/rodata_pairs_02fc4a40.h` holds **1,760 bytes = 880 words**. This is the data the
+  repository owns, and `test/test_doc_numbers.py` recomputes both from the headers so the sentence cannot rot.
+  Layout: 256 level-1 words then 16-word blocks, each class-2 entry naming a block through `bextr(r15, 0x404)`,
+  so **`max(bases)+16 = 384` closes with no remainder** -- exact arithmetic, about the declared data.
+* **Reachable indices (measured, and larger).** Sweeping all 65,536 units through the A-site chain asks for at
+  most index **607** (`entry + ((unit >> 4) & 0xff)`), with **80 distinct indices past 384 actually requested**.
+  So `max(bases)+16` is not a bound on what the original asks for, only on what the declaration contains.
+* **Open, and why it matters:** whether the original reads past its own declared table. If what it asks for is
+  <= the true end of the data the pin is real; if not, the original reads past it for some inputs. The
+  "plausible upper bound" measure (longest run of values <= 3 from index 0) returned 5 for A and 0 for B, which
+  is nonsense on its face and is withdrawn. **Honest state: declared 384, reachable >= 608, true end not
+  established.**
 
-Two of my own numbers were artifacts and are withdrawn: a sweep printing "max requested 607" and
-"80 indices past the derived 384" contradicts `e1 <= 368` by arithmetic, so the instrument was
-wrong; and 608 (and "the derivation is short") came from that same bad input. A derivation
-cannot confirm its own input.
+**The gate this implies:** membership in the union of declared blocks, never `< extent` -- `< 384` admits an
+index landing in a hole between blocks. And **table B (`0x02fc4a40`, 880 words, index source `0x41419d`) has
+never had this closure run at all.**
 
-**Gate: membership in the union of declared blocks, not `< extent`** -- `< 384` admits an index
-landing in a hole between blocks, which a future non-contiguous table would hit. And **table B
-(`0x02fc4a40`, 880 words, index source `0x41419d`) has never had this closure run at all**; the
-same instrument must derive and gate both, per table, before either pin is called real.
-
-## The rodata extent, measured as two bounds (reachability, not pattern)
-
-Sweeping all 65,536 units through the A-site lookup chain against table `0x02fc5120`:
-
-* **reachability lower bound: 608 words.** First lookup asks at most index 255; the second asks
-  at most index **607** (`entry + ((unit >> 4) & 0xff)`), and **80 distinct indices past the
-  derived 384 are actually asked for.** So `max(bases)+16` = 384 is short by at least 224 words,
-  and the units that read past it are not hypothetical.
-* **plausible upper bound: NOT ESTABLISHED.** The measure I used -- "longest run of values <= 3
-  from index 0" -- returns 5 for table A and 0 for table B, which is nonsense on its face, so it
-  is a broken measure rather than a bound. The earlier observation stands on its own: values past
-  word 400 include 63,901, so the array ends somewhere in 544..783 by the earlier reading, and
-  that reading is now the only one I have.
-
-608 sits inside the 544..783 uncertainty band, so **the honest state is that I cannot yet say
-whether the original stays inside its own table.** If required <= true end, the extent is settled
-and the pin is real. If required > true end, the original reads past its table for some inputs
-and the body must reproduce that read -- a finding about the binary, not a tool bug, and the
-second time in this pilot that "the table is bigger" was the answer.
-
-Class distribution over the unit domain: **63,232 class 0, 256 class 1, 2,048 class 2** -- so the
-two-level arm is reached by 2,048 units, not the 600 I had been quoting for class 1 alone.
-
-Next: locate the true end by structure (where the stride/class-code pattern breaks), then emit
-both headers with the derived extent replaced by reachability + located end, and re-pin.
