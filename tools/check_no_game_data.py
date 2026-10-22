@@ -55,7 +55,12 @@ DUMP_LINE = re.compile(rb'\b(undefined[1-8]?|(FUN|DAT|LAB|PTR|SUB|UNK)_[0-9a-fA-
 DUMP_THRESHOLD = 20
 DUMP_EXEMPT = ('README.md', 'QUIRKS.md', 'CONTRIBUTING.md', 'docs/', 'tools/', 'test/')
 MAX_SIZE = 2 * 1024 * 1024
-SIZE_EXCEPTIONS = {'symbols/ghidra_functions.csv': 16 * 1024 * 1024}
+# The size cap exists to stop large ARTIFACTS being committed, not to stop the ledger growing with
+# the work. Both entries are text tables the tools read and validate: ghidra_functions.csv is the
+# 157,757-row catalogue, verification.csv is the evidence ledger (~80 B/row, ~12.6 MB at target).
+# A second exception is a decision, not a habit: the cap stays 2 MB for everything else.
+SIZE_EXCEPTIONS = {'symbols/ghidra_functions.csv': 16 * 1024 * 1024,
+                   'symbols/verification.csv': 16 * 1024 * 1024}
 
 
 def git(root: str, *args: str) -> bytes:

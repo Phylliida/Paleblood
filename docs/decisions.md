@@ -186,3 +186,18 @@ For `ret` (7,761) one family digest is the wrong blast radius: a single bad memb
 7,761 and say nothing about *where*, and bisecting across a dozen tool runs is not a diagnosis.
 **Batch by ~500, one digest per batch:** a failure localises to its batch and names it, and rows
 still cannot be cherry-picked inside a batch. `record_bytes_family.py --batch N` is the mechanism.
+
+### 1f. `ret` (7,761): no mutant exists, and byte identity does not prove the source form
+
+Every previous family had a constant to move ±1; `ret` has **no parameter, so no mutation is
+possible**. The correct entry in the record is **mutants n/a, with that reason** — a family
+reporting a mutant count it could not have measured is the `assert applied == 4` shape.
+
+Byte identity proves the executed bytes equal the original extent. It does **not** prove the body
+is asm: an empty C `void` body is what this tree compiles to `push rbp` today, which is a fact about
+the current flags, not a proof about `c3`. **Every one of the 7,761 rows therefore reads:
+byte-identical to the original extent; the source form is decision 1 and is not evidenced by these
+bytes.** At 7,761 rows, that is where scope honesty has to be explicit rather than implied.
+
+Digests are **per batch of 500** (16 batches), not one family digest: a bad member decays its
+batch and names it, and rows still cannot be cherry-picked inside a batch.

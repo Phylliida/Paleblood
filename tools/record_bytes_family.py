@@ -21,6 +21,8 @@ import subprocess
 import sys
 import tempfile
 
+import re
+
 import progress as P
 import verification as V
 
@@ -74,7 +76,14 @@ def main(argv):
 
     fpath = os.path.join(o.root, 'symbols', 'functions.csv')
     all_rows = list(csv.DictReader(open(fpath)))
-    fam = [r for r in all_rows if r['name'].startswith(o.family)]
+    # `startswith('leaf_ret_')` also matches `leaf_ret_xor_...` -- 4,721 rows that already carry
+    # differential evidence. A ladder family name ends in exactly eight hex digits, so match that.
+    pat = re.compile('^' + re.escape(o.family) + r'[0-9a-f]{8}$')
+    fam = [r for r in all_rows if pat.match(r['name'])]
+    skipped = [r for r in all_rows if r['name'].startswith(o.family) and not pat.match(r['name'])]
+    if skipped:
+        print(f'  not this family: {len(skipped)} rows match the prefix but not the shape '
+              f'({skipped[0]["name"]})')
     if not fam:
         raise SystemExit(f'refused: no rows in functions.csv start with {o.family}')
     bad = [r['name'] for r in fam if r['status'] != 'original']
@@ -113,9 +122,13 @@ def main(argv):
 
     flipped = 0
     for r in all_rows:
-        if r['name'].startswith(o.family):
+        if pat.match(r['name']):          # the same selector as the members, not a second one
+            if r['status'] != 'original':
+                raise SystemExit(f'refused: {r["name"]} is {r["status"]}, not original')
             r['status'] = 'edge-verified'
             flipped += 1
+    if flipped != len(members):
+        raise SystemExit(f'refused: flipped {flipped} but recorded {len(members)}')
     fields = list(all_rows[0].keys())
     with open(fpath, 'w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=fields, lineterminator='\n')
