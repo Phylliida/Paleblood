@@ -27,16 +27,23 @@ DRIVER = r'''
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/mman.h>
 #include "runtime/host_hooks.h"
+
+enum { IMAGE_SIZE = 0x100 };
 
 int main(void)
 {
-    unsigned char image[0x100];
+    /* Executable, because the installer now proves the page it patches is executable: a hook into a
+       plain array reads back and never fires, and refusing it is the point of the check below. */
+    unsigned char *image = mmap(NULL, IMAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (image == MAP_FAILED) { puts("mmap failed"); return 1; }
     rt_host host = {0};
-    memset(image, 0x90, sizeof image);
+    memset(image, 0x90, IMAGE_SIZE);
     host.version = RT_HOST_API_VERSION;
     host.image = image;
-    host.image_size = sizeof image;
+    host.image_size = IMAGE_SIZE;
     if (rt_host_hooks_initialize(&host) != 0) { puts("init refused"); return 2; }
 
     const unsigned char before = image[0x10 + 14];
@@ -56,10 +63,27 @@ int main(void)
     if (before != image[0x10 + 14]) { puts("1 wrong bytes"); return 5; }
 
     /* 2. a 6-byte site (pool B's shape): refused, image unchanged */
-    unsigned char keep[0x100];
+    unsigned char keep[IMAGE_SIZE];
     memcpy(keep, image, sizeof keep);
     if (host.install_hook(0x40, 6, (const void *)0x1000ULL) == 0) { puts("2 accepted a 6-byte site"); return 6; }
     if (memcmp(keep, image, sizeof keep) != 0) { puts("2 changed the image"); return 7; }
+
+    /* 2b. a page the process cannot execute: refused, image untouched. The negative control for the
+       executable-mapping check, in the other direction from case 1. */
+    {
+        rt_host plain = {0};
+        plain.version = RT_HOST_API_VERSION;
+        plain.image = (unsigned char *)keep;   /* stack memory: readable, not executable */
+        plain.image_size = sizeof keep;
+        if (rt_host_hooks_initialize(&plain) != 0) { puts("2b init refused"); return 9; }
+        if (plain.install_hook(0, sizeof keep, (const void *)0x1000ULL) == 0) { puts("2b accepted a non-executable page"); return 10; }
+        if (keep[0] != 0x90) { puts("2b changed a refused image"); return 11; }
+        /* the module keeps the image it was handed: put the real one back */
+        host.version = RT_HOST_API_VERSION;
+        host.image = image;
+        host.image_size = IMAGE_SIZE;
+        if (rt_host_hooks_initialize(&host) != 0) { puts("2b restore refused"); return 12; }
+    }
 
     /* 3. a site past the end of the image: refused */
     if (host.install_hook(0xf8, 0x20, (const void *)0x1000ULL) == 0) { puts("3 accepted an overlong site"); return 8; }

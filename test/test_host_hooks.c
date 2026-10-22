@@ -130,6 +130,26 @@ int main(void)
     host.image = NULL;
     failed |= check(rt_host_hooks_initialize(&host) != 0, "missing guest image must fail");
 
+    /* A patch into a page the process cannot execute reads back and never fires: refused, and the
+       image is untouched. The synthetic image above is mmap'd PROT_EXEC, so this is the negative
+       control for that check, not a second test of the same path. */
+    {
+        unsigned char plain[64];
+        memset(plain, 0x90, sizeof plain);
+        rt_host plain_host = {RT_HOST_API_VERSION, plain, sizeof plain, NULL};
+        failed |= check(rt_host_hooks_initialize(&plain_host) == 0, "a plain image must still initialize");
+        failed |= check(plain_host.install_hook(0, sizeof plain, (const void *)replacement) != 0,
+                        "a hook into a non-executable page must be refused");
+        failed |= check(plain[0] == 0x90, "a refused non-executable hook must not change the bytes");
+        /* rt_host_hooks_initialize stores the image in module state, so the control above must put it
+           back or every later case patches the stack array. Found by the segfault it caused, which is
+           the only reason it is written down here. */
+        host.version = RT_HOST_API_VERSION;
+        host.image = image;
+        host.image_size = GUEST_CODE_SIZE;
+        failed |= check(rt_host_hooks_initialize(&host) == 0, "the real image must be restored after the control");
+    }
+
     /* The emitted crossing is pinned to bytes the test derives itself, so an emitter edit that changes
        the instruction stream fails here instead of at the first boot on a machine with a live %fs. */
     {

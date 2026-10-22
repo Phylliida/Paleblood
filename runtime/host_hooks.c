@@ -54,11 +54,43 @@ static unsigned char *stub_alloc(size_t n)
     return p;
 }
 
+/* A hook written into a page the process cannot execute reads back perfectly and never fires: the
+   readback proves the bytes, not the mapping. Ask /proc/self/maps about the page the patch lands in,
+   and fail closed if the answer cannot be read. This is the "N installed counts writes" defect one
+   level up, and it is cheap here for the same reason it is expensive later. */
+static int region_is_executable(const void *address, size_t length)
+{
+    FILE *maps = fopen("/proc/self/maps", "r");
+    if (!maps) return 0;
+    const uintptr_t start = (uintptr_t)address;
+    const uintptr_t end = start + length;
+    char line[512];
+    int executable = 0;
+    while (fgets(line, sizeof line, maps)) {
+        unsigned long low = 0, high = 0;
+        char perms[5] = {0};
+        if (sscanf(line, "%lx-%lx %4s", &low, &high, perms) != 3) continue;
+        if ((uintptr_t)low <= start && end <= (uintptr_t)high) {
+            executable = (perms[2] == 'x');
+            break;
+        }
+    }
+    fclose(maps);
+    return executable;
+}
+
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
     if (!guest_image || !target || size < ABSOLUTE_JUMP_SIZE || offset > guest_image_size ||
         size > guest_image_size - offset)
         return -1;
+
+    if (!region_is_executable(guest_image + offset, ABSOLUTE_JUMP_SIZE)) {
+        fprintf(stderr, "hook: refusing to patch 0x%llx: the 14 bytes at 0x%llx are not in an "
+                "executable mapping, so the patch would read back and never fire\n",
+                (unsigned long long)offset, (unsigned long long)(uintptr_t)(guest_image + offset));
+        return -1;
+    }
 
     /* With a live guest %fs the jump goes to a boundary stub: swap to the host base, park the guest's
        rsp in rbx, align, call, restore both. Without TLS (the harness) there is nothing to swap and
