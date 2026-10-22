@@ -58,3 +58,25 @@ are already sunk in that habit.
 5. **Run it twice and diff the logs.** If the NID sequence differs between runs, the order is not
    the guest's boot path and the worklist is a *sample*, not an ordering -- which decides whether
    any implementation plan may be built on it. One command, before any implementation work.
+
+## Owed before the batch: `kind` beside the count
+
+`imports_implemented` went 30 -> 31 when `_init_env` landed as a *documented no-op*, so the field
+now reports 31 "implemented" of which 30 are behaviours and 1 is a decision that no behaviour is
+needed. That is the counter-without-evidence defect in a new coat. The status JSON and every
+burndown must print `implementations: N, declared no-ops: M` -- the split, never the sum.
+
+## Validate the ordinal table before trusting it past index 1
+
+Two free ground-truth points already witnessed by boot output: **ordinal 0 -> `bzQExy189ZI`**
+(`_init_env`) and **ordinal 1 -> `8G2LB+A3rzg`** (`atexit`). The PLT stubs carry `push N` before
+`jmp 0x2fbe4a8`, and the GOT slots are `0x57e4690` (ordinal 0) and `0x57e4698` (ordinal 1). If
+those two do not match the loader's table, `push N` is not the index -- **PLT ordinals are often
+per-library, not global**, and then `push 2` means libkernel's ordinal 2 rather than libc's third
+import. Two points are enough to tell those apart and the data is already in hand.
+
+## Predicted next stop after the five-thunk batch
+
+**`0x400020`** -- the startup body inside eboot, a frame prologue with its own callees, not an
+import. That is a different kind of stop (missing capability, not missing import) and it is the
+*next phase*, not a regression. `0x400020` is excluded from the no-op batch by measurement.
