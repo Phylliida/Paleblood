@@ -1,3 +1,4 @@
 name,guest_start,size,kind
-eboot,0x00400000,8192,eboot
-m.elf,0x00400000,4096,module
+eboot,0x00400000,91042036,eboot
+libc.elf,0x80400000,878112,module
+libSceFios2.elf,0x84400000,1525820,module

@@ -563,6 +563,26 @@ int main(int argc, char **argv)
     rt_process.image_size = objects[0].size;
     rt_process.proc_param = proc_param_size ? objects[0].image + proc_param : NULL;
 
+    /* Guest start is the image delta from GUEST_BASE -- the same base the host/guest translation in guest.h
+       uses -- so a module lands where the catalog would put it. Subtracting each object's own mapping base
+       instead printed libc.elf at eboot's address, which is what overlapping() exists to refuse. */
+    /* The object table is written HERE, at load time, not where the run ends: a boot that stops at a wall
+       is still a boot that mapped every object, and a table written after run_guest() returns would be
+       absent on exactly the runs that need it first. The print stays for the operator; the file is for the
+       tool, because an emitter parsing a log line breaks silently when the line is reworded. */
+    {
+        FILE *t = fopen("symbols/objects.csv", "w");
+        if (!t) fprintf(stderr, "pbboot: cannot write symbols/objects.csv: %s\n", strerror(errno));
+        else {
+            fprintf(t, "name,guest_start,size,kind\n");
+            for (size_t m = 0; m < object_count; m++)
+                fprintf(t, "%s,0x%08llx,%llu,%s\n", objects[m].label ? objects[m].label : "?",
+                        (unsigned long long)(((uintptr_t)objects[m].image - GUEST_BASE) + RT_EBOOT_BASE),
+                        (unsigned long long)objects[m].size, m == 0 ? "eboot" : "module");
+            fclose(t);
+        }
+    }
+
     unsigned char *stack = mmap(NULL, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
     if (stack == MAP_FAILED) {
         fprintf(stderr, "pbboot: cannot map the stack: %s\n", strerror(errno));
@@ -641,27 +661,6 @@ int main(int argc, char **argv)
     for (int k = 0; k < (int)(sizeof objects / sizeof objects[0]); k++) {
         if (!objects[k].elf) continue;
         fprintf(stderr, "pbboot: image %d at host %p\n", k, (void *)objects[k].image);
-        /* The object table goes to a FILE, because the print is for the operator and the file is for the
-           tool: an emitter that parses a log line breaks silently the first time the line is reworded --
-           every pointer becomes "uncovered" and the capture then looks clean. Guest start is the same
-           number the catalog uses, so a captured pointer joins it directly. */
-        {
-            static int wrote_table;
-            if (!wrote_table) {
-                wrote_table = 1;
-                FILE *t = fopen("symbols/objects.csv", "w");
-                if (t) {
-                    fprintf(t, "name,guest_start,size,kind\n");
-                    for (size_t m = 0; m < object_count; m++)
-                        fprintf(t, "%s,0x%08llx,%llu,%s\n",
-                                objects[m].label ? objects[m].label : "?",
-                                (unsigned long long)(((uintptr_t)objects[m].image - (m ? MODULE_BASE : GUEST_BASE)) + RT_EBOOT_BASE),
-                                (unsigned long long)objects[m].size,
-                                m == 0 ? "eboot" : "module");
-                    fclose(t);
-                }
-            }
-        }
         for (int i = 0; i < (int)objects[k].imports; i++)
             if (objects[k].called[i]) fprintf(stderr, "pbboot: entered #%d %s:%s\n", i, rt_elf_import_library(objects[k].elf, i) ? rt_elf_import_library(objects[k].elf, i) : "?", rt_elf_import_name(objects[k].elf, i) ? rt_elf_import_name(objects[k].elf, i) : "?");
     }

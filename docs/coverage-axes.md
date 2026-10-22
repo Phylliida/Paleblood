@@ -159,3 +159,25 @@ majority**. The capture's record carries `origin=hand` in `note`, because a coun
 will imply a claim the event cannot support. On the other hand, the row is one of the 21 `verified` rows, so
 a surprise there is a surprise about **integration, not decompilation** — which is the axis the capture
 exists to measure, and the two claims stay separable.
+
+### The object table exists, and my "takes a boot" was an assumption in a limit's clothes
+
+The boot was one command: `pbboot ../data/bb/elf/eboot.elf --module ../data/bb/elf/libc.elf
+--module ../data/bb/elf/libSceFios2.elf`. The file now reads
+
+```
+name,guest_start,size,kind
+eboot,0x00400000,91042036,eboot
+libc.elf,0x80400000,878112,module
+libSceFios2.elf,0x84400000,1525820,module
+```
+
+`overlapping()` → none: the three ranges are a partition. All four reachable hook addresses classify as
+**eboot**; a module pointer at `0x80400010` classifies as **libc.elf**.
+
+Two corrections, both needed before the file was right. **(1)** The writer sat in the block that runs after
+`run_guest()` returns, so the wall (`rt_fatal`, rc=134) exited before it — **a table written where the run
+ends is absent on exactly the runs that need it first**; it now writes at load time. **(2)** Guest start
+subtracted each object's own mapping base, which printed `libc.elf` at `0x00400000` — **eboot's address**.
+It now uses the single translation base `GUEST_BASE` that `guest.h` uses, and the module lands at
+`0x80400000`. **That defect was found by `overlapping()`, which is why the helper exists.**
