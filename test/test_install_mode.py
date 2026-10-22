@@ -92,9 +92,15 @@ class TestInstallMode(unittest.TestCase):
         self.assertEqual(violations(funcs, hooks, install), [])
         del_hook = [h for h in hooks if h['address'] != target['address']]
         errs = violations(funcs, del_hook, install)
-        self.assertEqual(len(errs), 1)
-        self.assertIn(target['name'], errs[0])
-        self.assertIn('neither', errs[0])
+        # TWO errors, and that is the correct number now that the tables carry a real population: the same
+        # disagreement is reported from each side -- install_mode.csv says "hook with no hooks entry", and
+        # functions.csv says "neither a hooks entry nor a host row". Asserting one would have encoded the
+        # empty-table era; the pair is the cross-check, and both must name the site.
+        self.assertEqual(len(errs), 2, errs)
+        self.assertTrue(any('install_mode.csv' in e and 'hook mode but no' in e for e in errs), errs)
+        self.assertTrue(any('neither' in e for e in errs), errs)
+        for e in errs:
+            self.assertIn(target['name'] if 'functions.csv' in e else target['address'], e)
 
     def test_host_row_needs_an_ledger_row(self):
         funcs = _rows(FUNCTIONS)

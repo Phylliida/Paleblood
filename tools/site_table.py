@@ -10,6 +10,11 @@ that merely look consistent.
 """
 import csv, pathlib, sys
 
+try:
+    from capstone import CS_ARCH_X86, CS_MODE_64, Cs
+except ImportError:  # the population check is the point; a missing decoder must not read as a pass
+    Cs = None
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MODE = ROOT / "symbols" / "install_mode.csv"
 OUT = ROOT / "symbols" / "site_ok.csv"
@@ -34,6 +39,32 @@ def rows():
     return mode, out
 
 
+def population_check(table):
+    """A check no single site can make: over every prologue, at once.
+
+    A 16 KiB bias error fails this loudly -- 16 KiB away sit thunks and padding, whose first bytes are `e9`/`ff`
+    or which decode to nothing -- and it costs one pass over eboot with no build. Duplicates are printed and not
+    refused: `xor eax,eax; ret` bodies recur, so a refusal there fires on the first real run.
+    """
+    md = Cs(CS_ARCH_X86, CS_MODE_64) if Cs else None
+    if md is None:
+        return ["capstone is not importable: the decode half of this check did not run"]
+    problems, seen = [], {}
+    for address, hexs in table:
+        code = bytes.fromhex(hexs)
+        seen[hexs] = seen.get(hexs, 0) + 1
+        if code[0] in (0xE9, 0xCC, 0xFF):
+            problems.append(f"{address}: begins 0x{code[0]:02x} -- a prior patch, or the wrong bias reading into a "
+                            f"thunk; bytes {hexs}")
+        if not any(True for _ in md.disasm(code, int(address, 16))):
+            problems.append(f"{address}: the {GUARD_BYTES} bytes decode to no instruction; bytes {hexs}")
+    dupes = {h: n for h, n in seen.items() if n > 1}
+    print(f"prologues shared with another site: {len(dupes)} distinct ({sum(dupes.values())} rows); not refused")
+    for h, n in list(dupes.items())[:3]:
+        print(f"  {n} sites share {h}")
+    return problems
+
+
 def main() -> int:
     mode, table = rows()
     OUT.write_text("address,prologue\n" + "".join(f"{a},{p}\n" for a, p in table))
@@ -46,6 +77,12 @@ def main() -> int:
     if hooks != sites:
         print(f"surplus {abs(hooks - sites)} in {'install_mode' if hooks > sites else 'site_ok'}: refusing")
         return 1
+    problems = population_check(table)
+    if problems:
+        print(f"{len(problems)} site(s) failed the population check; first one verbatim:")
+        print(f"  {problems[0]}")
+        return 1
+    print(f"{sites} prologues: none begins e9/cc/ff, every one decodes, no bias shift")
     return 0
 
 

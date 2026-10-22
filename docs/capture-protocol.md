@@ -735,3 +735,28 @@ rc=2
 is a zero over an empty intersection, not agreement** — the table, the join, and the C guard are all built and
 exercised against a test-supplied table, and none of them has yet seen a real hook row. Wiring the 1,737 hooks into
 `install_mode.csv` is what turns this from a proven mechanism into a proven population.
+
+### The population landed: 1,737 of 1,737, and the bias passed its first real test
+
+`symbols/install_mode.csv` now carries the **1,737 `hook` rows** from `game/hooks.csv` alongside the one `host` row
+that was already there, sorted and unique (`git diff --numstat` → `1737\t0`, never `--stat`). The join went from
+**`0 of 0`** to **`1,737 of 1,737`**, so the surplus check finally has a population to be surplus about.
+
+**`tools/site_table.py` now makes the check no single site can make**, over all 1,737 prologues in one pass with no
+build:
+
+- **none begins `0xe9`, `0xcc` or `0xff`** — a prior patch, or the wrong bias reading into a thunk;
+- **every one decodes as at least one instruction** under Capstone;
+- **duplicates are counted and printed, never refused** — `15 distinct prologues shared by 575 rows`, and the top
+  three are `vpermilps`-family bodies (`c5f82806c5f82907c5f8284610c5` ×4). A refusal there would have fired on the
+  first honest run, because **`xor eax,eax; ret` bodies legitimately recur.**
+
+Result: **`1737 prologues: none begins e9/cc/ff, every one decodes, no bias shift`.** **A 16 KiB bias error fails
+this loudly** — thunks and padding live 16 KiB away and their first bytes are exactly the refused set — and that is
+evidence about **all 1,737 sites**, where a single-site test is evidence about one.
+
+**And populating the table turned a test red, correctly.** `test_absent_installation_record_refuses` asserted
+**exactly one** error when a hooks row is dropped; it now gets **two**, because the same disagreement is reported from
+both sides — `install_mode.csv: <addr> is hook mode but no game/hooks.csv entry`, and `functions.csv: <name> is
+<status> with neither a … entry nor an install_mode row saying host`. **Asserting one would have encoded the
+empty-table era.** The test now asserts the pair, requires both to name the site, and says why.
