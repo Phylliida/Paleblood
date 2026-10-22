@@ -9,3 +9,5 @@ seq,sha256,nid,name,binding,return_address,note
 8,,R9lA82OraNs,,,eboot+0x20261dd,after sysmodule records ids instead of naming them
 9,,99b82IKXpH4,sceAppContentAppParamGetInt,libSceAppContent,eboot+0x20261eb,modelled success; ids 0x0 and 0x1 read TWICE EACH, then signal 11 at address 0x0 (corrected: the first version of this row said "guest continued")
 10,dcbd016910d0,,,host+0x615b94b659ab,,fault signal 11 address 0x0 after the modelled app-param reads
+11,d2e029cede39,,0TyVk4MSLt0,pthread_cond_init,libScePosix,eboot+0x207e6dc,ABI class fixed: semaphore ids by value; cond init takes a POINTER and was implemented modelled
+12,a017377789c4,,UTXzJbWhhTE,scePthreadAttrSetstacksize,libkernel,eboot+0x263b37f,modelled no-op declared (threads refused); next stop 4+h9EzwKF4I

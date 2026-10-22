@@ -8,6 +8,7 @@
    A no-op that records when it *would* have blocked is a measurement; a silent one is a wish. So Wait
    prints the case it could not serve -- count short of the request -- which is exactly the situation that
    would hang a real kernel and is therefore evidence of guest logic rather than of our stub. */
+#include "runtime/guest_mem.h"
 #include "runtime/process.h"
 #include "runtime/syslib.h"
 
@@ -78,12 +79,15 @@ static int sema_create(int64_t out, int64_t name, int64_t attr, int64_t init_cou
     return k_err_nomem;
 }
 
-static int sema_wait(int64_t storage, int64_t need, int64_t timeout)
+/* ABI class note, measured: semaphore, mutex, event flag and cond take the ID BY VALUE;
+   Map/Allocate/gettimeofday take pointers. We learned this the expensive way -- rdi held
+   0x53454d4100000012 ("SEMA" | 19) and the old body dereferenced it as a pointer to storage.
+   Arity is knowable from the import record; a first argument's kind is not, so it is written here. */
+static int sema_wait(int64_t sema_id, int64_t need, int64_t timeout)
 {
     require_single_threaded("Sema wait");
     (void)timeout;
-    if (storage == 0) return refuse(0, "Wait");
-    uint64_t h = *(const uint64_t *)(uintptr_t)storage;
+    uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Wait");
     if (rows[i].count < (int)need) {
@@ -98,11 +102,10 @@ static int sema_wait(int64_t storage, int64_t need, int64_t timeout)
     return 0;
 }
 
-static int sema_signal(int64_t storage, int64_t count)
+static int sema_signal(int64_t sema_id, int64_t count)
 {
     require_single_threaded("Sema signal");
-    if (storage == 0) return refuse(0, "Signal");
-    uint64_t h = *(const uint64_t *)(uintptr_t)storage;
+    uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Signal");
     rows[i].count += (int)count;
@@ -114,11 +117,10 @@ static int sema_signal(int64_t storage, int64_t count)
     return 0;
 }
 
-static int sema_poll(int64_t storage, int64_t need)
+static int sema_poll(int64_t sema_id, int64_t need)
 {
     require_single_threaded("Sema poll");
-    if (storage == 0) return refuse(0, "Poll");
-    uint64_t h = *(const uint64_t *)(uintptr_t)storage;
+    uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Poll");
     if (rows[i].count < (int)need) return (int)0x8002000eu; /* would block: a poll's honest answer */
@@ -126,14 +128,15 @@ static int sema_poll(int64_t storage, int64_t need)
     return 0;
 }
 
-static int sema_delete(int64_t storage)
+static int sema_delete(int64_t sema_id)
 {
-    if (storage == 0) return refuse(0, "Delete");
-    uint64_t h = *(const uint64_t *)(uintptr_t)storage;
+    uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Delete");
+    /* The id is by value, so there is no guest word to clear: destroying must make the id itself dead,
+       and it does, because row_of() checks `used` before anything else. Clearing through a pointer here
+       is what the old body did and it was the same defect as dereferencing the id in Wait. */
     rows[i].used = 0;
-    *(uint64_t *)(uintptr_t)storage = 0;
     return 0;
 }
 
@@ -154,3 +157,35 @@ RT_SYSLIB_NOOP("libkernel", sceKernelSignalSema, sema_signal);
 RT_SYSLIB_NOOP("libkernel", sceKernelPollSema, sema_poll);
 RT_SYSLIB_NOOP("libkernel", sceKernelDeleteSema, sema_delete);
 RT_SYSLIB_UNRESOLVED("libkernel", scePthreadCreate, thread_create_refused);
+
+/* pthread_cond_init(cond, attr): the FIRST ARGUMENT IS A POINTER to caller-provided storage, unlike the
+   semaphore family whose id is by value. That difference is the ABI class the two runs paid for: arity is
+   knowable from the import record, a first argument's kind is not. Modelled: the object is zeroed through
+   the write check and no host condvar is created, because a condvar here would only ever be signalled by a
+   worker thread, and scePthreadCreate refuses to make one. */
+static int cond_init(int64_t cond, int64_t attr)
+{
+    (void)attr;
+    if (cond == 0) return (int)0x80020016u;
+    if (!rt_guest_write_ok((uintptr_t)cond, 8, "PthreadCondInit")) return (int)0x8002000eu;
+    *(uint64_t *)(uintptr_t)cond = 0;
+    fprintf(stderr, "pbboot: posix: CondInit(%llx) -> 0 (modelled: zeroed storage, no host condvar)\n",
+            (unsigned long long)cond);
+    return 0;
+}
+
+RT_SYSLIB_MODELLED("libScePosix", pthread_cond_init, cond_init);
+
+/* scePthreadAttrSetstacksize(attr, size): the first argument is a POINTER to a guest attr object, the
+   second a scalar. Modelled, and modelled as a no-op that says so: this runtime refuses to create threads
+   (see thread_create_refused), so a stack size is a value nobody will ever read. Recording it in the attr
+   object would be writing state that no code path can observe -- the definition of a decorative write. */
+static int attr_set_stacksize(int64_t attr, int64_t size)
+{
+    if (attr == 0) return (int)0x80020016u;
+    fprintf(stderr, "pbboot: posix: AttrSetstacksize(%llx, %lld) -> 0 (modelled: no-op, threads are refused)\n",
+            (unsigned long long)attr, (long long)size);
+    return 0;
+}
+
+RT_SYSLIB_MODELLED("libkernel", scePthreadAttrSetstacksize, attr_set_stacksize);

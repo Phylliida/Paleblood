@@ -1030,3 +1030,22 @@ for) and `rdi` holding a live handle both agree.
 `0x53454d4100000012`.** So (c) was right -- the reported address is not the faulting operand here -- and a
 fault report must print **both** `si_addr` and the register a load could have used, or the two will keep
 being confused. That is the third time in this campaign that a report named one thing and meant another.
+
+## The handle ABI class, corrected once and for all -- and the wrapper that retires the stale-binary class
+
+`sema_wait/signal/poll/delete` take **the id by value**; `pthread_cond_init` takes **a pointer** to guest
+storage; `AttrSetstacksize` takes **a pointer and a scalar**. Measured, not assumed: rdi held
+`0x53454d4100000012` (`"SEMA" | 19`) while the old body dereferenced it. **Arity is knowable from the import
+record; a first argument's kind is not, and that is why the per-entry argument-kind field is owed rather
+than optional.**
+
+`tools/bbrun.sh` builds, **exits non-zero on a failed build**, keeps the binary at
+`build-release/kept/<sha256>`, and only then runs -- **`&&` between build and run, because a failed build
+followed by a run produces a plausible result, and that class has now cost three incidents.** It earned its
+keep on its first use: the build failed on a missing `guest_mem.h` include and **no run happened**, where the
+previous pattern would have re-run the old binary and shown me the old fault as if it were an answer.
+
+Boot now: **54 implemented, 414 unbound, called 62**, stop at `4+h9EzwKF4I` (`eboot+0x263b3ca`). **No
+"sema:" line has printed, so the would-have-blocked prediction is still untested** -- and it is recorded: if
+it fires, the guest is waiting on a thread that cannot exist, and the boot stops there instead of serving
+success.
