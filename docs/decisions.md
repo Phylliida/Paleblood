@@ -201,3 +201,14 @@ bytes.** At 7,761 rows, that is where scope honesty has to be explicit rather th
 
 Digests are **per batch of 500** (16 batches), not one family digest: a bad member decays its
 batch and names it, and rows still cannot be cherry-picked inside a batch.
+
+### 1g. The 624 stores, and what the census says is left
+
+Three shapes, not "the store families": `mov dword ptr [rdi+K], esi; ret` (225), `mov qword ptr
+[rdi+K], rsi; ret` (200), `mov byte ptr [rdi+K], K; ret` (199). All byte-tier, **no `returns`, no
+`void`, no snapshot** -- that question belonged to the differential tier and is not reopened here.
+
+With these the byte-backed pool is **9,423** (7,761 + 793 + 245 + 624) and the leaf supply is thin:
+the remaining unlanded leaves are spread over hundreds of shapes at single-digit depth, where
+per-family amortisation is gone. The next mass is the **>16 B tier**, and that is a different
+mechanism (a body, not a leaf), so it is a planning question, not another template row.
