@@ -1,2 +1,2 @@
-nid,library,module,source,evidence
-FxVZqBAA7ks,libkernel,libc.elf+0x27362,docs/bind-order-eboot.txt:734 + libc.elf decode,"3 args; rdi/rsi/rdx passed through unchanged; guarded by lea eax,[rbx-1];cmp eax,1;ja -> call skipped unless arg1 in {1,2}; result returned as-is"
+nid,library,module,source,evidence,name
+FxVZqBAA7ks,libkernel,libc.elf+0x27362,"hash sweep of idc/ps4libdoc known_names.txt (42,010 names) + libc.elf decode","3 args; rdi/rsi/rdx passed through unchanged; guarded by lea eax,[rbx-1];cmp eax,1;ja -> call skipped unless arg1 in {1,2}; result returned as-is; agrees with _write(fd,buf,n): fd gated to {1,2}, result returned as ssize_t",_write

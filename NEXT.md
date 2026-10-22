@@ -179,3 +179,21 @@ Recorded in `symbols/unresolved_imports.csv` with the evidence, **name left empt
 call gated on `arg1 in {1,2}` does not single out one name, and a plausible one would be
 indistinguishable from a measured one. Next: eboot's own caller of `bind 47`, which has catalogued
 boundaries -- two witnesses, and disagreement is a finding.
+
+## `FxVZqBAA7ks` = `_write`, closed by two independent witnesses
+
+The ps4libdoc clone paid after all, in the direction it can answer: hashing all **42,010** names in
+`known_names.txt` through `harness.nid()` finds exactly one hit, **`_write`**, with three controls
+in the same call (`sceKernelGetDirectMemorySize`, `sceKernelAllocateDirectMemory`, `scePthreadYield`
+-> `pO96TwzOm5E`, `rTXw65xmLIA`, `T72hz6ffq08`, 3/3). The sweep's null-result ambiguity is what the
+controls exist for, and this one was decisive.
+
+**And it agrees with the decode, which is the point of having done the decode first:** three
+arguments, unchanged, gated on `arg1 in {1,2}` -- `_write(fd, buf, n)` writes to stdout/stderr --
+result returned as-is, since a write returns a count or an error. Neither witness alone named it;
+together the signature and the name settle each other, and the row in
+`symbols/unresolved_imports.csv` now carries both.
+
+The general lesson: **hash sweep for the name, decode for the signature, and require agreement.**
+Every future stop gets the sweep first (it is one call over 42,010 names) and the decode only when
+the sweep is silent or the two disagree.
