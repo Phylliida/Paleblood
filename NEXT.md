@@ -335,3 +335,29 @@ Note against the expectation: there is **no `0x61000020`**; the SCE types here a
 (`PT_SCE_RELA`, the relocations, 0x24e10) and `0x61000002` (0x18, next to the second LOAD's start).
 So `_Stdout` is not in a `0x6100002x` table in this file -- the next read is `PT_DYNAMIC`'s tag list
 itself (print tag/value pairs), since SCE names/providers live in those tags rather than in a symtab.
+
+## `libc.elf`'s `PT_DYNAMIC`, printed: no `DT_STRTAB`/`DT_SYMTAB`/`DT_STRSZ`/`DT_SYMENT` at all
+
+39 tag/value pairs, verbatim in the commit's file (see `docs/`-adjacent note below). The standard
+tags that are present are all `DT_NEEDED`(1) x2, `DT_INIT`(12), `DT_FINI`(13), `DT_INIT_ARRAY`(25)/
+`_SZ`(27), `DT_FINI_ARRAY`(26)/`_SZ`(28), `DT_PREINIT_ARRAY`(32)/`_SZ`(33)=8, `DT_PLTGOT`(3)=`0xbecb8`,
+`DT_DEBUG`(21)=0, `DT_FLAGS`(30)=0.
+
+**Absent: 5 (`DT_STRTAB`), 6 (`DT_SYMTAB`), 10 (`DT_STRSZ`), 11 (`DT_SYMENT`).** So the prediction
+that standard tags would interleave with `DT_SCE_*` was **half right** -- `DT_SYMTAB` really is
+missing, as predicted -- but there is no standard string/symbol table pair at all. Everything
+name-bearing lives in the SCE tags: `0x61000007`, `0x61000009`(=`0x43`), `0x6100000d`, `0x61000011`,
+plus the export-lib family `0x6100000f`/`0x61000013`/`0x61000015`/`0x61000017`/`0x61000019`.
+
+**Values like `0x101010000001f` and `0x2010100000029` are packed (type|offset|size), not addresses**
+-- the high bits repeat across entries while the low 32 vary, which is the signature of a packed
+attribute word rather than a pointer. So **do not index into them as addresses**; `0x61000011`=0 and
+`0x61000009`=0x43 are counts/sizes, not bases.
+
+**No `DT_SCE_SYMENT` was identified by inspection, so the symbol stride is still unknown** -- and
+indexing the SCE symbol table with 24 because `Elf64_Sym` is 24 is exactly the remembered-constant
+error. The stride must be read from the tag that describes it (0x61000009=0x43=67 is a plausible
+entry count for an 11-char-NID-shaped table: 0x6100000d=0x1010000003e pairs with it).
+
+**Second route, now the primary one:** `eboot`'s `PT_SCE_RELA` names the exact slot for `_Stdout`
+(the data analogue of the GOT-slot join). Two routes, one answer.
