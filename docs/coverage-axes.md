@@ -252,3 +252,6 @@ rounded away, and a test now decodes the whole member and fails if the decode is
    failed slice, because the depth-2 claim comes from `edges.csv` and **164,953 unresolved indirect edges**
    mean execution can take a path the graph does not model. The number to print in that case is **how far
    the guest got**, not that nothing happened.
+
+**Captures go to `../data/captures/`, never `build-release/`** — see `docs/capture-protocol.md`, which also
+pre-registers the four outcomes of the first run before any hook has fired.
