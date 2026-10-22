@@ -60,3 +60,30 @@ binary, and the phrase "out-of-extent read" must be retired until the real end i
 Beyond word 784 the values jump to 63,901, so the array ends inside that span. The next step is
 to locate the end by the structure (where the 4-word pattern stops), re-emit both headers with
 the corrected extent, and re-pin them. Until then the body carries the derived extent and says so.
+
+## The tracer instruments multi-byte nops, so coverage is unusable for most of the tier
+
+`0x414239` is `0f 1f 80 00 00 00` -- `nop DWORD PTR [rax+0x0]` -- and `0x414283` is
+`66 66 66 66 2e 0f 1f 84 00 00 00 00 00`, a 13-byte nop ending in `nop WORD PTR [rax+rax*1+0x0]`.
+Neither touches memory architecturally. The harness reported
+
+    original: instruction memory bounds violation at 0x800014239 read 0x0+4
+
+and `control_flow_coverage` came back empty with `trace incomplete: unsupported access class`.
+The transcription is correct; the tracer is instrumenting the nop's effective address, which
+computes to zero when rax is zero.
+
+Population: **5,432 of the 7,791 tier functions (69.7%) contain the byte pair `0f 1f`** -- an
+upper bound, since the pair can appear inside an immediate. Even at half that, per-block
+coverage cannot be measured for most of the tier until the tracer stops treating a
+multi-byte nop as a memory access.
+
+Consequence: `check_block_addresses.py` stays the coverage gate (it is static and unaffected),
+the trace is a bonus where it works, and no verdict about a body's coverage may rest on a trace
+from a function containing a memory-operand nop until this is fixed.
+
+The same case's differential verdict is nevertheless admissible, because the "fault" was the
+harness's: the original ran, and the body disagreed with it at `dst+0x0` (original `0x28`,
+replacement `0x29`) with the index array displaced one slot. Per the companion's reading, that
+is one branch divergence -- a wrong arm selection in the A-class gate -- not two defects. It is
+the first real defect a case has found, in exactly the region no ASCII input reaches.
