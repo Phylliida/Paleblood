@@ -149,3 +149,33 @@ not "unknown to ps4libdoc" either -- it is simply not in the table's population.
 **Therefore the clone does not convert decodes into lookups**, and the remaining 430 still need the
 call-site oracle. Keep the clone for the complementary question it can answer -- "does this name
 exist?" -- which is a cheap way to reject a guessed name before writing code.
+
+## `FxVZqBAA7ks` decoded at libc's call site: three arguments, and not obviously the arena family
+
+`0x27367` is the **return** address ("returning to libc.elf+0x27367"), so the call ends there. Bytes
+`e8 39 90 fd ff` at `0x27362`, and the 32 bytes before it decode as
+
+```
+56 53 50            push rsi; push rbx; push rax
+49 89 d6            mov  r14, rdx
+49 89 f7            mov  r15, rsi
+89 fb               mov  ebx, edi
+8d 43 ff            lea  eax, [rbx - 1]
+83 f8 01            cmp  eax, 1
+77 0f               ja   0x27368          <- skips the call entirely
+89 df               mov  edi, ebx
+4c 89 fe            mov  rsi, r15
+4c 89 f2            mov  rdx, r14
+e8 39 90 fd ff      call (import)
+```
+
+So: **three arguments, all passed through unchanged, and the call is skipped unless arg1 is 1 or
+2**; the result is returned as-is. That is a *status* call gated on an enum-like first argument, not
+`Allocate` (six args, writable sixth), not `Map` (address first, pointer dereferenced), and not
+`Release` (one address, no out-param) -- **so it is not the direct-memory family**, and the earlier
+guess that the family follows in sequence is unsupported by this call site.
+
+Recorded in `symbols/unresolved_imports.csv` with the evidence, **name left empty**: a 3-arg status
+call gated on `arg1 in {1,2}` does not single out one name, and a plausible one would be
+indistinguishable from a measured one. Next: eboot's own caller of `bind 47`, which has catalogued
+boundaries -- two witnesses, and disagreement is a finding.

@@ -1,0 +1,2 @@
+nid,library,module,source,evidence
+FxVZqBAA7ks,libkernel,libc.elf+0x27362,docs/bind-order-eboot.txt:734 + libc.elf decode,"3 args; rdi/rsi/rdx passed through unchanged; guarded by lea eax,[rbx-1];cmp eax,1;ja -> call skipped unless arg1 in {1,2}; result returned as-is"
