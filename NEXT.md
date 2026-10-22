@@ -1097,3 +1097,21 @@ the architecture does not have to batch guest code between host calls.
 **Scope this fixes:** one guest TCB block per modelled thread, self-pointer at offset 0, `wrfsbase` on entry
 to guest code, restore glibc's base on entry to any host function that may touch libc (which is all of them,
 so the restore belongs in the same place as the trampoline's call, not sprinkled per call).
+
+## Guest TLS is scoped, and the regression criterion is written before the swap is wired in
+
+`runtime/tls.c` + `runtime/tls.h` exist: a 4 KiB aligned guest block whose first eight bytes point at
+itself, `rt_tls_init()` probing CPUID leaf 7 EBX bit 0 **and** round-tripping `wrfsbase` (so the check is the
+kernel's answer, not the CPU's advertisement), falling back to `arch_prctl` when absent, and
+`rt_tls_enter_guest()` / `rt_tls_enter_host()`.
+
+**It is deliberately not wired into the boot yet, and here is the reason in one sentence: the swap is only
+correct if the host base is restored before any host code that touches libc, i.e. inside the trampoline at
+the one site every syslib call passes through -- and wiring only the guest-entry half would run our own
+`fprintf` on glibc's `%fs` while the guest block is installed, which is a fault that looks like a printf bug.**
+
+**Pre-registered regression criterion, before the build: after the swap is wired at both ends, the boot must
+reach `scePthreadCreate` with `called 66` and stop there.** Earlier is a TLS-layout error. Later is a finding.
+Anything else -- a changed call count, a new fault, a silent success -- is a defect in the wiring, and the
+criterion exists because the swap touches no syslib entry: **every number in the run would look unchanged by
+construction, so only this criterion can say the swap is neutral.**
