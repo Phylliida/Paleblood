@@ -100,3 +100,23 @@ The subject is now declared in the one function that is told what the image is, 
 `bbgame_init` sets `rt_process.image`/`image_size` from `host->image`, as `boot.c` does on its own path.
 **A guard whose subject is never initialised is a licence, not a guard,** and this one had been a licence
 on exactly the path the campaign's evidence comes from.
+
+## `runtime-witnessed` emits a case, or it is only an anecdote
+
+A capture is written with `tools/case_emit.py` in **the schema `verify.py` reads**, so the first in-game
+witness is immediately replayable through the original-vs-replacement differential. That upgrades the axis
+from *the body ran once* to **a differential over an input the game produced** — the closest thing to
+in-game evidence available without a full in-game differential.
+
+* **The guest PC is the identifier** (`id == address == pc`), so a capture, a ledger row and a replay share
+  one key; the emitter refuses anything that is not a ten-character address, because a short key would not
+  join the ledger.
+* **What could not be reconstructed is reported, not invented**: registers become the case's `args`,
+  buffers become `buffers`, and every read past them is listed in `uncovered`. A fabricated preset would
+  pass the differential on an input the game never produced.
+* **The emit is proved by the reader, not by its own idea of the format**: `test/test_case_emit.py`
+  re-emits forty real cases from `../data/cases` and requires the same `schema`, `address`, `args` and
+  `buffers`, asserting the number actually compared so a filter that skips everything cannot read as green.
+
+The cheap check the companion asked for is the reason this landed before the hook path is trusted: **a
+format nobody has loaded is wrong in exactly one field.**
