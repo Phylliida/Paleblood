@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -30,6 +31,9 @@
 static unsigned char tls_area[RT_TLS_AREA_BYTES + 64] __attribute__((aligned(64)));
 static unsigned char *guest_block; /* == %fs, the TCB: self-pointer at offset 0 */
 static unsigned guest_memsz = 0x4a0u;
+
+/* Off unless the environment asks: a mirror is an experiment, not a design. */
+static int rt_mirror_host_tls;
 
 /* Read by the assembly stubs that cannot call a C helper without eating caller-saved arguments. */
 uint64_t rt_tls_guest_base_v;
@@ -58,6 +62,7 @@ static void probe_fsgsbase(void)
 
 void rt_tls_init(void)
 {
+    rt_mirror_host_tls = getenv("BB_TLS_MIRROR") != NULL;
     probe_fsgsbase();
     asm volatile("rdfsbase %0" : "=r"(host_fsbase));
     rt_tls_host_base_v = (uint64_t)host_fsbase;
@@ -83,6 +88,12 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
     guest_block = (unsigned char *)fs;
     memset((void *)(fs - guest_memsz), 0, guest_memsz + RT_TCB_BYTES);
     if (image && filesz) memcpy((void *)(fs - guest_memsz), image, filesz < guest_memsz ? filesz : guest_memsz);
+    /* EXPERIMENT: mirror the host's static TLS area -- the bytes below glibc's TCB -- so the guest sees
+       byte-for-byte what it saw before the swap, at the correct relative offsets. Reaches 66 calls => the
+       guest reads TLS *content* and the question narrows to which variable; still faults at 1 => the guest
+       is sensitive to the base ADDRESS, and no content work can fix it. */
+    if (rt_mirror_host_tls && host_fsbase > guest_memsz)
+        memcpy((void *)(fs - guest_memsz), (const void *)(host_fsbase - guest_memsz), guest_memsz);
     *(uint64_t *)guest_block = (uint64_t)fs;
     rt_tls_guest_base_v = (uint64_t)fs;
 }

@@ -191,10 +191,10 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
        No saves, no restores, and no hazard on either the argument or the return path. */
     *p++ = 0x49, *p++ = 0xba, memcpy(p, &target, 8), p += 8;          /* movabs r10, target */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &hostbase, 8), p += 8;         /* movabs r11, host %fs base */
-    *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;                /* wrfsbase r11 */
+    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
-    *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;                /* wrfsbase r11 */
+    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
     *p++ = 0xc3;                                                       /* ret */
 }
 
@@ -536,6 +536,7 @@ int main(int argc, char **argv)
        instructions, instead of inferring it from a displacement. */
     for (int k = 0; k < (int)(sizeof objects / sizeof objects[0]); k++) {
         if (!objects[k].elf) continue;
+        fprintf(stderr, "pbboot: image %d at host %p\n", k, (void *)objects[k].image);
         for (int i = 0; i < (int)objects[k].imports; i++)
             if (objects[k].called[i]) fprintf(stderr, "pbboot: entered object %d import #%d\n", k, i);
     }

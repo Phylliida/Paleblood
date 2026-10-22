@@ -1217,3 +1217,20 @@ not 0 (the guest does start on its own block and still gets to its first import 
 configurations share is the failure point: the first import call is entered and the guest faults immediately
 after.** That makes the block the suspect again rather than the transition -- **and it says the pre-swap 66-call
 baseline ran entirely on glibc's TCB, so that baseline was never the guest's own state.**
+
+## The fault was my own `wrfsbase` encoding: the F3 prefix was missing
+
+Resolving the pc by arithmetic instead of by guessing: `0x9a2` in the low 12 bits, trampolines at
+`tramp + 64 * index`, and the entered import was **#38** -> `0x980 + 0x22`. **Byte 0x22 of the stub is exactly
+where `wrfsbase r11` begins** (10 mark + 4 store + 10 movabs r10 + 10 movabs r11). So the SIGILL was the
+instruction I emitted, not anything the guest did.
+
+**`wrfsbase` is `F3`-prefixed: `F3 REX.W 0F AE /3`.** Without `F3`, `0F AE DB` is an invalid opcode. The inline
+asm in `tls.c` was assembled correctly (the assembler supplies the prefix); **the hand-encoded bytes in the
+trampoline were not, and nothing in the build or the run could have said so -- an unrecognised byte is not a
+compile error in a buffer I write myself.**
+
+**After the fix: `called 1` -> `called 3`, and the fault moved.** It is now `signal 11`, `address 0x0`, at
+**`libc.so.6+0xa8564`** -- *host* glibc, not the guest image and not the stub. So the swap now executes, the
+guest gets three import calls, and the next defect is on the host side: **host code is reaching a null TCB,
+which is what happens when glibc runs while the guest base is installed.**
