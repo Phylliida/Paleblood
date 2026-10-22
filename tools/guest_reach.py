@@ -15,6 +15,13 @@ edges are counted and reported for the frontier, because they are exactly the ro
 cannot see -- so `reached` is proof a hook can be called, and `far` is not proof it cannot.
 """
 
+# Two address-space facts this tool must not get wrong, because both fail as a clean negative:
+#   * `e_entry` is an OFFSET from the image base (loader.c:133), and the loader enters at
+#     image + e_entry (boot.c:632). Formatting e_entry alone walks from 0xa0, finds one node, and
+#     reports `far` about a graph it never entered. That was this tool's first run.
+#   * guest addresses, the edges file's caller/callee keys, and file offsets are three spaces:
+#     host = IMAGE + guest - EBOOT_BASE, file = guest - 0x3fc000. A base carried into the wrong
+#     space reads as "nothing here", never as an error.
 import argparse
 import collections
 import csv

@@ -97,6 +97,10 @@ const char *rt_identity_sha(void)
 
 void rt_announce_identity(void)
 {
-    printf("pbboot sha256 %s\n", rt_identity_sha());
+    /* stderr, not stdout: this is a banner, and `--imports` and `--status` write data on stdout.
+       On stdout it became the first field of every machine-read listing, which is how
+       test_tools.Boot.test_imports_bind_to_a_bundled_module went red reading
+       'pbboot sha256 84815fd20b2c\neboot' where it expected 'eboot'. */
+    fprintf(stderr, "pbboot sha256 %s\n", rt_identity_sha());
     fflush(stdout);
 }

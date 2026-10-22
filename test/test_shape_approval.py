@@ -19,8 +19,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 import shape_approval as SA  # noqa: E402
 from validate_functions import REVIEW_HEADER, check_reviews  # noqa: E402
 
-MEMBERS = [("0x00410100", "5", "leaf_demo_00410100"), ("0x00418d80", "8", "leaf_demo_00418d80"),
-           ("0x004261a0", "5", "leaf_demo_004261a0")]
+# Synthetic addresses, not game addresses: check_agnostic flags a test that hard-codes a value from
+# symbols/*.csv, and a fixture that names real functions expires with the catalogue it borrowed from.
+MEMBERS = [("0x00e01000", "5", "leaf_demo_00e01000"), ("0x00e01100", "8", "leaf_demo_00e01100"),
+           ("0x00e01200", "5", "leaf_demo_00e01200")]
 
 
 def write_csv(path, header, rows):

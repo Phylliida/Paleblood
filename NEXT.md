@@ -1450,6 +1450,35 @@ into the boot path, install the 1,737 hooks, and read `bbgame: N hook(s) install
 of the four depth-2/3 bodies fires before the wall. If one fires, wire the caller and take the first
 capture — the differential harness proves the body, the boot run would prove the reach.
 
+**The installer has never had a client, and three things follow.** `tools/harness.py:739` passes
+`lambda o, s, t: 0` as `install_hook` and its docstring says so — so **no `edge-verified` row was ever
+produced through a patched site**: the evidence is a direct call of the replacement with the ABI, not
+a guest execution. The hook→host transition has literally never run.
+
+* **Sizes are not the collision** — this table's are all ≥16 bytes. Of 1,737 hooks, every one has a
+  catalogue row and the smallest sizes are 16, 18, 19, 20, 21, 22 (largest 3,222), so the 14-byte
+  `jmp qword ptr [rip+0]` fits every row with ≥2 bytes spare. The 3/6/8-byte pool-B leaves are
+  `install_mode = host`, not installed. What that means for the future: **a 3-byte
+  `xor eax,eax; ret` cannot hold even a 5-byte `jmp rel32`, and a 6-byte `mov rax,[rdi+K]; ret`
+  cannot hold an absolute jump** — the size floor is what makes pool B host-call-only, and patching
+  one would overwrite the next function's first instruction while the run stays green.
+* **The address space is the same on both sides** — `runtime/plugin.c:40` patches `host->image`, and
+  both clients pass `0x800000000` (`tools/harness.py:39`, `runtime/boot.c:46`), which is the mapping
+  `run_guest(objects[k].image + entry)` executes from; `0x3fc000` is a *file* relation
+  (`file = guest − 0x3fc000`), never a mapping base. The hazard is the duplicated constant, not a
+  wrong one — so the readback below is the thing that would notice a divergence.
+* **The jump has no boundary stub.** `install_hook` writes an absolute jump straight into the C++
+  replacement, so a body would run on the guest's `%fs` — the WRGSBASE class one level down. It now
+  **refuses while `rt_tls_guest_base()` is live**, naming the missing stub, and it **reads the patched
+  bytes back** (`BB_HOOK_VERBOSE=1` prints size, distance and `readback ok` per site), because
+  `N installed` counts writes. `test/test_host_hooks.py` exercises all four cases by compiling the
+  callback against a stand-in image.
+
+**Open, load-dependent:** `ctest -R tools` failed once at 130 s with `test_fault_is_reported_with_offset`
+timing out (60 s subprocess limit); the same tree passes `307 tests OK in 69.6 s` standalone, and that
+test alone passes in 4 ms. `on_signal`/`rt_fault` call `dladdr` and `printf` from a signal handler —
+not async-signal-safe, and a plausible deadlock under load. Do not claim ctest green until it is fixed.
+
 **Recorder (original trigger, still the second half).** The in-game capture path is blocked on boot
 reaching past the `scePthreadCreate` wall
 (`runtime/syslib/pthread_sema.c`, the designed fatal stop). **When the boot runs past that wall, the
