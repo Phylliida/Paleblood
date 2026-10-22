@@ -961,3 +961,19 @@ other direction, so the two numbers print with their subjects.
 module file read, fabricated app-content success) and 5 are noop (blocking primitives that cannot block
 because the guest is single-threaded). **The boot is walking fabricated state in at least 11 of 51 places,
 and now the log says so instead of a summary nobody prints.**
+
+## AppParamGetInt: modelled success, and the guest read two parameters and continued
+
+`sceAppContentAppParamGetInt` (`99b82IKXpH4`, `import_names.csv:655`) zeroes its out-parameter through
+`rt_guest_write_ok()` and returns **success**, declared `RT_SYSLIB_MODELLED` and printing the parameter id
+each time. **The reason is the one that decides these: this tree has no app parameter store, and inventing
+one of the real machine's parameter-not-found codes would be a wrong number the guest branches on -- worse
+than a declared stand-in.**
+
+**The guest read ids 0x0 and 0x1 and moved on, no panic**, so the return value does not gate the path
+immediately: **that is a measurement, and it is more than a refusal would have told us.** Two calls, not
+one: the second read is the guest asking twice, which is the behaviour a "not found" answer would have
+changed.
+
+Scored: 51 -> **52 implemented**, 417 -> **416 unbound**, called 48 -> **55** (seven calls into the
+modelled path). Next stop is on the following line of the run.

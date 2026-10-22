@@ -7,3 +7,4 @@ seq,sha256,nid,name,binding,return_address,note
 6,b3c4f7fd5232,g8cM39EUZ6o,sceSysmoduleLoadModule,libSceSysmodule,eboot+0x2026149,first sysmodule call
 7,d2a40f19a54f,,, ,,guest panic: LoadModule requested id 180 which an invented table lacked
 8,,R9lA82OraNs,,,eboot+0x20261dd,after sysmodule records ids instead of naming them
+9,,99b82IKXpH4,sceAppContentAppParamGetInt,libSceAppContent,eboot+0x20261eb,modelled success; ids 0 and 1 read; guest continued
