@@ -766,3 +766,31 @@ binding for `pO96TwzOm5E` regressed at some earlier commit and the run now halts
 **The three stdio data imports were never bound to libc's exports in this configuration** (identical
 unbound count with the check removed), so `bind_import`'s data-scratch path is still live and still a
 zero object -- **the fault is behind an earlier wall, not behind my refusal.**
+
+## The guest diagnosed itself: the heap allocation failed because my arena was 64 MiB and it asked for 116
+
+Running `pbboot` directly (eboot + libc + libSceFios2, no `--nids`) reproduces the fault **and prints the
+guest's own panic first**:
+
+    [Dantelion2 Panic]
+    ... Ps4RuntimeHeapImpl.cpp(324)
+    _AllocateDirectMemory() failed for creating runtime heap. (size=121634816 bytes)
+    DL_PANIC is firing core dump...
+    pbboot: eboot: fault: signal 11 at eboot+0x20b56d2, address 0x0
+    milestone entry; 213 bundled, 33 implemented, 4 unresolved, 436 unbound, 28 called
+
+**121,634,816 B = 116 MiB against `k_arena_bytes = 0x4000000` (64 MiB).** So the fault's *cause* was
+never the stdio objects; it was my own model refusing an allocation the guest treats as fatal, and the
+panic screen is what dereferences the unpopulated `__sFILE` afterwards.
+
+One variable changed -- arena `0x4000000` -> `0x8000000`:
+
+    panic: gone
+    stop:  unimplemented, eboot calls libkernel L-Q3LEjIbgA at eboot+0x2081ac6
+    imports called 26 (was 28)
+
+**Also refuted: the "33 implemented -> 30" regression.** The registry is intact -- `nm` shows both
+`kernel_direct_memory.c` entries, and the NID model reproduces the known pair (`memset` ->
+`8zTFvBIAIN8`) and `sceKernelGetDirectMemorySize` -> `pO96TwzOm5E`. The two invocation paths simply
+report different populations (219/30/433 via `boot.py --nids`, 213/33/436 directly). **Why they differ
+is measured and unexplained -- written down, not smoothed.**

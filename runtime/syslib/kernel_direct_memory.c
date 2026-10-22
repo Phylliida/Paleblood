@@ -32,7 +32,7 @@ enum { k_error_inval = 0x16, k_error_fault = 0x0e, k_error_nomem = 0x0c };
    it was given. If Map instead invented a separate virtual range, every range Allocate had
    already handed out would become unreadable the moment anything mapped it, and the failure would
    look like memory corruption in whichever consumer ran second. */
-enum { k_page = 0x1000u, k_arena_bytes = 0x4000000u /* 64 MiB, the model's whole budget */ };
+enum { k_page = 0x1000u, k_arena_bytes = 0x8000000u /* 128 MiB: the guest asked for 116 MiB at ps4 RuntimeHeapImpl.cpp(324) */ };
 
 static unsigned char *arena;
 static size_t arena_used;
