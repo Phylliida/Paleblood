@@ -182,3 +182,25 @@ to be the same set.
 **60.4% stands as stated** — **497 of 823 installed trampolines** jump to `unimplemented()`, eboot **400 of
 666** — with the note that it counts **slots, not imports the guest exercises**: the guest called **63**, and
 how many of the 497 it can reach before stopping is the number that matters for the wall.
+
+### 848 − 823 = 25 is the data imports, and my retraction is itself retracted
+
+`--imports` prints the loader's own table: **848 rows = 823 `function` + 25 `data`** (eboot 20, libc.elf 2,
+libSceFios2.elf 3). `write_trampoline` is called **only** for `RT_ELF_IMPORT_FUNCTION`
+(`runtime/boot.c:560`), so **the deficit is by design**: a data import gets a data slot and no trampoline.
+Not deduplication — **multi-object NIDs counted 0 of 848** — and not a skipped import.
+
+**Retraction retracted: 666 / 77 / 80 stands.** It reproduces on two different logs with an independent
+script, and it is arithmetically the function imports alone: 686−20=666, 79−2=77, 83−3=80. The one parse that
+produced **6/186/631** was a one-off awk I cannot reproduce, on a log that is a different file from the other
+(/tmp/bootV.log 37,560 B sha `2dc747ea2571b702`, /tmp/bootW.log 67,766 B sha `39bce741bb9c910f`). **So the
+lesson is neither "decoder defect" nor "stale artifact" as stated — it is that a number produced by a command
+I cannot re-run is a number I may not act on.** From here the parser prints its input path and sha256, and
+`max(k) < object_count` is asserted rather than hoped for.
+
+**The residual that remains open, with its terms now exact.** Provider partition: bundled **221**, syslib
+**109**, syslib-unresolved **9**, none **509** = 848. Bound slots (any non-null target) would be **339**, but
+**326** trampolines are 126 B and **497** are 131 B (**823** total). **339 − 326 = 13 bound slots that still
+emitted the `unimplemented` form**, most plausibly the 9 `syslib-unresolved` entries whose `fn` is null plus 4
+others — **a hypothesis, not a finding**, and the next instrument is one line per slot printing
+`<object>, <nid>, <provider>, <target == 0>`.
