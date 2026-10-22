@@ -3,9 +3,10 @@
 
 `blocks.py` counts every static jump target that is not an instruction boundary inside the function's
 declared extent as "unplaceable".  Its decode window *is* the extent, so a tail jump into a neighbour
-is invisible as a boundary and gets counted as a defect of the function.  For 0x00414040 all three
-"unplaced" targets (0x41447d, 0x414481, 0x4144ad) are past the declared end 0x414470 -- the function
-has 66 blocks and zero genuinely unplaceable leaders.  The tier-wide 42.6% was measured this way.
+is invisible as a boundary and gets counted as a defect of the function.  In the pilot function all
+three "unplaced" targets are past the declared end of the extent -- the function has 66 blocks and
+zero genuinely unplaceable leaders.  Two of the three are the third byte of a preceding instruction,
+which is why they looked like leaders at all.  The tier-wide 42.6% was measured this way.
 
 This tool separates three populations that must never be added together:
   * internal unplaced leaders -- a static target inside the extent that is not an instruction boundary

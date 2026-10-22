@@ -49,7 +49,7 @@ def main(argv=None):
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--elf', default=os.environ.get('BB_ELF'),
                     help='the executable (eboot.elf); default $BB_ELF')
-    ap.add_argument('--address', required=True, help='the member, e.g. 0x00414040')
+    ap.add_argument('--address', required=True, help='the member, as written in symbols/functions.csv')
     ap.add_argument('--source', required=True, help='the translated body to check')
     ap.add_argument('--window', type=lambda s: int(s, 0), default=0x4000,
                     help='expand this many bytes either side of the declared extent')
