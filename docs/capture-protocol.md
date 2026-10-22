@@ -93,3 +93,31 @@ be printed (`BB_TRAMPOLINE_VERBOSE=1`) before this lands.
 the pre-call ones.** Run the same case with the snapshot moved after the call and it must **fail**, or the
 test is measuring the harness rather than the ordering. **That mutation is exactly what a post-body design
 absorbs silently**, which is why the negative control is the load-bearing half.
+
+### Measured: the import path's occupancy, and the wrapper that keeps it untouched
+
+`BB_TRAMPOLINE_VERBOSE=1` has now run. **823 trampolines** printed occupancy, in exactly two sizes:
+
+```
+trampoline 2:      126 of 220 bytes, 94 left
+trampoline 2097234: 131 of 220 bytes, 89 left
+```
+
+**326 at 126** and **497 at 131**, so the observed maximum is **131 of 220** and the real headroom is
+**89 bytes**. My carried "~20 bytes headroom" was a derivation from the 78-byte *stub* against a 220-byte
+*trampoline*, and the 48–53 bytes it ignored are the import path's own bookkeeping (`movabs` mark store,
+`movabs` + `mov dword` in-flight, three arg captures). **The number is now a print, not an arithmetic.**
+
+**Therefore the capture does not grow the shared emitter.** It is a **hook-only snapshot wrapper** that ends
+in `jmp` to an **unmodified** boundary stub, on its own page, with its own size function.
+`rt_boundary_stub_size` keeps its signature, and the import path's occupancy stays inside the 131-of-220 it
+already uses — **it never becomes a question the capture path can regress.** Composition rather than a flag,
+because **a parameter that changes an emitted length must appear in both the emitter's and the size
+function's signatures or the product and the constant drift**, and a flag would thread through every existing
+caller to buy one new behaviour.
+
+**The distance check is mandatory, not assumed.** Both pages come from one mmap'd region, so `jmp rel32`
+should reach — **but the wrapper asserts the distance**: `abs(wrapper_end − stub_start) < 2^31` at emit time,
+refused otherwise, because a far target silently needs the 14-byte absolute form and that is **+9 bytes
+nobody budgeted.** A near jump is `e9 <rel32>` (5 B); the assertion is what makes that 5 a fact rather than a
+hope.
