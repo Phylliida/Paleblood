@@ -449,3 +449,22 @@ the graph, and my first `string(APPEND ...)` was inserted **inside `if(NOT CMAKE
 false in every configured tree — **two lines that never executed, with `configure rc=0` and `build rc=0`
 reporting success both times.** The tell was the test I had just written: **the gate printed 0 of 171, not
 success.**
+
+### Retraction: `static_assert` → 0 was my grep, not the tree — 212 exist
+
+I reported **0 `static_assert`** and concluded no compile-time guards existed. **Both halves of that were wrong,
+in two different ways at once:**
+
+- **C spells it `_Static_assert`,** with a leading underscore, and design spells it `static_assert` — **my
+  pattern matched neither inside `runtime/`**, because `runtime/` uses the C form (`runtime/syslib/clock.c`, 2).
+- **I searched `runtime/` and never `game/`,** which is where the C++ bodies live.
+
+The corrected survey: **`_Static_assert` → 2 in 1 file** (`runtime/syslib/clock.c`), **`static_assert` → 210 in
+24 files** (`game/`), **212 total** — the `offsetof`/`sizeof` layout guards, intact and exactly why the struct
+layouts are still trustworthy. **A zero produced by a pattern I chose is a fact about the pattern**, and this is
+the same class as `\bassert(` being unable to match `static_assert(` in the first place: **`_` is a word
+character, so there is no word boundary — the pattern excluded the very thing it was asked to count.**
+
+**Unchanged:** the `-UNDEBUG` policy and its test. `assert` (the runtime check, 0 occurrences) and
+`static_assert` (the compile-time guard, 212) are different instruments, and vacating the first never implied
+vacating the second.
