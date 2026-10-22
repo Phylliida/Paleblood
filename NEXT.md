@@ -528,3 +528,27 @@ lazy init.
 
 **A tag name recorded without its value is a claim, not a measurement** -- the same defect as the
 `boundary_confidence` DISTINCT/`ghidra-export-entry-size` mismatches.
+
+## `0x61000002` holds nothing text-shaped, and the three bss objects have 4-5 referrers each
+
+    payload (0x18 B): 18 00 00 00 00 00 00 00 | bf f4 13 3c 01 00 00 00 | 71 00 00 02 00 00 00 00
+    dwords:           0x18, 0x0,            0x3c13f4bf, 0x1,            0x2000071, 0x0
+
+**No field is an address inside libc's text** (`0..0xb7924`): `0x13c13f4bf` is ~5.2 GB, not a code
+address, and `0x2000071` is small and flag-shaped. So the companion's last place to look for a module
+init entry **does not hold one**, and the surviving reading is **lazy, guest-side stdio init**.
+
+**This does not license "no init exists"** -- the companion's distinction is right and stands: a real
+`DT_FINI` at `0x81d80` with a zero-length `DT_INIT_ARRAY` is a placeholder pair, so the honest claim is
+**"the init is not in the dynamic tags or in the 0x61000002 metadata"**, not "there is none."
+
+**Export references, counted by raw qword search over the whole file:**
+
+    0xbf060 (_Stdin?)  4 referrers at 0xd98c8 0xd98f8 0xd9910 0xd9928
+    0xbf160 (_Stdout?) 5 referrers at 0xd98e0 0xd9970 0xd99a0 0xd99b8 0xd99d0
+    0xbf260 (_Stderr?) 5 referrers at 0xd9988 0xd9a18 0xd9a48 0xd9a60 0xd9a78
+
+So each bss object is referenced from **several parallel tables in the same 0xd98xx--0xd9axx
+neighbourhood**, which is what an export entry array plus its lookups look like. **The addresses are
+real exported data objects; the ordering question (`_Stdin`/`_Stdout`/`_Stderr`) is still unproven**,
+because multiple tables carry them and adjacency in one is not the mapping.
