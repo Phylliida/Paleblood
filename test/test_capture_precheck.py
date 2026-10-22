@@ -1,7 +1,13 @@
 """The capture wrapper's float refusal, proved in both directions."""
+import os
+import sys
 import unittest
 
-from tools.capture_precheck import scan, verdict
+# Discovery puts `test/` on sys.path, not the repo root, and `-P` keeps the cwd off it: import the module the
+# way the rest of the suite does rather than relying on where I happened to run it from.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
+
+from capture_precheck import scan, verdict
 
 
 class CaptureRefusesVolatileXmm(unittest.TestCase):
