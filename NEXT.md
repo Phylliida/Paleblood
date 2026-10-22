@@ -664,3 +664,23 @@ and applies no relocation leaves them zero -- **which is exactly the null at `+0
 **This is no longer a guest-side question.** The next instrument is our own code: does `boot.c`'s
 relocation pass run for modules other than eboot, and does anything treat a zero word as "unset" and
 skip it?
+
+## The runtime already speaks SCE relocations -- and the 0x18 stride is the symbol entry size
+
+`runtime/loader.c` defines the whole SCE tag set (`0x61000013` EXPORT_LIB, `0x61000015` IMPORT_LIB,
+`0x61000029` JMPREL, `0x6100002d` PLTRELSZ, `0x6100002f` RELA, `0x61000031` RELASZ, `0x61000035` STRTAB,
+`0x61000037` STRSZ, `0x61000039` SYMTAB, `0x6100003f` SYMTABSZ) plus `R_X86_64_RELATIVE 8`, and it
+**applies** them: `loader.c:231 memcpy(&addend, r + 16, 8)` reads a 24-byte relocation entry, and
+`:399 memcpy(image + r->target, &v, 8)` writes the result.
+
+**So "our loader applies no relocations" is false, and the companion's mechanism 4 is refuted as stated**
+-- the objects live in bss, so no loader wrote zeros over valid pointers; the deltas are a table that
+must be *applied* to those fields.
+
+**What the same file resolves as a side effect:** the two `0x18` values in libc's tag dump
+(`0x61000033`, `0x61000035`) are consistent with a **24-byte symbol entry size**, which is the stride I
+"refuted" twice and then found again in the 0x18-strided records at `0xd98c8`. The stride was never
+wrong; only the object I attributed it to was.
+
+**Open and now narrow:** does the loader run its rela pass for modules other than `eboot`, and does any
+of its `R_X86_64_*` handlers skip a target whose current value is zero?
