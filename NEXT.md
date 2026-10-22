@@ -237,3 +237,29 @@ event.
 Before any more implementations, split that counter: **called** (trampoline entered) versus
 **served** (provider was RUNTIME and returned), printed as two figures. Until then no import
 progress claim should quote "imports called".
+
+## The null dereference: data imports get zeroed scratch, so stdio's FILE objects are all zeros
+
+`runtime/boot.c:289-293`:
+
+    if (kind == RT_ELF_IMPORT_DATA)
+        return o->bound[index] ? (uintptr_t)o->bound[index] : (uintptr_t)(o->data + 4096 * index);
+
+Each data import gets its **own 4 KiB block of zeroed anonymous memory** (`o->data` is one mapping
+of `(imports + 1) * 4096`, PROT_READ|PROT_WRITE). `_Stdout`, `_Stderr`, `_Stdin` are in the named
+list (`symbols/import_names.csv` rows 10, 12, 19; libc / libSceLibcInternal). So the guest receives
+a pointer to 4 KiB of **zeros** in place of a `FILE *`, and the first stdio call that touches a
+field of that struct reads a **null internal pointer** and faults at address 0x0.
+
+That fits every observation at once: no guest bytes reached stderr, the fault address is 0x0, the
+trampoline for `_write` was entered, and `_write`'s own body has no reason to have run. **So the
+fault is a data-symbol problem, not an implementation problem, and `_write` is innocent.**
+
+Not a "fix the loader" job in the same breath: a data import needs a *real* object behind it, and
+for stdio that means the runtime owning host `FILE` objects and pointing `_Stdout`/`_Stderr`/
+`_Stdin` at them -- which is the `FILE*` interop the delegation split says must stay ours. Recorded
+as the shape; not implemented.
+
+Rule for the dump, next run: print `provider` at bind time
+(`bind <idx> <nid> <lib> provider=<runtime|bundled|unresolved|data-scratch> called=<0|1>`), because
+the provider is decided there and inferring it from two counters is what cost this turn.
