@@ -953,3 +953,30 @@ entered, and entered is not recorded.
 **A stale assertion, third occurrence, fixed where it lives:** the wrapper readback asserted the first byte was `e9`.
 The capture form opens with `push rdi` and carries its `e9 rel32` in the last five bytes, so the readback now follows the
 form — first byte by form, jump where that form puts it.
+
+### The guest-PC record: three constraints that are cheaper to write down than to rediscover
+
+The trampoline records the guest return address at entry with `mov rax,[rsp]` / `mov [r11+0x18],rax`
+(`49 8b 04 24` / `49 89 43 18`), **after** the in-flight index store so a fault there cannot pair a stale
+index with a fresh PC. `rt_syslib_args` widened 3 -> 4 slots; `&arg == &rt_syslib_args` by construction
+(`boot.c:235` is the only declaration, and slot 3 lands inside the array).
+
+1. **One emitter, never one runtime function.** At bookkeeping time `%fs` is still the guest's, so ordinary
+   C called from there faults on its first `errno` or stack-protector access -- exactly the `libc+0x8ea99`
+   shape the snapshot hit before `wrfsbase` moved ahead of it. The stores work precisely because they touch
+   no libc. The one home is therefore a **byte emitter** with two callers (the import trampoline and the
+   hook-path stub), returning its size so each caller's size function stays derived -- the same shape as
+   `rt_write_boundary_stub`. A C hook is safe only **after** the swap, inside the crossing, with the
+   registers already saved.
+2. **`[rsp]` means different things on the two paths.** The hook wrapper has pushed six registers, so `[rsp]`
+   there is a saved `r9`, not a return address: that path records `[rsp+offset]` or records nothing.
+3. **A zero that means "not applicable" must not share a value with a zero that means "tail call".** Slot 3
+   distinguishes them: `0` is an unwritten record (tail call or a path that never wrote it) and the sentinel
+   `~0ull` prints as `guest_pc n/a (hook path)`. Measured today: record `#40` reports `guest_pc 0`, which is
+   the first of those two readings and **not** evidence about the guest's path.
+
+The join that decides the next piece of work: PCs -> owning function by `address <= pc < address + extent`
+against `functions.csv` (declared extents are understatements: sound for ownership, unsound for coverage),
+intersected with the 1,737 `install_mode=hook` rows, printed sorted by count with the name beside each PC,
+top 20, total, **and `PC outside every function extent: N` as its own line** -- without that line the join
+silently assigns a caller to a callee.
