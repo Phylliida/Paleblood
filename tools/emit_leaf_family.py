@@ -340,6 +340,10 @@ def case_docs(name, m):
                 'args': {'rdi': 'buf:out'},
                 'buffers': {'out': {'size': 16}},
                 'memory': [{'addr': 'buf:out+0x8', 'bytes': marker}],
+                # The stored value IS an address, and the original runs relocated in the host
+                # mapping, so the slot is compared in guest space with the ORIGINAL's bytes
+                # translated (harness.SIDE). Without this a correct replacement fails 3/3.
+                'guest_address_slots': [{'addr': 'buf:out+0x0', 'width': 8}],
             }
         return
     for tag, marker in zip(('m1', 'm2', 'm3'), MARKERS):

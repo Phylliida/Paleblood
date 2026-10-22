@@ -359,7 +359,7 @@ The paragraph above claims `grep -rl '"pointer"' ../data/cases` → **0 files** 
 in the same call:
 
 - cases using a `pointer` preset: **4,169**
-- cases using `memory` at all: **21,846**
+- cases using `memory` at all: **22,218**
 
 **How it happened is the part worth keeping:** I wrote the sentence into the heredoc *before* executing the
 command that produces its number, so the number in the document was an expectation formatted as a measurement.
@@ -374,7 +374,7 @@ order-independent.
 ### The number now has a second reader that runs
 
 `test/test_doc_numbers.py` recomputes the corpus counts this document quotes — **4,169** cases carrying a
-`pointer` preset and **21,846** carrying `memory` — from `../data/cases`, and asserts both appear here. It
+`pointer` preset and **22,218** carrying `memory` — from `../data/cases`, and asserts both appear here. It
 refuses a sweep that matches fewer than 100 cases, so a broken predicate cannot pass as agreement.
 
 **Proved by making it red:** with the document changed to `4,170`, the test fails

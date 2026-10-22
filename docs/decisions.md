@@ -375,3 +375,44 @@ own full before/after bytes, declared, refused if the address is not inside a de
 Board after both: functions **33,488 → 33,974**, ledger **33,589 → 34,075** (surplus stays 101),
 bytes **276,841 → 283,635**, differential **22,376 → 22,862**. `rip_load` (161) is **not** in this
 queue: it dereferences the resolved address, and nothing maps guest space for a replacement to read.
+
+### 1k, continued — the channel landed, and its first version compared nothing
+
+**Implemented as `guest_address_slots`**, a case key naming `{"addr", "width"}` with width 4 or 8
+(anything else refuses). The harness resolves the address, refuses one outside a declared buffer,
+captures the bytes before and after execution, and — critically — **translates them on the original
+side only**: `harness.SIDE` is set in `_run_isolated` **before the fork**, so the replacement's bytes
+are never rewritten. The `writes` diff skips any run falling entirely inside a slot, so a slot's bytes
+are not compared twice in two spaces, and the slot carries its own full before/after record, which is
+what makes it independent of the run-splitting problem.
+
+**Measured, both directions, on `0x1631c60`:** original reports `buf:out+0x0 after
+20587a0500000000` (= `0x57a5820`, guest) and a replacement storing image space reports
+`20583a0508000000` (= `0x8053a5820`) → **`rc=1`, failed 3**, naming the slot and both hex strings.
+With the guest-space body: 3/3, then **124/124** over the family. The channel refuses the body that
+passes without it, which is the only property that made it admissible.
+
+**The first version of the comparison compared nothing, and a body tuned to the instrument passed
+3/3.** It read the declaration out of `case`, the parameter `compare_case` takes as an optional third
+argument — and on the `run` path that map comes from `case_expectations()`, which keys on
+`case['id']` while **the emitted cases have no `id` field at all**, so the map was empty and `case` was
+`None`. `writes` were empty on both sides because the run fell inside the slot; the return was
+translated identically on both sides; **everything compared clean.** Fixed by keying the comparison off
+**what the two sides report** — the union of the slot names, with one-side-only recorded as a diff — so
+no caller can switch the check off by omitting an argument, and no key convention can disaggregate it.
+Named with the rest: `capture_ok.csv`'s guest-vs-image key, and now this — **a declaration looked up by
+a key the two readers spell differently is a declaration half of them ignore.** Worth stating plainly:
+`tools/differential.py:1184` still calls `compare_case` with no case at all; the slot check no longer
+cares, and `expected_fault` fails closed there, but a future declaration read through `case` would go
+inert in exactly this way.
+
+**Family `rip_store` landed on that basis:** 124 members, `{11: 124}` → **+1,364 B**, 372 cases in 124
+directories, `nm -D` 124. Board to the unit against the pre-registration: functions **33,488 →
+33,612**, ledger **33,589 → 33,713** (**surplus 101 unmoved**), bytes **276,841 → 278,205**,
+differential **22,376 → 22,500**, byte-identical **11,112 unmoved**, **`verified` 21 unmoved**.
+Measured, not carried: `verification.csv` holds 22,541 `edge` **rows** over **22,500 functions** (the
+ledger has 41 second rows), so a count quoted from rows where the metric is functions inflates the
+board by 41 — the same shape as the surplus, one layer down.
+
+`rip_add_store` (362 members, +5,430 B) is **not** in this commit: its body stores `resolved + K2`, so
+it needs the same channel and its own both-directions control before it prices anything.

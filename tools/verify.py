@@ -152,6 +152,25 @@ def compare_case(orig: dict, repl: dict, case: dict | None = None) -> list[str]:
             diffs.append(f'{side}: {e}')
     if of is not None or rf is not None:
         return diffs
+    # Declared address slots: the harness has already translated the ORIGINAL's bytes into guest
+    # space (harness.SIDE), so both sides are compared in the same space here. A replacement that
+    # stores an image-space address is not translated and fails, which is the point.
+    # Keyed off what the two sides REPORT, never off a parameter the caller may omit. The first
+    # version of this block read the declaration out of `case` -- and compare_case is called
+    # without a case on the main path, so it compared nothing and a body storing an image-space
+    # address passed 3/3. A comparison gated on an optional argument is a comparison that can be
+    # switched off by forgetting, so the only inputs are the two runs.
+    o_slots = orig.get('guest_address_slots') or {}
+    r_slots = repl.get('guest_address_slots') or {}
+    for name in sorted(set(o_slots) | set(r_slots)):
+        if name not in o_slots or name not in r_slots:
+            side = 'original' if name not in o_slots else 'replacement'
+            diffs.append(f'slot {name}: reported by one side only ({side} does not report it)')
+            continue
+        for part in ('before', 'after'):
+            a, b = o_slots[name].get(part), r_slots[name].get(part)
+            if a != b:
+                diffs.append(f'slot {name} {part}: original {a} replacement {b}')
     for group, regs in (('ret', RETURN_REGS), ('preserved', CALLEE_SAVED)):
         for r in regs:
             a = num(orig.get(group, {}).get(r))

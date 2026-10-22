@@ -675,6 +675,27 @@ class Run:
         for reg, off in (('xmm0', 72), ('xmm1', 88)):
             raw = bytes.fromhex(args.get(reg, '')).ljust(16, b'\0')[:16]
             ctypes.memmove(ctypes.addressof(self.block) + off, raw, 16)
+        # Declared address slots. A function that STORES a pointer writes an address into memory,
+        # and the two sides disagree about which space that address is in for one honest reason:
+        # the original executes inside the host mapping (IMAGE + guest - EBOOT_BASE) and the
+        # replacement does not. `normalised()` corrects exactly that for return values and there
+        # was no equivalent on the memory channel, so a correct replacement failed. A slot is
+        # declared per case, compared on its own, and translated on the ORIGINAL side only -- a
+        # replacement that stores an image-space address must still fail. The slot carries its own
+        # full before/after bytes rather than being reconstructed from a write diff: a diff run can
+        # be shorter than the slot (a stored byte that equals the seed's), and a partial run cannot
+        # be decoded back into a value.
+        slots = []
+        for spec in self.case.get('guest_address_slots') or []:
+            if not isinstance(spec, dict) or 'addr' not in spec:
+                raise BadInput('guest_address_slots entries are {"addr": ..., "width": 8}')
+            width = int(spec.get('width', 8))
+            if width not in (4, 8):
+                raise BadInput(f'guest_address_slots width {width}: only 4 and 8 can hold a pointer')
+            at = self.value(spec['addr'])
+            self.check_memory(at, width, source='guest_address_slot')
+            slots.append((str(spec['addr']), at, width))
+        slot_before = {spec: ctypes.string_at(at, w).hex() for spec, at, w in slots}
         before = self.snapshot()
         ctypes.CFUNCTYPE(None, ctypes.c_void_p)(CODE)(ctypes.addressof(self.block))
         for index in self.native:
@@ -719,7 +740,18 @@ class Run:
         writes = []
         for start, old in before.items():
             for offset, data in byte_diffs(old, after[start]):
-                writes.append({'addr': self.describe(start + offset), 'bytes': data.hex()})
+                at = start + offset
+                if any(s_at <= at and at + len(data) <= s_at + w for _, s_at, w in slots):
+                    continue    # compared through the slot channel, in guest space, below
+                writes.append({'addr': self.describe(at), 'bytes': data.hex()})
+        slot_records = {}
+        for spec, at, width in slots:
+            data = ctypes.string_at(at, width)
+            if SIDE == 'original':
+                value = self.normalised(int.from_bytes(data, 'little'))
+                data = value.to_bytes(width, 'little')
+            slot_records[spec] = {'before': slot_before[spec], 'after': data.hex()}
+        out['guest_address_slots'] = slot_records
         out['writes'] = writes
         out['access_trace'] = self.access_trace
         out['access_trace_scope'] = "harness-mediated scripted accesses; guest instructions are not instrumented"
@@ -777,8 +809,15 @@ def _trace_import_targets(boot: dict, case: dict) -> list[dict]:
     return targets
 
 
+SIDE = 'original'   # who is executing: 'original' runs relocated inside the host mapping, and a
+                    # pointer IT computes lands in image space. Set before the fork in
+                    # _run_isolated; the default is the original, which is the conservative side.
+
+
 def _run_isolated(machine: Machine, case: dict, address: str, target: int | None,
                   timeout: int, trace: bool, trace_limit: int, replacement_lib: str | None) -> dict:
+    global SIDE
+    SIDE = 'replacement' if replacement_lib else 'original'
     import signal
     r, w = os.pipe()
     pid = os.fork()
