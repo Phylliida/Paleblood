@@ -51,6 +51,7 @@ const rt_elf_tls *rt_elf_tls_segment(const rt_elf *elf);
 uint64_t rt_elf_proc_param(const rt_elf *elf, uint64_t *size);
 size_t rt_elf_load_count(const rt_elf *elf);
 const rt_elf_load *rt_elf_loads(const rt_elf *elf);
+uint64_t rt_elf_load_filesz(const rt_elf *elf, size_t index); /* the file-backed part of load `index` */
 size_t rt_elf_relocation_count(const rt_elf *elf);
 
 /* Imports, in the order their first relocation names them: "NID#library#module". */

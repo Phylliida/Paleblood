@@ -333,6 +333,10 @@ uint64_t rt_elf_proc_param(const rt_elf *e, uint64_t *size)
 }
 size_t rt_elf_load_count(const rt_elf *e) { return e->load_count; }
 const rt_elf_load *rt_elf_loads(const rt_elf *e) { return e->loads; }
+uint64_t rt_elf_load_filesz(const rt_elf *e, size_t i)
+{
+    return i < e->load_count ? e->load_filesz[i] : 0;
+}
 size_t rt_elf_relocation_count(const rt_elf *e) { return e->reloc_count; }
 size_t rt_elf_import_count(const rt_elf *e) { return e->import_count; }
 const char *rt_elf_import_name(const rt_elf *e, size_t i) { return i < e->import_count ? e->imports[i].name : NULL; }

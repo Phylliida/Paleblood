@@ -252,6 +252,20 @@ static const char *base_name(const char *path)
     return slash ? slash + 1 : path;
 }
 
+/* An export whose value lands past a load's p_filesz but inside its p_memsz names a .bss object:
+   the image reserves it and nothing in the file or in the relocation table initialises it. */
+static int export_unfilled(const rt_elf *e, size_t index)
+{
+    const uint64_t v = rt_elf_export_value(e, index);
+    const rt_elf_load *loads = rt_elf_loads(e);
+    for (size_t i = 0; i < rt_elf_load_count(e); i++) {
+        const uint64_t base = loads[i].vaddr, filesz = rt_elf_load_filesz(e, i);
+        if (v >= base && v < base + filesz) return 0;
+        if (v >= base + filesz && v < base + loads[i].memsz) return 1;
+    }
+    return 0;
+}
+
 /* Binding: modules' exports first, then the runtime's implementations. */
 static void resolve(object *o)
 {
@@ -264,6 +278,13 @@ static void resolve(object *o)
             for (size_t e = 0; e < rt_elf_export_count(objects[m].elf); e++) {
                 const char *lib = rt_elf_export_library(objects[m].elf, e);
                 if (same_nid(name, rt_elf_export_name(objects[m].elf, e)) && library && lib && !strcmp(library, lib)) {
+                    if (rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_DATA && export_unfilled(objects[m].elf, e)) {
+                        fprintf(stderr,
+                                "pbboot: %s imports %s from %s: provider=data-unfilled "
+                                "(export outside p_filesz, inside p_memsz)\n",
+                                o->label, name, objects[m].label);
+                        break; /* fail closed: leave it unbound rather than hand over a zeroed object */
+                    }
                     o->bound[i] = objects[m].image + rt_elf_export_value(objects[m].elf, e);
                     o->provider[i] = MODULE;
                     o->provider_object[i] = (int)m;

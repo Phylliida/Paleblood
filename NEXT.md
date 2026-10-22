@@ -745,3 +745,24 @@ mechanism is settled: **the fields are unnamed, not named-with-a-wrong-address.*
 
 **Also corrected: the two "rodata" delta targets are not strings either** -- read through the correct bias
 (`file = vaddr + 0x4000`), `0xaf8fc`/`0xaf944`/`0xb0aa8`/`0xb2c80` are 4-byte tables, not ASCII.
+
+## The fail-closed refusal landed, and it never fired: the boot stops before the fault
+
+Structural predicate (no literals): an export whose value is **past a load's `p_filesz` and inside its
+`p_memsz`** names a `.bss` object; binding a data import to it now prints
+`provider=data-unfilled` and refuses. `rt_elf_load_filesz` added so the test is computable from headers.
+
+**Same command, one variable, both runs:**
+
+    baseline (runtime/ stashed)  rc=3  imports 686: 219 bundled, 30 implemented, 4 unresolved, 433 unbound, called 24
+                                 stop: unimplemented, eboot calls libkernel pO96TwzOm5E, returning to eboot+0x2081a85
+    patched                      rc=3  identical on every number and on the same stop
+
+**So the refusal is inert on this boot, and the pre-registered outcome did not occur** -- not `served 0`,
+not `provider=data-unfilled`, but **a stop three layers earlier.** The guest never reaches
+`0x20b56d2`: **the SIGSEGV I have been modelling for six slices is not reproducible at HEAD**, because
+binding for `pO96TwzOm5E` regressed at some earlier commit and the run now halts at that call.
+
+**The three stdio data imports were never bound to libc's exports in this configuration** (identical
+unbound count with the check removed), so `bind_import`'s data-scratch path is still live and still a
+zero object -- **the fault is behind an earlier wall, not behind my refusal.**
