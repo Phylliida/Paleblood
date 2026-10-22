@@ -72,9 +72,12 @@ order. Three consequences, in order of what they invalidate:
    relocation that writes it. So the dump cannot be joined to `0x57e4690/698/6a0/6a8` yet --
    the slot must be added at the relocation apply site, not in `resolve()`.
 2. **Those NIDs carry `#q#q` / `#p#J` suffixes** where the witnessed ones are bare 11-char base64.
-   Whatever produces the suffix must be established before any join on value; a join on value
-   fails before a join on key does. Check whether the same write path guarded in `1bc6903`
-   produces it.
+   Asked where that comes from, and it is the *guest's own format*, not damage:
+   `runtime/loader.c:346` splits an import name at the first `#` (`const char *p = strchr(name, '#');`)
+   and `boot.c:235` compares **`RT_NID_SIZE - 1` bytes and then requires `'#'` on both sides** --
+   the marker is expected, and the syslib match deliberately ignores what follows it. So the
+   value join works if the suffix is stripped to the first 11 characters, exactly as the runtime
+   does. The 223-row incident's markers were the same format, not a new corruption.
 3. **The 652 reconciles: 219 bundled + 30 implemented + 4 unresolved + 433 unbound = 686.** So the
    in-game workload is **433 unbound**, not 652 -- 219 are bundled and already available. This
    closes the reconciliation item and improves the figure by a third.
