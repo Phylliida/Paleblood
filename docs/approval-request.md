@@ -65,3 +65,9 @@ the rule is refused by the tool rather than covered by your signature.
 
 Append one line to `docs/approval-answers.md` — `2026-10-22 scope=shape` or `scope=function`, plus anything you
 want attached to it. Nothing else on this sheet needs a decision today.
+
+`scope=function` keeps reviews one per function, which is the default and needs no flag.
+`scope=shape` is also the only thing that makes a `scope = shape` row in `symbols/reviews.csv` legal:
+the review says what was reviewed, that line says the owner allowed one rule to stand for the family,
+and `tools/shape_approval.py` then derives the per-function rows — built and tested already, so the
+answer needs no work behind it.

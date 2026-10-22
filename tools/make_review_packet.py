@@ -268,7 +268,7 @@ def build(args):
     out.append('Reviewer: ______________  Date: __________')
     out.append('```\n')
     out.append('Approval is one row per address in `symbols/reviews.csv`')
-    out.append('(`address,name,date,reviewer,verdict,notes`):\n')
+    out.append('(`address,name,date,reviewer,verdict,scope,source_hash,cases_sha256,notes`):\n')
     out.append('```')
     out.append('%s,%s,<date>,<you>,approved,family attestation; member %s read line by line; %d members '
                'byte-identical (sha256 %s…)' % (reference, ref_member['name'], reference, len(rows), ref_sha[:16]))

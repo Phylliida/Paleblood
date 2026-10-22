@@ -123,7 +123,7 @@ def review_row(root: str, name: str) -> int:
     print(f"{'name':<12} {name}")
     print(f"{'source_hash':<12} {source or verification.CASES_UNAVAILABLE}")
     print(f"{'cases_sha256':<12} {evidence or verification.CASES_UNAVAILABLE}")
-    print(f"{'row':<12} {row['address']},{name},<date>,<reviewer>,approved,"
+    print(f"{'row':<12} {row['address']},{name},<date>,<reviewer>,approved,function,"
           f"{source or verification.CASES_UNAVAILABLE},{evidence or verification.CASES_UNAVAILABLE},<notes>")
     return 0
 
@@ -251,7 +251,9 @@ def main() -> int:
     return 1 if errs else 0
 
 
-REVIEW_HEADER = ['address', 'name', 'date', 'reviewer', 'verdict', 'source_hash', 'cases_sha256',
+REVIEW_SCOPES = ('function', 'shape')
+REVIEW_HEADER = ['address', 'name', 'date', 'reviewer', 'verdict', 'scope', 'source_hash',
+                 'cases_sha256',
                  'notes']
 REVIEW_PINS = ('source_hash', 'cases_sha256')
 
@@ -298,6 +300,25 @@ def review_pin_errors(root: str, r: dict, rv: dict) -> list[str]:
     return errs
 
 
+
+def shape_answer(root: str) -> bool:
+    """True only if the user's own answer file says `scope=shape`.
+
+    The review row is a reviewer's statement; the scope is the owner's decision. Reading the decision
+    from the file the user writes means a shape approval cannot be manufactured by editing reviews.csv,
+    and the flag and the answer are the same object rather than two things kept in step by hand."""
+    path = os.path.join(root, 'docs', 'approval-answers.md')
+    if not os.path.isfile(path):
+        return False
+    with open(path) as f:
+        for line in f:
+            if line.lstrip().startswith('#'):
+                continue
+            if re.search(r'\bscope\s*=\s*shape\b', line, re.I):
+                return True
+    return False
+
+
 def check_reviews(root: str, funcs: list[dict]) -> list[str]:
     """A verified function needs an approved independent review (symbols/reviews.csv), unless its
     code is still grandfathered (tools/readable_allowlist.txt, STYLE.md)."""
@@ -322,6 +343,15 @@ def check_reviews(root: str, funcs: list[dict]) -> list[str]:
                 r = dict(zip(REVIEW_HEADER, row), _line=n)
                 if r['verdict'] not in ('approved', 'changes requested'):
                     errs.append(f"symbols/reviews.csv:{n}: verdict must be 'approved' or 'changes requested'")
+                if not r['scope'].strip():
+                    r['scope'] = 'function'      # absent is the narrower default, never the wider one
+                if r['scope'] not in REVIEW_SCOPES:
+                    errs.append(f"symbols/reviews.csv:{n}: scope must be one of {', '.join(REVIEW_SCOPES)}, "
+                                f"got {r['scope']!r}")
+                elif r['scope'] == 'shape' and not shape_answer(root):
+                    errs.append(f"symbols/reviews.csv:{n}: a shape review is only meaningful once the user has "
+                                f"answered docs/approval-request.md; append '<date> scope=shape' to "
+                                f"docs/approval-answers.md, or write the review per function")
                 if not r['reviewer'].strip():
                     errs.append(f'symbols/reviews.csv:{n}: reviewer is empty')
                 reviews[r['address']] = r       # the latest row for an address counts

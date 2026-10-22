@@ -1425,3 +1425,18 @@ Proved by its failure, both directions: `0x1c0 -> 0x1c1` in the table gives `con
 The lesson that produced it, in the companion's words: **a command in a document is code, and its cost is part of
 its correctness** -- the sheet's own command copied ~100 MB per invocation until it was bounded, and a stranger's
 first experience of this repo should not be that.
+
+## Triggers (write the condition, not the intention)
+
+**Recorder.** The in-game capture path is blocked on boot reaching past the `scePthreadCreate` wall
+(`runtime/syslib/pthread_sema.c`, the designed fatal stop). **When the boot runs past that wall, the
+next slice is the caller in `runtime/hooks.c`** — `rt_capture_begin`/`rt_capture_write` still have no
+caller outside tests, so no capture can happen at all. Not more boot work: boot is then done enough,
+and the recorder is the thing that has been blocked for thirty slices. If another boot fault appears
+first, fix only that fault and return here.
+
+**Shape approvals.** `symbols/reviews.csv` gained its `scope` column (`{function, shape}`, blank =
+function). A `scope = shape` row is only legal while `docs/approval-answers.md` carries
+`scope=shape`; `tools/shape_approval.py` turns one approved shape review into the per-function rows
+it covers, refusing when the member set no longer matches the `members=<hash>` in its notes. The
+cascade is built and tested against a synthetic approval, so the real yes needs no new code.

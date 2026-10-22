@@ -51,9 +51,10 @@ class Fixture(unittest.TestCase):
         # replacement. Written as literals rather than computed, so a change to either hashing
         # rule shows up in the tests that read this fixture instead of moving with them.
         write_csv(f'{self.d}/symbols/reviews.csv',
-                  ['address', 'name', 'date', 'reviewer', 'verdict', 'source_hash', 'cases_sha256', 'notes'],
+                  ['address', 'name', 'date', 'reviewer', 'verdict', 'scope', 'source_hash', 'cases_sha256',
+                   'notes'],
                   [['0x00401000', 'frame_timing_update', '2026-01-01', 'independent session', 'approved',
-                    'unavailable', '294c0ca0b6c6086e', '']])
+                    'function', 'unavailable', '294c0ca0b6c6086e', '']])
         # a clean, current verification record (no source file here, so the source hash is empty)
         write_csv(f'{self.d}/symbols/verification.csv',
                   ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
@@ -808,8 +809,8 @@ class Readable(unittest.TestCase):
             source = v.verification.source_hash(d, 'a_f')
             self.assertTrue(source)
             with open(os.path.join(d, 'symbols', 'reviews.csv'), 'w') as f:
-                f.write('address,name,date,reviewer,verdict,source_hash,cases_sha256,notes\n'
-                        f'0x00400000,a_f,2026-10-07,independent session,approved,{source},unavailable,\n')
+                f.write('address,name,date,reviewer,verdict,scope,source_hash,cases_sha256,notes\n'
+                        f'0x00400000,a_f,2026-10-07,independent session,approved,function,{source},unavailable,\n')
             self.assertEqual(v.check_reviews(d, funcs), [])
             with open(os.path.join(d, 'tools', 'readable_allowlist.txt'), 'w') as f:
                 f.write('game/a/f.cpp\n')
@@ -842,8 +843,8 @@ class ReviewPin(unittest.TestCase):
 
     def review(self, d, source, evidence):
         with open(os.path.join(d, 'symbols', 'reviews.csv'), 'w', newline='') as f:
-            f.write('address,name,date,reviewer,verdict,source_hash,cases_sha256,notes\n')
-            f.write(f'0x00400020,sample,2026-10-19,independent session,approved,{source},{evidence},\n')
+            f.write('address,name,date,reviewer,verdict,scope,source_hash,cases_sha256,notes\n')
+            f.write(f'0x00400020,sample,2026-10-19,independent session,approved,function,{source},{evidence},\n')
 
     def funcs(self):
         return [{'address': '0x00400020', 'name': 'sample', 'status': 'verified', '_line': 2}]
@@ -940,7 +941,7 @@ class ReviewPin(unittest.TestCase):
             self.assertEqual(v.review_row(d, 'sample'), 0)
         row = next(ln for ln in printed.getvalue().splitlines() if ln.startswith('row'))[len('row'):].strip()
         with open(os.path.join(d, 'symbols', 'reviews.csv'), 'w', newline='') as f:
-            f.write('address,name,date,reviewer,verdict,source_hash,cases_sha256,notes\n')
+            f.write('address,name,date,reviewer,verdict,scope,source_hash,cases_sha256,notes\n')
             f.write(row.replace('<date>', '2026-10-19').replace('<reviewer>', 'independent session')
                        .replace('<notes>', '') + '\n')
         self.assertEqual(v.check_reviews(d, self.funcs()), [])
