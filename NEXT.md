@@ -1412,3 +1412,16 @@ The `0xa4a` in my last report was a transposition **I** typed; the source, the w
 But the check surfaced the real fact: **three modules carry PT_TLS and the runtime models one of them**, and the
 layout's `guest_memsz` starts as a hardcoded `0x4a0` default rather than a value read from the object it is
 laying out -- the same shape as every other constant in this runtime that turned out to be a memory.
+
+## The approval sheet is now executable, and it fails when it rots
+
+`test/test_approval_request.py` extracts the fenced `python3` block from `docs/approval-request.md`, runs it for
+every member the sheet tabulates, and asserts the decoded bytes and constant; it also recomputes the member-set
+hash, so "this signature expires if the membership changes" is a build failure rather than a sentence.
+
+Proved by its failure, both directions: `0x1c0 -> 0x1c1` in the table gives `constant drift for 0x00418d80`
+(the command printed the true `0x1c0`), and a corrupted hash gives `the member set changed`.
+
+The lesson that produced it, in the companion's words: **a command in a document is code, and its cost is part of
+its correctness** -- the sheet's own command copied ~100 MB per invocation until it was bounded, and a stranger's
+first experience of this repo should not be that.
