@@ -536,6 +536,20 @@ int main(int argc, char **argv)
     if (outcome == FAULT) printf(": signal %d at %s, address 0x%llx", fault_signal, at, (unsigned long long)fault_address);
     if (outcome == TIMEOUT) printf(" after %d s, at %s", timeout, at);
     if (outcome == EXITED) printf(" with code %d", exit_code);
+        {
+            int n_real = 0, n_modelled = 0, n_noop = 0, n_refused = 0, n_all = 0;
+            for (const rt_syslib_entry *e = rt_syslib_begin(); e < rt_syslib_end(); e++) {
+                n_all++;
+                switch (e->kind) {
+                case RT_SYSLIB_KIND_REAL: n_real++; break;
+                case RT_SYSLIB_KIND_MODELLED: n_modelled++; break;
+                case RT_SYSLIB_KIND_NOOP: n_noop++; break;
+                default: n_refused++; break;
+                }
+            }
+            printf("\npbboot: syslib registered %d = %d real + %d modelled + %d noop + %d refused\n", n_all,
+                   n_real, n_modelled, n_noop, n_refused);
+        }
     printf("\npbboot: milestone %s; executable imports %zu: %zu from bundled modules, %zu implemented by the runtime, "
            "%zu unresolved diagnostics, %zu unbound; imports called %zu\n",
            reached >= 0 ? milestones[reached].name : "loaded", objects[0].imports, from_modules, from_runtime,

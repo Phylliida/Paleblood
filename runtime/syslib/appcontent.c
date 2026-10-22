@@ -44,6 +44,6 @@ static int app_content_addcont_list(int64_t list, int64_t list_num, int64_t coun
     return 0;
 }
 
-RT_SYSLIB("libSceAppContent", sceAppContentInitialize, app_content_initialize);
+RT_SYSLIB_MODELLED("libSceAppContent", sceAppContentInitialize, app_content_initialize);
 RT_SYSLIB("libSceAppContent", sceAppContentGetNumAddcont, app_content_num_addcont);
 RT_SYSLIB("libSceAppContent", sceAppContentGetAddcontInfoList, app_content_addcont_list);

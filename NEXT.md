@@ -946,3 +946,18 @@ second target: `test_syslib` links `${PB_TEST_SYSLIB}` too, so the check had to 
 
 which is `+0x12` past the Initialize call site -- the guest's own next call in the same function.
 Scored: 49 -> **51 implemented**, 419 -> **417 unbound**, called 47 -> **48**.
+
+## Every registration declares what it is, and the boot line prints the decomposition
+
+`RT_SYSLIB` entries now carry **`kind ∈ {real, modelled, noop, refused}` declared at the registration
+site** (`RT_SYSLIB_MODELLED` / `RT_SYSLIB_NOOP` wrappers; `RT_SYSLIB_UNRESOLVED` is `refused`), and the
+boot prints the split: **`syslib registered 71 = 54 real + 6 modelled + 5 noop + 6 refused`**.
+
+**Two different populations, and the line says which is which:** 71 is *table entries*, 51 is *imports of
+this executable that matched one*. Confusing them would be the sum-without-decomposition defect in the
+other direction, so the two numbers print with their subjects.
+
+**The split makes "the boot advanced" falsifiable**: 6 of the 51 matched are modelled (fixed epoch, no
+module file read, fabricated app-content success) and 5 are noop (blocking primitives that cannot block
+because the guest is single-threaded). **The boot is walking fabricated state in at least 11 of 51 places,
+and now the log says so instead of a summary nobody prints.**

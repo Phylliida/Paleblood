@@ -62,5 +62,5 @@ static int gettimeofday_impl(int64_t tv, int64_t tz)
     return 0;
 }
 
-RT_SYSLIB("libkernel", gettimeofday, gettimeofday_impl);
-RT_SYSLIB("libScePosix", gettimeofday, gettimeofday_impl);
+RT_SYSLIB_MODELLED("libkernel", gettimeofday, gettimeofday_impl);
+RT_SYSLIB_MODELLED("libScePosix", gettimeofday, gettimeofday_impl);

@@ -64,6 +64,6 @@ static int is_loaded(int64_t id)
     return 0;
 }
 
-RT_SYSLIB("libSceSysmodule", sceSysmoduleLoadModule, load_module);
-RT_SYSLIB("libSceSysmodule", sceSysmoduleUnloadModule, unload_module);
-RT_SYSLIB("libSceSysmodule", sceSysmoduleIsLoaded, is_loaded);
+RT_SYSLIB_MODELLED("libSceSysmodule", sceSysmoduleLoadModule, load_module);
+RT_SYSLIB_MODELLED("libSceSysmodule", sceSysmoduleUnloadModule, unload_module);
+RT_SYSLIB_MODELLED("libSceSysmodule", sceSysmoduleIsLoaded, is_loaded);
