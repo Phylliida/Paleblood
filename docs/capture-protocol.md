@@ -153,3 +153,32 @@ reconciliation of that with 666 remains owed.
 libc **47 of 77**, libSceFios2 **50 of 80**. This is the per-entry arity-independent bound on how much of the
 import surface the modelled runtime actually serves, and it arrived by reading a size column rather than by
 any new instrument.
+
+### The partition, printed per (object, nid) — and one of my numbers retracted
+
+`BB_IMPORT_PROVIDER_VERBOSE=1` prints one line per import: `<object>, <nid>, <provider>` with provider ∈
+`bundled | syslib | syslib-unresolved | none`. The partition, over **848 import rows**:
+
+```
+eboot            : bundled 213, syslib  61, syslib-unresolved  5, none 407   (= 686)
+libc.elf         : bundled   8, syslib  19, syslib-unresolved  3, none  49   (=  79)
+libSceFios2.elf  : bundled   0, syslib  29, syslib-unresolved  1, none  53   (=  83)
+totals           : bundled 221, syslib 109, syslib-unresolved  9, none 509   (= 848)
+```
+
+**Retraction: the per-object trampoline split I reported (666 / 77 / 80) was my decoder, not the data.** I
+derived it by unpacking `which = k << 20 | i`; the same unpacking run twice on the same binary gave
+**666/77/80** and then **6/186/631**. **A decoder whose output changes between runs on one binary is a
+decoder defect** — the packing must be read in the source, not inferred from printed values. Those three
+numbers are withdrawn; the object labels in the provider print are trustworthy because the loader prints
+`o->label` itself.
+
+**And a new discrepancy, printed rather than smoothed:** the same boot emits **848 bind rows and 823 trampoline
+lines** — **25 imports have no trampoline.** That 25 is the same magnitude as the companion's residual
+(326 resolved slots against 213 bundled + 88 registered), which makes "one mechanism" a hypothesis worth
+testing and **not a conclusion**: the two 25s are counted from different instruments and have not been shown
+to be the same set.
+
+**60.4% stands as stated** — **497 of 823 installed trampolines** jump to `unimplemented()`, eboot **400 of
+666** — with the note that it counts **slots, not imports the guest exercises**: the guest called **63**, and
+how many of the 497 it can reach before stopping is the number that matters for the wall.

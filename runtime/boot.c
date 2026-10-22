@@ -411,6 +411,15 @@ static void resolve(object *o)
                                      : RUNTIME_UNRESOLVED;
             }
         }
+        /* The partition, not the total: a resolved slot is bundled, syslib, or a third provider nobody has
+           named, and only printing it per (object, nid) can tell those apart. A total that does not equal
+           the sum of its named parts is a total about nothing. */
+        if (getenv("BB_IMPORT_PROVIDER_VERBOSE"))
+            fprintf(stderr, "provider %s %s %s\n", o->label, name,
+                    o->provider[i] == MODULE            ? "bundled"
+                    : o->provider[i] == RUNTIME         ? "syslib"
+                    : o->provider[i] == RUNTIME_UNRESOLVED ? "syslib-unresolved"
+                                                          : "none");
     }
 }
 
