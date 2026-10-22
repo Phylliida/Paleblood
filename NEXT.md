@@ -722,3 +722,26 @@ an instruction stream.
 **Next call is the program headers, printed, before anything is decoded from them** (`p_type, p_offset,
 p_vaddr, p_filesz, p_memsz` for every header) -- **the mapping has now cost me four decode attempts and
 has never once been printed beside the result that depends on it.**
+
+## Program headers printed; the rela table is real, and it relocates nothing in the stdio range
+
+    [0] type=0x00000001 off=0x4000  vaddr=0x0      filesz=0xb7924  memsz=0xb7924
+    [1] type=0x00000001 off=0xbc000 vaddr=0xb8000  filesz=0x6cc0   memsz=0x1e620
+    [2] type=0x61000002 off=0xbc000 vaddr=0xb8000  filesz=0x18     memsz=0x18
+    [3] type=0x00000002 off=0xe7850 vaddr=0x0      filesz=0x280
+    [6] type=0x61000000 off=0xc2cc0 vaddr=0x0      filesz=0x24e10
+    
+    file = vaddr + 0x4000   for BOTH LOADs (p_offset is NOT 0)
+
+**The SCE tags are offsets into the `0x61000000` blob at file `0xc2cc0`, not vaddrs** -- which is why
+`0x4000 + 0x162c8` and `0x162c8` both decoded as `lea` bytes. Decoded at `0xc2cc0 + 0x162c8`:
+
+    entries 2020   pass type<40 and r_offset<0xd6620: 2020   fail: 0
+    relocations whose target lies in 0xbf060..0xbf360: 0
+
+**2020 of 2020 pass the validity predicate, so this is the relocation table; and not one entry names the
+three stdio objects.** Combined with the loader loop (which writes every entry unconditionally), the
+mechanism is settled: **the fields are unnamed, not named-with-a-wrong-address.**
+
+**Also corrected: the two "rodata" delta targets are not strings either** -- read through the correct bias
+(`file = vaddr + 0x4000`), `0xaf8fc`/`0xaf944`/`0xb0aa8`/`0xb2c80` are 4-byte tables, not ASCII.
