@@ -328,3 +328,50 @@ as an *average* of a distribution that decays from 20.2% to 1.2% inside the firs
 cheap part of the >16 B tier is the part immediately above the boundary** — and above ~128 B, single-
 block, no-call, position-independent bodies are rare enough that the leaf tier is still the cheapest
 supply in the catalogue.
+
+### 1k. An address STORED INTO MEMORY has no channel — measured, both directions
+
+The 647 rows retracted in `ee1ac58` were rebuilt as C bodies that resolve the rip-relative address at
+emission time (`end of the lea + disp`, a constant) and store it through `rdi` — the convention the
+8,072 `leaf_lea_rip` bodies use for *returns*. The bodies build; the cases exist; **the differential
+refuses them, and the refusal is the finding.**
+
+Measured on `leaf_rip_store_01631c60` (guest `0x1631c60`, `lea rax,[rip+0x4173bb9]` → `0x57a5820`):
+
+| body's stored value | differential |
+|---|---|
+| `0x57a5820` — the guest address, correct in-game | **0/3**, `memory buf:out+0x2: original 3a replacement 7a`, `buf:out+0x4: original 08 replacement unwritten` |
+| `0x8053a5820` — `IMAGE + (0x57a5820 − EBOOT_BASE)` | **3/3, clean** |
+
+The original reports `0x8053a5820` because the harness executes it **inside the host mapping**. The
+project already knows this and says so at `tools/harness.py:464–467`: *"This is a value conversion,
+not a display one: the original runs in the host mapping and a computed pointer lands at
+IMAGE + (guest − EBOOT_BASE), while a replacement…"* — and `Machine.normalised()` applies that
+conversion **to return values only**. There is no equivalent on the memory channel, so a store of an
+address is compared in whatever space the relocated original happens to use, and a correct
+replacement fails.
+
+**Storing the image-space value in the body is refused**, though it passes 3/3: it bakes the
+harness's mapping into a shipping body and would put a host-mapping address into a guest buffer in
+the game. A body tuned to the instrument is the `void f(){}`-for-`ret` defect with a green
+differential.
+
+**Proposed: a declared slot channel.** A case may name slots — `"guest_address_writes":
+["buf:out+0x0"]` — and the harness translates the **original's** bytes in those slots from image
+space to guest space, exactly as `normalised()` does for returns. **Original side only**: a
+replacement that stores an image-space address must still fail, which is the only way the channel
+avoids becoming an alibi. Not implemented yet, and it must not be implemented as a patch to the
+`writes` diff: those are **diff runs**, and a slot whose stored bytes partly coincide with the seed
+yields a run shorter than eight, which cannot be decoded back into a value. The slot must carry its
+own full before/after bytes, declared, refused if the address is not inside a declared buffer.
+
+**Pre-registered for the run after the channel exists**, per family:
+
+| family | members | bytes | rows | cases |
+|---|---|---|---|---|
+| `rip_store` | 124 | 1,364 | +124 | 372 in 124 dirs, 101 distinct resolved addresses |
+| `rip_add_store` | 362 | 5,430 | +362 | 1,086 in 362 dirs |
+
+Board after both: functions **33,488 → 33,974**, ledger **33,589 → 34,075** (surplus stays 101),
+bytes **276,841 → 283,635**, differential **22,376 → 22,862**. `rip_load` (161) is **not** in this
+queue: it dereferences the resolved address, and nothing maps guest space for a replacement to read.
