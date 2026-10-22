@@ -51,3 +51,10 @@ are already sunk in that habit.
 3. **Cap calls per NID** (`BB_IMPORT_PERMISSIVE_MAX`, default small). A stubbed yield or spin
    returns 0 forever: one row per call, millions of rows, and no crash to end the run. Over the
    cap -> abort **with the row flushed**, which turns a hang into a finding.
+4. **A terminal-status line in the same log**: `end: exit=N` / `end: fault 0x<addr>` /
+   `end: max-calls nid=<nid>`. A log that stops at row N with no terminator is the ambiguity this
+   campaign has spent three slices removing everywhere else -- it cannot distinguish "the guest
+   ended", "the guest faulted" and "the instrumentation died" without a join across two artifacts.
+5. **Run it twice and diff the logs.** If the NID sequence differs between runs, the order is not
+   the guest's boot path and the worklist is a *sample*, not an ordering -- which decides whether
+   any implementation plan may be built on it. One command, before any implementation work.
