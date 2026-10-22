@@ -439,3 +439,14 @@ Note `0xb8aa8` is *not* the name table (which lives at file offset 0xc3xxx, and 
 vaddr == offset): the second quad points into libc's data segment, so it is an attribute or a cookie,
 not `st_name`. **Which quad names the symbol is the open question**, and the name table at 0xc3xxx
 being contiguous with the stdio NIDs means the link is by ordinal or by a separate index array.
+
+## Pre-registration (written before the scan): what `_Stdout` must look like in libc.elf's file image
+
+Failure mode stated first, so a clean zero is not a refutation: FreeBSD initialises `stdout`/`stderr`
+from `_initstdio`/`__sfp` at **runtime**, so a file image may legitimately hold zeros and a scan that
+finds nothing would refute nothing.
+
+Predicted values if the objects *are* static in this file (companion's, adopted because they are
+checkable): `_flags` = `0x8` (`__SWR`) for `_Stdout`, `0x9` (`__SWR|__SUNB`) for `_Stderr`, `0x4`
+(`__SRD`) for `_Stdin`; `_file` = `1`/`2`/`0` respectively; layout `_flags` 0x00, `_file` 0x08,
+`_cookie` 0x10, `_read` 0x18, `_seek` 0x20, `_write` 0x28. **Any other reading is a finding.**
