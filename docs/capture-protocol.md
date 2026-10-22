@@ -265,3 +265,41 @@ the snapshot must report `capture`, not the guest**, because "fault in capture" 
 opposite meanings for whether the capture is evidence at all. Its negative control is a deliberately wild
 pointer: the run must say `capture`, exit clean, and **leave no half-written JSON, since a partial file that
 parses is worse than none.**
+
+### Which side the table came from, and what the replacement actually takes
+
+**The 112-instruction table is the original, not the replacement.** The bytes were read from
+`../data/bb/elf/eboot.elf` at `0x02418d20 − 0x3fc000` — the game's own body at the catalog address. The
+replacement has no instruction stream in the tree that I disassembled; taking its side means reading its C.
+
+**And the replacement's C takes no arguments at all.** `game/frame_timing/frame_step.cpp:107`:
+
+```c
+extern "C" uint8_t bb_frame_timing_frame_step()
+{
+    SprjWindow *window = window_instance.get();
+    ...
+    return running & (quitting ^ 1);
+}
+```
+
+So the union-of-sides rule is the right rule and here it resolves to something sharper than a bigger input
+set: **the original reads a pointer in `rdi`; the replacement reads a singleton.** `rdi` is not an input the
+replacement consumes — it is the **precondition the replacement assumes**, namely that the window the game
+passed is the one `window_instance` holds. Recording it is still necessary, and as an **assertion on the case**
+rather than as a parameter:
+
+- **`rdi` is captured as a buffer because the original dereferences it** (4 uses, widest 8), not because the
+  replacement wants it.
+- **The differential compares a body that reads its argument with a body that reads a global.** If they
+  disagree, the cause may be the singleton rather than the rewrite — **so the case must also record what
+  `window_instance` was at capture time, or a mismatch is unattributable.** That is a new requirement on the
+  record and it belongs in the JSON, not in a note.
+
+**`rip` needs no capture:** the 23 rip-relative reads resolve against eboot's own bytes, which the harness
+holds in full, so they are inputs by construction rather than by snapshot — **which is precisely why `rdi` is
+the only buffer in the set.**
+
+**What this costs the plan:** the first capture is no longer "one invocation away." It needs the singleton
+state in the record (at minimum the pointer identity of `window_instance`), or the first honest outcome is
+category (2) — a difference that cannot be attributed.
