@@ -20,6 +20,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/mman.h>
 
 /* Error values are the model's own, not console codes: I have no citation for the kernel's
@@ -32,7 +33,11 @@ enum { k_error_inval = 0x16, k_error_fault = 0x0e, k_error_nomem = 0x0c };
    it was given. If Map instead invented a separate virtual range, every range Allocate had
    already handed out would become unreadable the moment anything mapped it, and the failure would
    look like memory corruption in whichever consumer ran second. */
-enum { k_page = 0x1000u, k_arena_bytes = 0x8000000u /* 128 MiB: the guest asked for 116 MiB at ps4 RuntimeHeapImpl.cpp(324) */ };
+/* Reserve, don't ration: the mapping is anonymous and private, so untouched pages cost nothing and
+   the arena's ceiling is address space, not memory. A fixed budget here is a number I invented, and
+   the guest asked for 116 MiB against a 64 MiB budget at Ps4RuntimeHeapImpl.cpp(324) -- a refusal
+   that the guest reports as a fatal panic, which is how six slices were spent downstream of it. */
+enum { k_page = 0x1000u, k_arena_bytes = 0x40000000u /* 1 GiB reserved, committed on touch */ };
 
 static unsigned char *arena;
 static size_t arena_used;
@@ -47,14 +52,20 @@ static int kernel_allocate_direct_memory(int64_t search_start, int64_t search_en
     if (!physical) return k_error_fault;
     if (len == 0) return k_error_inval;
     if (!arena) {
-        void *p = mmap(NULL, k_arena_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        void *p = mmap(NULL, k_arena_bytes, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
         if (p == MAP_FAILED) return k_error_nomem;
         arena = p;
         arena_bytes = k_arena_bytes;
     }
     size_t step = alignment ? alignment : k_page;
     size_t start = (arena_used + step - 1) / step * step;
-    if (start > arena_bytes || len > arena_bytes - start) return k_error_nomem;
+    if (start > arena_bytes || len > arena_bytes - start) {
+        /* The refusal must be as loud as the guest's, and in the same units. */
+        fprintf(stderr, "pbboot: direct memory: allocation of %zu bytes refused, %zu of %zu used\n", len,
+                arena_used, arena_bytes);
+        return k_error_nomem;
+    }
     *physical = (int64_t)(uintptr_t)(arena + start);
     arena_used = start + len;
     return 0;

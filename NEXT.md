@@ -794,3 +794,26 @@ One variable changed -- arena `0x4000000` -> `0x8000000`:
 `8zTFvBIAIN8`) and `sceKernelGetDirectMemorySize` -> `pO96TwzOm5E`. The two invocation paths simply
 report different populations (219/30/433 via `boot.py --nids`, 213/33/436 directly). **Why they differ
 is measured and unexplained -- written down, not smoothed.**
+
+## Arena reserves instead of rationing; the popup that survived says Map, and the 219/30/433 line was a build
+
+Arena: `k_arena_bytes = 0x40000000` with `MAP_NORESERVE` -- untouched pages cost nothing, so the ceiling
+is address space, not a number I invented -- and a refusal now prints the request beside the usage:
+
+    pbboot: direct memory: allocation of N bytes refused, U of T used
+
+Result: **panic gone, fault gone**, run `rc=0`, stop moves again:
+
+    unimplemented: eboot calls libkernel L-Q3LEjIbgA, returning to eboot+0x2081ac6
+    imports called 26
+
+**`L-Q3LEjIbgA` was already named in the tree** -- `symbols/import_names.csv:249`, bind 125,
+`sceKernelMapDirectMemory`. So the next wall is the one whose invariant I wrote into a file header and
+never implemented: **Map is the identity over the arena**, because this runtime has one address space.
+
+**Withdrawn: "two invocation paths disagree."** They do not. Same binary, same two modules
+(`game/modules.csv` maps exactly `libc` and `libSceFios2`), with and without `--nids`:
+**213 bundled / 33 implemented / 4 unresolved / 436 unbound, called 26** every time. The `219/30/433`
+line came from an **earlier build**, so it was two builds, not two paths -- **and that means the
+stash-baseline comparison I reported as "identical" compared a binary whose objects had not all
+relinked. The baseline must be re-run clean before that claim is repeated.**
