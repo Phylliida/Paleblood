@@ -61,3 +61,20 @@ static void *libc_memset(void *dest, int c, size_t n)
     return memset(dest, c, n);
 }
 RT_SYSLIB("libSceLibcInternal", memset, libc_memset);
+
+/* sceKernelGetDirectMemorySize: the size of the direct memory region the guest may address.
+   The runtime maps exactly the executable's image (runtime/boot.c: rt_process.image /
+   image_size, one mapping sized by the loader), so the only figure it can vouch for is that
+   mapping -- this returns a FLOOR, not the console's value. The console figure is not sourced
+   here: it is not in the process parameter block this runtime reads, and I have no citation for
+   it, so it is not written down. Residual, stated as the affinity constant's is: a caller that
+   needs more than the image gets the truth about what is mapped instead of a plausible round
+   number, and the value is checked, not asserted in a comment. */
+static unsigned long kernel_get_direct_memory_size(void)
+{
+    unsigned long mapped = rt_process.image_size;
+    if (mapped == 0) rt_fatal("sceKernelGetDirectMemorySize", "the image is not mapped");
+    if (mapped % 0x1000) rt_fatal("sceKernelGetDirectMemorySize", "the mapped image is not page-aligned");
+    return mapped;
+}
+RT_SYSLIB("libkernel", sceKernelGetDirectMemorySize, kernel_get_direct_memory_size);
