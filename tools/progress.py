@@ -27,6 +27,7 @@ import argparse
 import csv
 import hashlib
 import json
+import bisect
 import os
 import re
 import sys
@@ -60,6 +61,20 @@ def compute(root: str) -> dict:
     funcs = read_csv(os.path.join(root, 'symbols', 'functions.csv'))
     total_f = len(export)
     total_b = sum(int(r['size']) for r in export)
+
+    # Denominator 2 -- maximal extents.  Most catalogue rows do not begin a function: a row
+    # whose start lies strictly inside another row's extent is an interior address, not a
+    # boundary.  Counting it as a function inflates the denominator, so the two ratios are
+    # printed together and neither may be quoted without the other.
+    spec = sorted((int(r['address'], 16), int(r['size'])) for r in export)
+    starts = [a for a, _ in spec]
+    ends = [a + s for a, s in spec]
+
+    def _interior(a: int) -> bool:
+        i = bisect.bisect_right(starts, a) - 1
+        return any(starts[j] < a < ends[j] for j in (i - 1, i) if j >= 0)
+
+    maximal = {a for a, _ in spec if not _interior(a)}
 
     def tally(rows: list[dict]) -> dict:
         return {'functions': len(rows), 'bytes': sum(int(r['size']) for r in rows)}
@@ -99,6 +114,9 @@ def compute(root: str) -> dict:
                           'bytes_pct': pct(tally(edge)['bytes'], total_b)},
         'verified': {**tally(ver), 'functions_pct': pct(len(ver), total_f),
                      'bytes_pct': pct(tally(ver)['bytes'], total_b)},
+        'maximal': {'extents': len(maximal), 'contained': len(export) - len(maximal),
+                    'edge': sum(1 for r in edge if int(r['address'], 16) in maximal),
+                    'tracked': sum(1 for r in funcs if int(r['address'], 16) in maximal)},
         'systems': {k: systems[k] for k in sorted(systems)},
         'runtime': runtime(root),
     }
@@ -182,6 +200,10 @@ def burndown_line(d: dict) -> str:
         o = d['origins']
         parts.append(f"hand {o['hand']} / generated {o['generated']}")
     parts += [
+        (f'maximal extents {mx["extents"]} (edge-verified {mx["edge"]}, '
+         f'{fmt_pct(pct(mx["edge"], mx["extents"]))}); '
+         f'{mx["contained"]} of {t["functions"]} catalogue rows start inside another'
+         if (mx := d.get('maximal')) else ''),
         f'target {t["functions"]} ({t["bytes"]} B)',
         'exclusive ' + ' + '.join(f'{ex[s]} {s}' for s in sorted(ex)),
     ]
