@@ -1065,3 +1065,18 @@ before the run.**
 
 Note also: only **one** attr no-op line printed despite fourteen registrations -- so the guest configures
 one attribute and immediately proceeds, which is consistent with it going straight at thread creation.
+
+## (b) taken: the wall is named and the boot stops at it -- and the TLS question came back nonzero
+
+`scePthreadCreate` now calls `rt_fatal` with the whole sentence (entry, arg, unmapped TLS, unlocked arena,
+single-thread assumption). Run `34b3af572076`: **rc=134, the line above is the last thing the process says.**
+The guest's panic path and the unpopulated `__sFILE` are no longer reachable from here, so **nothing after
+this point is fabricated state.**
+
+**The static measurement: `fs:` is used 16,854 times in the catalog, `gs:` zero.** `tools/seg_scan.py`, one
+pass over all 157,757 catalog entries decoding per entry. The dominant form is `mov rax, qword ptr fs:[0]` --
+**the TCB self-pointer** -- at `0x819414`, `0x819f34`, `0x81a00b`, `0x81a21e`, and 16,850 more.
+
+**So the main thread has been reading glibc's TCB since the first guest instruction that touched it.** TLS is
+not a threads-only concern and (a) is not "threads need TLS": it is **"the boot has read the wrong TLS all
+along"**. That reframes the subsystem decision and it is why the measurement came before the scoping.

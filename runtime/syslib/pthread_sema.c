@@ -145,10 +145,18 @@ static int sema_delete(int64_t sema_id)
 static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64_t arg, int64_t name)
 {
     (void)out; (void)attr; (void)name;
-    fprintf(stderr, "pbboot: pthread: Create refused (entry %p, arg %p) -- the guest is modelled "
-                    "single-threaded; a host thread running guest code needs TLS and a locked arena\n",
-            (void *)(uintptr_t)entry, (void *)(uintptr_t)arg);
-    return (int)0x80020016u;
+    /* The wall, named and stopped at rather than served past. Returning an error here is what the guest
+       did NOT handle: it panicked, and the panic path dereferences the unpopulated __sFILE, so the run
+       ended in a stdio-looking fault two layers away from the cause. Stopping here means nothing after this
+       point is fabricated state -- a synchronisation model that cannot be honoured must not be handed a
+       success, and the guest's own failure path is not an honest alternative when the failure is ours. */
+    static char wall[512];
+    snprintf(wall, sizeof wall,
+             "the guest asked for a thread (entry %p, arg %p) and this runtime cannot give it one: guest "
+             "TLS is unmodelled (PT_TLS filesz 0x220, memsz 0x4a0), the arena is one unlocked bump "
+             "pointer, and every host call assumes one guest thread in flight",
+             (void *)(uintptr_t)entry, (void *)(uintptr_t)arg);
+    rt_fatal("scePthreadCreate", wall);
 }
 
 RT_SYSLIB_NOOP("libkernel", sceKernelCreateSema, sema_create);
