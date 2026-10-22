@@ -84,6 +84,37 @@ def assert_no_control_flow(members) -> None:
                              f"call(s): byte tier is single-block only (decisions.md 1h)")
 
 
+def assert_position_independent(members) -> None:
+    """A byte-identical body only means what the original meant if no instruction's VALUE depends
+    on where it sits. `lea rax,[rip+K]` in libbbgame.so computes .so_addr + K; the original
+    computed guest_addr + K -- different by the load offset. The bytes are identical, the behaviour
+    is not, and the byte assertion cannot see it. Same failure as `void f(){}` for `ret`, one tier
+    up: a green certifying the wrong claim. decisions.md 1j (iv).
+
+    Refuses on: a RIP-relative memory operand, a relative branch/call, or an immediate that lands
+    inside the image's own address range (>= 0x400000), which is how a two-part address such as
+    `lea rax,[rip+K]; add rax,K2` shows its second half.
+    """
+    import capstone
+    from capstone.x86_const import X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_RIP
+    md = open(C.ELF, 'rb').read()
+    cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+    cs.detail = True
+    for m in members:
+        guest, size = int(m['address'], 16), int(m['size'])
+        off = guest - C.FILE_BIAS
+        for ins in cs.disasm(md[off:off + size], guest):
+            for op in ins.operands:
+                if op.type == X86_OP_MEM and op.mem.base in (X86_REG_RIP, X86_REG_EIP):
+                    raise SystemExit(f"refused: {m['function']} has a RIP-relative operand "
+                                     f"({ins.mnemonic} {ins.op_str}): its value depends on where "
+                                     f"it sits, so byte identity does not preserve behaviour")
+                if op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000:
+                    raise SystemExit(f"refused: {m['function']} carries an address-valued "
+                                     f"immediate ({ins.mnemonic} {ins.op_str}): {op.imm:#x} is "
+                                     f"guest space, not a constant")
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument('--family', required=True, help='name prefix, e.g. leaf_mov_al_mem_')
@@ -111,6 +142,7 @@ def main(argv):
         raise SystemExit(f'refused: {len(bad)} rows are already past `original` ({bad[0]}...)')
     members = [{'function': r['name'], 'address': r['address'], 'size': r['size']} for r in fam]
     assert_no_control_flow(members)   # decisions.md 1h, before any digest and before any write
+    assert_position_independent(members)   # decisions.md 1j (iv)
     sizes = {}
     for m in members:
         sizes[int(m['size'])] = sizes.get(int(m['size']), 0) + 1

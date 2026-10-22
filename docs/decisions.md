@@ -270,3 +270,23 @@ behaviour to get wrong, only bytes to copy.
 Approving this makes the asm-body count jump **11,759 → 16,535** — the monotonic-counter tooth of
 decision 1 exists exactly to make that a decision rather than a drift. **This is that decision,
 asked for once.**
+
+### 1j (iv) — added before the ask goes out: position independence
+
+`.byte` fixes the *encoding*; it does not fix the *meaning* of any instruction whose value depends
+on where it sits. `lea rax,[rip+K]` executed from `libbbgame.so` computes `.so_addr + K`; the
+original computed `guest_addr + K` — different by the load offset — and the byte assertion passes
+because the bytes are identical. Same failure as `void f(){}` for `ret`, one tier up: **a green
+certifying the wrong claim.**
+
+So transcription is legal only when **no instruction has a RIP-relative operand, a relative branch,
+or an address-valued immediate**, checked in the same capstone walk the guard already runs
+(`record_bytes_family.assert_position_independent`, refusing by member name). This is not a
+proposal: it is a **defect that had already landed** — `rip_add_store` 362 + `rip_load` 161 +
+`rip_store` 124 = **647 byte-tier rows retracted at `git rm` of their bodies**, board
+34,135 → **33,488** (21.64% → **21.23%**), bytes 285,245 → **276,841**, byte-identical
+11,759 → **11,112**.
+
+Measured with the new tooth, over the unlanded leaf set: **5,423 transcribable · 4,097 position
+independent (the honest size of ask 7) · 1,326 address-dependent** — those 1,326 need C bodies
+computing `image_base + K`, which is exactly how the 8,072 `lea rax,[rip+K]` members were done.

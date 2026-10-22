@@ -22,13 +22,13 @@ a NID appears there instead of a name.
 | | Functions | Bytes |
 |---|---:|---:|
 | Target (Ghidra export) | 157757 | 42487347 |
-| Replaced | 34135 (21.64%) | 285245 (0.67%) |
-| Edge-verified | 34135 (21.64%) | 285245 (0.67%) |
+| Replaced | 33488 (21.23%) | 276841 (0.65%) |
+| Edge-verified | 33488 (21.23%) | 276841 (0.65%) |
 | Verified | 21 (0.01%) | 14010 (0.03%) |
 
 Each row includes the next: verified functions are also edge-verified and replaced.
 
-Of those 34135 functions, 42 rest on ledger rows whose `cases_sha256` is `unavailable`: the comparison is recorded, its inputs are not in this tree, so it cannot be re-run. At the top rung that is 21 of 21.
+Of those 33488 functions, 42 rest on ledger rows whose `cases_sha256` is `unavailable`: the comparison is recorded, its inputs are not in this tree, so it cannot be re-run. At the top rung that is 21 of 21.
 
 | Runtime | |
 |---|---|
