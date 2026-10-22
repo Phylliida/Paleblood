@@ -1,0 +1,34 @@
+/* The one segment that crosses the ABI boundary, in one place.
+
+   Every path that hands control from guest code to a C body needs the same four things in the same
+   order: run on the host's %fs, park the guest's rsp somewhere callee-saved, give the C body the
+   ABI's 16-byte alignment, and put the guest's %fs and rsp back before returning. There are two such
+   paths -- the import trampolines in boot.c and the hook installer in host_hooks.c -- and the only
+   allowed difference between them is how the target address is materialised, because a trampoline
+   lives in the mapped image and a host replacement does not. Both use the 14-byte absolute form, so
+   today there is no difference at all.
+
+   This used to be a hand-written prologue in one file. A single wrong ModRM digit (/3 WRGSBASE for
+   /2 WRFSBASE) lived there for days and was only found by disassembling the shipped bytes; a second
+   hand-written prologue would get the same treatment with no reader. Hence one emitter. */
+#ifndef RT_BOUNDARY_STUB_H
+#define RT_BOUNDARY_STUB_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+/* Writes the boundary segment at dst and returns its length. Caller guarantees dst has room for
+   RT_BOUNDARY_STUB_MAX. No bookkeeping: anything a caller wants recorded (import index, arguments in
+   flight) goes before this segment, in the caller's file, where its own tests can see it. */
+#define RT_BOUNDARY_STUB_MAX 64
+
+/* in_flight_addr is the ONLY optional element, and it is not part of the boundary crossing: it is the
+   import path's bookkeeping word (rt_syslib_in_flight), cleared to "none" after the ABI segment is
+   complete and before the ret, because the import path owns it and the hook path has no such word
+   (it lives in boot.c, not in the library both paths link). Pass 0 to omit it. The test compares the
+   two emissions up to this point, not through it: the ABI segment is identical by construction, and
+   the tail difference is stated rather than discovered. */
+size_t rt_write_boundary_stub(unsigned char *dst, uint64_t target, uint64_t host_fs, uint64_t guest_fs,
+                              uint64_t in_flight_addr);
+
+#endif

@@ -26,7 +26,7 @@ add_executable(test_plugin test/test_plugin.c runtime/plugin.c runtime/hooks.c)
 target_include_directories(test_plugin PRIVATE runtime/include)
 add_test(NAME plugin COMMAND test_plugin)
 
-add_executable(test_host_hooks test/test_host_hooks.c runtime/host_hooks.c)
+add_executable(test_host_hooks test/test_host_hooks.c runtime/host_hooks.c runtime/boundary_stub.c)
 target_include_directories(test_host_hooks PRIVATE runtime/include)
 add_test(NAME host_hooks COMMAND test_host_hooks)
 add_executable(test_capture test/test_capture.cpp)

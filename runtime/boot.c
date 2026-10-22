@@ -20,6 +20,7 @@
    Names: an import is "NID#library#module"; library names come from the object, symbol names
    from a public NID database (--nids, default $BB_NID_DB), else the NID is shown. */
 #define _GNU_SOURCE
+#include "runtime/boundary_stub.h"
 #include "runtime/loader.h"
 #include "runtime/nid.h"
 #include "runtime/process.h"
@@ -229,9 +230,6 @@ volatile uint32_t rt_syslib_in_flight = 0xffffffffu;
 volatile uint64_t rt_syslib_args[3];
 /* Read back inside the stub, immediately after the host swap: a wrfsbase that does not take is otherwise
    indistinguishable from one that does. */
-volatile uint64_t rt_stub_fs;
-volatile uint32_t rt_stub_which;
-volatile uint64_t rt_stub_fs_pre;
 /* The guest stack's alignment at the call site is the guest's business; our C bodies need the ABI's. */
 volatile uint64_t rt_stub_rsp;
 
@@ -239,8 +237,6 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
 {
     unsigned char *p = t;
     const uint64_t m = (uint64_t)(uintptr_t)mark;
-    const uint64_t hostbase = rt_tls_host_base();
-    const uint64_t guestbase = rt_tls_guest_base();
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &m, 8), p += 8;                /* movabs r11, mark */
     *p++ = 0x41, *p++ = 0xc6, *p++ = 0x03, *p++ = 0x01;               /* mov byte [r11], 1 */
     {
@@ -257,57 +253,12 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         *p++ = 0xbf, memcpy(p, &which, 4), p += 4;                     /* mov edi, which */
         target = (uint64_t)(uintptr_t)unimplemented;
     }
-    /* The stub inlines the %fs swap instead of calling rt_tls_enter_host(): a C call between the guest's
-       jump and the target would clobber every caller-saved argument register (rdi, rsi, rdx, rcx, r8, r9,
-       xmm0-7), so the guest's arguments would arrive as garbage -- a defect already paid for once. r11 is
-       caller-saved, so the guest cannot hold anything live in it across a call: it is free by the ABI.
-       No saves, no restores, and no hazard on either the argument or the return path. */
-    *p++ = 0x49, *p++ = 0xba, memcpy(p, &target, 8), p += 8;          /* movabs r10, target */
-    {
-        const uint64_t fsg = (uint64_t)(uintptr_t)&rt_stub_fs;
-        const uint64_t pre = (uint64_t)(uintptr_t)&rt_stub_fs_pre;
-        *p++ = 0x50;                                                   /* push rax */
-        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &fsg, 8), p += 8;          /* movabs r11, &rt_stub_fs */
-        *p++ = 0xf3, *p++ = 0x48, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xc0; /* rdfsbase rax -- BEFORE the write */
-        *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
-        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &pre, 8), p += 8;          /* movabs r11, &rt_stub_fs_pre */
-        *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
-        *p++ = 0x58;                                                   /* pop rax */
-    }
-    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &hostbase, 8), p += 8;         /* movabs r11, host %fs base */
-    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;  /* wrfsbase r11 -- F3 is mandatory, and ModRM /2 is WRFSBASE; /3 is WRGSBASE */
-    {
-        const uint64_t fsg = (uint64_t)(uintptr_t)&rt_stub_fs;
-        *p++ = 0x50;                                                   /* push rax */
-        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &fsg, 8), p += 8;          /* movabs r11, &rt_stub_fs */
-        *p++ = 0xf3, *p++ = 0x48, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xc0; /* rdfsbase rax -- read it back */
-        *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
-        {
-            const uint64_t wg = (uint64_t)(uintptr_t)&rt_stub_which;
-            *p++ = 0x49, *p++ = 0xbb, memcpy(p, &wg, 8), p += 8;       /* movabs r11, &rt_stub_which */
-            *p++ = 0x41, *p++ = 0xc7, *p++ = 0x03, memcpy(p, &which, 4), p += 4; /* mov [r11], which */
-        }
-        *p++ = 0x58;                                                   /* pop rax */
-    }
-    /* The guest's stack alignment at its call site is the guest's business; our C bodies need the ABI's, and
-       glibc spills xmm with `movaps`, which faults on a misaligned rsp and reports address 0. rbx carries the
-       guest's rsp across the call because it is callee-saved: the body must preserve it, and a global would be
-       wrong the moment a body re-enters another import. */
-    *p++ = 0x53;                                                       /* push rbx */
-    *p++ = 0x48, *p++ = 0x89, *p++ = 0xe3;                             /* mov rbx, rsp */
-    *p++ = 0x48, *p++ = 0x83, *p++ = 0xe4, *p++ = 0xf0;                /* and rsp, -16 */
-    *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
-    *p++ = 0x48, *p++ = 0x89, *p++ = 0xdc;                             /* mov rsp, rbx: the guest's own rsp */
-    *p++ = 0x5b;                                                       /* pop rbx */
-    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
-    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;  /* wrfsbase r11 -- F3 is mandatory, and ModRM /2 is WRFSBASE; /3 is WRGSBASE */
-    {
-        const uint64_t inf = (uint64_t)(uintptr_t)&rt_syslib_in_flight;
-        const uint32_t none = 0xffffffffu;
-        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &inf, 8), p += 8;          /* movabs r11, &in_flight */
-        *p++ = 0x41, *p++ = 0xc7, *p++ = 0x03, memcpy(p, &none, 4), p += 4; /* cleared: none in flight */
-    }
-    *p++ = 0xc3;                                                       /* ret */
+    /* The crossing itself is emitted by runtime/boundary_stub.c, which host_hooks.c also calls: one
+       emitter, so the /2-vs-/3 class cannot come back in a second hand-written prologue. The %fs
+       readback dumps that used to sit here were an instrument for a question that is closed, and an
+       instrument left in a report is an instrument nobody re-tests. */
+    p += rt_write_boundary_stub(p, target, rt_tls_host_base(), rt_tls_guest_base(),
+                                (uint64_t)(uintptr_t)&rt_syslib_in_flight);
     if ((size_t)(p - t) > TRAMPOLINE_SIZE) rt_fatal("trampoline", "stub exceeds TRAMPOLINE_SIZE");
 }
 
@@ -750,33 +701,9 @@ int main(int argc, char **argv)
            single-object image, and faults itself -- re-entering this path forever while stdout stayed
            buffered, which reads as a hang (12 of 12 on a synthetic ELF, and ctest's 60 s timeout).
            An instrument left in a report is a defect the report cannot show. */
-        if (getenv("BB_FAULT_STUB_DUMP") && object_count > 1 && objects[1].tramp) {
-            /* The stub's two %fs bases are imm64 literals in the instruction stream, so the question "did it
-               write the host base" is answered by reading them. Imm64s make a wrong value silent; a
-               (%rip)-relative load would make it impossible. */
-            int k = 1;
-            unsigned char *t = objects[k].tramp + TRAMPOLINE_SIZE * 38;
-            printf("pbboot: stub obj %d #38:", k);
-            for (int b2 = 0; b2 < 90; b2++) {
-                if (b2 && b2 % 15 == 0) printf("\n                ");
-                printf(" %02x", t[b2]);
-            }
-            printf("\n");
-            for (int b2 = 0; b2 + 10 <= 90; b2++)
-                if (t[b2] == 0x49 && t[b2 + 1] == 0xbb) {
-                    uint64_t imm;
-                    memcpy(&imm, t + b2 + 2, 8);
-                    printf("pbboot: stub movabs r11 @%d = %#llx\n", b2, (unsigned long long)imm);
-                }
-        }
         if (getenv("BB_FAULT_STUB_DUMP")) {
             uint64_t live_fs = 0;
             __asm__ volatile("rdfsbase %0" : "=r"(live_fs));
-            printf("pbboot: stub pre-write fs %#llx\n", (unsigned long long)rt_stub_fs_pre);
-            printf("pbboot: probe says wrfsbase %s\n", rt_tls_uses_wrfsbase() ? "WORKS" : "unavailable");
-            printf("pbboot: stub readback %#llx which #%u (host base %#llx)\n",
-                   (unsigned long long)rt_stub_fs, rt_stub_which,
-                   (unsigned long long)rt_tls_host_base());
             printf("pbboot: fs host %#llx guest %#llx live %#llx%s\n",
                    (unsigned long long)rt_tls_host_base(), (unsigned long long)rt_tls_guest_base(),
                    (unsigned long long)live_fs,

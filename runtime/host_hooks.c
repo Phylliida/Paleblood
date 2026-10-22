@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+
+#include "runtime/boundary_stub.h"
 
 #if !defined(__x86_64__)
 #error "The version-1 host hook callback requires an x86-64 host"
@@ -15,16 +18,40 @@ enum { ABSOLUTE_JUMP_SIZE = 14 };
 static unsigned char *guest_image;
 static uint64_t guest_image_size;
 
-/* Once the boot has installed a guest block, the guest's %fs is live, and this jump has no boundary
-   stub: the replacement would run on the guest's TCB, where glibc's errno and stack protector are
-   not -- the shape that cost seven slices in the import trampoline, one level down. Refuse rather
-   than fault later, and say what is missing. Weak, because the differential harness links no TLS,
-   has no guest block, and passes an installer that installs nothing. */
+/* Once the boot has installed a guest block, the guest's %fs is live, and a bare jump would run the
+   replacement on the guest's TCB, where glibc's errno and stack protector are not -- the shape that
+   cost seven slices in the import trampoline, one level down. So when TLS is live the 14 bytes point
+   at a stub that swaps %fs and aligns the stack; the crossing itself is emitted by
+   runtime/boundary_stub.c, the same code the import trampolines use, because a second hand-written
+   prologue is how the /3-for-/2 bug survived for days. Weak, because the differential harness links
+   no TLS, has no guest block, and passes an installer that installs nothing. */
 extern uint64_t rt_tls_guest_base(void) __attribute__((weak));
+extern uint64_t rt_tls_host_base(void) __attribute__((weak));
 
 static int guest_tls_is_live(void)
 {
-    return rt_tls_guest_base && rt_tls_guest_base() != 0;
+    return rt_tls_guest_base && rt_tls_host_base && rt_tls_guest_base() != 0;
+}
+
+/* One page of executable memory holds every hook's stub. Bounded and reported, never a silent
+   overrun: a hook that cannot get a stub must fail loudly, because a jump to nowhere is a green run
+   that executes nothing. */
+enum { STUB_PAGE = 4096 };
+static unsigned char *stub_area;
+static size_t stub_used;
+
+static unsigned char *stub_alloc(size_t n)
+{
+    if (!stub_area) {
+        void *p = mmap(NULL, STUB_PAGE, PROT_READ | PROT_WRITE | PROT_EXEC,
+                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (p == MAP_FAILED) return NULL;
+        stub_area = p;
+    }
+    if (n > STUB_PAGE - stub_used) return NULL;
+    unsigned char *p = stub_area + stub_used;
+    stub_used += n;
+    return p;
 }
 
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
@@ -33,20 +60,31 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         size > guest_image_size - offset)
         return -1;
 
+    /* With a live guest %fs the jump goes to a boundary stub: swap to the host base, park the guest's
+       rsp in rbx, align, call, restore both. Without TLS (the harness) there is nothing to swap and
+       the jump goes straight to the target, which is what every existing caller sees. */
+    uintptr_t destination = (uintptr_t)target;
     if (guest_tls_is_live()) {
-        fprintf(stderr,
-                "hook: refusing to patch 0x%llx: the guest %%fs is live and this path has no "
-                "boundary stub -- it jumps straight into the replacement, which then runs on the "
-                "guest's TCB (glibc errno and stack protector are not there). Install a stub that "
-                "swaps %%fs (wrfsbase) and gives the body a 16-byte aligned stack first.\n",
-                (unsigned long long)offset);
-        return -1;
+        unsigned char *stub = stub_alloc(RT_BOUNDARY_STUB_MAX);
+        if (!stub) {
+            fprintf(stderr, "hook: no room for a boundary stub at 0x%llx (page holds %u of %u bytes)\n",
+                    (unsigned long long)offset, (unsigned)STUB_PAGE, (unsigned)stub_used);
+            return -1;
+        }
+        size_t n = rt_write_boundary_stub(stub, (uint64_t)(uintptr_t)target,
+                                          rt_tls_host_base(), rt_tls_guest_base(), 0);
+        __builtin___clear_cache((char *)stub, (char *)stub + n);
+        destination = (uintptr_t)stub;
+        if (getenv("BB_HOOK_VERBOSE"))
+            fprintf(stderr, "hook: 0x%llx -> %zu-byte boundary stub at 0x%llx -> body 0x%llx\n",
+                    (unsigned long long)offset, n, (unsigned long long)destination,
+                    (unsigned long long)(uintptr_t)target);
     }
 
     /* `jmp qword ptr [rip]` followed by the 64-bit destination preserves every argument register,
        including AL for variadic calls. The loader installs hooks before entering guest code. */
     unsigned char jump[ABSOLUTE_JUMP_SIZE] = {0xff, 0x25, 0, 0, 0, 0};
-    const uintptr_t destination = (uintptr_t)target;
+    if (destination > (uintptr_t)UINTPTR_MAX) return -1;
     memcpy(jump + 6, &destination, sizeof destination);
     memcpy(guest_image + offset, jump, sizeof jump);
     __builtin___clear_cache((char *)guest_image + offset, (char *)guest_image + offset + sizeof jump);

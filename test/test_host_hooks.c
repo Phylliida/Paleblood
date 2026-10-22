@@ -5,14 +5,82 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
+
+#include "runtime/boundary_stub.h"
 
 enum { GUEST_CODE_SIZE = 32, MINIMUM_HOOK_SIZE = 14 };
 
 static int replacement(int left, int right)
 {
     return left * 3 + right;
+}
+
+/* The boundary crossing, measured from inside the C body it calls: the body records the %fs base it
+   was entered with, so the test can tell "the stub swapped" from "the stub exists". */
+static uint64_t live_host_fs;
+static uint64_t live_guest_fs;
+static uint64_t body_saw_fs;
+static int boundary_body(int left, int right)
+{
+    unsigned long base;
+    __asm__ volatile("rdfsbase %0" : "=r"(base));
+    body_saw_fs = base;
+    return left * 3 + right;
+}
+
+/* Strong definitions: host_hooks.c references these weakly, because the differential harness links no
+   TLS. Here they are the point of the test. */
+static uint64_t fake_guest_fs;
+static uint64_t fake_host_fs;
+uint64_t rt_tls_guest_base(void) { return fake_guest_fs; }
+uint64_t rt_tls_host_base(void) { return fake_host_fs; }
+
+static uint64_t read_fs(void)
+{
+    unsigned long base;
+    __asm__ volatile("rdfsbase %0" : "=r"(base));
+    return (uint64_t)base;
+}
+
+static void write_fs(uint64_t base)
+{
+    __asm__ volatile("wrfsbase %0" : : "r"(base) : "memory");
+}
+
+/* Does this host actually have FSGSBASE? Ask the instruction, not CPUID: this machine reports
+   CPUID.07H:EBX[16] == 0 and still executes rdfsbase, so a capability bit is a claim and the round
+   trip is the measurement. SIGILL means "no", not "the test is broken". */
+static sigjmp_buf ill_env;
+static void on_ill(int signal_number)
+{
+    (void)signal_number;
+    siglongjmp(ill_env, 1);
+}
+
+static int try_wrfsbase(void)
+{
+    struct sigaction sa, old;
+    memset(&sa, 0, sizeof sa);
+    sa.sa_handler = on_ill;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_NODEFER;
+    sigaction(SIGILL, &sa, &old);
+
+    const uint64_t saved = read_fs();
+    int ok = 0;
+    if (!sigsetjmp(ill_env, 1)) {
+        const uint64_t probe = saved + 0x4000;
+        write_fs(probe);
+        ok = (read_fs() == probe);
+        write_fs(saved);
+    }
+    sigaction(SIGILL, &old, NULL);
+    return ok;
 }
 
 static int check(int condition, const char *message)
@@ -61,6 +129,78 @@ int main(void)
     host.version = RT_HOST_API_VERSION;
     host.image = NULL;
     failed |= check(rt_host_hooks_initialize(&host) != 0, "missing guest image must fail");
+
+    /* The emitted crossing is pinned to bytes the test derives itself, so an emitter edit that changes
+       the instruction stream fails here instead of at the first boot on a machine with a live %fs. */
+    {
+        unsigned char want[128];
+        unsigned char *w = want;
+        const uint64_t target = 0x1122334455667788ULL, host = 0x99aabbccddeeff00ULL;
+        const uint64_t guest = 0x0f1e2d3c4b5a6978ULL;
+        *w++ = 0x49, *w++ = 0xba, memcpy(w, &target, 8), w += 8;   /* movabs r10, target */
+        *w++ = 0x49, *w++ = 0xbb, memcpy(w, &host, 8), w += 8;     /* movabs r11, host */
+        *w++ = 0xf3, *w++ = 0x49, *w++ = 0x0f, *w++ = 0xae, *w++ = 0xd3; /* wrfsbase r11 */
+        *w++ = 0x53; *w++ = 0x48, *w++ = 0x89, *w++ = 0xe3;        /* push rbx; mov rbx, rsp */
+        *w++ = 0x48, *w++ = 0x83, *w++ = 0xe4, *w++ = 0xf0;        /* and rsp, -16 */
+        *w++ = 0x41, *w++ = 0xff, *w++ = 0xd2;                     /* call r10 */
+        *w++ = 0x48, *w++ = 0x89, *w++ = 0xdc; *w++ = 0x5b;        /* mov rsp, rbx; pop rbx */
+        *w++ = 0x49, *w++ = 0xbb, memcpy(w, &guest, 8), w += 8;    /* movabs r11, guest */
+        *w++ = 0xf3, *w++ = 0x49, *w++ = 0x0f, *w++ = 0xae, *w++ = 0xd3; /* wrfsbase r11 */
+        *w++ = 0xc3;                                               /* ret */
+        unsigned char got[128];
+        size_t n = rt_write_boundary_stub(got, target, host, guest, 0);
+        failed |= check(n == (size_t)(w - want), "boundary stub length must match the derived bytes");
+        failed |= check(memcmp(got, want, n) == 0, "boundary stub bytes must match the derived bytes");
+        /* Counted, not indexed: hand-computed offsets into an instruction stream were wrong twice in
+           this very test, which is the defect the test exists to catch. */
+        int wrfsbase = 0, wrgsbase = 0;
+        for (size_t k = 0; k + 5 <= n; k++) {
+            static const unsigned char wf[5] = {0xf3, 0x49, 0x0f, 0xae, 0xd3};
+            static const unsigned char wg[5] = {0xf3, 0x49, 0x0f, 0xae, 0xdb};
+            if (memcmp(got + k, wf, 5) == 0) wrfsbase++;
+            if (memcmp(got + k, wg, 5) == 0) wrgsbase++;
+        }
+        failed |= check(wrfsbase == 2, "the crossing must write %fs exactly twice, both wrfsbase");
+        failed |= check(wrgsbase == 0, "%fs must never be written with wrgsbase (/3 = 0xdb)");
+    }
+
+    /* Live guest %fs: the 14 bytes must point at a stub, not at the replacement, and executing the
+       patched site must enter the body on the host base and give the guest its base back. */
+    if (try_wrfsbase()) {
+        unsigned char *pages = image;
+        memset(pages, 0x90, GUEST_CODE_SIZE);
+        memcpy(pages, guest_code, sizeof guest_code);
+        fake_host_fs = read_fs();
+        fake_guest_fs = fake_host_fs + 0x4000;
+        live_host_fs = fake_host_fs;
+        live_guest_fs = fake_guest_fs;
+        body_saw_fs = 0;
+
+        failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
+                        "with a live guest %fs the hook must install a boundary stub");
+        uintptr_t dest = 0;
+        memcpy(&dest, image + 6, sizeof dest);
+        failed |= check(dest != (uintptr_t)(void *)boundary_body,
+                        "live-TLS patch must point at the stub, not straight at the body");
+        failed |= check(((unsigned char *)dest)[0] == 0x49 && ((unsigned char *)dest)[1] == 0xba,
+                        "stub must start with movabs r10, target");
+        {
+            static const unsigned char wf[5] = {0xf3, 0x49, 0x0f, 0xae, 0xd3};
+            failed |= check(memcmp((unsigned char *)dest + 20, wf, 5) == 0,
+                            "the stub must swap %fs before it calls the body");
+        }
+
+        uint64_t saved = read_fs();
+        write_fs(fake_guest_fs);
+        int result = guest_function(5, 8);
+        uint64_t after = read_fs();
+        write_fs(saved);
+        failed |= check(result == 23, "the body must receive ABI arguments through the stub");
+        failed |= check(body_saw_fs == live_host_fs, "the body must run on the host %fs base");
+        failed |= check(after == live_guest_fs, "the guest's %fs base must be restored before return");
+    } else {
+        fprintf(stderr, "test_host_hooks: SIGILL from wrfsbase on this host, live-TLS case skipped\n");
+    }
 
     if (munmap(image, (size_t)page_size) != 0) {
         perror("test_host_hooks: munmap");

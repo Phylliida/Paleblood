@@ -9,9 +9,9 @@ directly on a stand-in image, which is the only way to see the bytes before a bo
   * a site shorter than 14 bytes is refused and the image is unchanged (the smallest row in
     game/hooks.csv is 16 bytes, so this refuses a table mistake, not a real site);
   * a site that would run past the end of the image is refused;
-  * with a live guest %fs -- the boot, as opposed to the harness -- the install is refused with a
-    message naming the missing boundary stub, because the jump has no %fs swap and no stack
-    alignment and would run the replacement on the guest's TCB.
+  * with a live guest %fs -- the boot, as opposed to the harness -- the 14 bytes point at a boundary
+    stub emitted by runtime/boundary_stub.c (the same emitter the import trampolines use), not at the
+    replacement, because a bare jump would run the body on the guest's TCB.
 """
 
 import os
@@ -47,8 +47,13 @@ int main(void)
     if (memcmp(image + 0x10, want, 6) != 0) { puts("1 wrong opcode"); return 4; }
     uint64_t dest = 0;
     memcpy(&dest, image + 0x16, 8);
-    printf("dest 0x%llx tail %02x\n", (unsigned long long)dest, image[0x10 + 14]);
-    if (dest != 0x1234567890abcdefULL || before != image[0x10 + 14]) { puts("1 wrong bytes"); return 5; }
+    /* Without a live guest %fs there is nothing to swap, so the jump names the target; with one it
+       names a boundary stub. Both are correct, and the difference is printed rather than assumed. */
+    if (dest == 0x1234567890abcdefULL)
+        printf("dest 0x%llx tail %02x\n", (unsigned long long)dest, image[0x10 + 14]);
+    else
+        printf("stub 0x%llx tail %02x\n", (unsigned long long)dest, image[0x10 + 14]);
+    if (before != image[0x10 + 14]) { puts("1 wrong bytes"); return 5; }
 
     /* 2. a 6-byte site (pool B's shape): refused, image unchanged */
     unsigned char keep[0x100];
@@ -65,10 +70,11 @@ int main(void)
 '''
 
 LIVE_TLS = r'''
-/* Stands in for runtime/tls.c once the boot has a guest block: the weak probe resolves and says the
-   guest %fs is live, which is the condition under which the install must refuse. */
+/* Stands in for runtime/tls.c once the boot has a guest block: the weak probes resolve and say the
+   guest %fs is live, which is the condition under which the jump must go through a boundary stub. */
 #include <stdint.h>
 uint64_t rt_tls_guest_base(void) { return 0x7f0000001000ULL; }
+uint64_t rt_tls_host_base(void) { return 0x7f0000000000ULL; }
 '''
 
 
@@ -79,7 +85,8 @@ class HostHooks(unittest.TestCase):
         with open(src, 'w') as f:
             f.write(DRIVER)
         cmd = [CC, '-O1', '-Wall', '-Wextra', f'-I{os.path.join(ROOT, "runtime", "include")}',
-               src, os.path.join(ROOT, 'runtime', 'host_hooks.c'), '-o', os.path.join(d, 'driver')]
+               src, os.path.join(ROOT, 'runtime', 'host_hooks.c'),
+               os.path.join(ROOT, 'runtime', 'boundary_stub.c'), '-o', os.path.join(d, 'driver')]
         if extra_source:
             extra = os.path.join(d, 'tls.c')
             with open(extra, 'w') as f:
@@ -96,11 +103,13 @@ class HostHooks(unittest.TestCase):
         self.assertIn('ok', run.stdout)
         self.assertIn('dest 0x1234567890abcdef tail 90', run.stdout)
 
-    def test_a_live_guest_tls_refuses_the_install(self):
+    def test_a_live_guest_tls_installs_a_boundary_stub(self):
         run = self.build(LIVE_TLS)
-        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
-        self.assertIn('1 refused', run.stdout)
-        self.assertIn('the guest %fs is live and this path has no boundary stub', run.stderr)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('ok', run.stdout)
+        # the patch no longer names the replacement; it names a stub that leads to it
+        self.assertNotIn('dest 0x1234567890abcdef', run.stdout)
+        self.assertIn('stub ', run.stdout)
 
 
 if __name__ == '__main__':
