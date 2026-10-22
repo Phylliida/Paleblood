@@ -9,9 +9,9 @@
 
    The guest timeval is declared here rather than borrowed from the host headers, and asserted: "happens
    to match x86-64 glibc" is exactly the assumption that produced the __sFILE defect. Writes go through
-   guest_write_ok(), because the first system call that writes guest memory is the wrong place to
+   rt_guest_write_ok(), because the first system call that writes guest memory is the wrong place to
    discover that the range was never validated. */
-#include "runtime/process.h"
+#include "runtime/guest_mem.h"
 #include "runtime/syslib.h"
 
 #include <stddef.h>
@@ -44,25 +44,10 @@ static uint64_t elapsed_ns(void)
     return now - origin_ns;
 }
 
-/* The only writer of guest memory in this file, so the check has one home. Refuses rather than faults:
-   a null pointer is legal for gettimeofday's tv, and a range outside the image is a caller bug worth
-   naming, not a signal worth taking. */
-static int guest_write_ok(uintptr_t addr, size_t len, const char *call)
-{
-    uintptr_t base = (uintptr_t)rt_process.image;
-    uintptr_t end = base + (uintptr_t)rt_process.image_size;
-    if (addr < base || len > end - addr || end < base) {
-        fprintf(stderr, "pbboot: %s: refused write of %zu bytes at %p, outside the image [%p,%p)\n", call,
-                len, (void *)addr, (void *)base, (void *)end);
-        return 0;
-    }
-    return 1;
-}
-
 static int gettimeofday_impl(int64_t tv, int64_t tz)
 {
     if (tv != 0) {
-        if (!guest_write_ok((uintptr_t)tv, sizeof(guest_timeval), "gettimeofday")) return k_err_fault;
+        if (!rt_guest_write_ok((uintptr_t)tv, sizeof(guest_timeval), "gettimeofday")) return k_err_fault;
         uint64_t ns = elapsed_ns();
         guest_timeval v;
         v.tv_sec = rt_epoch_seconds + (int64_t)(ns / 1000000000ull);
@@ -70,7 +55,7 @@ static int gettimeofday_impl(int64_t tv, int64_t tz)
         *(guest_timeval *)(uintptr_t)tv = v; /* field by field, in the guest's own layout */
     }
     if (tz != 0) {
-        if (!guest_write_ok((uintptr_t)tz, 8, "gettimeofday")) return k_err_fault;
+        if (!rt_guest_write_ok((uintptr_t)tz, 8, "gettimeofday")) return k_err_fault;
         *(int32_t *)(uintptr_t)tz = 32;
         *(int32_t *)((uintptr_t)tz + 4) = 0;
     }

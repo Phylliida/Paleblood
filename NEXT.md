@@ -924,3 +924,25 @@ prevent, so the file records the absence rather than inventing a build.**
 
 Scored: 46 -> **49 implemented**, 422 -> **419 unbound**, called 46 -> **47**. Next stop `R9lA82OraNs` from
 **libSceAppContent**, return address `eboot+0x20261dd` -- twenty bytes after the sysmodule call returned.
+
+## App content succeeds because the real machine succeeds; guest_write_ok has one home and two callers
+
+`sceAppContentInitialize` returns **success**, prints its arguments, and says in the code and the log that
+the success is **modelled**: the title's own content exists on a real machine, this runtime has none to
+check, and **a fabricated failure is not more honest than a fabricated success -- both are models, and the
+right one is the one the real system produces.** The add-on queries are the opposite case and are
+truthfully empty: a base-game disc has no add-ons, so `GetNumAddcont`/`GetAddcontInfoList` write **0**
+through the write check rather than inventing entries.
+
+**`rt_guest_write_ok()` promoted out of `clock.c` into `runtime/guest_mem.c`** before this call existed, so
+AppContent is its **first legitimate second caller rather than a copy**. Promoting it immediately found a
+second target: `test_syslib` links `${PB_TEST_SYSLIB}` too, so the check had to be named there as well --
+**a helper with one caller per target is how a "one home" claim quietly becomes two.**
+
+**No panic on the success path** — the guest accepted it and moved on:
+
+    appcontent: Initialize(args=0x8056a0200) -> success (modelled)
+    unimplemented: eboot calls libSceAppContent 99b82IKXpH4 at eboot+0x20261eb
+
+which is `+0x12` past the Initialize call site -- the guest's own next call in the same function.
+Scored: 49 -> **51 implemented**, 419 -> **417 unbound**, called 47 -> **48**.
