@@ -69,30 +69,39 @@ def classify(pointer: int, objects: list[dict]) -> str | None:
 def emit_capture(pc: str, registers: dict[str, int], objects: list[dict],
                  buffers: dict[str, dict] | None = None, replayed: str = 'eboot',
                  returns: str = 'i64', note: str = '') -> dict:
-    """Emit a case from captured entry state, reporting every pointer the replay cannot speak for.
+    """Emit a case from captured entry state, in the form the existing cases use.
 
-    `buffers` is keyed by object-qualified name (`eboot:0x10`) so a caller can supply bytes for the
-    addresses it actually reconstructed. Anything named in `uncovered` is a read the replay does not
-    cover: a fabricated preset at that number would be the input the game never produced.
+    Reading 35,344 real cases settled the address-space question: **a case never carries an address.** A
+    pointer argument is written `buf:<name>` or `buf:<name>+0x<offset>`, and `buffers` declares the bytes
+    under `name`. So the capture's job is to name a region and give its bytes -- not to translate between
+    guest and host space, because there is no address in the document to translate.
+
+    `buffers` here is keyed by name and may carry `address` (the guest address the bytes were read from)
+    and `size`. A captured pointer inside a declared buffer becomes that buffer plus a resolved offset;
+    a pointer with no declared bytes is reported in `uncovered`, never prescripted.
     """
+    declared = buffers or {}
     emitted: dict[str, str] = {}
     uncovered: list[str] = []
-    for name in sorted(registers):
-        value = registers[name]
+    for reg in sorted(registers):
+        value = registers[reg]
         owner = classify(value, objects)
-        if owner is None:
-            emitted[name] = f'0x{value:x}'
-        elif owner == replayed:
-            key = f'{replayed}:0x{value:x}'
-            if buffers and key in buffers:
-                emitted[name] = f'buf:{key}'
-            else:
-                uncovered.append(f'{name}: 0x{value:x} in {owner} (no bytes captured)')
+        hit = None
+        for name in sorted(declared):
+            base = declared[name].get('address')
+            size = declared[name].get('size', 0)
+            if base is not None and base <= value < base + size:
+                hit = (name, value - base)
+                break
+        if hit is not None:
+            name, off = hit
+            emitted[reg] = f'buf:{name}' if off == 0 else f'buf:{name}+0x{off:x}'
+        elif owner is None:
+            emitted[reg] = f'0x{value:x}'
         else:
-            uncovered.append(f'{name}: 0x{value:x} in {owner}')
-    used = {k: buffers[k] for k in sorted(buffers or {}) if f'buf:{k}' in emitted.values()}
+            uncovered.append(f'{reg}: 0x{value:x} in {owner} (no bytes captured)')
+    used = {n: {'size': d['size'], 'bytes': d['bytes']} for n, d in declared.items() if f'buf:{n}' in [a.split('+')[0] for a in emitted.values()]}
     return emit(pc, emitted, used, returns=returns, uncovered=uncovered, note=note)
-
 
 def load_objects(path: str = 'symbols/objects.csv') -> list[dict]:
     """Read the object table the loader wrote. A tool reads a file; a person reads the log.

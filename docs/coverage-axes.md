@@ -193,3 +193,26 @@ a guard on the output protects the state.
 `else` branch ran `fclose(NULL)`. Unset is now silent, set-but-unwritable is an error — **a request that
 failed is not the same thing as a request not made.** Suite 317 OK, ctest 16/16, and `symbols/objects.csv`
 unchanged after both.
+
+## A case carries no address at all, so the emit is a copy and the conversion never exists
+
+Settled from data, not from the schema I remembered: **35,344 cases** in `../data/cases` carry `args`;
+every buffer reference is `buf:<name>` or **`buf:<name>+0x<offset>`**, and **0 of 16 buffer names are
+address-shaped**. A pointer is expressed as *an offset into a declared region*, so the document never holds a
+guest address and never holds a host one. **The emit is therefore a copy**, and the "does it need
+`0x800000000 + (ptr − 0x400000)`" question has no referent: there is nothing in the case to convert.
+
+`emit_capture()` was rewritten to speak that convention: `buffers` is keyed by name and may carry `address`
+and `size`, a captured pointer inside a declared region becomes `buf:<name>` (or `buf:<name>+0x<offset>` when
+it is not at the base), a pointer outside every declared region but inside an object is `uncovered` with its
+object named, and a pointer in no object at all is emitted as a scalar. Two tests pin it, and the
+population test refuses the whole file set if any `buf:` reference names an undeclared buffer — **a
+filter that skips everything must not pass as a green.**
+
+**eboot's size, checked against the ELF's own segments.** `readelf -lW` gives LOAD1 `vaddr 0 memsz
+0x50d96dc` and LOAD2 `vaddr 0x50dc000 memsz 0x5f70f4`, so the image ends at `0x56d30f4` = **91,074,804 B**
+from the base. The table says **91,042,036**, which is **32,768 B (0x8000) short** — so a pointer in that
+last 32 KiB would classify as outside eboot and be reported `uncovered`. That is the safe direction (a false
+negative, not an in-range false positive), and it is a defect: `o->size` is not the ELF's extent end. The
+catalog's highest address `0x02fbe370` is far inside (offset 45,842,288 of 91,042,036), which the size test
+asserts.

@@ -6,6 +6,7 @@ bytes, because a format nobody loads is a format that will be wrong in exactly o
 import glob
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -68,11 +69,12 @@ class CaseEmit(unittest.TestCase):
                    {'name': 'libc.elf', 'base': 0x00e10000, 'size': 0x40000}]
         case = case_emit.emit_capture('0x00e01000',
                                       {'rdi': 0x400100, 'rsi': 0x00e10040, 'rdx': 0x10},
-                                      objects, buffers={'eboot:0x400100': {'size': 8, 'bytes': '00' * 8}})
-        self.assertEqual(case['args']['rdi'], 'buf:eboot:0x400100')
+                                      objects, buffers={'obj': {'size': 16, 'bytes': '00' * 16, 'address': 0x400100}},
+                                      replayed='eboot')
+        self.assertEqual(case['args']['rdi'], 'buf:obj')
         self.assertEqual(case['args']['rdx'], '0x10')
         self.assertNotIn('rsi', case['args'])
-        self.assertEqual(case['uncovered'], ['rsi: 0xe10040 in libc.elf'])
+        self.assertEqual(case['uncovered'], ['rsi: 0xe10040 in libc.elf (no bytes captured)'])
         self.assertEqual(case['id'], '0x00e01000')
 
     def test_an_unreconstructed_eboot_pointer_is_uncovered_not_invented(self):
@@ -80,6 +82,10 @@ class CaseEmit(unittest.TestCase):
         case = case_emit.emit_capture('0x00e01000', {'rdi': 0x400100}, objects)
         self.assertNotIn('rdi', case['args'])
         self.assertEqual(case['uncovered'], ['rdi: 0x400100 in eboot (no bytes captured)'])
+        # and an offset into a declared buffer is expressed the way real cases express it
+        case = case_emit.emit_capture('0x00e01000', {'rdi': 0x400110}, objects,
+                                      buffers={'obj': {'size': 0x40, 'bytes': '00' * 0x40, 'address': 0x400100}})
+        self.assertEqual(case['args']['rdi'], 'buf:obj+0x10')
 
     def test_the_object_table_is_read_from_a_file_and_must_be_a_partition(self):
         table = 'name,guest_start,size,kind\neboot,0x00400000,8388608,eboot\nlibc.elf,0x80400000,262144,module\n'
@@ -105,6 +111,48 @@ class CaseEmit(unittest.TestCase):
         case = case_emit.emit_capture('0x00e01000', {'rdi': 0x10}, objects,
                                       note='origin=hand; target is a verified row')
         self.assertIn('origin=hand', case['note'])
+
+    def test_real_cases_declare_buffers_by_name_so_emitting_is_a_copy_not_a_conversion(self):
+        # The branch question settled from data: 35,344 cases in ../data/cases carry `args`, and every
+        # buffer reference is `buf:<name>` where the name is symbolic -- `data`, `dest`, `object+0x20` --
+        # with no address anywhere in the document. So there is no guest-vs-host conversion to get wrong:
+        # a capture names its buffers and carries bytes, and the address lives only in `uncovered` and the
+        # record. This test is the assertion that keeps that true as cases are added.
+        root = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'cases')
+        checked = 0
+        address_shaped = re.compile(r'(0x)?[0-9a-fA-F]{6,}$')
+        for path in sorted(glob.glob(os.path.join(root, '**', '*.json'), recursive=True)):
+            try:
+                case = json.load(open(path))
+            except Exception:
+                continue
+            if not isinstance(case, dict) or 'args' not in case:
+                continue
+            checked += 1
+            buffers = case.get('buffers', {})
+            for reg, value in case['args'].items():
+                if isinstance(value, str) and value.startswith('buf:'):
+                    # The real convention is `buf:<name>` or `buf:<name>+0x<offset>` -- an offset into a
+                    # declared buffer, which is how a case expresses a pointer without carrying an address.
+                    name = re.split(r'\+0x', value[4:])[0]
+                    self.assertIn(name, buffers, f'{path}: {reg} names an undeclared buffer {name}')
+            for name in buffers:
+                self.assertIsNone(address_shaped.match(name), f'{path}: buffer named by address: {name}')
+        self.assertGreater(checked, 1000, 'the filter must not skip the population it reports on')
+
+    def test_the_eboot_size_in_the_table_covers_every_catalogued_address(self):
+        # A base table with a wrong size classifies pointers wrong in the only direction that matters:
+        # out of range read as in range. The check that can be made cheaply is the catalog's own extent.
+        import csv as _csv
+        objects = case_emit.load_objects(os.path.join(os.path.dirname(__file__), '..', 'symbols', 'objects.csv'))
+        eboot = objects[0]
+        self.assertEqual(eboot['name'], 'eboot')
+        highest = 0
+        with open(os.path.join(os.path.dirname(__file__), '..', 'symbols', 'ghidra_functions.csv'), newline='') as f:
+            for row in _csv.DictReader(f):
+                highest = max(highest, int(row['address'], 16))
+        self.assertLess(highest - 0x400000, eboot['size'],
+                        'a catalogued address outside the declared eboot range would be reported uncovered')
 
 
 if __name__ == '__main__':
