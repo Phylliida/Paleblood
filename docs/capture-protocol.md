@@ -121,3 +121,35 @@ should reach — **but the wrapper asserts the distance**: `abs(wrapper_end − 
 refused otherwise, because a far target silently needs the 14-byte absolute form and that is **+9 bytes
 nobody budgeted.** A near jump is `e9 <rel32>` (5 B); the assertion is what makes that 5 a fact rather than a
 hope.
+
+### What 823 counts, and what the 5 bytes are — both printed, both from the log
+
+**823 is the number of `write_trampoline` calls**, i.e. one line per trampoline slot, summed over the three
+objects the loader mapped — **not** an `imports.csv` total and not a boot-import total. Per object, by the
+`k` field packed into `which` (`k << 20 | i`):
+
+```
+object 0 (eboot):        666 trampolines -- 266 at 126 B, 400 at 131 B
+object 1 (libc.elf):      77             --  30 at 126 B,  47 at 131 B
+object 2 (libSceFios2):   80             --  30 at 126 B,  50 at 131 B
+totals:                  823             -- 326 at 126 B, 497 at 131 B
+```
+
+So the loader's own relocation counts are **666 / 77 / 80**, while `symbols/imports.csv` holds **673 / 76 / 80
+= 829**. **823 is a count of trampoline slots; 829 is a count of catalog rows, and they differ by −7 on eboot
+and +1 on libc.** Neither is wrong; they are two subjects, and quoting either without its subject is the
+defect this campaign keeps paying for. **686 is a third subject again** (eboot's boot-time imports), and the
+reconciliation of that with 666 remains owed.
+
+**The 5 bytes are an argument, not a jump form.** `write_trampoline` emits `mov edi, which` (`0xbf` + imm32 =
+**5 bytes**) only when `target == 0`, i.e. when the import has **no provider** and control goes to
+`unimplemented()`. So the two sizes are a **partition of resolved versus unresolved**, and the counts are free
+`arg kind` data:
+
+- **126 B = resolved** (provider found) — **326** trampolines
+- **131 B = unresolved** (target `unimplemented`) — **497** trampolines, **60.4%** of the loader's slots
+
+**60.4% of the trampolines the boot installs jump to `unimplemented()`**, per object: eboot **400 of 666**,
+libc **47 of 77**, libSceFios2 **50 of 80**. This is the per-entry arity-independent bound on how much of the
+import surface the modelled runtime actually serves, and it arrived by reading a size column rather than by
+any new instrument.
