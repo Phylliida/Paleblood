@@ -862,3 +862,21 @@ construction.** So the predicate (past `p_filesz`, inside `p_memsz`) selected ex
 written for, on the first boot that reached it, and it did so by naming a mechanism rather than an
 address window. **A guard whose first firing is a known mechanism is evidence; a guard whose first firing
 is a mystery is a bug report about the guard.**
+
+## Single-threadedness as a checked variable, semaphores as a handle table, and the compiler caught the wish
+
+`scePthreadCreate` **refuses by name** (it is now the 5th unresolved diagnostic), and because it is the
+only call that could falsify the assertion, the semaphore family below it is correct *under* one guard
+rather than each function assuming it privately. Every entry point calls `require_single_threaded()`.
+
+**The no-ops record what they could not serve:** a `Wait` whose count is short prints the handle, the
+request and the count, and says it would have blocked -- success here, a hang on a real kernel. `Poll`
+returns a would-block error instead of lying, since a poll has an honest answer available.
+
+Scored: 40 -> **45 implemented**, 429 -> **423 unbound**, 4 -> **5 unresolved** (the new one is
+`scePthreadCreate`, refusing), called 36 -> **44**. Next stop `n88vx3C5nW8` from **libScePosix**, i.e. the
+same primitive under the POSIX alias namespace.
+
+**The compiler rejected my first version**: `static int guest_threads = 1;` was never read, so `-Werror`
+failed the build. **A "single assertion" that nothing consults is a comment with a type**, and the tool I
+had just described as making it checkable is what proved it wasn't.
