@@ -426,3 +426,26 @@ Landed (`runtime/boundary_stub.c`, `test/test_snapshot_stub.c`, ctest **17/17**,
 **Not yet landed, and named:** the installer wiring and the end-to-end run (hook enters wrapper, wrapper reaches
 stub, body runs, guest returns). That is A's second half, and until it runs the emitter is proved **as a
 function** and not **in a page**.
+
+### NDEBUG: zero asserts in the tree, 171 compile lines where one would have vanished
+
+The companion's hypothesis was that every `assert()` in `runtime/` had been compiling to nothing. **The
+measurement, in one command:** `grep -rn '\bassert(' runtime/ test/ game/` → **0 occurrences in 0 files**, and
+`static_assert` → **0**. **Nothing was lost, because there was nothing to lose.** The number is the finding.
+
+**The mechanism is real and now measured too:** `CMAKE_BUILD_TYPE` defaults to `Release`, and **171 of 171**
+compile lines in `build-release/build.ninja` carry `-DNDEBUG`. So the hazard is not historical, it is the next
+`assert()` anyone writes — and it bit this slice once already, in `test_snapshot_stub.c`, where the only symptom
+of a check compiling away was a `-Wunused-variable` warning.
+
+**Policy, chosen once:** `string(APPEND CMAKE_C_FLAGS_RELEASE " -UNDEBUG")` (and CXX), so `-UNDEBUG` follows
+`-DNDEBUG` on **171 of 171** lines, **asserted by `test/test_build_flags.py`** rather than by the comment —
+it fails with `171 of 171 lines define NDEBUG with no -UNDEBUG after it` if the flag is dropped, and it refuses
+to pass over a sweep of fewer than 50 lines. **The gate was red before the flag landed and green after**: the
+red was produced by running it, not by intending it.
+
+**And the flag cost two attempts, both silently successful:** `add_compile_options(-UNDEBUG)` never appeared in
+the graph, and my first `string(APPEND ...)` was inserted **inside `if(NOT CMAKE_BUILD_TYPE ...)`**, which is
+false in every configured tree — **two lines that never executed, with `configure rc=0` and `build rc=0`
+reporting success both times.** The tell was the test I had just written: **the gate printed 0 of 171, not
+success.**

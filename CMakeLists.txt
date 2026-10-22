@@ -11,7 +11,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)   # editors: ln -s build/compile_commands.
 # otherwise (CI builds Release too).
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+
+# A Release build defines NDEBUG, so every assert() compiles to nothing -- a guard that cannot fail, in the
+# configuration the test suite runs. The tree has 0 asserted invariants today (grep -rn '\bassert(' runtime/
+# test/ game/ -> 0), so nothing was lost; this is here so the first one added is checked rather than silently
+# removed. -UNDEBUG comes after the type's flags, and test/test_build_flags.py asserts that ordering, because
+# a flag protected only by this comment is a flag someone later drops.
 endif()
+# Appended AFTER the if(): the block above runs only when no build type is cached, which is false for every
+# configured tree -- inside it, this was two lines that never executed, and CMake reported success.
+string(APPEND CMAKE_C_FLAGS_RELEASE " -UNDEBUG")
+string(APPEND CMAKE_CXX_FLAGS_RELEASE " -UNDEBUG")
 add_compile_options(-Wall -Wextra -Werror)
 
 enable_testing()
