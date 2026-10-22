@@ -1115,3 +1115,23 @@ reach `scePthreadCreate` with `called 66` and stop there.** Earlier is a TLS-lay
 Anything else -- a changed call count, a new fault, a silent success -- is a defect in the wiring, and the
 criterion exists because the swap touches no syslib entry: **every number in the run would look unchanged by
 construction, so only this criterion can say the swap is neutral.**
+
+## The site audit: four boundaries, not one and not three -- so the wiring waits
+
+Enumerated before wiring, as agreed:
+
+1. **`rt_boot_call` (asm), the only instruction in the tree that calls guest code.** Reached from
+   `run_guest`, which has **two** callers: `boot.c:483` (module entry, arguments NULL) and `:494` (main
+   entry, `&params` and a callback). One function, two logical entries.
+2. **`write_trampoline`: `jmp target` -- guest to host.** There is no return through the trampoline, so the
+   restore cannot live there without changing the emitted code.
+3. **`on_signal` / `rt_fault`: the failure path**, which runs with whatever `%fs` was installed when control
+   was lost, and which itself calls `dladdr`, `printf`, `snprintf`, `addr2line`-style formatting.
+4. **`guest_exit`, passed to the guest as argument `b` at `:494` -- a host function pointer handed to guest
+   code, called by the guest, and its first statement is `exit_code = code; siglongjmp(...)`.** It touches no
+   libc today, which is why nothing has broken; **the moment anyone adds a diagnostic to it, it runs on the
+   guest `%fs`.** This is the site neither of us counted, and it is the one the "callbacks" warning was for.
+
+**So the count is four, my expectation was three, and by the rule we agreed the wiring waits.** The finding is
+that the boundary is not a place but a *property of who is executing*, and the emission of the trampoline is a
+separate edit from the pair around `rt_boot_call`.
