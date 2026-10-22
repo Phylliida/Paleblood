@@ -1256,3 +1256,23 @@ one guard, at the place every path already passes through, permanently catching 
 `rt_guest_read_ok`/`rt_guest_write_ok` before it is handed to anything that assumes validity -- **the guest
 sending null where a real machine would send a valid pointer is precisely what `data-scratch` and unpopulated
 modules produce, so this recurs.**
+
+## The three entered imports, named -- and the null has an owner
+
+`symbols/import_names.csv` names them: **#23 `scePthreadMutexInit`**, **#38 `sceKernelGetProcParam`**,
+**#39 `_sceKernelRtldSetApplicationHeapAPI`** -- all `libkernel`, all `implemented`.
+
+So the guest's first three calls are: create a mutex, **ask for the process-parameter block**, **hand the C
+library its heap table**. Then it faults in a glibc memory routine with **`rdi 0`, `rsi 0x20b58`, `rdx 0x1000`**.
+**`0x20b58` is below `RT_EBOOT_BASE` (`0x400000`), so it is not a mapped guest address** -- and it is exactly the
+shape of `sceKernelGetProcParam`'s return being used as a source pointer.
+
+Two candidate causes, and the next run's job is to separate them:
+1. **`rt_process.proc_param` is a raw vaddr, not an image-mapped pointer** -- `kernel.c:12` returns it verbatim;
+   if it was stored from the segment header without the `RT_EBOOT_BASE` bias, the guest receives `0x20b58` and
+   every reader of the block faults on an unmapped address.
+2. **The heap table the guest installs at #39 is used to allocate a destination, and it returns 0**, so the
+   null is on the destination side and `0x20b58` is a legitimate source.
+
+**The separator is one print**: `rt_process.proc_param` and its vaddr beside `rt_image`, at init and again in
+the fault handler. **Not a guess about memcpy semantics -- a value printed before it is used.**

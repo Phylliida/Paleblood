@@ -538,7 +538,7 @@ int main(int argc, char **argv)
         if (!objects[k].elf) continue;
         fprintf(stderr, "pbboot: image %d at host %p\n", k, (void *)objects[k].image);
         for (int i = 0; i < (int)objects[k].imports; i++)
-            if (objects[k].called[i]) fprintf(stderr, "pbboot: entered object %d import #%d\n", k, i);
+            if (objects[k].called[i]) fprintf(stderr, "pbboot: entered #%d %s:%s\n", i, rt_elf_import_library(objects[k].elf, i) ? rt_elf_import_library(objects[k].elf, i) : "?", rt_elf_import_name(objects[k].elf, i) ? rt_elf_import_name(objects[k].elf, i) : "?");
     }
 
     /* Results */
