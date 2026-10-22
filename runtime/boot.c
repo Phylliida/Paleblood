@@ -147,7 +147,11 @@ __asm__(".text\n"
         "  mov %rsi, %rdi\n"
         "  mov %rcx, %rsi\n"
         "  mov %r8, %rdx\n"
+        "  mov rt_tls_guest_base_v(%rip), %r11\n"          /* guest %fs: r11 is caller-saved, so free */
+        "  wrfsbase %r11\n"
         "  call *%rax\n"
+        "  mov rt_tls_host_base_v(%rip), %r11\n"           /* back to the host's TCB on return */
+        "  wrfsbase %r11\n"
         "  mov %r12, %rsp\n"
         "  pop %r15\n  pop %r14\n  pop %r13\n  pop %r12\n  pop %rbx\n  pop %rbp\n"
         "  ret\n");
@@ -526,6 +530,14 @@ int main(int argc, char **argv)
         } params = {1, 0, {"eboot.bin", NULL, NULL}};
         phase = "eboot";
         run_guest(objects[0].image + rt_elf_entry(objects[0].elf), &params, (void *)guest_exit, NULL, stack_top, timeout);
+    }
+
+    /* Which imports were entered: an index against the symbol table puts the guest's position within a few
+       instructions, instead of inferring it from a displacement. */
+    for (int k = 0; k < (int)(sizeof objects / sizeof objects[0]); k++) {
+        if (!objects[k].elf) continue;
+        for (int i = 0; i < (int)objects[k].imports; i++)
+            if (objects[k].called[i]) fprintf(stderr, "pbboot: entered object %d import #%d\n", k, i);
     }
 
     /* Results */

@@ -30,6 +30,10 @@
 static unsigned char tls_area[RT_TLS_AREA_BYTES + 64] __attribute__((aligned(64)));
 static unsigned char *guest_block; /* == %fs, the TCB: self-pointer at offset 0 */
 static unsigned guest_memsz = 0x4a0u;
+
+/* Read by the assembly stubs that cannot call a C helper without eating caller-saved arguments. */
+uint64_t rt_tls_guest_base_v;
+uint64_t rt_tls_host_base_v;
 static unsigned long host_fsbase;
 static int have_wrfsbase;
 
@@ -56,6 +60,7 @@ void rt_tls_init(void)
 {
     probe_fsgsbase();
     asm volatile("rdfsbase %0" : "=r"(host_fsbase));
+    rt_tls_host_base_v = (uint64_t)host_fsbase;
     /* EXPERIMENT, one build: seed the guest block with the process's own TCB so the guest sees byte-for-byte
        what it saw before the swap, and only the self-pointer's identity differs. If the boot returns to
        called 66 the guest reads TCB fields and this block must become a declared layout; if it still faults at
@@ -79,6 +84,7 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
     memset((void *)(fs - guest_memsz), 0, guest_memsz + RT_TCB_BYTES);
     if (image && filesz) memcpy((void *)(fs - guest_memsz), image, filesz < guest_memsz ? filesz : guest_memsz);
     *(uint64_t *)guest_block = (uint64_t)fs;
+    rt_tls_guest_base_v = (uint64_t)fs;
 }
 
 int rt_tls_have_wrfsbase(void) { return have_wrfsbase; }

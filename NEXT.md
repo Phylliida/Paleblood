@@ -1203,3 +1203,17 @@ the pc is the only thing that will say.
 address every time.** The `(no module resolved)` line prints a host address where an offset belongs, which is
 the naming bug already logged -- **so the pc must be resolved by hand against each `kept/` artifact's module
 base before anything is concluded from it.**
+
+## Site 2 wired: the guest now starts on its own base, and the fault is at the same pc after the same one call
+
+`rt_boot_call` sets the guest base before `call *%rax` and restores the host base after it, using `r11` only
+(`rt_tls_guest_base_v` / `rt_tls_host_base_v`, read `(%rip)`), so no caller-saved argument is touched. The run
+also now prints which imports were entered: **object 1 import #38 -- a `libc.elf` import, so the guest's first
+import call is into the module that then faults.**
+
+Outcome: **`called 1`, `signal 4`, pc low bytes `...79a2` -- the fourth run, fourth binary, same low bytes.**
+So this is neither of the two pre-registered outcomes: not 66 (the mid-flight transition was not the cause), and
+not 0 (the guest does start on its own block and still gets to its first import call). **What the two
+configurations share is the failure point: the first import call is entered and the guest faults immediately
+after.** That makes the block the suspect again rather than the transition -- **and it says the pre-swap 66-call
+baseline ran entirely on glibc's TCB, so that baseline was never the guest's own state.**

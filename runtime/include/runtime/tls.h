@@ -7,5 +7,7 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz);
 int rt_tls_have_wrfsbase(void);
 void rt_tls_enter_guest(void);
 void rt_tls_enter_host(void);
+extern uint64_t rt_tls_guest_base_v;
+extern uint64_t rt_tls_host_base_v;
 uint64_t rt_tls_host_base(void);
 uint64_t rt_tls_guest_base(void);
