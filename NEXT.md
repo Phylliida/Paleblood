@@ -1234,3 +1234,25 @@ compile error in a buffer I write myself.**
 **`libc.so.6+0xa8564`** -- *host* glibc, not the guest image and not the stub. So the swap now executes, the
 guest gets three import calls, and the next defect is on the host side: **host code is reaching a null TCB,
 which is what happens when glibc runs while the guest base is installed.**
+
+## The host-side null, read off the dump I already had
+
+`signal 11`, `address 0x0`, `libc.so.6+0xa8564`, and the registers say what it is: **`rdi 0`, `rsi 0x20b58`,
+`rdx 0x1000`, `rcx 0x22`.** That is a glibc string/memory routine called with **a null destination, a plausible
+source and a page-sized length** -- `memcpy(NULL, 0x20b58, 0x1000)` in shape. The three entries entered were
+**object 1 (libc.elf) imports #23, #38, #39**, so the culprit is one of those bodies copying into a guest pointer
+that was null.
+
+`rdi 0` also has an innocent-looking reading I must rule out before changing anything: **the guest itself may be
+passing the null**, in which case the body is right to fail and the fault is the guest's own error path -- which
+is exactly why the guard below prints the entry index rather than merely asserting.
+
+**Structural fix (next, not yet written): assert `%fs` == host base at the first instruction of every host
+handler, in the shared prologue, printing the entry index on mismatch.** Same move as `test_build_graph.py`:
+one guard, at the place every path already passes through, permanently catching any future unwired site.
+
+**Class rule adopted: no guest pointer reaches a libc formatter or a libc memory routine directly.** Every
+`%s` on guest memory goes through the bounded copy, and every guest buffer is range-checked with
+`rt_guest_read_ok`/`rt_guest_write_ok` before it is handed to anything that assumes validity -- **the guest
+sending null where a real machine would send a valid pointer is precisely what `data-scratch` and unpopulated
+modules produce, so this recurs.**
