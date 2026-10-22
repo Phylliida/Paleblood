@@ -153,3 +153,25 @@ Four builds of the same member set, `bb_asm_pilot_004034f0` against `0x004034f0`
 moved on every build would look exactly like a correct one. And the fourth proves the build is
 reproducible for this purpose — same sources, same bytes, same digest. ±1, the mutant discipline,
 applied to a build rather than to an instruction.
+
+### 1d. The writer is proved; the family's numbers are pre-registered before it runs
+
+`record_many` refuses a root with no HEAD ("cannot read HEAD … the pre-record snapshot is diffed
+against a commit"), so the writer proof ran against the real tree and was reverted with
+`git checkout`, not with a patch:
+
+    record_many({cases:'bytes', total:1, passed:1, cases_sha256:'15f7205eb6957de7'})  -> wrote 1
+    evidence_hash('leaf_asm_pilot_004034f0')                                        -> d6c8b9a36ec19632
+    ledger split  rows 22478 / functions 22377 / byte_backed 1 / differential 22376
+    after `git checkout -- symbols/verification.csv`  rows 22477 / functions 22376 / byte_backed 0
+
+So the tier is end-to-end: vocabulary, writer, hash, progress split. **The digest is family-wide by
+design** — all 793 rows carry the same `cases_sha256` — because one bad member then decays all 793
+instead of leaving 792 approvals standing over a broken family, and per-member digests would let a
+cherry-picked subset look clean. Each row's `source` says `check_asm_bytes.py` and the note says
+the claim is family-wide; a reviewer reading one row must know the scope of what backs it.
+
+**Pre-registered, from the size column, before the run:** 22,376 → **23,169** edge-verified · rows
+**+793** · bytes **252,274 → 254,653 (+2,379)** from `{3: 793}` · evidence line
+**`22376 differential / 793 byte-identical`**. **If any of the four disagrees, stop and read —
+never adjust the expectation to meet the output.**
