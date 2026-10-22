@@ -192,6 +192,8 @@ volatile uint64_t rt_syslib_args[3];
 volatile uint64_t rt_stub_fs;
 volatile uint32_t rt_stub_which;
 volatile uint64_t rt_stub_fs_pre;
+/* The guest stack's alignment at the call site is the guest's business; our C bodies need the ABI's. */
+volatile uint64_t rt_stub_rsp;
 
 static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target)
 {
@@ -247,7 +249,16 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         }
         *p++ = 0x58;                                                   /* pop rax */
     }
+    /* The guest's stack alignment at its call site is the guest's business; our C bodies need the ABI's, and
+       glibc spills xmm with `movaps`, which faults on a misaligned rsp and reports address 0. rbx carries the
+       guest's rsp across the call because it is callee-saved: the body must preserve it, and a global would be
+       wrong the moment a body re-enters another import. */
+    *p++ = 0x53;                                                       /* push rbx */
+    *p++ = 0x48, *p++ = 0x89, *p++ = 0xe3;                             /* mov rbx, rsp */
+    *p++ = 0x48, *p++ = 0x83, *p++ = 0xe4, *p++ = 0xf0;                /* and rsp, -16 */
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
+    *p++ = 0x48, *p++ = 0x89, *p++ = 0xdc;                             /* mov rsp, rbx: the guest's own rsp */
+    *p++ = 0x5b;                                                       /* pop rbx */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
     *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;  /* wrfsbase r11 -- F3 is mandatory, and ModRM /2 is WRFSBASE; /3 is WRGSBASE */
     {

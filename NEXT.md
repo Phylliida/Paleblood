@@ -1389,3 +1389,15 @@ bytes later `%fs` is still the guest block -- while the same instruction works a
 malloc'd RWX buffer in `main` and call it.** If it no-ops there too, the cause is the hand-emitted form or the
 mapping; if it works, the cause is something about the stub region or the caller. **The instruction is the same
 in both places, so whichever variable moves between them is the one that matters.**
+
+## The address-0 fault was `movaps`, not a format mismatch: the guest's stack was misaligned at our call
+
+    8ea99:  0f 29 85 40 ff ff ff   movaps %xmm0,-0xc0(%rbp)
+
+An x86 #GP reports `si_addr = 0` because it is not a page fault, and `movaps` requires 16-byte alignment --
+so "fault at address 0 inside glibc" was a misaligned `rsp` at the body's entry, which is exactly what a guest
+call site supplies. The fix is in the stub (`push rbx; mov rbx,rsp; and rsp,-16; call; mov rsp,rbx; pop rbx`),
+with **rbx** carrying the guest's rsp because it is callee-saved and because a global would be wrong the moment
+a body re-enters another import -- the global version was tried first and hung at libc.elf+0x59ca1.
+
+Result: the `scePthreadCreate` wall now prints its full sentence and stops the run on purpose.
