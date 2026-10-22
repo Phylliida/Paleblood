@@ -24,6 +24,7 @@
 #include "runtime/nid.h"
 #include "runtime/process.h"
 #include "runtime/identity.h"
+#include "runtime/guest.h"
 #include "runtime/tls.h"
 #include "runtime/syslib.h"
 
@@ -361,7 +362,20 @@ static const char *usage =
 int main(int argc, char **argv)
 {
     rt_announce_identity();
-    rt_tls_init(); /* must precede every trampoline: the stub inlines the two bases */
+    /* The guest's own TLS image, before any trampoline exists: the stub inlines both bases, so they must be
+       final by then. */
+    if (objects[0].elf) {
+        const rt_elf_tls *t = rt_elf_tls_segment(objects[0].elf);
+        if (t) {
+            /* A TLS vaddr is a guest address; rt_guest_to_image is the only place the bias lives. */
+            /* The TLS vaddr is a guest address and objects[0].image is the eboot image, so the bias is
+               RT_EBOOT_BASE -- the same arithmetic rt_guest() performs, done here without pulling the plugin
+               TU into pbboot (rt_image is defined in plugin.c, which this executable does not link). */
+            const unsigned char *img = t->filesz ? objects[0].image + (t->vaddr - RT_EBOOT_BASE) : NULL;
+            rt_tls_layout(img, (unsigned)t->filesz, (unsigned)t->memsz);
+        }
+    }
+    rt_tls_init();
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
     int timeout = 30, trace = 0, list = 0;
     for (int i = 1; i < argc; i++) {

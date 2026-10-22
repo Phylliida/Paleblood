@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 void rt_tls_init(void);
+void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz);
 int rt_tls_have_wrfsbase(void);
 void rt_tls_enter_guest(void);
 void rt_tls_enter_host(void);

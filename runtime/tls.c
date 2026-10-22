@@ -18,9 +18,18 @@
 #include <unistd.h>
 
 
-#define RT_TLS_BLOCK_BYTES 0x1000u /* PT_TLS says filesz 0x220 / memsz 0x4a0; one page covers it with slack */
+/* Variant II, the FreeBSD/amd64 arrangement: [static image memsz bytes][TCB], %fs pointing at the TCB and
+   the image sitting exactly memsz below it. The guest's @tpoff values are fixed link-time constants relative
+   to the TCB, so any padding between image and TCB shifts every TLS variable and reproduces the fault at a
+   different address. Alignment therefore belongs to the END: fs = align_up(base + memsz + tcb_end, 64), and
+   the image starts at fs - memsz. memsz 0x4a0 is not a multiple of 64 for exactly this reason -- the loader
+   aligns the end, not the base. */
+#define RT_TLS_AREA_BYTES 0x4000u
+#define RT_TCB_BYTES 0x100u
 
-static unsigned char guest_block[RT_TLS_BLOCK_BYTES] __attribute__((aligned(64)));
+static unsigned char tls_area[RT_TLS_AREA_BYTES + 64] __attribute__((aligned(64)));
+static unsigned char *guest_block; /* == %fs, the TCB: self-pointer at offset 0 */
+static unsigned guest_memsz = 0x4a0u;
 static unsigned long host_fsbase;
 static int have_wrfsbase;
 
@@ -53,14 +62,23 @@ void rt_tls_init(void)
        1 the guest does arithmetic on the pointer (variant II) and the block needs a static image before it.
        The copy is a stopgap: it is the host's TCB, whose contents are glibc's business, so it must not survive
        past threads. */
-    memset(guest_block, 0, sizeof guest_block);
-    {
-        const unsigned char *src = (const unsigned char *)(uintptr_t)host_fsbase;
-        memcpy(guest_block + 8, src + 8, RT_TLS_BLOCK_BYTES < 0x4a0 ? RT_TLS_BLOCK_BYTES - 8 : 0x4a0 - 8);
-    }
+    if (!guest_block) rt_tls_layout(NULL, 0, guest_memsz);
     *(uint64_t *)guest_block = (uint64_t)(uintptr_t)guest_block; /* the guest's own self-pointer */
     fprintf(stderr, "pbboot: tls: guest block at %p, self-pointer set, swap via %s\n", (void *)guest_block,
             have_wrfsbase ? "wrfsbase" : "arch_prctl");
+}
+
+/* Places the image and the TCB inside one region and sets %fs to the TCB. Idempotent: later calls with a
+   real image replace the zeros a thread would see on the real machine anyway. */
+void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
+{
+    if (memsz) guest_memsz = memsz;
+    const uintptr_t base = (uintptr_t)tls_area;
+    const uintptr_t fs = (base + guest_memsz + RT_TCB_BYTES + 63u) & ~(uintptr_t)63u;
+    guest_block = (unsigned char *)fs;
+    memset((void *)(fs - guest_memsz), 0, guest_memsz + RT_TCB_BYTES);
+    if (image && filesz) memcpy((void *)(fs - guest_memsz), image, filesz < guest_memsz ? filesz : guest_memsz);
+    *(uint64_t *)guest_block = (uint64_t)fs;
 }
 
 int rt_tls_have_wrfsbase(void) { return have_wrfsbase; }

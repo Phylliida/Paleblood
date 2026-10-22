@@ -1184,3 +1184,22 @@ in both runs (`...d9a2`, `...89a2`, module bases different).** A fixed guest loc
 pointer taken from `%fs`: **the same arithmetic landed on the same static-TLS slot, and what is there is not
 code.** Not yet a conclusion -- the two runs used different binaries -- but it is the one number that should be
 checked by resolving the pc against the kept artifact's module base before the layout is written.
+
+## Variant II is in: image at `fs - memsz`, no pad, alignment at the end -- and the fault is unchanged
+
+`rt_tls_layout()` builds `[PT_TLS image, memsz bytes][TCB]` in one region, `%fs` = the 64-byte-aligned end of
+`memsz + TCB`, image at **exactly `fs - memsz`** (a pad between them would shift every `@tpoff` and move the
+fault without fixing it), and the image is initialised from **eboot's own `PT_TLS`** (`rt_elf_tls_segment`,
+`objects[0].image + (vaddr - RT_EBOOT_BASE)`). Bytes outside `filesz` are zero, **which is what a freshly
+created thread sees on the real machine, so the uninitialised case is now faithful by construction rather than
+a modelling decision.** The TCB copy stopgap is deleted.
+
+Run: **still `called 1`, still `signal 4`.** So the layout is now the plausible variant-II arrangement and the
+fault persists -- meaning the next question is not the layout but **what the guest does with the value**, and
+the pc is the only thing that will say.
+
+**Three runs, three different binaries and three different module bases, fault pc low bytes identical
+(`...d9a2`, `...89a2`, `...c9a2`): the differing digits track the base, so the guest reached the same guest
+address every time.** The `(no module resolved)` line prints a host address where an offset belongs, which is
+the naming bug already logged -- **so the pc must be resolved by hand against each `kept/` artifact's module
+base before anything is concluded from it.**
