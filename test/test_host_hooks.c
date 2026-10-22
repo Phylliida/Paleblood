@@ -214,6 +214,22 @@ int main(void)
         memcpy(&dest, image + 6, sizeof dest);
         failed |= check(dest != (uintptr_t)(void *)boundary_body,
                         "live-TLS patch must point at the stub, not straight at the body");
+        /* Commit A inserted a wrapper between the site and the stub, so the patch lands on a 5-byte
+           `e9 rel32` whose target is the stub. Follow it instead of assuming the old layout: an
+           assertion written against one shape outlives its subject and then reports the shape as a
+           defect. Both addresses print, because "did the guest enter the wrapper" and "did it reach
+           the stub" are opposite findings. */
+        unsigned char *site_target = (unsigned char *)dest;
+        failed |= check(site_target[0] == 0xe9, "the site's destination must be a near-jump wrapper");
+        if (site_target[0] == 0xe9) {
+            int32_t rel = 0;
+            memcpy(&rel, site_target + 1, 4);
+            uintptr_t stub = (uintptr_t)(site_target + 5 + rel);
+            fprintf(stderr, "test: wrapper at %p -> stub at %p (distance %d)\n",
+                    (void *)site_target, (void *)stub, (int)rel);
+            failed |= check(stub != (uintptr_t)site_target, "the wrapper must jump somewhere else");
+            dest = stub; /* the stub is the subject of the byte assertions below */
+        }
         failed |= check(((unsigned char *)dest)[0] == 0x49 && ((unsigned char *)dest)[1] == 0xba,
                         "stub must start with movabs r10, target");
         {

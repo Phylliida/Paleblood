@@ -468,3 +468,27 @@ character, so there is no word boundary — the pattern excluded the very thing 
 **Unchanged:** the `-UNDEBUG` policy and its test. `assert` (the runtime check, 0 occurrences) and
 `static_assert` (the compile-time guard, 212) are different instruments, and vacating the first never implied
 vacating the second.
+
+### Commit A, second half: the wrapper is in the installer, and the guest enters it
+
+Wired into `install_hook`, in this order and for this reason: **the stub is emitted, then the wrapper, then the
+site is patched** — a site patched to a wrapper that failed to allocate points at junk the moment the guest
+arrives, and with 1,737 candidate sites that is a crash with no owner. **Emit-before-patch is "the gate lands
+before its client", applied to bytes.**
+
+- **Executability covers the wrapper, not only the site.** A wrapper in a read-only page reads back perfectly and
+  faults on entry — the same defect one level earlier, and it would read as a body fault because the wrapper's
+  last instruction is a jump. `region_is_executable` now runs on both.
+- **Readback from the page, not the emitter's return**, and the two prints the run needs: the wrapper's address
+  and its distance to the stub — the assertion's inputs, not only its verdict.
+- The measured page layout: **stub at `0x…9000` (96 bytes reserved), wrapper at `0x…9060`, distance `-101`** —
+  a **backwards** near jump, because allocation order puts the wrapper after the stub. `e9 rel32` is signed and
+  the assertion is on `|delta|`, so this is legal and proved rather than assumed.
+- **The end-to-end run happened inside `test_host_hooks`, not the game:** the patched site executes, enters the
+  wrapper, reaches the stub, and the body runs on the host base with the guest base restored. **The unit test
+  proved the emitter; this is the first evidence that a page-level emit works at all.**
+
+**And the assertion that outlived its subject failed exactly once and correctly:** `test_host_hooks` asserted the
+stub's first bytes at the site's destination, which is now a `e9` wrapper. It was fixed by **following the
+wrapper** to the stub and asserting there, and by printing both addresses — **"the guest entered the wrapper"
+and "the guest never reached the site" are opposite findings and must not share a message.**

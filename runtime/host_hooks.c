@@ -112,6 +112,46 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         }
         __builtin___clear_cache((char *)stub, (char *)stub + n);
         destination = (uintptr_t)stub;
+
+        /* Commit A's wrapper: a 5-byte `e9 rel32` from its own slot to the stub, emitted and proved
+           BEFORE the site is patched -- a site patched to a wrapper that failed to allocate points at
+           junk the moment the guest arrives, and with 1,737 candidate sites that is a crash with no
+           owner. Emit-before-patch is the gate-before-client rule applied to bytes. */
+        unsigned char *wrapper = stub_alloc(rt_snapshot_stub_size(0));
+        if (!wrapper) {
+            fprintf(stderr, "hook: no room for a snapshot wrapper at 0x%llx\n", (unsigned long long)offset);
+            return -1;
+        }
+        /* The site's executability is checked above; the wrapper is a different page, and a wrapper in a
+           read-only page reads back perfectly and faults on entry -- the same defect one level earlier,
+           and it would look like a body fault because the wrapper's last instruction is a jump. */
+        if (!region_is_executable(wrapper, rt_snapshot_stub_size(0))) {
+            fprintf(stderr, "hook: refusing to enter a wrapper at 0x%llx: page is not executable\n",
+                    (unsigned long long)(uintptr_t)wrapper);
+            return -1;
+        }
+        size_t w = rt_write_snapshot_stub(wrapper, rt_snapshot_stub_size(0), (uint64_t)(uintptr_t)wrapper,
+                                          (uint64_t)destination, 0);
+        if (w == 0) {
+            fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
+                    (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
+                    (long long)((intptr_t)destination - (intptr_t)(uintptr_t)wrapper));
+            return -1;
+        }
+        __builtin___clear_cache((char *)wrapper, (char *)wrapper + w);
+        /* Readback from the page, not the emitter's return: "emitted N bytes" is a claim, the page is
+           the evidence. The assertion's inputs are printed beside its verdict. */
+        if (memcmp(wrapper, "\xe9", 1) != 0) {
+            fprintf(stderr, "hook: wrapper readback at 0x%llx is not a near jump\n",
+                    (unsigned long long)(uintptr_t)wrapper);
+            return -1;
+        }
+        if (getenv("BB_HOOK_VERBOSE"))
+            fprintf(stderr, "hook: wrapper emitted %zu bytes at 0x%llx, jmp -> stub 0x%llx "
+                    "(distance %lld bytes), readback ok\n",
+                    w, (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
+                    (long long)((intptr_t)destination - (intptr_t)(uintptr_t)wrapper));
+        destination = (uintptr_t)wrapper;
         if (getenv("BB_HOOK_VERBOSE")) {
             /* A new allocator with no readback is where the next objects[1] lives: print the bytes
                that are actually in the page, not the length the emitter reported. */
