@@ -120,3 +120,22 @@ in-game evidence available without a full in-game differential.
 
 The cheap check the companion asked for is the reason this landed before the hook path is trusted: **a
 format nobody has loaded is wrong in exactly one field.**
+
+## A capture's pointers are classified by owning object, and the table that classifies them does not exist yet
+
+`pbboot` maps several objects; the harness maps one image. A pointer captured inside `libc.elf` replays as
+**the same number over eboot's bytes** — differential passes, answer is about a buffer the game never had.
+So `case_emit.emit_capture()` classifies every captured pointer against an object table and writes only
+ownership-`eboot` pointers with bytes as `args`; **anything else goes into `uncovered` with its object named**
+(`rsi: 0xe10040 in libc.elf`), and an eboot pointer with no captured bytes is `uncovered (no bytes captured)`
+rather than a preset. Two tests pin both halves.
+
+**The finding this produced: the object table has no artifact.** `symbols/boot.json` records module *names and
+counts* (`libc.elf` 2,140 exports, `libSceFios2.elf` 165) and **no bases or sizes**, so the classification
+currently has nothing to classify against. The loader is the only thing that knows, and it must print
+`object <name> guest <start> size <n>` at boot — one line per object — before a capture can be classified
+at all. Until then the emitter's contract is proved against a synthetic table, which is the same species of
+proof as a check that has never fired on its subject.
+
+`0x02418d20 frame_timing_frame_step` is in `symbols/functions.csv` at **467 bytes, status `verified`** — so
+`id == address` joins the ledger row instead of 404-ing at replay time.

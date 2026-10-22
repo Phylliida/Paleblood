@@ -58,6 +58,29 @@ class CaseEmit(unittest.TestCase):
             loaded = json.load(open(path))
             self.assertEqual(loaded, case)
 
+    def test_a_pointer_into_another_object_is_reported_not_prescripted(self):
+        # The hazard: pbboot maps several objects, the harness maps one image, so a pointer into libc.elf
+        # replays as the same number over eboot's bytes. It must be reported, never preset.
+        # The ranges must not overlap: the first version of this fixture put libc.elf inside eboot's
+        # range, and classification answered with the first match -- which is correct behaviour and a
+        # defective table. Objects are a partition, so a table that is not one is the thing to fix.
+        objects = [{'name': 'eboot', 'base': 0x400000, 'size': 0x800000},
+                   {'name': 'libc.elf', 'base': 0x00e10000, 'size': 0x40000}]
+        case = case_emit.emit_capture('0x00e01000',
+                                      {'rdi': 0x400100, 'rsi': 0x00e10040, 'rdx': 0x10},
+                                      objects, buffers={'eboot:0x400100': {'size': 8, 'bytes': '00' * 8}})
+        self.assertEqual(case['args']['rdi'], 'buf:eboot:0x400100')
+        self.assertEqual(case['args']['rdx'], '0x10')
+        self.assertNotIn('rsi', case['args'])
+        self.assertEqual(case['uncovered'], ['rsi: 0xe10040 in libc.elf'])
+        self.assertEqual(case['id'], '0x00e01000')
+
+    def test_an_unreconstructed_eboot_pointer_is_uncovered_not_invented(self):
+        objects = [{'name': 'eboot', 'base': 0x400000, 'size': 0x2000000}]
+        case = case_emit.emit_capture('0x00e01000', {'rdi': 0x400100}, objects)
+        self.assertNotIn('rdi', case['args'])
+        self.assertEqual(case['uncovered'], ['rdi: 0x400100 in eboot (no bytes captured)'])
+
 
 if __name__ == '__main__':
     unittest.main()

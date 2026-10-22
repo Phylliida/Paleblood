@@ -48,3 +48,46 @@ def write(path: str, case: dict) -> None:
 def read(path: str) -> dict:
     with open(path, encoding='utf-8') as f:
         return json.load(f)
+
+
+def classify(pointer: int, objects: list[dict]) -> str | None:
+    """Which object owns this guest address, or None if no object does.
+
+    `pbboot` maps several objects (`eboot`, `libc.elf`, `libSceFios2.elf`); the harness maps one image.
+    A pointer captured inside a non-eboot object therefore names **the same number over different bytes**
+    when it is replayed -- the differential would pass and the answer would be about a buffer the game
+    never had. So a pointer is written into a case only when its owning object is the one being replayed,
+    and everything else is reported.
+    """
+    for o in objects:
+        if o['base'] <= pointer < o['base'] + o['size']:
+            return o['name']
+    return None
+
+
+def emit_capture(pc: str, registers: dict[str, int], objects: list[dict],
+                 buffers: dict[str, dict] | None = None, replayed: str = 'eboot',
+                 returns: str = 'i64') -> dict:
+    """Emit a case from captured entry state, reporting every pointer the replay cannot speak for.
+
+    `buffers` is keyed by object-qualified name (`eboot:0x10`) so a caller can supply bytes for the
+    addresses it actually reconstructed. Anything named in `uncovered` is a read the replay does not
+    cover: a fabricated preset at that number would be the input the game never produced.
+    """
+    emitted: dict[str, str] = {}
+    uncovered: list[str] = []
+    for name in sorted(registers):
+        value = registers[name]
+        owner = classify(value, objects)
+        if owner is None:
+            emitted[name] = f'0x{value:x}'
+        elif owner == replayed:
+            key = f'{replayed}:0x{value:x}'
+            if buffers and key in buffers:
+                emitted[name] = f'buf:{key}'
+            else:
+                uncovered.append(f'{name}: 0x{value:x} in {owner} (no bytes captured)')
+        else:
+            uncovered.append(f'{name}: 0x{value:x} in {owner}')
+    used = {k: buffers[k] for k in sorted(buffers or {}) if f'buf:{k}' in emitted.values()}
+    return emit(pc, emitted, used, returns=returns, uncovered=uncovered)
