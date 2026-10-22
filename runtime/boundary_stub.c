@@ -2,9 +2,21 @@
 
 #include <string.h>
 
-size_t rt_write_boundary_stub(unsigned char *dst, uint64_t target, uint64_t host_fs, uint64_t guest_fs,
+size_t rt_boundary_stub_size(uint64_t in_flight_addr)
+{
+    /* 10 movabs target + 10 movabs host + 5 wrfsbase + 1 push + 3 mov rbx,rsp + 4 and rsp + 3 call
+       + 3 mov rsp,rbx + 1 pop + 10 movabs guest + 5 wrfsbase + 1 ret = 56, plus 22 for the import
+       path's bookkeeping word. */
+    return 56u + (in_flight_addr ? 22u : 0u);
+}
+
+size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t target, uint64_t host_fs, uint64_t guest_fs,
                               uint64_t in_flight_addr)
 {
+    /* Refuse before the first store: a bound checked after the write is a report about an overrun. */
+    const size_t needed = rt_boundary_stub_size(in_flight_addr);
+    if (!dst || capacity < needed) return 0;
+
     unsigned char *p = dst;
 
     /* r10 and r11 are caller-saved and carry no arguments in the System V convention, so the guest

@@ -17,10 +17,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Writes the boundary segment at dst and returns its length. Caller guarantees dst has room for
-   RT_BOUNDARY_STUB_MAX. No bookkeeping: anything a caller wants recorded (import index, arguments in
-   flight) goes before this segment, in the caller's file, where its own tests can see it. */
-#define RT_BOUNDARY_STUB_MAX 64
+/* Writes the boundary segment at dst and returns its length, or 0 if it would not fit in capacity.
+   The capacity is the caller's, not a global: the import path emits into a slot of TRAMPOLINE_SIZE and
+   the hook path into a page allocator, so a single maximum would be a lie for one of them. With the
+   bookkeeping word the segment is 79 bytes, which is why the shared maximum is 96 and not 64 -- the 64
+   it used to be was exceeded by the import path every time, and nothing compared them.
+   No bookkeeping of its own: anything a caller wants recorded goes before this segment, in the
+   caller's file, where its own tests can see it. */
+#define RT_BOUNDARY_STUB_MAX 96
 
 /* in_flight_addr is the ONLY optional element, and it is not part of the boundary crossing: it is the
    import path's bookkeeping word (rt_syslib_in_flight), cleared to "none" after the ABI segment is
@@ -28,7 +32,11 @@
    (it lives in boot.c, not in the library both paths link). Pass 0 to omit it. The test compares the
    two emissions up to this point, not through it: the ABI segment is identical by construction, and
    the tail difference is stated rather than discovered. */
-size_t rt_write_boundary_stub(unsigned char *dst, uint64_t target, uint64_t host_fs, uint64_t guest_fs,
-                              uint64_t in_flight_addr);
+size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t target, uint64_t host_fs,
+                              uint64_t guest_fs, uint64_t in_flight_addr);
+
+/* The length the emitter will produce, so a caller can refuse before it writes and so the maximum above
+   can be checked against arithmetic rather than against a comment. 0 means "does not fit". */
+size_t rt_boundary_stub_size(uint64_t in_flight_addr);
 
 #endif

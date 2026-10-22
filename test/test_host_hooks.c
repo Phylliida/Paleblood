@@ -168,7 +168,19 @@ int main(void)
         *w++ = 0xf3, *w++ = 0x49, *w++ = 0x0f, *w++ = 0xae, *w++ = 0xd3; /* wrfsbase r11 */
         *w++ = 0xc3;                                               /* ret */
         unsigned char got[128];
-        size_t n = rt_write_boundary_stub(got, target, host, guest, 0);
+        size_t n = rt_write_boundary_stub(got, sizeof got, target, host, guest, 0);
+        failed |= check(n == rt_boundary_stub_size(0), "the emitted length must match the size helper");
+        /* A capacity one byte short must be refused before the first store, and the buffer untouched. */
+        unsigned char tiny[128];
+        memset(tiny, 0xcc, sizeof tiny);
+        const size_t full = rt_boundary_stub_size(0);
+        failed |= check(rt_write_boundary_stub(tiny, full - 1, target, host, guest, 0) == 0,
+                        "an under-sized capacity must be refused");
+        failed |= check(tiny[0] == 0xcc, "a refused emission must not write a single byte");
+        failed |= check(rt_write_boundary_stub(tiny, full, target, host, guest, 0) == full,
+                        "an exactly-sized capacity must be accepted");
+        failed |= check(rt_boundary_stub_size(1) == full + 22,
+                        "the import path's bookkeeping word must be counted in the size");
         failed |= check(n == (size_t)(w - want), "boundary stub length must match the derived bytes");
         failed |= check(memcmp(got, want, n) == 0, "boundary stub bytes must match the derived bytes");
         /* Counted, not indexed: hand-computed offsets into an instruction stream were wrong twice in

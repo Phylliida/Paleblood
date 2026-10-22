@@ -257,9 +257,21 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
        emitter, so the /2-vs-/3 class cannot come back in a second hand-written prologue. The %fs
        readback dumps that used to sit here were an instrument for a question that is closed, and an
        instrument left in a report is an instrument nobody re-tests. */
-    p += rt_write_boundary_stub(p, target, rt_tls_host_base(), rt_tls_guest_base(),
-                                (uint64_t)(uintptr_t)&rt_syslib_in_flight);
-    if ((size_t)(p - t) > TRAMPOLINE_SIZE) rt_fatal("trampoline", "stub exceeds TRAMPOLINE_SIZE");
+    {
+        /* The capacity is this slot's remaining budget, so the bound is checked before the first
+           store instead of after it. An addition to the import path must displace something: the slot
+           is TRAMPOLINE_SIZE bytes and the emitter returns 0 rather than overrun it. */
+        const size_t room = TRAMPOLINE_SIZE - (size_t)(p - t);
+        const size_t stub = rt_write_boundary_stub(p, room, target, rt_tls_host_base(),
+                                                   rt_tls_guest_base(),
+                                                   (uint64_t)(uintptr_t)&rt_syslib_in_flight);
+        if (stub == 0 || stub > room)
+            rt_fatal("trampoline", "boundary stub does not fit the trampoline slot");
+        p += stub;
+        if (getenv("BB_TRAMPOLINE_VERBOSE"))
+            fprintf(stderr, "trampoline %u: %zu of %d bytes, %zu left\n", which,
+                    (size_t)(p - t), TRAMPOLINE_SIZE, (size_t)(TRAMPOLINE_SIZE - (p - t)));
+    }
 }
 
 typedef struct {

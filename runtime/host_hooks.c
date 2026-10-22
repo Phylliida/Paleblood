@@ -103,20 +103,30 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
                     (unsigned long long)offset, (unsigned)STUB_PAGE, (unsigned)stub_used);
             return -1;
         }
-        size_t n = rt_write_boundary_stub(stub, (uint64_t)(uintptr_t)target,
+        size_t n = rt_write_boundary_stub(stub, RT_BOUNDARY_STUB_MAX, (uint64_t)(uintptr_t)target,
                                           rt_tls_host_base(), rt_tls_guest_base(), 0);
+        if (n == 0 || n > RT_BOUNDARY_STUB_MAX) {
+            fprintf(stderr, "hook: boundary stub refused to emit into %d bytes at offset 0x%llx\n",
+                    RT_BOUNDARY_STUB_MAX, (unsigned long long)offset);
+            return -1;
+        }
         __builtin___clear_cache((char *)stub, (char *)stub + n);
         destination = (uintptr_t)stub;
-        if (getenv("BB_HOOK_VERBOSE"))
+        if (getenv("BB_HOOK_VERBOSE")) {
+            /* A new allocator with no readback is where the next objects[1] lives: print the bytes
+               that are actually in the page, not the length the emitter reported. */
             fprintf(stderr, "hook: 0x%llx -> %zu-byte boundary stub at 0x%llx -> body 0x%llx\n",
                     (unsigned long long)offset, n, (unsigned long long)destination,
                     (unsigned long long)(uintptr_t)target);
+            fprintf(stderr, "hook: stub bytes");
+            for (size_t k = 0; k < n && k < 16; k++) fprintf(stderr, " %02x", stub[k]);
+            fprintf(stderr, "%s\n", n > 16 ? " ..." : "");
+        }
     }
 
     /* `jmp qword ptr [rip]` followed by the 64-bit destination preserves every argument register,
        including AL for variadic calls. The loader installs hooks before entering guest code. */
     unsigned char jump[ABSOLUTE_JUMP_SIZE] = {0xff, 0x25, 0, 0, 0, 0};
-    if (destination > (uintptr_t)UINTPTR_MAX) return -1;
     memcpy(jump + 6, &destination, sizeof destination);
     memcpy(guest_image + offset, jump, sizeof jump);
     __builtin___clear_cache((char *)guest_image + offset, (char *)guest_image + offset + sizeof jump);
