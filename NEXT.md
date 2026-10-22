@@ -880,3 +880,25 @@ same primitive under the POSIX alias namespace.
 **The compiler rejected my first version**: `static int guest_threads = 1;` was never read, so `-Werror`
 failed the build. **A "single assertion" that nothing consults is a comment with a type**, and the tool I
 had just described as making it checkable is what proved it wasn't.
+
+## Time is reproducible and comes from one origin; the guest timeval is declared, not borrowed
+
+**Epoch policy, decided before the code:** fixed `1700000000`, so a boot is reproducible and any
+timing-dependent guest behaviour stays legible. **One origin function** (`origin_ns`, one
+`CLOCK_MONOTONIC` reading at first use) serves every clock -- `gettimeofday` today, `clock_gettime` and
+process time when they arrive -- so the guest cannot see time go backwards between two calls, which two
+independent host reads would allow at microsecond resolution.
+
+Guest `timeval` is **declared in our own terms with `_Static_assert(sizeof == 16 && offsetof(tv_usec) ==
+8)`**, then written field by field; it happens to match x86-64 glibc, and "happens to match" is the
+assumption that produced the `__sFILE` defect. `tv == NULL` returns success; `tz` is filled with two zero
+int32s rather than left untouched (the true value is +00:00).
+
+**One writer of guest memory means one place for the range check** -- `guest_write_ok()` refuses with the
+address and the image bounds instead of taking a signal. **This is the first syscall in the tree that
+writes guest memory, so it is the first place the check exists at all**; every later guest write should
+route through the same helper rather than growing its own.
+
+Scored: 45 -> **46 implemented**, 423 -> **422 unbound**, called 44 -> **46**. The same function is
+registered under **`libkernel` and `libScePosix`**, which is the alias namespace arriving as predicted;
+next stop `g8cM39EUZ6o` from **libSceSysmodule**.
