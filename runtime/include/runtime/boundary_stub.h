@@ -44,5 +44,10 @@ size_t rt_boundary_stub_size(uint64_t in_flight_addr);
 /* The hook-only snapshot wrapper. Commit A emits the empty form only: `e9 rel32` to an unmodified
    boundary stub, 5 bytes. The capture form's size is reported as SIZE_MAX rather than guessed, so a
    caller cannot size a form that is not emitted and the capacity refusal cannot pass by arithmetic. */
+/* Called from the capture form. Six uint64_t parameters because that is what rdi..r9 already hold: no argument
+   setup in the emitted bytes. Identity comes from __builtin_return_address(0), inside the per-site wrapper. */
+void rt_capture_snapshot(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5);
+
 size_t rt_snapshot_stub_size(int capturing);
-size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr, int capturing);
+size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr,
+                              uint64_t host_fs, uint64_t guest_fs, int capturing);

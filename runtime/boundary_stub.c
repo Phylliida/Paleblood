@@ -1,7 +1,26 @@
 #include "runtime/boundary_stub.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+
+/* The site identity costs no bytes and no alignment: this takes the six uint64_t arguments rdi..r9 already hold,
+   so the emitter needs no argument setup, and it learns WHICH site it is from the return address, which lies
+   inside a per-site wrapper. A seventh `site` argument would have needed `sub rsp,16; mov [rsp],site` to keep
+   the alignment the push-rbx/and-rsp idiom establishes; that form is not in the bytes. */
+void rt_capture_snapshot(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5)
+{
+    uintptr_t sp = 0;
+    __asm__ volatile("mov %%rsp, %0" : "=r"(sp));
+    const uintptr_t ret = (uintptr_t)__builtin_return_address(0);
+    /* The assertion the /3-class defect would have failed in one line: the callee must see rsp == 8 (mod 16). */
+    const unsigned align = (unsigned)(sp & 15u);
+    fprintf(stderr, "capture: site wrapper(%#llx) rsp%%16=%u (expect 8) %s | rdi=%#llx rsi=%#llx rdx=%#llx "
+                    "rcx=%#llx r8=%#llx r9=%#llx\n",
+            (unsigned long long)ret, align, align == 8u ? "aligned" : "MISALIGNED", (unsigned long long)a0,
+            (unsigned long long)a1, (unsigned long long)a2, (unsigned long long)a3, (unsigned long long)a4,
+            (unsigned long long)a5);
+}
 
 size_t rt_boundary_stub_size(uint64_t in_flight_addr)
 {
@@ -57,10 +76,25 @@ size_t rt_snapshot_stub_size(int capturing)
        movabs snapshot, call, six pops) is Commit B; until its bytes exist, its size is UNSATISFIABLE
        rather than a number, because a capacity refusal proved against a guessed size stops covering
        the form it is not checking -- and here it would be the form that is not emitted at all. */
-    return capturing ? SIZE_MAX : 5u; /* e9 rel32 */
+    /* Commit B's capture form, byte by byte, because the size is a claim about those bytes:
+         6 pushes (rdi,rsi,rdx,rcx,r8,r9)      8
+         movabs r11, host %fs                 10
+         wrfsbase r11                          5
+         push rbx / mov rbx,rsp / and rsp,-16  8
+         movabs rax, snapshot                 10   <- the SITE IDENTITY COSTS NO BYTES:
+         call rax                              2      the snapshot takes exactly the six uint64_t
+         mov rsp,rbx / pop rbx                 4      arguments rdi..r9 already hold at entry and learns
+         movabs r11, guest %fs / wrfsbase     15      which site it is from __builtin_return_address(0),
+         6 pops                                8      a return address inside a per-site wrapper.
+         e9 rel32 to the boundary stub          5
+        A seventh argument would need `sub rsp,16; mov [rsp],site` to keep the 16-byte alignment the
+        push-rbx/and-rsp idiom exists to establish -- an 8-byte push before `call` looks right in review
+        and puts the callee 8 bytes off. THAT FORM IS NOT IN THESE BYTES. */
+    return capturing ? 75u : 5u; /* 75 = the capture form above; 5 = e9 rel32 */
 }
 
-size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr, int capturing)
+size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr,
+                              uint64_t host_fs, uint64_t guest_fs, int capturing)
 {
     const size_t needed = rt_snapshot_stub_size(capturing);
     /* Refuse before the first store, and refuse an unsatisfiable size: capacity < SIZE_MAX is every
@@ -75,6 +109,40 @@ size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self
     const int32_t rel = (int32_t)delta;
 
     unsigned char *p = dst;
+    if (capturing) {
+        /* The six argument registers are pushed in the order the snapshot takes them, and the snapshot
+           reads them back as its parameters -- no argument setup, no seventh argument, no alignment
+           change beyond the idiom already in the boundary stub. */
+        *p++ = 0x57;                                                   /* push rdi */
+        *p++ = 0x56;                                                   /* push rsi */
+        *p++ = 0x52;                                                   /* push rdx */
+        *p++ = 0x51;                                                   /* push rcx */
+        *p++ = 0x41, *p++ = 0x50;                                      /* push r8 */
+        *p++ = 0x41, *p++ = 0x51;                                      /* push r9 */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &host_fs, 8), p += 8;      /* movabs r11, host %fs */
+        *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3; /* wrfsbase r11: F3 and /2 are
+                                                                          mandatory; 0xdb is /3 (wrgsbase),
+                                                                          legal, silent, wrong register */
+        *p++ = 0x53;                                                   /* push rbx */
+        *p++ = 0x48, *p++ = 0x89, *p++ = 0xe3;                         /* mov rbx, rsp */
+        *p++ = 0x48, *p++ = 0x83, *p++ = 0xe4, *p++ = 0xf0;            /* and rsp, -16 */
+        const uint64_t snap = (uint64_t)(uintptr_t)&rt_capture_snapshot;
+        *p++ = 0x48, *p++ = 0xb8, memcpy(p, &snap, 8), p += 8;         /* movabs rax, snapshot */
+        *p++ = 0xff, *p++ = 0xd0;                                      /* call rax */
+        *p++ = 0x48, *p++ = 0x89, *p++ = 0xdc;                         /* mov rsp, rbx */
+        *p++ = 0x5b;                                                   /* pop rbx */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guest_fs, 8), p += 8;     /* movabs r11, guest %fs */
+        *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3; /* wrfsbase r11 */
+        *p++ = 0x5f;                                                   /* pop rdi */
+        *p++ = 0x5e;                                                   /* pop rsi */
+        *p++ = 0x5a;                                                   /* pop rdx */
+        *p++ = 0x59;                                                   /* pop rcx */
+        *p++ = 0x41, *p++ = 0x58;                                      /* pop r8 */
+        *p++ = 0x41, *p++ = 0x59;                                      /* pop r9 */
+        *p++ = 0xe9;                                                   /* jmp rel32 to the boundary stub */
+        memcpy(p, &rel, 4), p += 4;
+        return (size_t)(p - dst);
+    }
     *p++ = 0xe9;                              /* jmp rel32 */
     memcpy(p, &rel, 4), p += 4;
     return (size_t)(p - dst);                 /* 5 */

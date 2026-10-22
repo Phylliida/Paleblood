@@ -279,10 +279,11 @@ int main(void)
            `capturing` was hardcoded 0 at the call site. Now the form is derived and unsatisfiable until the
            capture stub exists, so the honest assertion is the refusal plus byte identity. THE PASS CASE COMES
            BACK WITH THE CAPTURE STUB, and it is named here so it cannot be quietly forgotten. */
-        failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
-                        "an unsatisfiable capture form must refuse rather than install the ordinary stub");
-        failed |= check(memcmp(image, pristine, sizeof pristine) == 0,
-                        "an unsatisfiable-form refusal must leave the site byte-identical");
+        /* THE PASS CASE CAME BACK WITH THE CAPTURE STUB, exactly as the comment promised it would, and the
+           assertion is the same one that was here before the hole was found -- now it is true for the right
+           reason, because rt_snapshot_stub_size(1) is 75 and the form exists. */
+        failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
+                        "capture mode must allow a pass row with a matching library and a matching prologue");
         remove(path);
         remove("site_ok_test.csv");
         unsetenv("BB_SITE_OK");   /* the allowed case leaves the site patched; later cases restore it themselves */

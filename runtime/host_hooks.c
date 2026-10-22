@@ -313,7 +313,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
             return -1;
         }
         size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
-                                          (uint64_t)destination, capturing);
+                                          (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(), capturing);
         if (w == 0) {
             fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
                     (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
@@ -323,9 +323,14 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         __builtin___clear_cache((char *)wrapper, (char *)wrapper + w);
         /* Readback from the page, not the emitter's return: "emitted N bytes" is a claim, the page is
            the evidence. The assertion's inputs are printed beside its verdict. */
-        if (memcmp(wrapper, "\xe9", 1) != 0) {
-            fprintf(stderr, "hook: wrapper readback at 0x%llx is not a near jump\n",
-                    (unsigned long long)(uintptr_t)wrapper);
+        /* The readback follows the FORM: a 5-byte wrapper opens with `e9`, and the 75-byte capture form opens
+           with `push rdi` and carries its `e9 rel32` in the last five bytes. An assertion written against one
+           shape outlived its subject here once already; this one decodes the jump where the form puts it. */
+        const unsigned char want_first = capturing ? 0x57 : 0xe9;
+        const unsigned char *jump_at = capturing ? wrapper + w - 5 : wrapper;
+        if (memcmp(wrapper, &want_first, 1) != 0 || memcmp(jump_at, "\xe9", 1) != 0) {
+            fprintf(stderr, "hook: wrapper readback at 0x%llx is not the %s form (first byte 0x%02x)\n",
+                    (unsigned long long)(uintptr_t)wrapper, capturing ? "capture" : "jump", (unsigned)wrapper[0]);
             return -1;
         }
         if (getenv("BB_HOOK_VERBOSE"))

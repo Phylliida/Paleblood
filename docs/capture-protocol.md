@@ -917,3 +917,39 @@ returning **only with the capture stub**.
 was the first, wired in only after the same observation. **A helper's contract is proved by its callers, so a helper with
 no caller has no contract** — the same sentence that makes `site_ok.csv`'s 1,737 rows a wish until something reads them,
 and the same one that makes `rt_snapshot_stub_size`'s `capturing` parameter a decoration until an installer passes it.
+
+### Commit B's capture form: 75 bytes, six argument pushes, site identity for free
+
+**The site identity costs no bytes and no alignment.** The snapshot takes exactly the six `uint64_t` arguments that
+`rdi…r9` already hold at entry, so the `call` needs **no argument setup**, and the snapshot learns *which* site it is
+from `__builtin_return_address(0)` — a return address inside a per-site wrapper. **A seventh `site` argument would have
+needed `sub rsp,16; mov [rsp],site` to keep the 16-byte alignment the `push rbx / and rsp,-16` idiom establishes; an
+8-byte `push` before `call` looks right in review and puts the callee 8 bytes off. That form is NOT in these bytes**, and
+the emitter says so where the bytes are written.
+
+```text
+ 6 pushes (rdi,rsi,rdx,rcx,r8,r9)      8
+ movabs r11, host %fs                 10
+ wrfsbase r11                          5      F3 present, /2 not /3
+ push rbx / mov rbx,rsp / and rsp,-16  8
+ movabs rax, snapshot                 10
+ call rax                              2
+ mov rsp,rbx / pop rbx                 4
+ movabs r11, guest %fs / wrfsbase     15
+ 6 pops                                8
+ e9 rel32 to the boundary stub         5
+                                     ---
+                                      75
+```
+
+**The snapshot asserts the alignment it depends on**: `rsp ≡ 8 (mod 16)` at entry, one `and`/`cmp`, printed with the six
+arguments and the wrapper address. **That is the check that would have caught the `/3` class in one line.**
+
+**Run, with the real catalog and the capture table's guards:** `install: sites_checked=1 refused=0 hooks_installed=1`,
+wrapper readback ok for the capture form, then `rc=134` — the same `scePthreadCreate` wall. **No `capture: site` line
+appeared, which is the honest reading: the hook was installed and the guest never reached this site.** Installed is not
+entered, and entered is not recorded.
+
+**A stale assertion, third occurrence, fixed where it lives:** the wrapper readback asserted the first byte was `e9`.
+The capture form opens with `push rdi` and carries its `e9 rel32` in the last five bytes, so the readback now follows the
+form — first byte by form, jump where that form puts it.
