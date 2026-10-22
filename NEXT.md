@@ -594,3 +594,31 @@ forms remain unexamined.
 That is consistent with the objects being reached **only through the pointer tables at 0xd98xx**, which
 is what an export-table consumer (or a getter returning `&__sF[i]`) looks like -- and it would explain
 why no direct reference exists to find.
+
+## My `_Stdin`/`_Stdout`/`_Stderr` labels are WITHDRAWN -- and the records carry their own name pointers
+
+Two things arrived together: the companion caught that the name table orders `H8AprKeZtNg`(_Stderr),
+`1TDo-ImqkJc`(_Stdin), `2sWzhYqFH4E`(_Stdout) at `0xc3c34`/`0xc3c44`/`0xc3c54`, i.e. **stderr, stdin,
+stdout** -- not the FreeBSD `stdin, stdout, stderr` I assigned. **My table came from a convention, not
+from this file**, and it is withdrawn rather than patched.
+
+Then the 24-byte records at `0xd98c8` turned out to be `(value, name_pointer, flags)`:
+
+    k= 0  0xbf060  0xb8f90  0x8              A
+    k= 1  0xbf160  0xb8f98  0x8              B
+    k= 2  0xbf060  0xb8fa0  0x8              A
+    k= 3  0xbf060  0xb8fa8  0x8              A
+    k= 4  0xbf060  0xb8fb0  0xf000000001     A
+    k= 7  0xbf160  0xb9158  0x8              B
+    k= 8  0xbf260  0xb9160  0x8              C
+    ...     and further aliases for B (k=9,10,11) and C (k=14,16,17,18)
+
+**Three consequences.** (1) **Each object carries several exported *names*** -- aliases, which is why the
+raw qword search found 4-5 referrers each and why no index arithmetic can map object to name.
+(2) **The name pointers point at `0xb8f90`+ in the file-backed data segment, not at the `0xc3xxx` NID
+table** -- so there are two independent name stores and I had been reading the other one.
+(3) **The assignment is one read away and needs no convention at all**: read the C strings at
+`0xb8f90`, `0xb8f98`, `0xb8fa0`, `0xb9158`, `0xb9160`, `0xb9320`.
+
+**Rule that this earns:** a label inferred from a platform convention is a hypothesis; this file has now
+contradicted FreeBSD ordering once, and the contradiction was in a dump I had already printed.
