@@ -1049,3 +1049,19 @@ Boot now: **54 implemented, 414 unbound, called 62**, stop at `4+h9EzwKF4I` (`eb
 "sema:" line has printed, so the would-have-blocked prediction is still untested** -- and it is recorded: if
 it fires, the guest is waiting on a thread that cannot exist, and the boot stops there instead of serving
 success.
+
+## The attr family landed in one declaration, and the wall it walked into is the one that was pre-registered
+
+14 attr entries landed as one `PB_ATTR_NOOP` declaration (init/destroy/setdetachstate/setinheritsched/
+setschedparam/setschedpolicy/setaffinity/get/getaffinity, plus the libScePosix spellings), all MODELLED and
+printed. Run `f2ede9ccae55`: **61 implemented, 407 unbound, called 66, and the boot reached the `threads`
+milestone -- then faulted at `eboot+0x20b56d2`, address `0x0`.**
+
+**That is the guest's original fault address, which is the panic path, which means the guest took an error
+path and panicked.** The pre-registered prediction's second branch: **the refusal did not get handled
+single-threaded; the guest died on it.** So `scePthreadCreate` is no longer a diagnostic refusal -- **the
+thread decision is now the wall, exactly as predicted, and it is not a surprise because it was written down
+before the run.**
+
+Note also: only **one** attr no-op line printed despite fourteen registrations -- so the guest configures
+one attribute and immediately proceeds, which is consistent with it going straight at thread creation.

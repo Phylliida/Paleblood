@@ -189,3 +189,39 @@ static int attr_set_stacksize(int64_t attr, int64_t size)
 }
 
 RT_SYSLIB_MODELLED("libkernel", scePthreadAttrSetstacksize, attr_set_stacksize);
+
+/* The pthread attribute family, landed as one declaration instead of eight turns.
+
+   Every one of these sets a field of a guest attr object that no code path will ever read, because this
+   runtime refuses to create threads (scePthreadCreate is a named refusal, not a stub). The values they
+   carry -- stack size, scheduling policy, detach state, scope, affinity -- are only observable to a thread
+   that exists. Writing them into guest memory would be a decorative write: state that validates as
+   correct and that nothing can observe.
+
+   Declared MODELLED and printed on every call, so the log says how far the boot is walking on these
+   before the guest reaches the create call that cannot succeed. First argument is a pointer for every
+   member of the family; the rest are scalars. */
+#define PB_ATTR_NOOP(lib, sym)                                                                        \
+    static int attr_noop_##sym(int64_t a, int64_t b, int64_t c)                                       \
+    {                                                                                                 \
+        (void)c;                                                                                      \
+        fprintf(stderr, "pbboot: posix: " #sym "(%llx, %lld) -> 0 (modelled: attr no-op, threads "     \
+                        "are refused)\n", (unsigned long long)a, (long long)b);                       \
+        return 0;                                                                                     \
+    }                                                                                                 \
+    RT_SYSLIB_MODELLED(lib, sym, attr_noop_##sym)
+
+PB_ATTR_NOOP("libkernel", scePthreadAttrInit);
+PB_ATTR_NOOP("libkernel", scePthreadAttrDestroy);
+PB_ATTR_NOOP("libkernel", scePthreadAttrSetdetachstate);
+PB_ATTR_NOOP("libkernel", scePthreadAttrSetinheritsched);
+PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedparam);
+PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedpolicy);
+PB_ATTR_NOOP("libkernel", scePthreadAttrSetaffinity);
+PB_ATTR_NOOP("libkernel", scePthreadAttrGet);
+PB_ATTR_NOOP("libkernel", scePthreadAttrGetaffinity);
+PB_ATTR_NOOP("libScePosix", pthread_attr_init);
+PB_ATTR_NOOP("libScePosix", pthread_attr_destroy);
+PB_ATTR_NOOP("libScePosix", pthread_attr_setdetachstate);
+PB_ATTR_NOOP("libScePosix", pthread_attr_setstacksize);
+PB_ATTR_NOOP("libScePosix", pthread_attr_setschedparam);

@@ -11,3 +11,4 @@ seq,sha256,nid,name,binding,return_address,note
 10,dcbd016910d0,,,host+0x615b94b659ab,,fault signal 11 address 0x0 after the modelled app-param reads
 11,d2e029cede39,,0TyVk4MSLt0,pthread_cond_init,libScePosix,eboot+0x207e6dc,ABI class fixed: semaphore ids by value; cond init takes a POINTER and was implemented modelled
 12,a017377789c4,,UTXzJbWhhTE,scePthreadAttrSetstacksize,libkernel,eboot+0x263b37f,modelled no-op declared (threads refused); next stop 4+h9EzwKF4I
+13,f2ede9ccae55,,,threads milestone,eboot+0x20b56d2,PRE-REGISTERED WALL HIT: guest faulted at the panic path (address 0x0) after the attr family; scePthreadCreate refusal is now the live decision
