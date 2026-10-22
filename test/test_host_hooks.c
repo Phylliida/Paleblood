@@ -224,7 +224,7 @@ int main(void)
         setenv("BB_SITE_OK", "site_ok_test.csv", 1);
 
         FILE *f = fopen(path, "w");
-        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,none,00,aa\n");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x400000,none,00,aa\n");
         fclose(f);
 
         unsetenv("BB_CAPTURE_TABLE_ID");
@@ -242,7 +242,7 @@ int main(void)
         setenv("BB_CAPTURE_TABLE_ID", "aa", 1);
         memcpy(image, before, sizeof before);   /* pristine site: the guard refuses a patched one for its own reason */
         f = fopen(path, "w");
-        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,xmm0,00,aa\n");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x400000,xmm0,00,aa\n");
         fclose(f);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
                         "capture mode must refuse a non-none verdict");
@@ -264,7 +264,7 @@ int main(void)
                 "9090909090909090909090909090");   /* not this site: the image is not the catalog */
         fclose(sf);
         f = fopen(path, "w");
-        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,none,00,aa\n");
+        fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x400000,none,00,aa\n");
         fclose(f);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
                         "capture mode must refuse a site that does not match its catalogued prologue");

@@ -143,7 +143,7 @@ static int capture_allowed(uint64_t offset)
             fclose(table);
             return 0;
         }
-        if (addr != offset) continue;
+        if (addr != rt_guest_address(offset)) continue;   // guest-keyed table, offset-keyed caller
         seen = 1;
         if (strcmp(verdict, "none") != 0) {
             fprintf(stderr, "capture: refusing to install at 0x%llx: %s\n", (unsigned long long)offset,
@@ -154,8 +154,8 @@ static int capture_allowed(uint64_t offset)
     }
     fclose(table);
     if (!seen) {
-        fprintf(stderr, "capture: no row for 0x%llx in %s: refusing; nothing is recorded\n",
-                (unsigned long long)offset, path);
+        fprintf(stderr, "capture: no row for guest 0x%llx in %s: refusing; nothing is recorded\n",
+                (unsigned long long)rt_guest_address(offset), path);
         return 0;
     }
     return 1;
@@ -202,7 +202,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
                 unsigned long long addr = 0;
                 char hex[64] = {0};
                 if (sscanf(line, "0x%llx,%63s", &addr, hex) != 2) continue;
-                if (addr != offset + (unsigned long long)RT_SITE_EBOOT_BASE || strlen(hex) != 28) continue;
+                if (addr != rt_guest_address(offset) || strlen(hex) != 28) continue;
                 found = 1;
                 match = 1;
                 for (int k = 0; k < ABSOLUTE_JUMP_SIZE; k++) {
@@ -217,7 +217,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
             if (!found) {
                 sites_unlisted++;
                 fprintf(stderr, "hook: 0x%llx has no site_ok row: refusing rather than patching an unlisted site\n",
-                        (unsigned long long)(offset + RT_SITE_EBOOT_BASE));
+                        (unsigned long long)rt_guest_address(offset));
                 return -1;
             }
             if (!match) {

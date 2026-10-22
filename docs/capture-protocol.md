@@ -861,3 +861,30 @@ install: sites_checked=1 refused=0 hooks_installed=1    # post-install, by whoev
 count printed by the line that precedes its own population is one step too early. And regenerating the table was a
 **one-column change** (`so_sha256` `f5bd9fc1…` → `8b784efa…`) forced by relinking `libbbgame.so`, which the staleness
 guard caught before I could reason about it.
+
+### Gate 3 reached: the key was fixed, and the refusal I pre-registered did **not** fire
+
+**The key is now converted inside the lookup, at one site.** `rt_guest_address()` sits beside `rt_image_offset()` in
+`site_guard.h` and both lookups in `install_hook` use it, so a caller cannot hand the table a key from the wrong
+space. `functions.csv`, `install_mode.csv`, `capture_candidates.txt` and `capture_ok.csv` are all **guest-keyed**;
+only `install_hook` is offset-keyed, and **exactly one conversion site now exists for each direction.**
+The test fixture was offset-keyed too (`0x0`) and went red on the first run — **the fixture had been written to the
+installer's wrong convention, which is why it passed.** That is the fourth time a fixture certified the defect.
+
+**Then gate 3 was reached, and the capacity hole is real:**
+
+```text
+hook: wrapper emitted 5 bytes at 0x7d8d28e08060, jmp -> stub 0x7d8d28e08000 (distance -96 bytes), readback ok
+hook: 0x2018d20 -> 56-byte boundary stub -> body 0x7d8d213571c0
+hook: 0x2018d20 size 467 bytes patched with a 14-byte absolute jump ... readback ok
+rc=134   (the designed scePthreadCreate wall, unchanged)
+```
+
+**With `BB_CAPTURE=1` the installer patched the site with the ordinary 56-byte boundary stub.** No unsatisfiable size
+reached `install_hook`; `rt_snapshot_stub_size(capturing)` is not consulted on the path that installs. **My
+pre-registered sentence did not fire, so the expectation is refuted, not deferred** — and the refutation is the useful
+artifact: the capacity design has a hole, and the run that was supposed to prove it refuses proved it does not.
+
+**What this run does establish, because it is the strongest evidence yet:** the plugin's real installer, with the real
+catalog and the capture table's identity and prologue guards, **patched the real site through the entire chain and ran
+the guest to the same wall** — `wrapper 5 bytes → 56-byte stub → body 0x7d8d213571c0`, readback ok, distance −96.

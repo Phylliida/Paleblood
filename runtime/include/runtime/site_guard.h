@@ -26,6 +26,16 @@ static inline uint64_t rt_image_offset(uint64_t guest_address)
     return guest_address - (uint64_t)RT_SITE_EBOOT_BASE;
 }
 
+/* The inverse, beside the forward conversion on purpose. Every keyed table in the repo -- functions.csv,
+   install_mode.csv, capture_candidates.txt, capture_ok.csv -- is GUEST-keyed; install_hook is offset-keyed. One
+   conversion site, and it lives here, so no caller can hand the lookup a key from the wrong space. A one-way
+   conversion with no inverse is how a correct value gets looked up under a wrong key (it happened: a present row
+   was reported as missing). The capture record stores guest addresses too, so this is needed again regardless. */
+static inline uint64_t rt_guest_address(uint64_t image_offset)
+{
+    return image_offset + (uint64_t)RT_SITE_EBOOT_BASE;
+}
+
 /* The right function has the right prologue; a shifted patch generally does not. Refuse rather than patch. */
 static inline int rt_site_matches(const unsigned char *image, uint64_t image_size, uint64_t guest_address,
                                   const unsigned char *expected, uint64_t n)
