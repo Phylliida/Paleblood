@@ -80,3 +80,28 @@ import. Two points are enough to tell those apart and the data is already in han
 **`0x400020`** -- the startup body inside eboot, a frame prologue with its own callees, not an
 import. That is a different kind of stop (missing capability, not missing import) and it is the
 *next phase*, not a regression. `0x400020` is excluded from the no-op batch by measurement.
+
+## Join on slot, not on ordinal (and print all 686)
+
+Each PLT stub names its own GOT slot; the loader holds the NID. Join by **slot address**, never by
+index -- that the loader's iteration order equals PLT ordinal order is the one thing neither side
+has verified, and it is a coincidence, not a value.
+
+| ordinal | thunk | GOT slot | known? |
+|---|---|---|---|
+| 0 | `0x2fbe4b8` | `0x57e4690` | `bzQExy189ZI` = `_init_env` (witnessed) |
+| 1 | `0x2fbe4c8` | `0x57e4698` | `8G2LB+A3rzg` = `atexit` (witnessed) |
+| 2 | `0x2fbe4d8` | `0x57e46a0` | unnamed |
+| 3 | `0x2fbe4e8` | `0x57e46a8` | unnamed |
+
+Slot arithmetic: `slot = thunk + 6 + disp` of its `jmp qword ptr [rip+disp]`.
+
+**Print `(slot, nid, library)` for all 686 bindings in `boot.c`'s bind loop, before the guest
+runs.** One run then yields the whole import map -- the artifact that turns every future stop into
+a lookup instead of an experiment, and the thing `nidscan`'s 686/30/4/652 can be checked against.
+Ordinals 2 and 3 are blocked on exactly this; they are the reason no unnamed import may receive a
+no-op, since an unnamed no-op claims both the return value and every side effect are unnecessary,
+which nobody has established.
+
+The split of instruments: **the binary carries the ordinal and the slot; the loader carries the
+NID.** Two instruments owning half each is fine. Assuming one owns both is not.
