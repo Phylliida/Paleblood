@@ -131,8 +131,35 @@ static void *fault_frames[6];
 static int fault_frame_count;
 static int fault_backtrace_enabled;
 
+/* A siglongjmp is only meaningful while the frame that set back_to_host is still live. Once
+   run_guest() returns, the buffer points into a dead frame; a fault after that used to jump there
+   anyway, land back in the reporter, fault again, and spin with no output -- a live-lock that looks
+   like a hang. Guard the window, and when a fault arrives outside it say so and die: a one-line
+   diagnosis instead of a hundred seconds of silence. */
+static volatile sig_atomic_t fault_jmp_live;
+static volatile sig_atomic_t fault_in_handler;
+
+static void __attribute__((noreturn)) fault_outside_the_window(uint64_t pc)
+{
+    /* Async-signal-safe only: no printf, no dladdr, no lock. */
+    static const char hex[] = "0123456789abcdef";
+    char buf[96];
+    const char *head = "pbboot: fault inside the fault reporter at 0x";
+    size_t n = 0;
+    while (*head) buf[n++] = *head++;
+    for (int shift = 60; shift >= 0; shift -= 4) buf[n++] = hex[(pc >> shift) & 0xf];
+    buf[n++] = '\n';
+    /* write(2) directly: stdio is one of the locks this path must not take. */
+    extern long write(int, const void *, unsigned long);
+    write(2, buf, n);
+    _exit(134);
+}
+
 static void on_signal(int sig, siginfo_t *info, void *context)
 {
+    if (fault_in_handler || !fault_jmp_live)
+        fault_outside_the_window((uint64_t)(uintptr_t)((const ucontext_t *)context)->uc_mcontext.gregs[REG_RIP]);
+    fault_in_handler = 1;
     /* First statement: this handler runs on whatever %fs was installed when control was lost, and
        everything below it -- dladdr, snprintf, printf -- is host code that needs the host base. */
     rt_tls_enter_host();
@@ -179,11 +206,16 @@ __asm__(".text\n"
 static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void *c, void *stack_top, int timeout)
 {
     outcome = RUNNING;
+    fault_in_handler = 0;
+    fault_jmp_live = 1;
     if (!sigsetjmp(back_to_host, 1)) {
         alarm((unsigned)timeout);
         rt_boot_call(fn, a, stack_top, b, c);
         outcome = RETURNED;
     }
+    /* Past this point the buffer is dead: every fault from here on is reported, not jumped from. */
+    fault_jmp_live = 0;
+    fault_in_handler = 0;
     alarm(0);
 }
 

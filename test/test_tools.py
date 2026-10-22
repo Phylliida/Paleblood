@@ -505,13 +505,20 @@ class Boot(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # build-release first: `build/` held a two-day-old binary, and this test passed for days against
-        # an artifact nobody had rebuilt (the fault-path hang below only reproduced on the current one).
-        # A gate that runs a stale binary is not a red gate, it is an absent one.
-        cls.pbboot = (os.environ.get('BB_PBBOOT')
-                      or next((p for p in (os.path.join(ROOT, 'build-release', 'runtime', 'pbboot'),
-                                           os.path.join(ROOT, 'build', 'runtime', 'pbboot'))
-                               if os.path.exists(p)), os.path.join(ROOT, 'build', 'runtime', 'pbboot')))
+        # No default. `build/` held a two-day-old binary and this suite passed for days against an
+        # artifact nobody had rebuilt; a two-element search is still a default and its second element
+        # is that same stale path. Name the variable, refuse, and let ctest (which passes BB_PBBOOT)
+        # and the caller say which artifact they mean.
+        env = os.environ.get('BB_PBBOOT')
+        if not env:
+            raise RuntimeError(
+                'BB_PBBOOT is unset: this class must be told which pbboot to test, because a default '
+                'silently picks a stale binary. Set BB_PBBOOT to a built one, e.g.\n'
+                '  ' + os.path.join(ROOT, 'build-release', 'runtime', 'pbboot') + '\n'
+                '  ' + os.path.join(ROOT, 'build', 'runtime', 'pbboot') + '  (only if that is the tree you built)')
+        if not os.path.exists(env):
+            raise RuntimeError('BB_PBBOOT names a path that does not exist: %s' % env)
+        cls.pbboot = env
         if not os.path.isfile(cls.pbboot):
             raise unittest.SkipTest('pbboot not built')
         sys.path.insert(0, os.path.join(ROOT, 'test'))

@@ -1488,6 +1488,18 @@ in a signal handler, and although it was not this bug it is a real one); an empt
 *why* it is empty; the test takes the child's partial output on timeout; and the pbboot default is
 `build-release` first. `ctest` **15/15 green, 84.06 s**; suite **307 OK, 70.4 s**.
 
+Then the two guards that make the class unrepeatable. **`BB_PBBOOT` unset now refuses** (`RuntimeError` naming
+the variable and both candidate paths) instead of defaulting — a two-element search is still a default and its
+second element is the stale path that cost the slice; `ctest` passes it explicitly, so nothing legitimate
+breaks. **And a fault outside `run_guest`'s window is reported, not jumped from**: `siglongjmp` into a buffer
+whose frame has returned is undefined and used to re-enter the reporter silently, so `fault_jmp_live` /
+`fault_in_handler` now send any such fault to an async-signal-safe `write(2)` of
+`pbboot: fault inside the fault reporter at 0x…` and `_exit(134)`. Proved by plant: widening the dump's bound
+to remove the `objects[1].tramp` check gives **rc=134 with that line in under a second**, where the same code
+spun for a hundred seconds with no output; restored, rebuilt, **rc=0 with the full report**. Suite **307 OK,
+69.9 s**; `ctest` **15/15, 83.10 s** — and the suite now needs `BB_PBBOOT` on the command line, which is the
+point.
+
 **Recorder (original trigger, still the second half).** The in-game capture path is blocked on boot
 reaching past the `scePthreadCreate` wall
 (`runtime/syslib/pthread_sema.c`, the designed fatal stop). **When the boot runs past that wall, the
