@@ -684,3 +684,22 @@ wrong; only the object I attributed it to was.
 
 **Open and now narrow:** does the loader run its rela pass for modules other than `eboot`, and does any
 of its `R_X86_64_*` handlers skip a target whose current value is zero?
+
+## Both greps answered: relocations run for every mapped object, and nothing skips a zero target
+
+`boot.c:340` opens each object in a loop, `:405 rt_elf_map(o->elf, o->image, bind_import, o, ...)` is
+called per object, and `loader.c:394-399` applies every relocation with **no test of the current value**:
+
+    for (i < e->reloc_count)
+        v = KIND_LOCAL     ? image + r->value
+          : KIND_TLS_MODULE? e->tls_module_id
+          :                  bound[r->value] + r->addend;
+        memcpy(image + r->target, &v, 8);
+
+**So the "handler skips a zero target" clause is excluded, and "the rela pass does not run for non-eboot
+modules" is excluded too** -- **provided libc.elf is one of `objects[]`.** That is now the only remaining
+premise, and it is one grep (`objects[...] = ` population), not a boot.
+
+**`KIND_LOCAL` is `image + r->value`, which is exactly the self-relative scheme the descriptors encode**
+-- so the descriptors and the loader agree, and if the objects were reachable by a relocation the
+mechanism would work.
