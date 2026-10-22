@@ -87,3 +87,13 @@ harness's: the original ran, and the body disagreed with it at `dst+0x0` (origin
 replacement `0x29`) with the index array displaced one slot. Per the companion's reading, that
 is one branch divergence -- a wrong arm selection in the A-class gate -- not two defects. It is
 the first real defect a case has found, in exactly the region no ASCII input reaches.
+
+## Why generation is not only cheaper
+
+Every divergence this pilot found is a value-flow error -- which register holds which value at a
+block boundary. That is the class a mechanical translation eliminates by construction: the
+decompiler's C names its locals and types them, so nobody decides whether `eax` or `r9d` carries
+the class at `0x414350`. The hand path's remaining defects are precisely its own reading; a
+generator has none of that, and its checklist (docs/generator-checklist.md) turns each one into
+a test. The arithmetic says generate; the defect taxonomy says the same thing for a second,
+independent reason.
