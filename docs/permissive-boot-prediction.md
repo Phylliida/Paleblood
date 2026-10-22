@@ -36,3 +36,18 @@ been expectations recorded after the result. Recorded here so the run is scored,
 Score the run against these three lines in the same message that reports it, including the miss.
 An expectation that moves after the result is not a prediction, and twelve slices of this campaign
 are already sunk in that habit.
+
+## Stub safety: three conditions, or the log is what crashes
+
+1. **The catch-all is explicit in `boot.c`, never "last in the section".** `boot.c:273` binds the
+   *first* matching `rt_syslib` entry, so a stub that must come last would rely on linker file
+   order within a gathered section: a convention, not a guarantee, and it fails *silently* -- real
+   implementations shadowed, every import reporting `continued`. So: after the walk, if the import
+   is still unbound and `BB_IMPORT_PERMISSIVE` is set, bind the catch-all there. Ordering then
+   stops mattering, which is the point.
+2. **Flush per row.** The rows that matter most are the last ones and the fault the stub invites
+   may take the host process with it; a buffered log loses exactly the NID that faulted. `fflush`
+   after each row, or unbuffered.
+3. **Cap calls per NID** (`BB_IMPORT_PERMISSIVE_MAX`, default small). A stubbed yield or spin
+   returns 0 forever: one row per call, millions of rows, and no crash to end the run. Over the
+   cap -> abort **with the row flushed**, which turns a hang into a finding.
