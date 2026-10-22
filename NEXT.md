@@ -263,3 +263,25 @@ as the shape; not implemented.
 Rule for the dump, next run: print `provider` at bind time
 (`bind <idx> <nid> <lib> provider=<runtime|bundled|unresolved|data-scratch> called=<0|1>`), because
 the provider is decided there and inferring it from two counters is what cost this turn.
+
+## Whose FILE layout: the reader is eboot, the provider is libc.elf, and libc.elf is on disk
+
+`symbols/imports.csv:413-415` -- all three are **data** imports **of eboot** with provider
+**`libc.elf`**:
+
+    eboot,libc,_Stderr,data,libc.elf
+    eboot,libc,_Stdin,data,libc.elf
+    eboot,libc,_Stdout,data,libc.elf
+
+(Separately `libSceFios2.elf` imports `_Stdout` from `libSceLibcInternal` with no provider, a second
+reader to settle later.)
+
+So the struct the guest reads is **libc.elf's**, libc.elf **is in the tree** (`../data/bb/elf/`), and
+the layout is therefore **derivable rather than guessed** -- the honest branch, not the
+delegate-everything fallback. Read libc.elf's own `fputs`/`fprintf`/`fwrite` to find the offsets it
+uses on the object, and build the object to that layout. Only if that decode comes back ambiguous
+does the stdio family get delegated wholesale, with the "guest must never touch a FILE field"
+constraint stated as a limit.
+
+And the first grep for these returned nothing because `imports.csv` has **no NID column** -- it
+holds names. Grep names there, NIDs in `import_names.csv`. That trap has now cost three slices.
