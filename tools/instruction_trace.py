@@ -11,6 +11,7 @@ temporary return breakpoint and make coverage incomplete.
 from __future__ import annotations
 
 import ctypes
+import re
 import ctypes.util
 import os
 from pathlib import Path
@@ -123,6 +124,13 @@ class Instruction(ctypes.Structure):
                 ("detail", ctypes.POINTER(Detail))]
 
 
+# Mnemonics that may carry a memory operand but never read or write that address.
+# Stated as a class so the next hint instruction does not reopen this.
+# Deliberately NOT here: clflush/clwb (they touch the line), invlpg, xsave/fxsave (they write).
+# A widened class would suppress real accesses, which is the same defect pointing the other way.
+_NEVER_ACCESSES = re.compile(r"^(lea|nop|prefetch[a-z0-9]*|endbr(32|64))")
+
+
 class Capstone:
     def __init__(self):
         path = None
@@ -189,9 +197,15 @@ class Capstone:
             mnemonic = insn.mnemonic.decode()
             # Capstone represents LEA's address expression as a memory operand,
             # but opcode 8D computes an address without loading or storing there.
-            address_calculation = (mnemonic.lower() == "lea" and detail.opcode[0] == 0x8D and
-                                   detail.op_count == 2 and detail.operands[0].type == CS_OP_REG and
-                                   detail.operands[1].type == CS_OP_MEM)
+            # A memory *operand* is not a memory *access*.  LEA was special-cased here and every
+            # other instruction that carries an address expression but touches no memory was not:
+            # a multi-byte nop (`nop DWORD PTR [rax+0x0]`) computes an effective address and reads
+            # nothing, and prefetch* hints likewise.  The bug only surfaced on the nop because its
+            # address happened to be zero and unmapped; for `lea rax,[rip+K]` the address lands
+            # inside the image, so the tracer silently counted a read that never happened.  The
+            # class is "mnemonics that never access memory", so it is stated as one.
+            hint_only = (_NEVER_ACCESSES.match(mnemonic.lower()) is not None)
+            address_calculation = bool(operands) and hint_only
             address_operands = operands if address_calculation else []
             if address_calculation:
                 operands = []
