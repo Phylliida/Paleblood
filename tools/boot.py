@@ -123,6 +123,29 @@ def record(status: dict, root: str, today: str) -> str | None:
 NID_SHAPE = re.compile(r'^[A-Za-z0-9_+\-]{11}(#|$)')
 
 
+def _refuse_raw_nids(what: str, symbols, allow_nids: bool) -> str:
+    """A raw NID in a names column is a name that was not resolved. Writing one destroys the
+    resolved name that was there, which this tree has done by accident twice."""
+    if allow_nids:
+        return None
+    bad = [s for s in symbols if s and NID_SHAPE.match(s)]
+    if bad:
+        return (f'refusing to write {what}: {len(bad)} raw NID symbol(s) and --nids was not given '
+                f'(first: {bad[0]}). Re-run with --nids, or without the listing, but not this.')
+    return None
+
+
+def _staged_write(path: str, header, rows) -> None:
+    """Write beside the target and rename: a run that dies mid-write leaves the old table."""
+    tmp = path + '.tmp'
+    with open(tmp, 'w', newline='') as f:
+        w = csv.writer(f, lineterminator='\n')
+        w.writerow(header)
+        w.writerows(rows)
+    os.replace(tmp, path)
+
+
+
 def preserve(existing: str, rows: list, allow_nids: bool):
     """Keep resolved import names that this listing would replace by raw NIDs.
 
@@ -198,22 +221,28 @@ def write_listing(listing: str, root: str, allow_nids: bool = False) -> int:
     if error:
         print(f'boot: {error}', file=sys.stderr)
         return 3
-    with open(path, 'w', newline='') as f:
-        w = csv.writer(f, lineterminator='\n')
-        w.writerow(IMPORT_FIELDS)
-        w.writerows(sorted(imports))
     path = os.path.join(root, 'symbols', 'module_functions.csv')
     # a status other than original (a replacement, later) is kept
     old = {}
     if os.path.isfile(path):
         with open(path, newline='') as f:
             old = {(r['module'], r['offset']): r['status'] for r in csv.DictReader(f)}
-    with open(path, 'w', newline='') as f:
-        w = csv.writer(f, lineterminator='\n')
-        w.writerow(MODULE_FIELDS)
-        for key in sorted(functions):
-            m, off, size, sym, status = functions[key]
-            w.writerow((m, off, size, sym, old.get(key, status)))
+    import_rows = sorted(imports)
+    function_rows = []
+    for key in sorted(functions):
+        m, off, size, sym, status = functions[key]
+        function_rows.append((m, off, size, sym, old.get(key, status)))
+    # Validated together; replaced in sequence. A refusal therefore leaves both untouched, but a
+    # kill between the two os.replace calls leaves a valid pair from two runs -- each table still
+    # raw-NID-free, not each table from the same listing.
+    for what, rows, idx in (('imports.csv', import_rows, 2),
+                            ('module_functions.csv', function_rows, 3)):
+        error = _refuse_raw_nids(what, [r[idx] for r in rows], allow_nids)
+        if error:
+            print(f'boot: {error}', file=sys.stderr)
+            return 3
+    _staged_write(os.path.join(root, 'symbols', 'imports.csv'), IMPORT_FIELDS, import_rows)
+    _staged_write(os.path.join(root, 'symbols', 'module_functions.csv'), MODULE_FIELDS, function_rows)
     return 0
 
 
