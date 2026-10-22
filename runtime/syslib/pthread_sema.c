@@ -35,6 +35,13 @@ static struct {
 
 static int row_of(uint64_t h)
 {
+    /* The table is allocated on first Create. A Wait before any Create finds it absent, and that is a
+       refusal, not a fault: this function dereferenced `rows` unconditionally and took signal 11 at
+       address 0x0 (pbboot+0xaadb = sema_wait+0xb) the first time the guest waited on a handle whose
+       storage was zero -- the __sFILE absence family arriving inside our own handle table.
+       NOTE on zero: zero is NOT the sentinel for "no handle". A handle is (magic << 32) | (index + 1),
+       so index 0 is legal and validity is carried by the magic word alone. Create always writes the
+       magic, so `h == 0` means storage was never written, not that the table's first row is special. */
     if ((uint32_t)(h >> 32) != HANDLE_MAGIC) return -1;
     uint32_t idx = (uint32_t)h;
     if (idx == 0 || idx > HANDLE_ROWS || !rows[idx - 1].used) return -1;
@@ -43,8 +50,14 @@ static int row_of(uint64_t h)
 
 static int refuse(uint64_t h, const char *call)
 {
-    fprintf(stderr, "pbboot: sema: %s refused, %016llx is not a live handle\n", call,
-            (unsigned long long)h);
+    /* Split the two bugs this refusal can mean: never created, or created somewhere other than the
+       storage this call reads. A live row holding exactly this value means the handle is valid and the
+       caller is looking at a different address; no such row means it was never handed out. */
+    int live = 0;
+    for (int i = 0; i < HANDLE_ROWS; i++) live += rows[i].used ? 1 : 0;
+    fprintf(stderr, "pbboot: sema: %s refused, %016llx is not a live handle (%d of %d rows in use -- 0 rows "
+                    "means no Create ran before this Wait, i.e. never handed out rather than created "
+                    "elsewhere)\n", call, (unsigned long long)h, live, HANDLE_ROWS);
     return k_err_inval;
 }
 

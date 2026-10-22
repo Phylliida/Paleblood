@@ -37,6 +37,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <ucontext.h>
+#include <dlfcn.h>
 #include <unistd.h>
 
 #define GUEST_BASE 0x800000000ull
@@ -534,6 +535,22 @@ int main(int argc, char **argv)
         printf(": %s calls %s %s (NID %s), returning to %s", stop_caller, stop_library ? stop_library : "?",
                stop_name ? stop_name : stop_nid, stop_nid, from);
     if (outcome == FAULT) printf(": signal %d at %s, address 0x%llx", fault_signal, at, (unsigned long long)fault_address);
+    if (outcome == FAULT) {
+        /* A raw host pointer is unreadable to every reader, including me. Every artifact names its own
+           subject: resolve the faulting PC to module + offset, and to the symbol when the build has one. */
+        Dl_info di = {0};
+        if (dladdr((void *)(uintptr_t)fault_rip, &di) && di.dli_fname) {
+            const char *base = strrchr(di.dli_fname, '/');
+            printf("pbboot: fault pc %s+0x%llx", base ? base + 1 : di.dli_fname,
+                   (unsigned long long)(fault_rip - (uint64_t)(uintptr_t)di.dli_fbase));
+            if (di.dli_sname)
+                printf(" (%s+0x%llx)", di.dli_sname,
+                       (unsigned long long)(fault_rip - (uint64_t)(uintptr_t)di.dli_saddr));
+            printf("\n");
+        } else {
+            printf("pbboot: fault pc 0x%llx (no module resolved)\n", (unsigned long long)fault_rip);
+        }
+    }
     if (outcome == TIMEOUT) printf(" after %d s, at %s", timeout, at);
     if (outcome == EXITED) printf(" with code %d", exit_code);
         {

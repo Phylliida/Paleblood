@@ -989,3 +989,22 @@ lines in total, i.e. two ids read more than once each**. The milestone line stil
 pointer it does not have** -- which is the `__sFILE` absence family again (`address 0x0`, second occurrence),
 not a pthread or sysmodule stop. Recorded as row 10 rather than folded into row 9, because **a history row
 that is edited to look right stops being a history.**
+
+## The fault moved and I can name its PC but not yet its cause -- and a rebuild nearly made me lie
+
+`sema_wait` now documents that **zero is not a sentinel** (a handle is `(magic << 32) | (index + 1)`, so
+index 0 is legal and `h == 0` means storage was never written) and that a refusal prints **how many table
+rows are live**, which splits "never handed out" from "created elsewhere than this call reads".
+
+**The fault persisted and moved**: `pbboot+0xaadb` (`sema_wait+0xb`, the load `mov (%rdi),%rcx`) in one
+build, `pbboot+0xac8b` (`sema_wait+0x1bb`) in the next, **both with `si_addr == 0x0` and with no `sema:`
+line printed at all** -- so the refusal path never ran. **`si_addr == 0x0` is inconsistent with `mov
+(%rdi),%rcx` unless `rdi` is null, and the guard above it would have branched.** So one of my premises is
+wrong, and the candidates are ordered: (a) the PC is inside an inlined block whose reported address is the
+function's, (b) the fault is a call through a null function pointer that lands on this PC in the guest's
+retargeted stub, (c) `si_addr` for this signal is not the faulting operand.
+
+**The lesson worth keeping: I resolved `0xaadb` against the binary built *after* the fault.** The run that
+faulted (`dcbd016910d0`) no longer existed on disk. **A symbol resolved against a rebuild is a name for a
+different artifact** -- the sha256 discipline applied to the disassembler -- so the handler must print the
+run's identity beside the PC, and the binary must be kept for the run that faulted.
