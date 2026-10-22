@@ -549,3 +549,34 @@ address,xmm_used,scanned_sha256
 **Unproved and named as such:** no C test exercises `BB_CAPTURE=1`, because nothing in `pbboot` installs a hook
 yet — the plugin that calls `install_hook` is not on that path. **The refusal is on the path to the thing it
 refuses for the first time; the next slice runs it and reports the sentence it prints.**
+
+### The table's contract proved by the call the test already makes, and one line that makes silence interpretable
+
+`test_host_hooks` installs a hook, so it can exercise `capture_allowed` today — **"nothing in `pbboot` installs a
+hook" is true of the game and false of the test binary that just installed one.** Three cases, and **every
+refusal is checked against the site's bytes, because a refusal that already patched is not a refusal:**
+
+- verdict `xmm0` for the address → **refused**, site byte-identical;
+- **no row** for the address (`0x1` present, `0x0` absent) → **refused**, site byte-identical;
+- row `0x0,none,…` → **allowed**, install returns 0.
+
+**And one unconditional startup line**, because `BB_CAPTURE=1` on a boot run today prints nothing, and *nothing*
+is indistinguishable between off, refused, no row, and not on the path — three findings and one silence:
+
+```text
+capture: mode=off table=- hooks_installed=0
+capture: mode=off table=- hooks_installed=1
+```
+
+It prints on **every** `rt_host_hooks_initialize`, so a run can be read for what it did rather than for whether
+it said anything. **`hooks_installed` counts readbacks that matched, not writes** — the same distinction the
+`N installed` line needed.
+
+**Two of my own defects on the way there:** I first used `ABSOLUTE_JUMP_SIZE` in the test where it is not
+declared (compile error, caught by the build), and then wrote `*mode` where `getenv` had returned **NULL** — an
+immediate segfault with **zero output**, which is why the first symptom was an empty log rather than a message.
+**`getenv` returning NULL is the ordinary case, not the error case.**
+
+**Residual, named:** C cannot recompute a sha256, so the digest column is enforced by the regenerating ctest, not
+by the installer. **A mutated digest does not refuse at install time, and the test that regenerates the table is
+the instrument that makes that safe.**

@@ -120,6 +120,8 @@ static int capture_allowed(uint64_t offset)
     return 1;
 }
 
+static unsigned installed_count;   /* what the startup line reports and what the game run can be compared to */
+
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
     if (!guest_image || !target || size < ABSOLUTE_JUMP_SIZE || offset > guest_image_size ||
@@ -216,6 +218,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
 
     /* "N installed" counts writes. Prove the bytes the guest will execute are the bytes written, or
        a write that landed somewhere else reads as a working hook. */
+    if (memcmp(guest_image + offset, jump, sizeof jump) == 0) installed_count++;
     if (memcmp(guest_image + offset, jump, sizeof jump) != 0) {
         fprintf(stderr, "hook: readback at 0x%llx does not match the jump written\n",
                 (unsigned long long)offset);
@@ -240,5 +243,21 @@ int rt_host_hooks_initialize(rt_host *host)
     guest_image = host->image;
     guest_image_size = host->image_size;
     host->install_hook = install_hook;
+
+    /* One line, always, before any hook can install. Without it "nothing was printed" is indistinguishable
+       between off, refused, no row, and not on the path -- three different findings and one silence. */
+    {
+        const char *mode = getenv("BB_CAPTURE");
+        const char *path = getenv("BB_CAPTURE_OK");
+        const int on = (mode && *mode && *mode != '0');
+        if (!path || !*path) path = "symbols/capture_ok.csv";
+        int present = 0;
+        if (on) {
+            FILE *probe = fopen(path, "r");
+            if (probe) { present = 1; fclose(probe); }
+        }
+        fprintf(stderr, "capture: mode=%s table=%s hooks_installed=%u\n",
+                on ? "on" : "off", on ? (present ? path : "absent") : "-", installed_count);
+    }
     return 0;
 }
