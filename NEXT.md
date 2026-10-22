@@ -29,3 +29,24 @@ import thunks, corrected down from six by looking). `_init_env` landed at `f1919
 
 Board: 21,128 / 157,757 = 13.39% edge-verified incl. verified; 21 verified; 30 approvals against
 21,086 clean rows; 0 of 528 `zero_init`. **`verified` has not moved in thirty slices.**
+
+## Carried debts (restored — `cat >` truncated the previous NEXT.md)
+
+The earlier NEXT.md was overwritten by a heredoc. Its content is not in this file, and the commit
+that replaced it did not preserve it; the five debts below are re-added from the handover:
+
+1. **Table B's extent closure has never been run.** `rodata_pairs_02fc4a40.h`, 880 words; only
+   table A (`0x02fc5120`) closed at 384. Pre-registered: 880 = 256 + 39x16, so 39 distinct class-2
+   bases, max base 864, no remainder. If it does not close, the layout does not generalise and
+   **both** pins are suspect.
+2. **`test_blocks.py` / `test_descent.py` / `test_check_block_addresses.py` do not exist** while
+   three tools emit tier-level verdicts. `check_block_addresses.py` has five recorded failing
+   fixtures but no registered test; registration without its failing case is the `check_agnostic`
+   defect again.
+3. **`record()` is O(N)** over 21,229 ledger rows — same species as the 507 s resolver and the
+   1.07 billion searches: invisible at the current population, catastrophic at the target.
+4. **One resolver, two callers** — `validate_functions.py`'s `_install_mode_hosts()` beside
+   `verification.replacement_symbol()`: two answers to one question until one is deleted, or the
+   agreement is a comment.
+5. **Bundle owed at HEAD**, proved by **bare clone plus a commit count**, never by a size line.
+   The bundle at `f9ad70c` is stale.
