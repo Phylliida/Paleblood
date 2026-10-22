@@ -303,3 +303,27 @@ the only buffer in the set.**
 **What this costs the plan:** the first capture is no longer "one invocation away." It needs the singleton
 state in the record (at minimum the pointer identity of `window_instance`), or the first honest outcome is
 category (2) — a difference that cannot be attributed.
+
+### The oracle can already express the singleton: `memory`, not a new `state` key
+
+The replay must set `window_instance` to the same object the original read through `rdi`, rebased along the
+same path as any other eboot pointer — **otherwise the replacement reads a stale singleton while the original
+reads the real window, and the difference is 100% instrumentation.** Agreed, and it does not need a new case
+block: **`harness.py` already reads a `memory` key** (`check_memory`, `harness.py:415`), which lays values down
+at guest addresses *before* the call and is explicitly exempt from the guest's segment permissions because
+**"a preset is the harness laying out the case, not an access the program makes."**
+
+So the record expresses the requirement as a preset at `window_instance`'s storage address holding the
+**rebased** pointer — `0x800000000 + (addr − 0x400000)` — and `buffers` still carries the window's own bytes,
+so the two sides read the same object at the same offsets. **The requirement is a field the harness has, not a
+field it needs.**
+
+**And the falsification is two replays, and it is cheap:** one with the preset at the captured object, one with
+the preset null. **The first must pass; the second must differ.** If both pass, **the body is not reading the
+singleton and something else is being compared** — which is the only check available this slice that the
+differential is asking the question it claims to ask. **A differential whose both sides were never the same
+question is worse than no differential, because it reports agreement.**
+
+**If a future body reads a singleton whose storage the harness cannot preset** — outside a loaded segment, or
+written by a stub the harness models — **the honest outcome is category (3): the oracle cannot express this
+input.** Not a differential that happens to pass.
