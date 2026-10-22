@@ -552,3 +552,23 @@ So each bss object is referenced from **several parallel tables in the same 0xd9
 neighbourhood**, which is what an export entry array plus its lookups look like. **The addresses are
 real exported data objects; the ordering question (`_Stdin`/`_Stdout`/`_Stderr`) is still unproven**,
 because multiple tables carry them and adjacency in one is not the mapping.
+
+## The RIP-relative scan for the three objects returned 0 -- and the zero is not evidence
+
+    0x4000..0xb7924 (751,268 B) linear-swept from vaddr 0 -> 20,123 instructions
+    751,268 / 20,123 = 37.3 bytes per instruction
+
+**x86-64 averages three to four bytes per instruction.** 37.3 is an order of magnitude out, which means
+the linear sweep desynchronised into data within the first few hundred bytes and **every instruction
+after that was decoded from the wrong boundary.** So "0 references" is **not** a fact about libc's code
+reaching the three stdio objects; it is a fact about my disassembly.
+
+**Divide first, applied to my own instrument:** the same arithmetic that exposed 236,517 entries for a
+157k-entry module and `1,072 -> 1,144` also flags a sweep whose bytes-per-instruction is impossible.
+**A decode with an implausible density must be discarded before its result is read**, and this is the
+second time in this campaign a matcher's zero was really the matcher.
+
+To retry: disassemble **per entry point** (the `descent.py` path, from known function starts such as the
+`DT_FINI` at `0x81d80` and the entries reachable from the 0xd98xx tables), not linearly over the whole
+text; or find the references by searching the relocation blob for RIP-relative disp32s whose computed
+target is one of the three, which needs no disassembly at all.
