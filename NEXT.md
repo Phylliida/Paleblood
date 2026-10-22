@@ -197,3 +197,20 @@ together the signature and the name settle each other, and the row in
 The general lesson: **hash sweep for the name, decode for the signature, and require agreement.**
 Every future stop gets the sweep first (it is one call over 42,010 names) and the decode only when
 the sweep is silent or the two disagree.
+
+## The 430 are almost entirely nameable: sweep of all bind NIDs against 42,010 names
+
+One call, hashing 42,010 names into a dict and matching every NID in `docs/bind-order-eboot.txt`:
+**746 of 747 resolve.** Landed as `symbols/import_names.csv` (`nid, library, bind_index, name,
+state`), with state = implemented / named / unresolved from the runtime's own `RT_SYSLIB` list.
+The remaining import workload is therefore **a list of known functions**, not 430 foreign decodes --
+`printf`, `vsnprintf`, `realloc`, `longjmp`, `__stack_chk_fail`, `__tls_get_addr`, libc++ symbols.
+
+Caveat to settle before trusting the counts: the dump yields **747 NIDs** while the boot reports
+**686** for eboot, so it spans more than eboot's import table; the states must be re-derived per
+object before any "N unbound" figure is quoted off this file.
+
+`_write` next, with the three details that bite: return the count from a real host `write()` and
+loop on partial writes; write raw bytes, never `%s`, because guest output is octets and a
+NUL-truncated line is indistinguishable from a correct one; refuse fds other than 1 and 2, and tag
+guest output distinctly so the boot log stays parseable once it carries the guest's own printing.
