@@ -181,3 +181,15 @@ ends is absent on exactly the runs that need it first**; it now writes at load t
 subtracted each object's own mapping base, which printed `libc.elf` at `0x00400000` — **eboot's address**.
 It now uses the single translation base `GUEST_BASE` that `guest.h` uses, and the module lands at
 `0x80400000`. **That defect was found by `overlapping()`, which is why the helper exists.**
+
+**The writer is env-gated, fail-closed: `BB_OBJECTS_CSV=symbols/objects.csv pbboot … <eboot> --module …`.**
+The unconditional write let the **test suite** overwrite this artifact within the same slice that created it —
+the suite boots a mock eboot of 8192 bytes, so the tracked table briefly read `eboot,0x00400000,8192` and
+`m.elf,0x80400000,4096`. **An artifact written by every run of anything is an artifact nobody can cite**;
+a guard on the output protects the state.
+
+**(3)** The gate's first version wrote `if (!t) … else fclose(t)` and **segfaulted every boot in the suite**
+(four failures, rc −11, against `pbboot sha256 ac188cdab9f9`): with the variable unset `t` is `NULL` and the
+`else` branch ran `fclose(NULL)`. Unset is now silent, set-but-unwritable is an error — **a request that
+failed is not the same thing as a request not made.** Suite 317 OK, ctest 16/16, and `symbols/objects.csv`
+unchanged after both.

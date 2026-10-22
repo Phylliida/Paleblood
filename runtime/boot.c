@@ -571,9 +571,17 @@ int main(int argc, char **argv)
        absent on exactly the runs that need it first. The print stays for the operator; the file is for the
        tool, because an emitter parsing a log line breaks silently when the line is reworded. */
     {
-        FILE *t = fopen("symbols/objects.csv", "w");
-        if (!t) fprintf(stderr, "pbboot: cannot write symbols/objects.csv: %s\n", strerror(errno));
-        else {
+        /* Gated on an environment variable, fail-closed: the test suite boots a mock eboot of 8192 bytes,
+           and an unconditional write let the suite overwrite this repository artifact within the same slice
+           that created it. A guard on the output protects the state; only a real boot opts in. */
+        const char *table_path = getenv("BB_OBJECTS_CSV");
+        FILE *t = (table_path && *table_path) ? fopen(table_path, "w") : NULL;
+        if (!t) {
+            /* Unset is not an error -- most runs are tests and captures, not artifact generation. Set but
+               unwritable is an error, because that is a request that failed. `else fclose(NULL)` was the
+               version that segfaulted every boot in the suite. */
+            if (table_path && *table_path) fprintf(stderr, "pbboot: cannot write %s: %s\n", table_path, strerror(errno));
+        } else {
             fprintf(t, "name,guest_start,size,kind\n");
             for (size_t m = 0; m < object_count; m++)
                 fprintf(t, "%s,0x%08llx,%llu,%s\n", objects[m].label ? objects[m].label : "?",
