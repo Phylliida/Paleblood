@@ -214,6 +214,15 @@ int main(void)
         setenv("BB_CAPTURE", "1", 1);
         setenv("BB_CAPTURE_OK", path, 1);
 
+        /* The catalog join: capture mode refuses an unlisted site, so the test supplies the 14 bytes it derived
+           itself. The hex is built from `pristine` -- a literal here would be a second copy of the facts. */
+        char site_hex[2 * 14 + 1];
+        for (int k = 0; k < 14; k++) snprintf(site_hex + 2 * k, 3, "%02x", pristine[k]);
+        FILE *sf = fopen("site_ok_test.csv", "w");
+        fprintf(sf, "address,prologue\n0x%08x,%s\n", 0x400000, site_hex);
+        fclose(sf);
+        setenv("BB_SITE_OK", "site_ok_test.csv", 1);
+
         FILE *f = fopen(path, "w");
         fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,none,00,aa\n");
         fclose(f);
@@ -249,12 +258,27 @@ int main(void)
         failed |= check(memcmp(image, before, sizeof before) == 0,
                         "a missing-row refusal must leave the site byte-identical");
 
+        memcpy(image, pristine, sizeof pristine);
+        sf = fopen("site_ok_test.csv", "w");
+        fprintf(sf, "address,prologue\n0x%08x,%s\n", 0x400000,
+                "9090909090909090909090909090");   /* not this site: the image is not the catalog */
+        fclose(sf);
         f = fopen(path, "w");
         fprintf(f, "address,xmm_used,scanned_sha256,so_sha256\n0x0,none,00,aa\n");
         fclose(f);
+        failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) != 0,
+                        "capture mode must refuse a site that does not match its catalogued prologue");
+        failed |= check(memcmp(image, pristine, sizeof pristine) == 0,
+                        "a prologue mismatch must leave the site byte-identical");
+
+        sf = fopen("site_ok_test.csv", "w");
+        fprintf(sf, "address,prologue\n0x%08x,%s\n", 0x400000, site_hex);
+        fclose(sf);
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
-                        "capture mode must allow a pass row with a matching library");
-        remove(path);   /* the allowed case leaves the site patched; later cases restore it themselves */
+                        "capture mode must allow a pass row with a matching library and a matching prologue");
+        remove(path);
+        remove("site_ok_test.csv");
+        unsetenv("BB_SITE_OK");   /* the allowed case leaves the site patched; later cases restore it themselves */
         unsetenv("BB_CAPTURE");
         unsetenv("BB_CAPTURE_OK");
         unsetenv("BB_CAPTURE_TABLE_ID");

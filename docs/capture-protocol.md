@@ -699,3 +699,39 @@ same compute-in-tool / freeze-in-file / refuse-absent shape as `install_mode.csv
    runs before the suite does.
 3. Non-`none` verdicts and missing rows share an exit path, so the counters cannot yet say which refusal fired;
    the messages do, and **`sites_refused` is a total, not a partition.**
+
+### The guard is the patch's width, the counters are four, and the join refuses its own zero
+
+**Width:** the comparison covers **14 bytes — `ABSOLUTE_JUMP_SIZE`, the same constant the write and the readback
+use.** A 4-byte guard beside a 14-byte patch verifies the first instruction's head and leaves its tail unverified,
+which is exactly where a 16 KiB-shifted patch still passes. **All 1,737 hook sites are ≥16 bytes (min 16)**, so 14
+is available at every one — the same fact that made a 14-byte absolute jump legal at all.
+
+**Counters, split, because they are opposite diagnoses:**
+
+```text
+capture: mode=off table=- hooks_installed=1 sites_checked=2 already_patched=0 mismatched=0 unlisted=0
+```
+
+- `already_patched` — two hooks on one site;
+- `mismatched` — **the image is not the catalog**;
+- `unlisted` — capture mode found no `site_ok` row, and absence is a refusal, not a default.
+
+**Order at install:** read the 14 bytes → compare to the catalog → only then write. The prior-patch byte test comes
+first, because a site that is already a jump makes the catalog comparison meaningless.
+
+**`symbols/site_ok.csv`** (`address,prologue`, 14 bytes hex) is produced by `tools/site_table.py`, which **joins
+`install_mode.csv`'s `hook` rows and prints both totals, failing on surplus in either direction** — two tables keyed
+on address is how `surplus 101` happened, and **an asserted join beats two tables that look consistent.**
+
+**And the tool refuses its own zero, which is the state it is actually in:**
+
+```text
+install_mode.csv names no hook rows: the join cannot be checked and this table proves nothing
+rc=2
+```
+
+`symbols/install_mode.csv` is **header-only**, so the population is empty and every count above is `0 of 0`. **That
+is a zero over an empty intersection, not agreement** — the table, the join, and the C guard are all built and
+exercised against a test-supplied table, and none of them has yet seen a real hook row. Wiring the 1,737 hooks into
+`install_mode.csv` is what turns this from a proven mechanism into a proven population.

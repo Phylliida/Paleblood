@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 
 #include "runtime/boundary_stub.h"
+#include "runtime/site_guard.h"   /* the bias constant, in a header nothing pins */
 
 #if !defined(__x86_64__)
 #error "The version-1 host hook callback requires an x86-64 host"
@@ -140,7 +141,10 @@ static int capture_allowed(uint64_t offset)
 }
 
 static unsigned installed_count;   /* what the startup line reports and what the game run can be compared to */
-static unsigned sites_checked, sites_refused;   /* every install is a claim about a site; count the claims */
+/* Four distinct findings, four counters. A total called "refused" merges them, and the two that matter most --
+   the site was already patched (two hooks on one site) and the site does not match the catalog (the image is not
+   the catalog) -- are opposite diagnoses with the same symptom. */
+static unsigned sites_checked, sites_already_patched, sites_mismatched, sites_unlisted;
 
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
@@ -150,13 +154,62 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
 
     if (!capture_allowed(offset)) return -1;
 
+    /* The guard's width is the patch's width: 14 bytes, the same constant the write and the readback use. Ten
+       unverified bytes at the tail of the first instruction is exactly what a 16 KiB-shifted patch still passes.
+       Fail closed in capture mode; the table is a contract, so absence is a refusal and not a default. */
+    {
+        const char *cap = getenv("BB_CAPTURE");
+        if (cap && *cap && *cap != '0') {
+            const char *path = getenv("BB_SITE_OK");
+            if (!path || !*path) path = "symbols/site_ok.csv";
+            FILE *tbl = fopen(path, "r");
+            char line[256];
+            int found = 0, match = 0;
+            if (!tbl) {
+                fprintf(stderr, "hook: no site table at %s: refusing; capture mode will not patch an unlisted site\n",
+                        path);
+                sites_unlisted++;
+                return -1;
+            }
+            while (!found && fgets(line, sizeof line, tbl)) {
+                unsigned long long addr = 0;
+                char hex[64] = {0};
+                if (sscanf(line, "0x%llx,%63s", &addr, hex) != 2) continue;
+                if (addr != offset + (unsigned long long)RT_SITE_EBOOT_BASE || strlen(hex) != 28) continue;
+                found = 1;
+                match = 1;
+                for (int k = 0; k < ABSOLUTE_JUMP_SIZE; k++) {
+                    unsigned v = 0;
+                    if (sscanf(hex + 2 * k, "%2x", &v) != 1 || guest_image[offset + k] != (unsigned char)v) {
+                        match = 0;
+                        break;
+                    }
+                }
+            }
+            fclose(tbl);
+            if (!found) {
+                sites_unlisted++;
+                fprintf(stderr, "hook: 0x%llx has no site_ok row: refusing rather than patching an unlisted site\n",
+                        (unsigned long long)(offset + RT_SITE_EBOOT_BASE));
+                return -1;
+            }
+            if (!match) {
+                sites_mismatched++;
+                fprintf(stderr, "hook: 0x%llx does not match its site_ok prologue over %d bytes: the image is not "
+                                "the catalog; refusing\n",
+                        (unsigned long long)(offset + RT_SITE_EBOOT_BASE), ABSOLUTE_JUMP_SIZE);
+                return -1;
+            }
+        }
+    }
+
     /* One memcmp per site, and it is the check that matters: a site whose bytes are not what the caller expected
        is a patch into a different function. It reads back perfectly, passes the exec check, and fires at a site
        nobody selected -- the 16 KiB bias class. A site that is already a jump is refused too: patching over a
        patch hides the first one. */
     sites_checked++;
     if (guest_image[offset] == 0xe9 || guest_image[offset] == 0xcc || guest_image[offset] == 0xff) {
-        sites_refused++;
+        sites_already_patched++;
         fprintf(stderr, "hook: refusing 0x%llx: site begins 0x%02x, which is already a patch or a trap\n",
                 (unsigned long long)offset, (unsigned)guest_image[offset]);
         return -1;
@@ -288,9 +341,10 @@ int rt_host_hooks_initialize(rt_host *host)
             FILE *probe = fopen(path, "r");
             if (probe) { present = 1; fclose(probe); }
         }
-        fprintf(stderr, "capture: mode=%s table=%s hooks_installed=%u sites_checked=%u sites_refused=%u\n",
+        fprintf(stderr, "capture: mode=%s table=%s hooks_installed=%u sites_checked=%u already_patched=%u "
+                        "mismatched=%u unlisted=%u\n",
                 on ? "on" : "off", on ? (present ? path : "absent") : "-", installed_count, sites_checked,
-                sites_refused);
+                sites_already_patched, sites_mismatched, sites_unlisted);
     }
     return 0;
 }
