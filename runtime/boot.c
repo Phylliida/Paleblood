@@ -413,6 +413,11 @@ int main(int argc, char **argv)
         }
     }
     rt_tls_init();
+    {
+        void *p = malloc(48);
+        fprintf(stderr, "pbboot: heap probe at init (before any guest code): malloc(48) = %p\n", p);
+        free(p);
+    }
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
     int timeout = 30, trace = 0, list = 0;
     for (int i = 1; i < argc; i++) {
@@ -637,6 +642,14 @@ int main(int argc, char **argv)
         }
         printf("pbboot: fault on pbboot sha256 %s (the artifact that is running, not a rebuild)\n",
                rt_identity_sha());
+        {
+            uint64_t live_fs = 0;
+            __asm__ volatile("rdfsbase %0" : "=r"(live_fs));
+            printf("pbboot: fs host %#llx guest %#llx live %#llx%s\n",
+                   (unsigned long long)rt_tls_host_base(), (unsigned long long)rt_tls_guest_base(),
+                   (unsigned long long)live_fs,
+                   rt_tls_host_base() == rt_tls_guest_base() ? "  <-- HOST FS IS THE GUEST BLOCK" : "");
+        }
         for (int f = 0; f < fault_frame_count; f++) {
             Dl_info di;
             if (dladdr(fault_frames[f], &di) && di.dli_fname)

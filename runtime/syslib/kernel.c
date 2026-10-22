@@ -5,6 +5,7 @@
 #include "runtime/process.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "runtime/syslib.h"
 
 #include <string.h>
@@ -12,6 +13,16 @@
 /* The process parameter block: the executable's PT_SCE_PROCPARAM segment as mapped. */
 static void *kernel_get_proc_param(void)
 {
+    /* Probe, before anything else in this boot touches the heap: is glibc's allocator healthy this early? */
+    {
+        uint64_t live = 0;
+        __asm__ volatile("rdfsbase %0" : "=r"(live));
+        fprintf(stderr, "pbboot: in-body fs %#llx (compare with the fs line in the report)\n",
+                (unsigned long long)live);
+        void *p = malloc(48);
+        fprintf(stderr, "pbboot: heap probe (before #23): malloc(48) = %p\n", p);
+        free(p);
+    }
     if (!rt_process.proc_param) rt_fatal("sceKernelGetProcParam", "the executable has no process parameter segment");
     if (!rt_guest_ptr_ok((uintptr_t)rt_process.proc_param, 4, "sceKernelGetProcParam")) {
         fprintf(stderr, "pbboot: sceKernelGetProcParam: proc_param %p, image %p\n", rt_process.proc_param,

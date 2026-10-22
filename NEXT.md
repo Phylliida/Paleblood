@@ -1337,3 +1337,21 @@ is what a C library whose `%fs` was a *different* TCB for part of its life would
 arena list live off `%fs`. **The test that separates "allocator broken by the earlier pre-swap entries" from
 "this call specifically": allocate and free 48 bytes at the top of the `#38` body, before anything else touches
 the heap, and see whether it faults there instead.**
+
+## Measured: inside a syslib body, `%fs` is the GUEST block, not the host base
+
+    in-body fs 0x63e9d158dc40                      <- equal to the guest block
+    fs host 0x72972f4a1740 guest 0x63e9d158dc40    <- and the host base is a different address
+
+**So the swap does not hold at the body's first instruction**, while the `in flight` index written by the same
+stub *does* hold -- same emitted bytes, one effect visible and one not. Two explanations remain:
+(i) the write executes and something restores the guest base before our body's first statement; (ii) the stub
+executed is not the stub `write_trampoline` emits, and the index is set by another path (the "two emission
+shapes" note). **The readback guard settles (i) versus (ii) in one build: `rdfsbase` immediately after each
+`wrfsbase` in the stub, stored to a global and printed in the report.**
+
+**This also re-reads the allocator crash: `malloc` works at init (`malloc(48) = 0x611845587490`) and the same
+call inside a body faults -- because glibc's tcache and arena pointers live off `%fs`, and `%fs` there is our
+guest block, which holds a self-pointer and zeros.** The heap probe moved the fault to the *first* heap use in
+guest-triggered code and named it `in flight: #38`, which is what a wrong `%fs` predicts and what "corrupted
+heap" does not.
