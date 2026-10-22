@@ -1,6 +1,9 @@
-date,milestone,milestone_index,imports_total,imports_bundled,imports_implemented,imports_remaining,stops_at,outcome,phase,returns_to,fault_at,fault_signal,fault_address
-2026-10-07,loaded,0,686,219,19,448,libc.elf->libkernel:scePthreadAttrGetaffinity,,,,,,
-2026-10-11,loaded,0,686,219,29,438,libc.elf->libkernel:scePthreadAttrGetaffinity,unimplemented,libc.elf,libc.elf+0x81ad5,,,
-2026-10-11,loaded,0,686,219,27,440,libc.elf->libkernel:scePthreadAttrGetaffinity,unimplemented,libc.elf,libc.elf+0x81ad5,,,
-2026-10-11,loaded,0,686,219,28,439,libc.elf->libkernel:scePthreadAttrGetaffinity,unimplemented,libc.elf,libc.elf+0x81ad5,,,
-2026-10-20,entry,1,686,219,30,437,eboot->libkernel:pO96TwzOm5E,unimplemented,eboot,eboot+0x2081a85,,,
+seq,sha256,nid,name,binding,return_address,note
+1,,pO96TwzOm5E,sceKernelGetDirectMemorySize,libkernel,eboot+0x2081a85,stop before the identity line existed
+2,b3c4f7fd5232,L-Q3LEjIbgA,sceKernelMapDirectMemory,libkernel,eboot+0x2081ac6,first run with sha256 line one
+3,b3c4f7fd5232,6ULAa0fq4jA,scePthreadRwlockInit,libkernel,eboot+0x207f2d8,after Map
+4,b3c4f7fd5232,188x57JYp0g,sceKernelCreateSema,libkernel,eboot+0x1fc2443,after rwlock family
+5,b3c4f7fd5232,n88vx3C5nW8,gettimeofday,libkernel,eboot+0x20e2708,libScePosix alias namespace
+6,b3c4f7fd5232,g8cM39EUZ6o,sceSysmoduleLoadModule,libSceSysmodule,eboot+0x2026149,first sysmodule call
+7,d2a40f19a54f,,, ,,guest panic: LoadModule requested id 180 which an invented table lacked
+8,,R9lA82OraNs,,,eboot+0x20261dd,after sysmodule records ids instead of naming them

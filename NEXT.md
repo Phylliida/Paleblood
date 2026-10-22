@@ -902,3 +902,25 @@ route through the same helper rather than growing its own.
 Scored: 45 -> **46 implemented**, 423 -> **422 unbound**, called 44 -> **46**. The same function is
 registered under **`libkernel` and `libScePosix`**, which is the alias namespace arriving as predicted;
 next stop `g8cM39EUZ6o` from **libSceSysmodule**.
+
+## Sysmodule records ids instead of naming them, and the stop order became a file
+
+**My first version carried an id->name table written from memory.** The guest asked for **id 180**, the
+table lacked it, the refusal went back as a guest value, and the guest panicked
+(`[Dantelion2 Panic]`, sha256 `d2a40f19a54f`). **That is the remembered-constant defect committed inside
+the file written to avoid it, and it cost exactly one boot to prove.** The table is deleted, not extended:
+ids are **printed and recorded**, with the honest note that they have no name here. Naming an id is an
+evidence problem, and an invented name is indistinguishable from a measured one once it is in a table.
+
+**Load and IsLoaded share one home**: a 64-entry accepted-id list, so nothing is ever "accepted and not
+remembered" -- that pair would be worse than any stop. `is_loaded` consults the same list, `unload`
+compacts it.
+
+**`symbols/boot_history.csv` now exists**, and it is the artifact this track was missing: the sequence of
+unimplemented NIDs **in the guest's own initialisation order** -- a dependency graph in execution order.
+Rows 1-8 record what was measured, with the sha256 of the run where I have it and a blank where I do not.
+The blank is the point: **a history row without its subject is the defect the sha256 line was added to
+prevent, so the file records the absence rather than inventing a build.**
+
+Scored: 46 -> **49 implemented**, 422 -> **419 unbound**, called 46 -> **47**. Next stop `R9lA82OraNs` from
+**libSceAppContent**, return address `eboot+0x20261dd` -- twenty bytes after the sysmodule call returned.
