@@ -239,3 +239,34 @@ not the working tables that grow with the work. Exempt, each a text table the to
 (evidence ledger), and **`functions.csv` (the ladder — the first table whose growth crossed the cap
 on its own merits, 2.21 MB at 34,135 rows = 21.6% of the reach)**. Every further exception is a
 decision recorded here, never an edit made at the moment a commit is refused.
+
+### 1j — PROPOSED, NOT IN FORCE: shape-agnostic `.byte` bodies for the remaining leaf tier
+
+**This section deliberately does not satisfy `emit_byte_leaves.py::authorised()`, which looks for
+`### 1j.`. Ratifying it is a one-character-kind edit by the user: drop `PROPOSED` and the dot
+lands, and the tool starts working. Until then the tool refuses and no `.byte` body can be built,
+because absence refuses.**
+
+The census: **4,776 transcribable leaves remain over 1,168 shapes (~4 members each), 47,655 B.**
+Per-shape `TEMPLATES` rows would be **1,168 rows for 4,776 members** — the per-family amortisation
+trap this project already named, and a larger one.
+
+The proposal: **one naked function per member, body = the original extent copied through `.byte`,
+with one generated comment line per instruction from the same decode the §1h guard runs.** The
+emitter is then shape-agnostic, §1h stays the only legality gate, and the comments cannot drift
+from the bytes because they are produced from them.
+
+**What it costs, stated against decision 1 and not around it.** Decision 1 authorised
+*single-instruction* asm with a uniform byte assertion, "strictly one instruction, no sequencing",
+and a monotonic asm-body count. A `.byte` body can encode several instructions and **removes the
+assembler — the third instrument that named a hand-emitted mnemonic — from the loop.** The byte
+assertion then proves **a transcription, not a reconstruction**: it still catches the defect class
+this project actually keeps paying for (bias/offset, length, indexing — and the offset arithmetic is
+already exercised for all 4,776 by `blocks.census`, which decodes every extent to exactly its
+declared size), and it cannot catch "the source form is right", because there is no source form.
+Under 1h that is admissible only because the extent has no branch, no loop and no call: there is no
+behaviour to get wrong, only bytes to copy.
+
+Approving this makes the asm-body count jump **11,759 → 16,535** — the monotonic-counter tooth of
+decision 1 exists exactly to make that a decision rather than a drift. **This is that decision,
+asked for once.**
