@@ -214,3 +214,26 @@ object before any "N unbound" figure is quoted off this file.
 loop on partial writes; write raw bytes, never `%s`, because guest output is octets and a
 NUL-truncated line is indistinguishable from a correct one; refuse fds other than 1 and 2, and tag
 guest output distinctly so the boot log stays parseable once it carries the guest's own printing.
+
+## The null fault: reading (a), and a counter that measures trampolines
+
+**No guest bytes reached stderr.** The rerun's stderr, filtered for lines not starting with
+`pbboot:` / `runtime:` / `boot:` / `DL_PANIC`, is empty -- so `_write` produced no output, the
+crash is not the guest reporting a failure it already had, and **reading (a) is live**: the return
+path is the shape to check. No `unimplemented:` line for `FxVZqBAA7ks` either, so the loader took a
+route that neither served the call nor stopped on it.
+
+That route is visible in the loader and it also explains the nine-row gap:
+
+    runtime/boot.c:403   write_trampoline(o->tramp + i * TRAMPOLINE_SIZE, &o->called[i], ...);
+    runtime/boot.c:75    unsigned char *called;   /* per import: called at least once */
+
+**The trampoline marks `called` itself, before it jumps to whatever the provider is.** So
+`imports called 28` counts *trampolines entered*, not calls served by an implementation -- a
+counter that measures intent, the same family as an approvals column that counts rows. That is why
+`_write` raised "called" while `implemented` stayed 33: the two numbers are not two views of one
+event.
+
+Before any more implementations, split that counter: **called** (trampoline entered) versus
+**served** (provider was RUNTIME and returned), printed as two figures. Until then no import
+progress claim should quote "imports called".
