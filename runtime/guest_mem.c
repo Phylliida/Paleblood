@@ -25,7 +25,17 @@ int rt_guest_write_ok(uintptr_t addr, size_t len, const char *call)
     uintptr_t base = (uintptr_t)rt_process.image;
     uintptr_t end = base + (uintptr_t)rt_process.image_size;
     if (len == 0) return 1;
-    if (addr < base || end < base || len > end - addr) {
+    /* rt_process.image is set in exactly one place, boot.c, so on the plugin path it is NULL and this
+       function used to admit EVERY address: with base == end == 0, `end - addr` underflows to a huge
+       unsigned value and `len > huge` is false. A bounds check whose subject was never initialised is
+       a licence, not a guard, so an unset image is now a refusal that says so -- and an image size of
+       zero is the same state by another route. */
+    if (!base || !end || end < base) {
+        fprintf(stderr, "pbboot: %s: refused %zu bytes at %p: the guest image bounds are unset "
+                "(rt_process.image is only initialised by boot.c)\n", call, len, (void *)addr);
+        return 0;
+    }
+    if (addr < base || len > end - addr) {
         fprintf(stderr, "pbboot: %s: refused write of %zu bytes at %p, outside the image [%p,%p)\n", call,
                 len, (void *)addr, (void *)base, (void *)end);
         return 0;

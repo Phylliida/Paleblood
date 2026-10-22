@@ -63,3 +63,20 @@ first call inside an installed body can resolve lazily. A hook that fires before
 has been resolved performs that resolution *inside the guest's thread* on the host `%fs` the boundary stub
 restored — which would read as a body defect. `LD_BIND_NOW=1` on any run whose purpose is a capture, and
 say so in the run's own log.
+
+## Which bounds the bodies consult — the answer is "none, until now"
+
+The empty intersection has a sharper consequence than shadowing. The one bounds function in the tree is
+`rt_guest_write_ok` (`runtime/guest_mem.c`), and **its subject `rt_process.image` is assigned in exactly
+one place, `boot.c:562–563`.** On the plugin path `boot.c` never runs, so `rt_process.image` and
+`image_size` were **0**, and with `base == end == 0` the arithmetic `len > end - addr` **underflows to a
+huge unsigned value and admits every address**: a bounds check whose subject was never initialised is a
+licence, not a guard. It now refuses, and says which state it was in. That also means the plugin's
+`rt_image` (from `host->image`) and the bounds check's `rt_process.image` are **two different globals, and
+neither is the boot's mapping** — the printed base comparison compares `host->image` with what `boot.c`
+mapped, and the disagreement it exists to catch is real rather than decorative.
+
+**`rt_syslib_in_flight` reports the last import entered, not the faulting one.** The word is set by the
+trampoline's prologue and cleared by the boundary stub's bookkeeping tail; a body that faults never runs
+the tail, so the value at a fault is **the import that was in flight**, which is the intended reading —
+but silence after a fault means *stale*, not *settled*, and must not be read as "nothing was in flight".

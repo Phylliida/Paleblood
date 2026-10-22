@@ -133,6 +133,15 @@ static void read_detach_state_without_variable(void) { (void)detach_state_of(NUL
 
 int main(void)
 {
+    /* This unit test has no guest image: the syslib handlers write through pointers the test owns on its
+       own stack. boot.c is what sets rt_process.image in a real run, so declare a fixture that covers this
+       frame -- an unset bound is now a refusal rather than a silent admission of every address, which is
+       the whole point of the change this test found. */
+    {
+        unsigned char anchor;
+        rt_process.image = (unsigned char *)((uintptr_t)&anchor & ~(uintptr_t)0xfff);
+        rt_process.image_size = 0x20000;
+    }
     /* Unresolved entries are still callable diagnostics, but are not reported as implemented. */
     CHECK(((int (*)(void))fn("test", "testUnresolvedEntry"))() == -1);
     CHECK(!is_implemented("test", "testUnresolvedEntry"));
@@ -182,7 +191,16 @@ int main(void)
     /* the process parameter block comes from the loaded executable */
     static unsigned char block[0x40];
     rt_process.proc_param = block;
+    /* The handler writes through the parameter block, so for this call the declared image IS the block:
+       the bounds cover the subject being written, not the frame the pointer lives in. Restored after, so
+       later handlers keep their frame fixture. */
+    unsigned char *const frame_image = rt_process.image;
+    const size_t frame_size = rt_process.image_size;
+    rt_process.image = block;
+    rt_process.image_size = sizeof block;
     CHECK(((void *(*)(void))fn("libkernel", "sceKernelGetProcParam"))() == block);
+    rt_process.image = frame_image;
+    rt_process.image_size = frame_size;
 
     /* a thread variable equals itself and nothing else: the same object pointer is the same thread.
        The runtime has a single guest thread so far (scePthreadCreate is not implemented), so the
