@@ -118,3 +118,22 @@ distinction that matters: **the byte assertion is exactly the instrument that ca
 flags change, and its green means "these bytes are the original's", not "this source form is the
 reason".** Decision 1's stability argument stands on its own; it just cannot be *rescue* for a
 check that turns out to work.
+
+### 1b. The byte-identity evidence tier: a case-set value, never a fourth status
+
+Byte identity makes the differential redundant for the asm families — equal executed bytes to the
+original extent is equivalence, not a proxy for it — so **8,799 members would cost zero cases.**
+What that must not become is a row pretending a differential ran.
+
+**`original | edge-verified | verified` is a partition**; a fourth status would make `edge-verified`
+mean "a differential ran" for some rows and "the bytes were compared" for others, and no reader
+could tell which. So the tier is a value of the **`cases`** field — `bytes`, meaning *no case set;
+the evidence is byte identity* — and `evidence_hash()` already hashes `cases|option|cases_sha256`,
+so **the kind is inside every approval and moving a row from `edge` to `bytes` decays it.**
+`test/test_evidence_bytes.py` holds both halves: accepted, and the hash moves.
+
+**Owed:** `progress.py --join` must print the split, or the headline silently merges 8,799
+byte-backed members with 22,376 differentially-backed ones, and the first question anyone asks of
+14.20% is "which of these actually ran?" **Owed:** the byte-assertion corpus digest for
+`cases_sha256` (a hash over `(address, executed bytes)` pairs), and one `record_many` call proving
+the path accepts `cases='bytes'` — the test above proves the vocabulary, not the writer.

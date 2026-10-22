@@ -51,7 +51,13 @@ import re
 VERIFICATION_HEADER = ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
                        'cases_sha256', 'date']
 QUARANTINE_HEADER = ['function', 'cases', 'option', 'case', 'reason', 'date']
-CASE_SETS = ('recorded', 'edge', 'option-recorded')
+# The evidence vocabulary. `bytes` is not a directory of cases: it says the evidence for this row
+# is that the replacement's executed bytes equal the original extent's, so no case was run. It
+# belongs in THIS field rather than in a fourth ladder status, because `original | edge-verified |
+# verified` is a partition and a fourth value would make `edge-verified` mean two things depending
+# on which row you read. evidence_hash() hashes `cases|option|cases_sha256`, so the kind flows into
+# every approval automatically -- moving a row from `edge` to `bytes` decays it, as it should.
+CASE_SETS = ('recorded', 'edge', 'option-recorded', 'bytes')
 SOURCE_HASH_LENGTH = 16
 # A row whose case files are not in this checkout carries this instead of a hash. It says "someone
 # looked and the inputs are not here", which is why record() never writes it: silence and an
