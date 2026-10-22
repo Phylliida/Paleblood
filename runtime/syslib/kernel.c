@@ -74,7 +74,10 @@ static unsigned long kernel_get_direct_memory_size(void)
 {
     unsigned long mapped = rt_process.image_size;
     if (mapped == 0) rt_fatal("sceKernelGetDirectMemorySize", "the image is not mapped");
-    if (mapped % 0x1000) rt_fatal("sceKernelGetDirectMemorySize", "the mapped image is not page-aligned");
-    return mapped;
+    /* image_size is the last segment's vaddr + memsz, so it is not page-aligned by construction --
+       the first run fataled here, which is the check doing its job on my assumption rather than on
+       the runtime. The mapping is a page mapping, so the bytes the guest can address are this
+       figure rounded up; returning the unrounded one would understate what is readable. */
+    return (mapped + 0xfff) & ~0xfffUL;
 }
 RT_SYSLIB("libkernel", sceKernelGetDirectMemorySize, kernel_get_direct_memory_size);
