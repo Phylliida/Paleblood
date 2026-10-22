@@ -317,7 +317,20 @@ static void rt_import_pc_report(void)
     for (unsigned i = 0; i < RT_IMPORT_PC_MAX; i++) {
         if (rt_import_pc[i][1]) { nz++; total += rt_import_pc[i][1]; }
     }
-    fprintf(stderr, "imports called: %llu rows, %llu calls total\n", nz, total);
+    /* Sum over EVERY object: object_count is 2 here (eboot, libc), and summing only the first would print a
+       number that looks right and is half the population. If the loader data is unreachable, print n/a -- an
+       unreachable subject must not print as a number. */
+    unsigned long long boot_called = 0;
+    int boot_known = 1;
+    for (size_t k = 0; k < object_count; k++) {
+        const size_t n = rt_elf_import_count(objects[k].elf);
+        if (!objects[k].called || !n) { boot_known = 0; break; }
+        for (size_t i = 0; i < n; i++) boot_called += objects[k].called[i] ? 1u : 0u;
+    }
+    if (boot_known)
+        fprintf(stderr, "imports called: %llu rows, %llu calls total, boot called=%llu\n", nz, total, boot_called);
+    else
+        fprintf(stderr, "imports called: %llu rows, %llu calls total, boot called=n/a\n", nz, total);
     for (unsigned pass = 0; pass < 20; pass++) {
         unsigned best = RT_IMPORT_PC_MAX;
         for (unsigned i = 0; i < RT_IMPORT_PC_MAX; i++) {
