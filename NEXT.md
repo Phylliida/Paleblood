@@ -285,3 +285,31 @@ constraint stated as a limit.
 
 And the first grep for these returned nothing because `imports.csv` has **no NID column** -- it
 holds names. Grep names there, NIDs in `import_names.csv`. That trap has now cost three slices.
+
+## Pre-registration: what `struct __sFILE` should look like before I read it
+
+Written **before** the decode, as a control rather than a discovery. FreeBSD 9's `struct __sFILE`,
+which PS4's libc is derived from, in 64-bit:
+
+| offset | field |
+|---|---|
+| 0x00 | `_flags` (int) |
+| 0x08 | `_file` (int, the descriptor) -- low half of a word with `_cookie` adjacency |
+| 0x10 | `_cookie` (void *) |
+| 0x18 | `_read` (function pointer, guest code address) |
+| 0x20 | `_seek` |
+| 0x28 | `_write` |
+
+**Falsification, stated so the read cannot be fitted afterwards:**
+- If a word at 0x18/0x20/0x28 is a **guest code address** (inside `libc.elf`'s text), the guest's own
+  stdio reads function pointers out of this object and **the host cannot construct it** -- `_Stdout`
+  must resolve to **libc.elf's own initialised object**, whose address libc's init has already
+  produced (the boot was inside libc.elf two stops ago). The arena is then the wrong tool.
+- If those words are zero or host-looking, the object is constructible and the layout above is a
+  candidate to match field by field.
+
+**Two failed attempts to reach the object, both instrument failures, neither a finding:**
+`libc.elf` has **no `SHT_DYNSYM` section** (`e_shoff` route returns nothing -- consistent with
+`e_shoff = 0`), and my `PT_DYNAMIC` walk raised `KeyError: 6` on `DT_SYMTAB`, so the tag map did not
+parse. Read the dynamic segment's tags and print them before indexing; an absent tag and a
+mis-parsed segment look identical, which is the same lesson as `_line` in the pin checker.
