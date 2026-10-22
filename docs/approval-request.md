@@ -19,7 +19,7 @@ From the repository root, with any `python3`:
 
 ```
 python3 -c 'import sys
-a=int(sys.argv[1],16); d=open("../data/bb/elf/eboot.elf","rb").read(); b=d[a-0x3fc000:][:8]
+a=int(sys.argv[1],16); d=open("../data/bb/elf/eboot.elf","rb").read(); o=a-0x3fc000; b=d[o:o+8]
 if b[2]==0x47: k,n=b[3],5
 elif b[2]==0x87: k,n=int.from_bytes(b[3:7],"little"),8
 else: print("NOT THIS SHAPE:",b.hex(" ")); raise SystemExit(1)
@@ -36,8 +36,8 @@ bytes. These three are members, decoded this way on 2026-10-22:
 | `0x004261a0` | `48 8b 47 48 c3` | `0x48` |
 
 Change the address to any of the **3,619** rows named `leaf_mov_rax_*` in `symbols/functions.csv` and the same
-command re-derives that member's constant. **121 distinct values of `K` exist; two of them (`0x40`, `0x48`) are
-3,388 of the 5-byte form between them.** The family's member set hashes to `bcc2bcb58f14c5ed…`; if the membership
+command re-derives that member's constant. **121 distinct values of `K` exist; `0x40` has 1,463 members and `0x48` has 1,450 — 2,913 of the 3,388
+five-byte members (86%), not all of them.** The family's member set hashes to `bcc2bcb58f14c5ed…`; if the membership
 changes, this request is stale by construction.
 
 ## The two answers, and what each costs you
