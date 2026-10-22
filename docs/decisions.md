@@ -230,3 +230,12 @@ So the rule, enforced in `record_bytes_family.py::assert_no_control_flow`:
 Decided from the bytes by `tools/blocks.py` (`blocks.census`), so it is mechanical, not a
 judgement. **Both directions were fired before this was relied on:** 175 `mov rax,rdi; ret` members
 pass; a 64-byte extent at `0x00414a40` is refused as *3 block(s) with 1 call(s)*.
+
+### 1i. The 2 MB size cap, and which tables are exempt
+
+`tools/check_no_game_data.py` refuses any staged file above 2 MB. That cap stops large **artifacts**,
+not the working tables that grow with the work. Exempt, each a text table the tools read and
+`validate_functions.py` checks row by row: `ghidra_functions.csv` (catalogue), `verification.csv`
+(evidence ledger), and **`functions.csv` (the ladder — the first table whose growth crossed the cap
+on its own merits, 2.21 MB at 34,135 rows = 21.6% of the reach)**. Every further exception is a
+decision recorded here, never an edit made at the moment a commit is refused.
