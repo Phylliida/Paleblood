@@ -90,16 +90,20 @@ size_t rt_snapshot_stub_size(int capturing)
         A seventh argument would need `sub rsp,16; mov [rsp],site` to keep the 16-byte alignment the
         push-rbx/and-rsp idiom exists to establish -- an 8-byte push before `call` looks right in review
         and puts the callee 8 bytes off. THAT FORM IS NOT IN THESE BYTES. */
-    return capturing ? 75u : 5u; /* 75 = the capture form above; 5 = e9 rel32 */
+    /* 75 + 13 for the entry counter (`movabs r11,&entered; incq [r11]`), which must run BEFORE the first push:
+       a counter inside the snapshot cannot tell "never entered" from "entered and died in the prologue", and the
+       /3- and rsp-class defects live in exactly those bytes. */
+    return capturing ? 88u : 5u; /* 88 = capture form + entry counter; 5 = e9 rel32 */
 }
 
 size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr,
-                              uint64_t host_fs, uint64_t guest_fs, int capturing)
+                              uint64_t host_fs, uint64_t guest_fs, uint64_t entered_addr, int capturing)
 {
     const size_t needed = rt_snapshot_stub_size(capturing);
     /* Refuse before the first store, and refuse an unsatisfiable size: capacity < SIZE_MAX is every
        capacity, so B cannot be installed by accident before it is written. */
     if (!dst || !self_addr || !stub_addr || capacity < needed) return 0;
+    if (capturing && !entered_addr) return 0;   /* the counter is part of the form, not an option */
 
     /* A near jump needs the target inside signed 32 bits of the byte after the opcode. Two pages from
        one mmap'd region are far inside that, but a far target silently needs the 14-byte absolute form
@@ -110,6 +114,10 @@ size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self
 
     unsigned char *p = dst;
     if (capturing) {
+        /* Entry counter FIRST -- before the pushes, before wrfsbase. If the prologue is wrong, this is the only
+           instrument that already ran, and it is read from the abort and fault paths as well as the clean one. */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &entered_addr, 8), p += 8;   /* movabs r11, &entered */
+        *p++ = 0x49, *p++ = 0xff, *p++ = 0x03;                          /* incq [r11] */
         /* The six argument registers are pushed in the order the snapshot takes them, and the snapshot
            reads them back as its parameters -- no argument setup, no seventh argument, no alignment
            change beyond the idiom already in the boundary stub. */

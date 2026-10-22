@@ -50,4 +50,5 @@ void rt_capture_snapshot(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uin
 
 size_t rt_snapshot_stub_size(int capturing);
 size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr,
-                              uint64_t host_fs, uint64_t guest_fs, int capturing);
+                              uint64_t host_fs, uint64_t guest_fs, uint64_t entered_addr, int capturing);
+/* 88 of 96 in the capture form: 75 + 13 for the entry counter. The slot arithmetic must move before the bytes do. */

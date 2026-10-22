@@ -229,7 +229,18 @@ static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void
    CLEARED before the stub returns, so "the fault happened inside #39" and "the fault happened after #39
    returned" are different readings rather than the same one -- a stale index is a claim, not a measurement. */
 volatile uint32_t rt_syslib_in_flight = 0xffffffffu;
-volatile uint64_t rt_syslib_args[3];
+/* Slots 0..2 are the guest's rdi/rsi/rdx; slot 3 is [rsp] at trampoline entry, i.e. the guest return
+   address. ONE global, overwritten per call, read at the reporting site -- so re-entrancy is a known limit:
+   the last call wins, and a nested import would overwrite its caller's record. */
+volatile uint64_t rt_syslib_args[4];
+
+/* One row per import, not a ring: a ring write needs a second scratch register, and here r11 holds &args while
+   rcx/r8/r9 are live arguments -- a ring that eats arguments is worse than a slot that misses one. `which` is a
+   compile-time literal in each trampoline, so the emitter bakes `movabs r11, &rt_import_pc[which]` and needs no
+   index arithmetic at all. pc in [0], count in [8]: a nonzero count is an import the guest actually called,
+   which is the `called` half of the called/served split this runtime has owed for many slices. */
+#define RT_IMPORT_PC_MAX 4096
+volatile uint64_t rt_import_pc[RT_IMPORT_PC_MAX][2];
 /* Read back inside the stub, immediately after the host swap: a wrfsbase that does not take is otherwise
    indistinguishable from one that does. */
 /* The guest stack's alignment at the call site is the guest's business; our C bodies need the ABI's. */
@@ -250,6 +261,18 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         *p++ = 0x49, *p++ = 0x89, *p++ = 0x7b, *p++ = 0x00;            /* mov [r11+0], rdi */
         *p++ = 0x49, *p++ = 0x89, *p++ = 0x73, *p++ = 0x08;            /* mov [r11+8], rsi */
         *p++ = 0x49, *p++ = 0x89, *p++ = 0x53, *p++ = 0x10;            /* mov [r11+16], rdx */
+        /* The guest return address, AFTER the in-flight index store: a fault in that store must not pair a
+           stale index with a fresh PC. [rsp] is a return address only for a `call` -- a guest tail call
+           (`jmp`) leaves the OUTER caller's return address here, which attributes the PC to the wrong
+           function. That is why the join prints "PC outside every function extent: N" as its own line.
+           rax is caller-saved and holds the return value anyway, so nothing live is clobbered. */
+        if (which < RT_IMPORT_PC_MAX) {
+            const uint64_t slot = (uint64_t)(uintptr_t)&rt_import_pc[which][0];
+            *p++ = 0x49, *p++ = 0x8b, *p++ = 0x04, *p++ = 0x24;        /* mov rax, [rsp] */
+            *p++ = 0x49, *p++ = 0xbb, memcpy(p, &slot, 8), p += 8;     /* movabs r11, &pc[which] */
+            *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                     /* mov [r11], rax  (this import's PC) */
+            *p++ = 0x49, *p++ = 0xff, *p++ = 0x43, *p++ = 0x08;        /* incq [r11+8]    (and its count) */
+        }
     }
     if (!target) {
         *p++ = 0xbf, memcpy(p, &which, 4), p += 4;                     /* mov edi, which */
@@ -270,11 +293,44 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         if (stub == 0 || stub > room)
             rt_fatal("trampoline", "boundary stub does not fit the trampoline slot");
         p += stub;
-        if (getenv("BB_TRAMPOLINE_VERBOSE"))
+        if (getenv("BB_RECORD_ADDR")) {
+            /* One declaration in the tree is not one copy at runtime: the emitted store carries a LITERAL address,
+               so if a trampoline were emitted by another object the store would land in that object's array and
+               read exactly like a genuine zero. Print the reporter's address; the dump prints the literal. */
+            fprintf(stderr, "record: &rt_syslib_args=%p &in_flight=%p\n",
+                    (void *)(uintptr_t)rt_syslib_args, (void *)(uintptr_t)&rt_syslib_in_flight);
+        }
+        if (getenv("BB_TRAMPOLINE_VERBOSE")) {
             fprintf(stderr, "trampoline %u: %zu of %d bytes, %zu left\n", which,
                     (size_t)(p - t), TRAMPOLINE_SIZE, (size_t)(TRAMPOLINE_SIZE - (p - t)));
+            /* A byte question deserves a dump, not a chain of reasoning about what the emitter does. */
+            fprintf(stderr, "trampoline %u bytes:", which);
+            for (size_t i = 0; i < (size_t)(p - t) && i < 72; i++) fprintf(stderr, " %02x", t[i]);
+            fprintf(stderr, "\n");
+        }
     }
 }
+
+static void rt_import_pc_report(void)
+{
+    unsigned long long nz = 0, total = 0;
+    for (unsigned i = 0; i < RT_IMPORT_PC_MAX; i++) {
+        if (rt_import_pc[i][1]) { nz++; total += rt_import_pc[i][1]; }
+    }
+    fprintf(stderr, "imports called: %llu rows, %llu calls total\n", nz, total);
+    for (unsigned pass = 0; pass < 20; pass++) {
+        unsigned best = RT_IMPORT_PC_MAX;
+        for (unsigned i = 0; i < RT_IMPORT_PC_MAX; i++) {
+            if (!rt_import_pc[i][1]) continue;
+            if (best == RT_IMPORT_PC_MAX || rt_import_pc[i][1] > rt_import_pc[best][1]) best = i;
+        }
+        if (best == RT_IMPORT_PC_MAX) break;
+        fprintf(stderr, "  #%u pc %#llx count %llu\n", best,
+                (unsigned long long)rt_import_pc[best][0], (unsigned long long)rt_import_pc[best][1]);
+        rt_import_pc[best][1] = 0;   /* consume, so the next pass finds the next-largest; nz/total already taken */
+    }
+}
+
 
 typedef struct {
     char nid[RT_NID_SIZE];
@@ -486,6 +542,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "pbboot: heap probe at init (before any guest code): malloc(48) = %p\n", p);
         free(p);
     }
+    atexit(rt_import_pc_report);
     fault_backtrace_enabled = getenv("BB_FAULT_BACKTRACE") != NULL;
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
     int timeout = 30, trace = 0, list = 0;
@@ -815,9 +872,9 @@ int main(int argc, char **argv)
         if (rt_syslib_in_flight == 0xffffffffu)
             printf("pbboot: in flight: none (not inside a syslib body)\n");
         else
-            printf("pbboot: in flight: #%u args %#llx %#llx %#llx\n", rt_syslib_in_flight,
+            printf("pbboot: in flight: #%u args %#llx %#llx %#llx guest_pc %#llx\n", rt_syslib_in_flight,
                    (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
-                   (unsigned long long)rt_syslib_args[2]);
+                   (unsigned long long)rt_syslib_args[2], (unsigned long long)rt_syslib_args[3]);
         printf("pbboot: fault regs rax %llx rbx %llx rcx %llx rdx %llx\n"
                "pbboot: fault regs rsi %llx rdi %llx rbp %llx rsp %llx\n"
                "pbboot: fault regs r8 %llx r9 %llx r10 %llx r11 %llx r12 %llx r13 %llx r14 %llx r15 %llx\n",

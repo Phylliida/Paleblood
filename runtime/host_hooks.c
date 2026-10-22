@@ -5,10 +5,46 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
 #include <sys/mman.h>
 
 #include "runtime/boundary_stub.h"
 #include "runtime/site_guard.h"   /* the bias constant, in a header nothing pins */
+
+/* The entry counter's backing store: one cacheline-honest slot per installed site, plus the site address so a
+   count can name which of several sites arrived. Printed from every exit we can reach -- clean (atexit) and the
+   designed abort (SIGABRT) -- because a counter printed only on the clean path is silent in exactly the run it
+   was built for. `sig_atomic_t` widened to uint64_t: a counter is incremented by emitted code, read by a handler. */
+#define RT_SITES_MAX 64
+static volatile uint64_t g_site_entered[RT_SITES_MAX];
+static uint64_t g_site_address[RT_SITES_MAX];
+static unsigned g_site_count;
+
+static void rt_sites_report(void)
+{
+    unsigned long long n = 0, total = 0;
+    for (unsigned i = 0; i < g_site_count; i++) { if (g_site_entered[i]) n++; total += g_site_entered[i]; }
+    char line[256];
+    int len = snprintf(line, sizeof line, "sites entered %llu of %u (%llu hits)", n, g_site_count, total);
+    for (unsigned i = 0; i < g_site_count && len > 0 && (size_t)len < sizeof line; i++) {
+        len += snprintf(line + len, sizeof line - (size_t)len, " 0x%llx=%llu",
+                        (unsigned long long)g_site_address[i], (unsigned long long)g_site_entered[i]);
+    }
+    if (len > 0) { snprintf(line + (len < (int)sizeof line ? len : (int)sizeof line - 1), sizeof line, "\n"); }
+    fputs(line, stderr);
+}
+
+static void rt_sites_on_abort(int sig)
+{
+    /* Async-signal-safe by the standard this file already meets: one bounded write, no malloc, no stdio state
+       beyond what glibc's `fputs` uses -- the fault reporter has the same shape and shipped with it. */
+    (void)sig;
+    write(2, "abort: ", 7);
+    rt_sites_report();
+    signal(SIGABRT, SIG_DFL);
+    raise(SIGABRT);
+}
 
 #if !defined(__x86_64__)
 #error "The version-1 host hook callback requires an x86-64 host"
@@ -312,8 +348,15 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
                     (unsigned long long)(uintptr_t)wrapper);
             return -1;
         }
+                if (capturing && g_site_count < RT_SITES_MAX) {
+            g_site_address[g_site_count] = rt_guest_address(offset);   /* guest-keyed, like every table */
+            g_site_entered[g_site_count] = 0;
+            g_site_count++;
+        }
+        const uint64_t entered_addr = capturing ? (uint64_t)(uintptr_t)&g_site_entered[g_site_count ? g_site_count - 1 : 0] : 0;
         size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
-                                          (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(), capturing);
+                                          (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(),
+                                          entered_addr, capturing);
         if (w == 0) {
             fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
                     (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
@@ -326,7 +369,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         /* The readback follows the FORM: a 5-byte wrapper opens with `e9`, and the 75-byte capture form opens
            with `push rdi` and carries its `e9 rel32` in the last five bytes. An assertion written against one
            shape outlived its subject here once already; this one decodes the jump where the form puts it. */
-        const unsigned char want_first = capturing ? 0x57 : 0xe9;
+        const unsigned char want_first = capturing ? 0x49 : 0xe9;   /* capture form opens with `movabs r11, &entered` */
         const unsigned char *jump_at = capturing ? wrapper + w - 5 : wrapper;
         if (memcmp(wrapper, &want_first, 1) != 0 || memcmp(jump_at, "\xe9", 1) != 0) {
             fprintf(stderr, "hook: wrapper readback at 0x%llx is not the %s form (first byte 0x%02x)\n",
@@ -378,6 +421,15 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
 
 int rt_host_hooks_initialize(rt_host *host)
 {
+    static int report_registered;
+    if (!report_registered) {
+        report_registered = 1;
+        atexit(rt_sites_report);
+        struct sigaction sa_abort;
+        memset(&sa_abort, 0, sizeof sa_abort);
+        sa_abort.sa_handler = rt_sites_on_abort;
+        sigaction(SIGABRT, &sa_abort, NULL);
+    }
     if (!host || host->version != RT_HOST_API_VERSION || !host->image ||
         host->image_size < ABSOLUTE_JUMP_SIZE)
         return -1;
