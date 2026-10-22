@@ -85,3 +85,31 @@ order. Three consequences, in order of what they invalidate:
 And the stale-binary finding voids more than the progression: the two "witnessed stops" came
 through the same `boot.py`, so **per-library ordinals stay alive**. `BB_PBBOOT` is now a literal
 in `resume-kit.md`.
+
+## Direct-memory family: names confirmed locally, arena not built
+
+`harness.nid()` run with two controls in the same call (`_init_env` -> `bzQExy189ZI`,
+`atexit` -> `8G2LB+A3rzg`, both matching the witnessed thunks):
+
+| name | NID | stop? |
+|---|---|---|
+| `sceKernelGetDirectMemorySize` | `pO96TwzOm5E` | implemented (31) |
+| `sceKernelAllocateDirectMemory` | `rTXw65xmLIA` | **current stop**, `eboot+0x2081aa3` |
+| `sceKernelReleaseDirectMemory` | `MBuItvba6z8` | predicted next in family |
+| `sceKernelMapDirectMemory` | `L-Q3LEjIbgA` | predicted next in family |
+
+**This is the first stop that cannot be a no-op.** `AllocateDirectMemory(searchStart, searchEnd,
+len, alignment, memoryType, off_t *physicalAddr)` returns 0 on success **and writes
+`*physicalAddr`**; a stub returning 0 without writing hands the guest garbage it immediately uses
+-- the `ret`-transparency problem again, in a pointer. Honest shape is a **model**, not a stub: a
+bump arena, `alignment` honoured (0 = default), addresses monotonic and non-overlapping,
+`*physicalAddr` always written, with the residual stated -- **no physical/virtual distinction, no
+fragmentation, no reclaim beyond Release**. A model is testable by a differential; a no-op is not.
+
+**Build it for the family, not the first caller.** `ReleaseDirectMemory`, `MapDirectMemory` and
+`MapFlexibleMemory` are the same allocator seen three ways; if Release is written as "return 0"
+the arena and the release path can disagree and nothing catches it. One arena, four entries,
+allocations recorded in a table the differential can read back.
+
+Also noted: bind-dump index 0 `P330P3dFF68` is marked UNRESOLVED in the external table, so it has
+no known name and must not be given a guessed implementation.
