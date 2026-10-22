@@ -60,3 +60,25 @@ that replaced it did not preserve it; the five debts below are re-added from the
    agreement is a comment.
 5. **Bundle owed at HEAD**, proved by **bare clone plus a commit count**, never by a size line.
    The bundle at `f9ad70c` is stale.
+
+## Bind dump: what it did and did not establish
+
+`docs/bind-order-eboot.txt` (848 rows) exists and shows the loader's **index** order --
+`P330P3dFF68#q#q` (libc), `f7uOxY9mM1U#p#J` (libkernel), ... -- which is **not** the PLT ordinal
+order. Three consequences, in order of what they invalidate:
+
+1. **The dump has no slot field.** `resolve()` knows the import index and the host trampoline
+   (`o->tramp + TRAMPOLINE_SIZE * index`), not the guest GOT slot; the slot comes from the
+   relocation that writes it. So the dump cannot be joined to `0x57e4690/698/6a0/6a8` yet --
+   the slot must be added at the relocation apply site, not in `resolve()`.
+2. **Those NIDs carry `#q#q` / `#p#J` suffixes** where the witnessed ones are bare 11-char base64.
+   Whatever produces the suffix must be established before any join on value; a join on value
+   fails before a join on key does. Check whether the same write path guarded in `1bc6903`
+   produces it.
+3. **The 652 reconciles: 219 bundled + 30 implemented + 4 unresolved + 433 unbound = 686.** So the
+   in-game workload is **433 unbound**, not 652 -- 219 are bundled and already available. This
+   closes the reconciliation item and improves the figure by a third.
+
+And the stale-binary finding voids more than the progression: the two "witnessed stops" came
+through the same `boot.py`, so **per-library ordinals stay alive**. `BB_PBBOOT` is now a literal
+in `resume-kit.md`.
