@@ -794,3 +794,30 @@ reaches `dlopen`** — four cases, and the count is asserted, not printed.
 **And the patched page is now checked for *writability* before the executable check** — symmetric to the existing
 test, one `/proc/self/maps` walk, and it yields `hook: refusing 0x…: the page is not writable, so the patch would
 fault in memcpy` instead of a SIGSEGV attributed to whatever runs next.
+
+### First run: one site, one variable, and the wall did not move
+
+```text
+plugin: path=build-release/game/libbbgame.so resolved=/home/bepis/modding/decomp/Paleblood/build-release/game/libbbgame.so
+capture: mode=off table=- hooks_installed=0 sites_checked=0 already_patched=0 mismatched=0 unlisted=0
+capture: installer=provided mode=off
+capture: installer=default hooks_installed=1
+runtime: scePthreadCreate: the guest asked for a thread (entry 0x80263b1e0, arg 0x8056166b0) and this runtime
+         cannot give it one: guest TLS is unmodelled (PT_TLS filesz 0x220, memsz 0x4a0), ...
+rc=134
+```
+
+**Pre-registered and met:** with `BB_HOOK_ONLY=0x02418d20` and capture **off**, the plugin loads through the real
+installer, **`hooks_installed=1`**, and the guest reaches **the same wall with the same sentence** at
+`scePthreadCreate`. **Reaching the same stop with one site patched is the evidence that the patch was correct** — a
+wrong bias or a clobbered register shows up as a changed stop, which is why the baseline comparison is the assertion
+and the exit code is not. `rc=134` is the designed abort, not a finding.
+
+**Two lines named one subject and disagreed in voice:** `installer=provided` (the plugin's own line) and
+`installer=default hooks_installed=1` (the loader's). Both are honest — the plugin prints what it was given, the
+loader prints what it published — but **a reader with one line of budget cannot tell which is the state**, so the
+loader's line is the one to keep and the plugin's is owed a rename.
+
+**`sites_checked=0` on the startup line is the pre-install count**, printed by `rt_host_hooks_initialize` before any
+hook exists; the post-install counter is `hooks_installed=1`. **Two populations, one label, again** — the startup
+line cannot carry a count that only exists after the line is printed.

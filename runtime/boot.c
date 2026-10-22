@@ -21,6 +21,7 @@
    from a public NID database (--nids, default $BB_NID_DB), else the NID is shown. */
 #define _GNU_SOURCE
 #include "runtime/boundary_stub.h"
+#include "runtime/plugin_load.h"
 #include "runtime/loader.h"
 #include "runtime/nid.h"
 #include "runtime/process.h"
@@ -35,6 +36,7 @@
 #include <execinfo.h>
 #include <signal.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -643,6 +645,29 @@ int main(int argc, char **argv)
     sa.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;
     static const int signals[] = {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGTRAP, SIGALRM};
     for (size_t i = 0; i < sizeof signals / sizeof signals[0]; i++) sigaction(signals[i], &sa, NULL);
+
+    /* The plugin endpoint: ONE call and one entry, because the loader was proved in a test binary first.
+       BB_PLUGIN names the library; the RESOLVED path is printed because dlopen resolves a relative path against
+       cwd and this binary is launched from more than one directory, so a bare path in a log is not reproducible. */
+    {
+        const char *plugin = getenv("BB_PLUGIN");
+        unsigned plugin_hooks = 0;
+        if (!plugin || !*plugin) {
+            fprintf(stderr, "pbboot: BB_PLUGIN=absent: no hooks will be installed and every import returns the "
+                            "unimplemented stub; a guest run under this state is not evidence about the game\n");
+        } else {
+            char resolved[PATH_MAX];
+            if (!realpath(plugin, resolved)) {
+                fprintf(stderr, "pbboot: BB_PLUGIN=%s does not resolve: %s\n", plugin, strerror(errno));
+                return 3;
+            }
+            fprintf(stderr, "plugin: path=%s resolved=%s\n", plugin, resolved);
+            if (rt_boot_load_plugin(objects[0].image, objects[0].size, resolved, &plugin_hooks) != 0) {
+                fprintf(stderr, "pbboot: the plugin refused: hooks_installed=%u\n", plugin_hooks);
+                return 3;
+            }
+        }
+    }
 
     unsigned char *stack_top = stack + STACK_SIZE - 64;
     rt_thread_register_main(stack, STACK_SIZE);
