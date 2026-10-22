@@ -11,6 +11,15 @@
 
 #include <stdio.h>
 
+/* The outbound direction. An address this runtime hands to the guest is the same hazard as one the guest
+   hands to us, with the failure deferred: a bad value does not fault here, it faults later inside a module
+   we do not own, which is how the missing bias on the process parameter presented. Same check, same
+   sentence, other direction. */
+int rt_guest_ptr_ok(uintptr_t addr, size_t len, const char *call)
+{
+    return rt_guest_write_ok(addr, len, call);
+}
+
 int rt_guest_write_ok(uintptr_t addr, size_t len, const char *call)
 {
     uintptr_t base = (uintptr_t)rt_process.image;

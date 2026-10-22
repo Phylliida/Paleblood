@@ -1276,3 +1276,22 @@ Two candidate causes, and the next run's job is to separate them:
 
 **The separator is one print**: `rt_process.proc_param` and its vaddr beside `rt_image`, at init and again in
 the fault handler. **Not a guess about memcpy semantics -- a value printed before it is used.**
+
+## Outbound pointers now checked like inbound; and the guard that did not fire
+
+`rt_guest_ptr_ok(value, bytes, call)` landed as the outbound direction of the same check (it *is*
+`rt_guest_write_ok`, named for the direction -- an address handed to the guest is the same hazard with the
+failure deferred into a module we do not own). Callers: `sceKernelGetProcParam`, `memcpy`, `memset`.
+
+**Result 1: `sceKernelGetProcParam` no longer refuses, so `rt_process.proc_param` IS inside the mapped image.
+Candidate 1 (missing bias) is refuted, and it is refuted by the guard rather than by a print I had to read.**
+
+**Result 2, the important negative: the `memcpy`/`memset` guards did NOT fire, so the faulting copy is not one of
+our registered entries.** `rsp`/`rbp` are host-stack addresses, so the fault is inside a host body; `rdi 0`,
+`rsi 0x20b58`, `rdx 0x1000`. **A guard placed where I assumed the copy happened proved the assumption wrong by
+staying silent -- and a refusal that does not fire is evidence about reachability, not about correctness.**
+
+**Next, and it is the one the companion asked for first: `rt_syslib_in_flight`, an index stored by the shared
+trampoline prologue (`mov dword [rip+idx], imm32`) and printed by the fault handler.** Ten bytes in a stub with
+sixteen spare. **Then the body is named instead of inferred from a register set, and no register can tell a
+caller's NULL from my arithmetic after the fact.**

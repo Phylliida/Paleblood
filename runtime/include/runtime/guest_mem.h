@@ -6,4 +6,5 @@
 /* Returns 1 if [addr, addr+len) lies inside the guest image and a system call may write it; otherwise
    prints the refusal with both the address and the bounds, and returns 0. */
 int rt_guest_write_ok(uintptr_t addr, size_t len, const char *call);
+int rt_guest_ptr_ok(uintptr_t addr, size_t len, const char *call);
 #endif

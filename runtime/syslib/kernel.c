@@ -1,7 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* System call group: kernel, threads and memory (libkernel, libScePosix, libSceSysmodule,
    libSceLibcInternal). */
+#include "runtime/guest_mem.h"
 #include "runtime/process.h"
+
+#include <stdio.h>
 #include "runtime/syslib.h"
 
 #include <string.h>
@@ -10,6 +13,11 @@
 static void *kernel_get_proc_param(void)
 {
     if (!rt_process.proc_param) rt_fatal("sceKernelGetProcParam", "the executable has no process parameter segment");
+    if (!rt_guest_ptr_ok((uintptr_t)rt_process.proc_param, 4, "sceKernelGetProcParam")) {
+        fprintf(stderr, "pbboot: sceKernelGetProcParam: proc_param %p, image %p\n", rt_process.proc_param,
+                (void *)rt_process.image);
+        rt_fatal("sceKernelGetProcParam", "the process parameter pointer is not inside the mapped image");
+    }
     return rt_process.proc_param;
 }
 RT_SYSLIB("libkernel", sceKernelGetProcParam, kernel_get_proc_param);
@@ -52,12 +60,18 @@ RT_SYSLIB_UNRESOLVED("libkernel", getpagesize, kernel_getpagesize);
    pointers) is not modelled: no PS4-specific behaviour for those cases is established. */
 static void *libc_memcpy(void *dest, const void *src, size_t n)
 {
+    /* A null destination is a guest bug on the real machine too -- but there it kills the guest, and here it
+       kills host glibc inside our body, which presents as our fault. Name it instead: the guest's address
+       space is the guest's business, the diagnostic is ours. */
+    if (!rt_guest_ptr_ok((uintptr_t)dest, n, "memcpy dest")) return dest;
+    if (!rt_guest_ptr_ok((uintptr_t)src, n, "memcpy src")) return dest;
     return memcpy(dest, src, n);
 }
 RT_SYSLIB("libSceLibcInternal", memcpy, libc_memcpy);
 
 static void *libc_memset(void *dest, int c, size_t n)
 {
+    if (!rt_guest_ptr_ok((uintptr_t)dest, n, "memset dest")) return dest;
     return memset(dest, c, n);
 }
 RT_SYSLIB("libSceLibcInternal", memset, libc_memset);
