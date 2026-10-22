@@ -37,3 +37,26 @@ it. **Evidence whose location is a build directory is evidence with an expiry da
 **A run with one expected outcome gets read as confirming it.** All four are written here first, each with
 the sentence that must accompany it, so that whatever happens the record carries its own interpretation
 rather than mine afterwards.
+
+## Corrections, appended before the run — both supersede text above
+
+**(1) The capture must contain the bytes, at call time.** The bullet above says the JSON carries *no guest
+bytes* and the two sentences that followed ("committing it is safe; the bytes stay in `../data/cases`") read
+as if the replay could materialise a region from `eboot.elf` at `addr − 0x400000`. **It cannot.** A buffer's
+content at *load* time is not its content at *call* time — the guest has run thousands of instructions by
+then — so a replay that reads the file gives the differential **two bodies compared over an input the game
+never had**, which is exactly the fabricated-preset failure the emitter's rules exist to prevent. **Capture
+the bytes at the hook.** The copyright concern that motivated "no guest bytes" does not reach here:
+`../data/captures/` is outside the checkout and uncommitted, which is the same solution as the path itself.
+So: `bytes` is a required field of every captured buffer, and a capture missing it is not a capture.
+
+**(2) The file name is not derived from the log.** `<address>-<sha256 of the run log>.json` is circular —
+the log prints the capture path, so the log's hash depends on the path, which depends on the hash. **A
+self-referential key resolves as "whichever order the code happened to run", which is a measurement that
+cannot be re-derived.** The name is **`<address>-<pbboot sha256[:12]>-<run counter>.json`**, all three known
+before the file is written; the counter distinguishes runs of one binary. The **log sha256 is recorded inside
+the JSON as an ordinary field** once the log is complete, where it is derived from the event rather than
+naming it.
+
+Both were cheap to fix now and expensive after the first capture exists, because **the first capture is the
+format everything else copies.**
