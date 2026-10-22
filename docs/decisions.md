@@ -96,3 +96,25 @@ measured**; that is a success of the timebox, not a failure.
 The human pushes (askpass blocks the agent). **Per-landed-packet cadence** thereafter, and the agent
 writes a **bundle file as a build artifact** so the human's manual step is one command, never a
 decision.
+
+### 1a. Measured, after the byte tool existed
+
+`tools/check_asm_bytes.py` compares the bytes the CPU executes (read at the function pointer
+in-process) against the original extent in `eboot.elf`. Three results, one of which corrects a
+sentence I wrote from reasoning rather than measurement:
+
+- `bb_asm_pilot_004034f0` — naked `asm("movb $1, %al; ret")` vs `0x004034f0`: **3 of 3 bytes
+  identical** (`b0 01 c3`).
+- `bb_c_pilot_004034f0` — a C body of the same shape: **differs at offset 0**, `b001c3` vs
+  `554889`. The control fires, so the assertion can fail.
+- `bb_c_pilot_ret` — empty C `void` body vs a `ret`-only extent (`0x00406600`, byte `c3`):
+  **differs at offset 0**, `c3` vs `55`.
+
+That last one is the correction. I wrote that for the 1-byte family "byte equality is necessary and
+not sufficient, because an empty C body at `-O2` emits one `c3`" — **and in this tree's actual
+configuration the empty C body emits `push rbp` first**, so the assertion *does* distinguish. The
+statement was true about clang at `-O2` and false about the artifact in front of me, which is the
+distinction that matters: **the byte assertion is exactly the instrument that catches a future
+flags change, and its green means "these bytes are the original's", not "this source form is the
+reason".** Decision 1's stability argument stands on its own; it just cannot be *rescue* for a
+check that turns out to work.
