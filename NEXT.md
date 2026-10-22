@@ -131,3 +131,21 @@ here, because a later reader of the code is the one who needs it: one address sp
 address is already guest-dereferenceable, and inventing a separate virtual range would make every
 range `Allocate` had already handed out unreadable, failing as memory corruption in whichever
 consumer ran second.
+
+## `idc/ps4libdoc` cloned: it is a name list, not a NID table
+
+`git clone --depth 1` succeeded (rc=0). Its shape, measured with a control in the same call:
+
+- `known_names.txt` -- 42,010 lines, a **bare names list** (`__absvdi2`, `sceKernelAllocateDirectMemory`),
+  with only 284 NID-shaped lines in it. **Names, no NIDs beside them.**
+- `unknown_nids.txt` -- 1,130,742 lines of **11-char NIDs with no names** (`AAAS3TTinKA`, ...).
+
+So the repo cannot answer "what is this NID": it holds the two halves *apart* -- which names exist,
+and which NIDs are unanswered -- not the mapping. `pO96TwzOm5E` (a name I already have) does not
+appear in `unknown_nids.txt`, which is what a known NID looks like there. `FxVZqBAA7ks` appears
+**nowhere in the repo at all**: neither among the 1.13M unknown NIDs nor in the names list, so it is
+not "unknown to ps4libdoc" either -- it is simply not in the table's population.
+
+**Therefore the clone does not convert decodes into lookups**, and the remaining 430 still need the
+call-site oracle. Keep the clone for the complementary question it can answer -- "does this name
+exist?" -- which is a cheap way to reject a guessed name before writing code.
