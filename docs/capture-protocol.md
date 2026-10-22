@@ -888,3 +888,32 @@ artifact: the capacity design has a hole, and the run that was supposed to prove
 **What this run does establish, because it is the strongest evidence yet:** the plugin's real installer, with the real
 catalog and the capture table's identity and prologue guards, **patched the real site through the entire chain and ran
 the guest to the same wall** — `wrapper 5 bytes → 56-byte stub → body 0x7d8d213571c0`, readback ok, distance −96.
+
+### The pre-registered refusal now fires, and a green test retired in the same breath
+
+```text
+hook: refusing to install at 0x2018d20: the capture form is unsatisfiable (rt_snapshot_stub_size(1) == SIZE_MAX);
+      nothing is written
+hook: site byte-identical: yes
+install: sites_checked=1 refused=1 hooks_installed=0
+rc=3
+```
+
+**`capturing` is now one variable with one derivation**, computed from the same predicate the rest of capture mode uses,
+and the refusal is **derived from the size** — `cap = rt_snapshot_stub_size(capturing); if (cap == SIZE_MAX) refuse` —
+rather than a second check that could drift from the first. Non-capture runs are unchanged: `sites_checked=1 refused=0
+hooks_installed=1`, then the same `scePthreadCreate` wall at `rc=134`.
+
+**Byte identity is now an instrument, not a claim.** `hooks_installed=0` counts successful installs; it is not a memory
+comparison. The refusal path snapshots the site's 14 bytes and `memcmp`s them, printing **`site byte-identical: yes`**.
+Owed since the wheel of this class began, paid here.
+
+**And the fixture that certified the hole is retired, loudly.** `test_host_hooks`' case *"capture mode must allow a pass
+row with a matching library and a matching prologue"* **passed while the installer emitted the ordinary stub** — the
+capacity hole wearing a green test. It now asserts the refusal plus byte identity, with a comment naming the pass case as
+returning **only with the capture stub**.
+
+**Class, named for the commit message:** *a refusal not on the path is advice.* Second occurrence — `capture_precheck`
+was the first, wired in only after the same observation. **A helper's contract is proved by its callers, so a helper with
+no caller has no contract** — the same sentence that makes `site_ok.csv`'s 1,737 rows a wish until something reads them,
+and the same one that makes `rt_snapshot_stub_size`'s `capturing` parameter a decoration until an installer passes it.

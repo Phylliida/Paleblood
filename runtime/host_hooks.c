@@ -235,6 +235,24 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
        nobody selected -- the 16 KiB bias class. A site that is already a jump is refused too: patching over a
        patch hides the first one. */
     sites_checked++;
+    /* One variable, one derivation. `capturing` changes the emitted length, so it must reach the size function
+       and the emitter together. It was hardcoded 0 at every call site below, so the size function and the emitter
+       agreed about a form neither had been asked about, and a capture install emitted the ordinary stub. */
+    unsigned char site_before[ABSOLUTE_JUMP_SIZE];
+    memcpy(site_before, guest_image + offset, sizeof site_before);
+    const int capturing = getenv("BB_CAPTURE") != NULL;
+    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing);
+    if (wrapper_capacity == SIZE_MAX) {
+        fprintf(stderr, "hook: refusing to install at 0x%llx: the capture form is unsatisfiable "
+                        "(rt_snapshot_stub_size(%d) == SIZE_MAX); nothing is written\n",
+                (unsigned long long)offset, capturing);
+        sites_unlisted++;   /* the form, not the catalog: counted, so a zero cannot silently hide it */
+        /* The assertion is an instrument, not a claim: hooks_installed=0 counts successful installs and is not a
+           memory comparison. This is the comparison. */
+        fprintf(stderr, "hook: site byte-identical: %s\n",
+                memcmp(site_before, guest_image + offset, sizeof site_before) == 0 ? "yes" : "no");
+        return -1;
+    }
     if (guest_image[offset] == 0xe9 || guest_image[offset] == 0xcc || guest_image[offset] == 0xff) {
         sites_already_patched++;
         fprintf(stderr, "hook: refusing 0x%llx: site begins 0x%02x, which is already a patch or a trap\n",
@@ -281,7 +299,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
            BEFORE the site is patched -- a site patched to a wrapper that failed to allocate points at
            junk the moment the guest arrives, and with 1,737 candidate sites that is a crash with no
            owner. Emit-before-patch is the gate-before-client rule applied to bytes. */
-        unsigned char *wrapper = stub_alloc(rt_snapshot_stub_size(0));
+        unsigned char *wrapper = stub_alloc(wrapper_capacity);
         if (!wrapper) {
             fprintf(stderr, "hook: no room for a snapshot wrapper at 0x%llx\n", (unsigned long long)offset);
             return -1;
@@ -289,13 +307,13 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         /* The site's executability is checked above; the wrapper is a different page, and a wrapper in a
            read-only page reads back perfectly and faults on entry -- the same defect one level earlier,
            and it would look like a body fault because the wrapper's last instruction is a jump. */
-        if (!region_is_executable(wrapper, rt_snapshot_stub_size(0))) {
+        if (!region_is_executable(wrapper, wrapper_capacity)) {
             fprintf(stderr, "hook: refusing to enter a wrapper at 0x%llx: page is not executable\n",
                     (unsigned long long)(uintptr_t)wrapper);
             return -1;
         }
-        size_t w = rt_write_snapshot_stub(wrapper, rt_snapshot_stub_size(0), (uint64_t)(uintptr_t)wrapper,
-                                          (uint64_t)destination, 0);
+        size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
+                                          (uint64_t)destination, capturing);
         if (w == 0) {
             fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
                     (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
