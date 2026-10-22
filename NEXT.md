@@ -313,3 +313,25 @@ which PS4's libc is derived from, in 64-bit:
 `e_shoff = 0`), and my `PT_DYNAMIC` walk raised `KeyError: 6` on `DT_SYMTAB`, so the tag map did not
 parse. Read the dynamic segment's tags and print them before indexing; an absent tag and a
 mis-parsed segment look identical, which is the same lesson as `_line` in the pin checker.
+
+## `libc.elf`'s program headers: SCE vendor types present, `PT_DYNAMIC` present, `DT_SYMTAB` absent
+
+    ph0 0x00000001 LOAD   vaddr 0x0      filesz 0x0b7924
+    ph1 0x00000001 LOAD   vaddr 0xb8000  filesz 0x006cc0
+    ph2 0x61000002 SCE?   vaddr 0xb8000  filesz 0x18
+    ph3 0x00000002 DYNAMIC off 0xe7850   filesz 0x280
+    ph4 0x00000007 TLS    vaddr 0xb8018  filesz 0x220
+    ph5 0x6474e550 GNU_EH_FRAME vaddr 0xb2548 filesz 0x53dc
+    ph6 0x61000000 SCE_RELA off 0xc2cc0 filesz 0x24e10
+    ph7 0x6fffff00
+    ph8 0x6fffff01
+
+**`KeyError: 6` is now explained structurally, not as my parse bug:** `PT_DYNAMIC` exists (ph3, 0x280
+bytes) but carries **no `DT_SYMTAB`** -- PS4 modules use SCE dynamic tags, so the tag map legitimately
+lacks tag 6. **An absent tag and a mis-parsed segment were not distinguishable until the segment was
+printed**, which is why printing tags precedes indexing.
+
+Note against the expectation: there is **no `0x61000020`**; the SCE types here are `0x61000000`
+(`PT_SCE_RELA`, the relocations, 0x24e10) and `0x61000002` (0x18, next to the second LOAD's start).
+So `_Stdout` is not in a `0x6100002x` table in this file -- the next read is `PT_DYNAMIC`'s tag list
+itself (print tag/value pairs), since SCE names/providers live in those tags rather than in a symtab.
