@@ -572,3 +572,25 @@ To retry: disassemble **per entry point** (the `descent.py` path, from known fun
 `DT_FINI` at `0x81d80` and the entries reachable from the 0xd98xx tables), not linearly over the whole
 text; or find the references by searching the relocation blob for RIP-relative disp32s whose computed
 target is one of the three, which needs no disassembly at all.
+
+## Pattern scan (no decoder): 0 hits and a healthy density -- but the sweep is REX-only
+
+Bounding the sweep by `DT_FINI + 0x2000` and matching `modrm & 0xC7 == 0x05` at `s+2` with lengths 7
+and 11:
+
+    540,032 bytes swept
+    4,815 rip-relative candidates = 8.9 per 1000 B
+    0 hits on 0xbf060 / 0xbf160 / 0xbf260
+
+**The density is plausible** (one rip-relative form per ~112 bytes), so unlike the linear sweep this
+instrument is not desynchronised -- **and its zero is therefore a real negative for the forms it covers.**
+
+**But it covers only REX-prefixed forms** (`s` must be 0x48..0x4f). A 32-bit-operand rip-relative
+reference -- `lea eax,[rip+d]` = `8d 05 dd dd dd dd`, `mov [rip+d],imm32` = `89 05 ... 11 bytes` --
+**has no REX byte and is outside this sweep entirely.** So the honest statement is narrower than the
+scan: **libc's 64-bit-operand code does not reach the three stdio objects directly**, and the 32-bit
+forms remain unexamined.
+
+That is consistent with the objects being reached **only through the pointer tables at 0xd98xx**, which
+is what an export-table consumer (or a getter returning `&__sF[i]`) looks like -- and it would explain
+why no direct reference exists to find.
