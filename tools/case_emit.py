@@ -21,6 +21,17 @@ import json
 
 SCHEMA = 1
 
+# A body that reads past a captured region is the one failure a differential cannot see: if both sides read
+# the same garbage and fault identically, the comparison reports agreement. So the bytes past a captured
+# region are poisoned with a value the original cannot plausibly produce, and anything read there becomes a
+# distinguishable wrong answer rather than a plausible one.
+POISON = 0xA5
+
+# Measured, not chosen: the widest memory access anywhere in the first capture target's 112 instructions is
+# 8 bytes (Capstone over the catalog bytes; no SIMD in its shape). An assumed region size must be a multiple
+# of this, or the replay can fault on a capture that was correct.
+WIDEST_ACCESS_BYTES = 8
+
 
 def emit(pc: str, registers: dict[str, str], buffers: dict[str, dict] | None = None,
          returns: str = 'i64', uncovered: list[str] | None = None, note: str = '') -> dict:
@@ -68,7 +79,7 @@ def classify(pointer: int, objects: list[dict]) -> str | None:
 
 def emit_capture(pc: str, registers: dict[str, int], objects: list[dict],
                  buffers: dict[str, dict] | None = None, replayed: str = 'eboot',
-                 returns: str = 'i64', note: str = '') -> dict:
+                 returns: str = 'i64', note: str = '', size_assumed: int | None = None) -> dict:
     """Emit a case from captured entry state, in the form the existing cases use.
 
     Reading 35,344 real cases settled the address-space question: **a case never carries an address.** A
@@ -100,7 +111,20 @@ def emit_capture(pc: str, registers: dict[str, int], objects: list[dict],
             emitted[reg] = f'0x{value:x}'
         else:
             uncovered.append(f'{reg}: 0x{value:x} in {owner} (no bytes captured)')
-    used = {n: {'size': d['size'], 'bytes': d['bytes']} for n, d in declared.items() if f'buf:{n}' in [a.split('+')[0] for a in emitted.values()]}
+    # A capture cannot know how many bytes the body reads, so an assumed size is a field in the artifact
+    # rather than a number in a message: `size_assumed` says the region was padded, and the padding is
+    # poison. Silence would let a replay claim a coverage it never had.
+    used: dict[str, dict] = {}
+    for name in declared:
+        if f'buf:{name}' not in [a.split('+')[0] for a in emitted.values()]:
+            continue
+        spec = {'size': declared[name]['size'], 'bytes': declared[name]['bytes']}
+        if size_assumed and size_assumed > spec['size']:
+            have = spec['size']
+            spec['bytes'] = spec['bytes'] + bytes([POISON]) * (size_assumed - have)
+            spec['size'] = size_assumed
+            spec['size_assumed'] = have
+        used[name] = spec
     return emit(pc, emitted, used, returns=returns, uncovered=uncovered, note=note)
 
 def load_objects(path: str = 'symbols/objects.csv') -> list[dict]:

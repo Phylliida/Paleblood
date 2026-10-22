@@ -216,3 +216,22 @@ last 32 KiB would classify as outside eboot and be reported `uncovered`. That is
 negative, not an in-range false positive), and it is a defect: `o->size` is not the ELF's extent end. The
 catalog's highest address `0x02fbe370` is far inside (offset 45,842,288 of 91,042,036), which the size test
 asserts.
+
+### The assumed region size is a field, and the padding is poison
+
+A capture knows **where** a pointer points and **what bytes are there**; it cannot know **how many bytes the
+body reads**. So `emit_capture(..., size_assumed=N)` writes `size_assumed` into the buffer spec alongside
+`size` and `bytes` — **the limitation lives in the artifact, not in a message** — and pads the region past
+what was captured with `POISON = 0xA5`, not with mapped zero.
+
+Why poison rather than zero: **a body that reads past the captured region gets a distinguishable value
+instead of a plausible one, and the original cannot be fooled into the same wrong answer.** The failure this
+prevents is the one a differential cannot see — **if both sides read past the region and fault identically,
+the comparison reports agreement.** The replay path inherits the rule explicitly: **a fault on either side is
+a failed capture, not a match.**
+
+**The size is proved, not chosen.** Capstone over the first target's 112 catalogued instructions gives a
+widest memory access of **8 bytes** and no SIMD in its shape, so `WIDEST_ACCESS_BYTES = 8` and an assumed
+region is a multiple of it (16 / 64 / 128 all are). **64 bytes picked by feel would be a remembered constant
+wearing a field name.** The harness has no poison convention of its own — `verify.py`'s "canary" is a
+falsification check on the comparison, not a fill value — so this field and its constant are new here.

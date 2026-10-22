@@ -154,6 +154,26 @@ class CaseEmit(unittest.TestCase):
         self.assertLess(highest - 0x400000, eboot['size'],
                         'a catalogued address outside the declared eboot range would be reported uncovered')
 
+    def test_an_assumed_region_size_is_a_field_and_the_padding_is_poison(self):
+        # A capture knows where a pointer points and what bytes are there; it cannot know how many bytes the
+        # body reads. So the assumption is recorded, and the bytes past it are poison -- if both sides read
+        # past the region and fault identically, the differential would call it agreement.
+        objects = [{'name': 'eboot', 'base': 0x400000, 'size': 0x800000}]
+        captured = bytes(range(16))
+        case = case_emit.emit_capture('0x00e01000', {'rdi': 0x400100}, objects,
+                                      buffers={'obj': {'size': 16, 'bytes': captured, 'address': 0x400100}},
+                                      size_assumed=64)
+        spec = case['buffers']['obj']
+        self.assertEqual(spec['size'], 64)
+        self.assertEqual(spec['size_assumed'], 16)          # what was actually captured
+        self.assertEqual(len(spec['bytes']), 64)
+        self.assertEqual(spec['bytes'][:16], captured)
+        self.assertEqual(spec['bytes'][16:], bytes([case_emit.POISON]) * 48)
+        # and the bound the assumed size has to respect, measured from the target's own instructions
+        self.assertEqual(case_emit.WIDEST_ACCESS_BYTES, 8)
+        for size in (16, 64, 128):
+            self.assertEqual(size % case_emit.WIDEST_ACCESS_BYTES, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
