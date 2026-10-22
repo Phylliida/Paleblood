@@ -1,5 +1,6 @@
 #include "runtime/boundary_stub.h"
 
+#include <stdint.h>
 #include <string.h>
 
 size_t rt_boundary_stub_size(uint64_t in_flight_addr)
@@ -48,4 +49,33 @@ size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t targ
     }
     *p++ = 0xc3;                                                       /* ret */
     return (size_t)(p - dst);
+}
+
+size_t rt_snapshot_stub_size(int capturing)
+{
+    /* Commit A emits only the empty form. The capture form (+ six pushes, movabs host, wrfsbase,
+       movabs snapshot, call, six pops) is Commit B; until its bytes exist, its size is UNSATISFIABLE
+       rather than a number, because a capacity refusal proved against a guessed size stops covering
+       the form it is not checking -- and here it would be the form that is not emitted at all. */
+    return capturing ? SIZE_MAX : 5u; /* e9 rel32 */
+}
+
+size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr, int capturing)
+{
+    const size_t needed = rt_snapshot_stub_size(capturing);
+    /* Refuse before the first store, and refuse an unsatisfiable size: capacity < SIZE_MAX is every
+       capacity, so B cannot be installed by accident before it is written. */
+    if (!dst || !self_addr || !stub_addr || capacity < needed) return 0;
+
+    /* A near jump needs the target inside signed 32 bits of the byte after the opcode. Two pages from
+       one mmap'd region are far inside that, but a far target silently needs the 14-byte absolute form
+       (+9 bytes nobody budgeted), so the distance is asserted at emit time rather than assumed. */
+    const int64_t delta = (int64_t)stub_addr - (int64_t)(self_addr + needed);
+    if (delta > INT32_MAX || delta < INT32_MIN) return 0;
+    const int32_t rel = (int32_t)delta;
+
+    unsigned char *p = dst;
+    *p++ = 0xe9;                              /* jmp rel32 */
+    memcpy(p, &rel, 4), p += 4;
+    return (size_t)(p - dst);                 /* 5 */
 }

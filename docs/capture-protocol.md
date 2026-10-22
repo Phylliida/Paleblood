@@ -393,3 +393,36 @@ been green is a paragraph** — the same rule as every other guard in this tree.
 In one commit a failure in B reads as a failure in A. **A gate and its first client never land together, and
 here the wrapper is the gate for the capture** — after A, the capture is a one-line change to a proven path,
 which is the cheapest a first capture can ever be.
+
+### Commit A, split once more: the emitter and its gate first, the wiring next
+
+**The companion's correction is right and it removed dead bytes from my sketch:** the boundary stub already opens
+with `movabs r11,host_fs` · `wrfsbase r11`, so a `wrfsbase` in the wrapper would be **dead bytes**, and worse, it
+would force Commit B to **move** it rather than insert around it. **A is `e9 rel32`, 5 bytes, and nothing else.**
+
+Landed (`runtime/boundary_stub.c`, `test/test_snapshot_stub.c`, ctest **17/17**, suite **322 OK**):
+
+- `rt_snapshot_stub_size(int capturing)` → **5** for the empty form, **`SIZE_MAX`** for the capture form.
+  **Not a guess at the bigger number:** a capacity refusal proved against a guessed size stops covering the
+  form it is not checking, and here the unchecked form is the one with no bytes at all, so an unsatisfiable
+  size is the only value that keeps the refusal honest. **B flips it to the real length when the bytes exist.**
+- `rt_write_snapshot_stub(dst, capacity, self, stub, capturing)` → refuses **before the first store** on a null
+  `dst`, a short capacity, or an unsatisfiable size, and **asserts the near-jump distance** (`delta` from the
+  byte *after* the opcode must fit `int32`), returning 0 rather than silently emitting the 14-byte absolute form.
+- The gate is the sentinel: `0xcc` across a 16-byte page, every refusal path, **not one byte moved**; then a
+  good emit writes **exactly five**, and `self + 5 + rel` is asserted to equal the stub.
+
+**Two defects in my own gate, both caught by running it:**
+
+1. **`assert()` compiles to nothing in this configuration.** `build-release` defines `NDEBUG`, so the first
+   version of the test measured no code at all and its only symptom was `-Wunused-variable` on a variable the
+   assertions had removed. **A test whose checks vanish under the flags the suite actually runs is a guard that
+   cannot fail** — the checks now `return 1` themselves.
+2. **My "far target" was not far.** I asserted a refusal for `self + (1 << 31)`, and the emitter correctly
+   emitted: the edge is `self + 5 + INT32_MAX`, and `1 << 31` is **five bytes inside it**. The test now states
+   the edge — the last reachable target passes, one byte past it refuses — **because a refusal asserted on a
+   reachable input is a test of my arithmetic, not of the emitter.**
+
+**Not yet landed, and named:** the installer wiring and the end-to-end run (hook enters wrapper, wrapper reaches
+stub, body runs, guest returns). That is A's second half, and until it runs the emitter is proved **as a
+function** and not **in a page**.

@@ -30,6 +30,10 @@ add_executable(test_host_hooks test/test_host_hooks.c runtime/host_hooks.c runti
 target_include_directories(test_host_hooks PRIVATE runtime/include)
 add_test(NAME host_hooks COMMAND test_host_hooks)
 
+add_executable(test_snapshot_stub test/test_snapshot_stub.c runtime/boundary_stub.c)
+target_include_directories(test_snapshot_stub PRIVATE runtime/include)
+add_test(NAME snapshot_stub COMMAND test_snapshot_stub)
+
 add_executable(test_guest_mem test/test_guest_mem.c runtime/guest_mem.c runtime/process.c)
 target_include_directories(test_guest_mem PRIVATE runtime/include)
 add_test(NAME guest_mem COMMAND test_guest_mem)
