@@ -450,3 +450,25 @@ Predicted values if the objects *are* static in this file (companion's, adopted 
 checkable): `_flags` = `0x8` (`__SWR`) for `_Stdout`, `0x9` (`__SWR|__SUNB`) for `_Stderr`, `0x4`
 (`__SRD`) for `_Stdin`; `_file` = `1`/`2`/`0` respectively; layout `_flags` 0x00, `_file` 0x08,
 `_cookie` 0x10, `_read` 0x18, `_seek` 0x20, `_write` 0x28. **Any other reading is a finding.**
+
+## `.bss` answered: 113 qwords point into it, and one array is 24-byte strided after all
+
+`ph1` is `filesz 0x6cc0 / memsz 0x1e620`, so the bss tail is **`0xbecc0..0xd6620` (96,608 B)** --
+printed before anything was scanned, per the rule that a range assumed empty is a range never checked.
+
+**113 qwords in the file land in that tail.** So exported *data* objects with file-image zeros exist,
+and `.bss` explains `_Stdout`'s zeros exactly as the companion predicted -- the object is knowable
+without a dump after all.
+
+The first hits after the blob are at **`0xcd140`, `0xcd158`, `0xcd170`, `0xcd188` -- stride `0x18`**,
+i.e. a **24-byte-strided table holding bss addresses**. So the `0x18` tags in `libc.elf` were right
+for libc all along; it was carrying that stride to **eboot** that was wrong. **Both facts are true at
+once, in different objects.**
+
+**Filter artifact worth the line:** the very first hit, file `0x198 -> 0xc2cc0`, is a program-header
+field -- `0xc2cc0` is `PT_SCE_RELA`'s file offset -- not a symbol address. **Any scan for "pointer into
+region X" also matches the tables that describe region X**, so candidate lists must exclude values
+that are also segment offsets before they are read as addresses.
+
+Next: walk the 24-byte table from `0xcd140` for entries whose address lands in the stdio neighbourhood,
+and join by ordinal to the contiguous `_Stderr`/`_Stdout`/`_Stdin` names at `0xc3c34..0xc3c54`.
