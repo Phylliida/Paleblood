@@ -128,7 +128,8 @@ void rt_tls_enter_host(void)
         asm volatile("wrfsbase %0" ::"r"(host_fsbase));
         return;
     }
-    unsigned long base = host_fsbase;
-    long rc = syscall(158, 0x1002UL, &base);
+    /* arch_prctl(ARCH_SET_FS, addr) takes the ADDRESS, not a pointer to it: &base would install a stack slot
+       as the TCB. This path has never run, because have_wrfsbase has never been false. */
+    long rc = syscall(158, 0x1002UL, (unsigned long)host_fsbase);
     if (rc != 0) fprintf(stderr, "pbboot: tls: arch_prctl restore failed (%ld)\n", rc);
 }

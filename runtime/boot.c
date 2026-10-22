@@ -50,7 +50,7 @@
 #define STACK_SIZE (16u << 20)
 /* 104 bytes of stub: prologue, mark, in-flight index and the three argument words, the target call between
    two %fs writes, and the clear before returning. */
-#define TRAMPOLINE_SIZE 160
+#define TRAMPOLINE_SIZE 220
 
 static const struct {
     const char *name;
@@ -191,6 +191,7 @@ volatile uint64_t rt_syslib_args[3];
    indistinguishable from one that does. */
 volatile uint64_t rt_stub_fs;
 volatile uint32_t rt_stub_which;
+volatile uint64_t rt_stub_fs_pre;
 
 static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target)
 {
@@ -220,8 +221,19 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
        caller-saved, so the guest cannot hold anything live in it across a call: it is free by the ABI.
        No saves, no restores, and no hazard on either the argument or the return path. */
     *p++ = 0x49, *p++ = 0xba, memcpy(p, &target, 8), p += 8;          /* movabs r10, target */
+    {
+        const uint64_t fsg = (uint64_t)(uintptr_t)&rt_stub_fs;
+        const uint64_t pre = (uint64_t)(uintptr_t)&rt_stub_fs_pre;
+        *p++ = 0x50;                                                   /* push rax */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &fsg, 8), p += 8;          /* movabs r11, &rt_stub_fs */
+        *p++ = 0xf3, *p++ = 0x48, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xc0; /* rdfsbase rax -- BEFORE the write */
+        *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &pre, 8), p += 8;          /* movabs r11, &rt_stub_fs_pre */
+        *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                         /* mov [r11], rax */
+        *p++ = 0x58;                                                   /* pop rax */
+    }
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &hostbase, 8), p += 8;         /* movabs r11, host %fs base */
-    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
+    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;  /* wrfsbase r11 -- F3 is mandatory, and ModRM /2 is WRFSBASE; /3 is WRGSBASE */
     {
         const uint64_t fsg = (uint64_t)(uintptr_t)&rt_stub_fs;
         *p++ = 0x50;                                                   /* push rax */
@@ -237,7 +249,7 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
     }
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
     *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guestbase, 8), p += 8;        /* movabs r11, guest %fs base */
-    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xdb;  /* wrfsbase r11 -- F3 is mandatory */
+    *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;  /* wrfsbase r11 -- F3 is mandatory, and ModRM /2 is WRFSBASE; /3 is WRGSBASE */
     {
         const uint64_t inf = (uint64_t)(uintptr_t)&rt_syslib_in_flight;
         const uint32_t none = 0xffffffffu;
@@ -573,6 +585,28 @@ int main(int argc, char **argv)
     const char *phase = "eboot";
     for (size_t k = 1; k < object_count; k++) {
         phase = objects[k].label;
+        /* ENTRY-STATE / LOCATION TEST. The failing case is a hand-emitted wrfsbase executed while %fs already
+           holds the guest block. Reproduce exactly that with a HOST caller: install the guest base with
+           arch_prctl, run the same six bytes from a malloc'd RWX buffer, then restore. Compiler-emitted asm in
+           the same entry state separates "hand-emitted" from "entry state". */
+        {
+            const uint64_t hostbase = rt_tls_host_base(), guestbase = rt_tls_guest_base();
+            unsigned char *buf = mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
+                                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            unsigned char *q = buf;
+            *q++ = 0x49, *q++ = 0xbb, memcpy(q, &hostbase, 8), q += 8;
+            *q++ = 0xf3, *q++ = 0x49, *q++ = 0x0f, *q++ = 0xae, *q++ = 0xdb;
+            *q++ = 0xf3, *q++ = 0x48, *q++ = 0x0f, *q++ = 0xae, *q++ = 0xc0;
+            *q++ = 0xc3;
+            syscall(158, 0x1002UL, (unsigned long)guestbase); /* %fs := guest block; arch_prctl takes the ADDRESS */
+            uint64_t seen = ((uint64_t(*)(void))buf)();
+            uint64_t asm_seen = 0;
+            asm volatile("wrfsbase %0" ::"r"(hostbase));
+            asm volatile("rdfsbase %0" : "=r"(asm_seen));
+            syscall(158, 0x1002UL, (unsigned long)hostbase);  /* restore the host TCB */
+            printf("pbboot: entry-state test: hand-emitted %#llx  compiler-emitted %#llx  host base %#llx\n",
+                   (unsigned long long)seen, (unsigned long long)asm_seen, (unsigned long long)hostbase);
+        }
         run_guest(objects[k].image + rt_elf_entry(objects[k].elf), NULL, NULL, NULL, stack_top, timeout);
         if (outcome != RETURNED) break;
     }
@@ -681,6 +715,7 @@ int main(int argc, char **argv)
         {
             uint64_t live_fs = 0;
             __asm__ volatile("rdfsbase %0" : "=r"(live_fs));
+            printf("pbboot: stub pre-write fs %#llx\n", (unsigned long long)rt_stub_fs_pre);
             printf("pbboot: probe says wrfsbase %s\n", rt_tls_uses_wrfsbase() ? "WORKS" : "unavailable");
             printf("pbboot: stub readback %#llx which #%u (host base %#llx)\n",
                    (unsigned long long)rt_stub_fs, rt_stub_which,
