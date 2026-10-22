@@ -23,6 +23,8 @@ import tempfile
 
 import re
 
+import blocks as B
+import leaf_family_census as C
 import progress as P
 import verification as V
 
@@ -64,6 +66,24 @@ def digest(root, lib, elf, members):
     return f['digest']
 
 
+def assert_no_control_flow(members) -> None:
+    """The byte tier is legal for ONE basic block with no branch, no loop and no call.
+
+    Above that, a byte-identical body is "ship the original": behaviour preserved, nothing
+    decompiled, rows rising while the goal does not. Decided from the bytes by tools/blocks.py,
+    never by judgement. See docs/decisions.md 1h.
+    """
+    md = open(C.ELF, 'rb').read()
+    for m in members:
+        c = B.census(md, int(m['address'], 16), int(m['size']))
+        if c['decoded'] != c['size'] or c['unplaced']:
+            raise SystemExit(f"refused: {m['function']} does not decode exactly: "
+                             f"{c['decoded']}/{c['size']} B decoded, {c['unplaced']} unplaced target(s)")
+        if c['blocks'] != 1 or c['calls']:
+            raise SystemExit(f"refused: {m['function']} is {c['blocks']} block(s) with {c['calls']} "
+                             f"call(s): byte tier is single-block only (decisions.md 1h)")
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument('--family', required=True, help='name prefix, e.g. leaf_mov_al_mem_')
@@ -90,6 +110,7 @@ def main(argv):
     if bad:
         raise SystemExit(f'refused: {len(bad)} rows are already past `original` ({bad[0]}...)')
     members = [{'function': r['name'], 'address': r['address'], 'size': r['size']} for r in fam]
+    assert_no_control_flow(members)   # decisions.md 1h, before any digest and before any write
     sizes = {}
     for m in members:
         sizes[int(m['size'])] = sizes.get(int(m['size']), 0) + 1

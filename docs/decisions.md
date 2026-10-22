@@ -212,3 +212,21 @@ With these the byte-backed pool is **9,423** (7,761 + 793 + 245 + 624) and the l
 the remaining unlanded leaves are spread over hundreds of shapes at single-digit depth, where
 per-family amortisation is gone. The next mass is the **>16 B tier**, and that is a different
 mechanism (a body, not a leaf), so it is a planning question, not another template row.
+
+### 1h. Where the byte tier stops: one basic block, no branch, no loop, no call
+
+Byte-identical transcription is honest when the whole body *is* the instruction: `mov [rdi+K],esi;
+ret` has no C expression more faithful than the instruction. **It is not honest for a body with
+control flow.** Applied to a 1,072-byte function it means "ship the original bytes": behaviour
+preserved, nothing decompiled, 113,426 rows rising while the goal moves zero — **the
+`void f(){}`-for-`ret` failure at scale, a number rising on a technicality.**
+
+So the rule, enforced in `record_bytes_family.py::assert_no_control_flow`:
+
+- legal: **exactly one basic block, zero calls, and the extent decodes to exactly its size**;
+- illegal: any branch, loop, call, or an unplaced branch target — then the body must be a
+  reimplementation and the evidence must be **differential**, never bytes.
+
+Decided from the bytes by `tools/blocks.py` (`blocks.census`), so it is mechanical, not a
+judgement. **Both directions were fired before this was relied on:** 175 `mov rax,rdi; ret` members
+pass; a 64-byte extent at `0x00414a40` is refused as *3 block(s) with 1 call(s)*.
