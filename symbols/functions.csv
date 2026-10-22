@@ -1,6 +1,7 @@
 address,size,name,system,status,notes
 0x0040c4c0,3,leaf_ret_zero_0040c4c0,leaf,edge-verified,
 0x00410100,5,leaf_mov_rax_00410100,leaf,edge-verified,
+0x00414040,1072,large_bracket_canon_00414040,large,original,"large: bracket/paren canonicaliser, 279 insns, 64 blocks, output written backwards; declared 1072 B stops inside a call rel32"
 0x00418d80,8,leaf_mov_rax_00418d80,leaf,edge-verified,
 0x004261a0,5,leaf_mov_rax_004261a0,leaf,edge-verified,
 0x0042d830,5,leaf_mov_rax_0042d830,leaf,edge-verified,
