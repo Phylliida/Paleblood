@@ -492,3 +492,32 @@ before its client", applied to bytes.**
 stub's first bytes at the site's destination, which is now a `e9` wrapper. It was fixed by **following the
 wrapper** to the stub and asserting there, and by printing both addresses — **"the guest entered the wrapper"
 and "the guest never reached the site" are opposite findings and must not share a message.**
+
+### The wrapper is generic and the body is not: `xmm0-7` refused, not silently clobbered
+
+Commit B's plan saves six GPRs around the C snapshot call and **not `xmm0-7`**, which are caller-saved — so the
+call may destroy every one of them before the body sees them. For `frame_timing_frame_step` that costs nothing
+(no arguments, no floats), **which is exactly why it would ship broken**: the wrapper is generic, and the next
+float body gets garbage with every counter reading `installed`.
+
+**Policy (b), adopted:** refuse the capture wrapper unless the body's disassembly shows **no use of `xmm0-7`**;
+take (a) — eight `movaps` into a 128-byte stack area, and the capacity re-proved with the sentinel because the
+wrapper grew — when a float body is the target. **A refusal that names a checkable reason beats a save that
+grows the surface for a case that does not exist yet.**
+
+Landed as `tools/capture_precheck.py`, with the register ids **imported from `capstone.x86_const`** (never
+remembered — that enum has been wrong in this repo twice) and the refusal naming the register:
+
+```text
+$ capture_precheck.py f30f1007      # movss xmm0, dword ptr [rdi]
+xmm0 used by body: the snapshot call may clobber caller-saved xmm0-7     rc=3
+```
+
+Four tests, both directions: a float-reading body **refused and the register named**; a GPR-only body
+(`mov rax,[rdi]; ret`) **passing and naming its base `rdi`**; a control asserting the clean scan really has an
+empty XMM set rather than an unread one; and **`verdict(b"")` refused**, because **a scan that can pass on
+nothing is not a scan.**
+
+**Not yet wired:** the installer does not call this. Until it does, the refusal is a tool with a test, and the
+wrapper can still be built for a float body by hand. **A refusal that is not on the path to the thing it refuses
+is advice.**
