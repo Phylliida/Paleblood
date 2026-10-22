@@ -257,6 +257,8 @@ static void resolve(object *o)
 {
     for (size_t i = 0; i < o->imports; i++) {
         const char *name = rt_elf_import_name(o->elf, i), *library = rt_elf_import_library(o->elf, i);
+        if (getenv("BB_BIND_DUMP"))
+            fprintf(stderr, "bind %zu %s %s\n", i, name, library ? library : "(none)");
         for (size_t m = 1; m < object_count && !o->bound[i]; m++) {
             if (&objects[m] == o) continue;
             for (size_t e = 0; e < rt_elf_export_count(objects[m].elf); e++) {
