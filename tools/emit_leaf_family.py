@@ -674,11 +674,17 @@ def main(argv):
         # per member. A count printed beside the thing it counts must come from that thing.
         n_cases = sum(1 for m in ms for _ in case_docs(name, m))
         print(f'  cases {n_cases} files in {len(ms)} directories')
+    # The body is built BEFORE anything is opened. `open(path,'w').write(body_text(...))` evaluates
+    # the open first, so a refusal truncated game/leaf/<family>_family.cpp to zero bytes and left it
+    # there -- the check that refused the family destroying the artifact it was protecting. It also
+    # made --dry-run dishonest: the guard returned above body_text, so a dry run printed "nothing
+    # written" and exited 0 for a family that refuses. Build, then ask, then write.
+    generated = body_text(name, ms)
     if '--dry-run' in argv:
-        print('  dry run: nothing written')
+        print(f'  dry run: nothing written ({len(generated)} bytes would be)')
         return 0
     # five tables and the body from one iteration, so they cannot differ by one member
-    open(os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp'), 'w').write(body_text(name, ms))
+    open(os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp'), 'w').write(generated)
     rows = []
     for m in ms:
         k = key(name, m)

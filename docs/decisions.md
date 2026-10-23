@@ -1179,3 +1179,21 @@ The 78-row chain is the second batch; both are the same condition, not two.
 **Where the seeding lives:** in the case file. `evidence_hash()` already pins `cases_sha256` over every
 fixture input, so a seeded slot is covered by the column that covers every other case — no new tier
 value, no fourth status.
+
+### Running the check found the check destroying the artifact it protects
+
+`open(path, 'w').write(body_text(name, ms))` — Python evaluates the `open` first, so `body_text`'s
+refusal (which is the *point* of the function) truncated `game/leaf/rip_load_family.cpp` to **0 bytes**
+and left it on disk. A refusal that destroys the artifact it was protecting. And the `--dry-run` guard
+sat *above* `body_text`, so a dry run printed `nothing written` and exited 0 for a family that refuses —
+a dry run that never asks the question it exists to ask.
+
+Both fixed by ordering: **build, then ask, then write.** Proven by artifact, not by message — after the
+fix, `rip_load --dry-run` exits 1 with the refusal and `ls game/leaf/rip_load_family.cpp` says *No such
+file*; and the positive control on the same path is `rip_store --reemit` → *reproduced byte-for-byte
+(124 members)*, rc=0, so the emitting path still emits.
+
+**Withdrawn attribution:** the 0-byte `rip_load_family.cpp` I saw earlier and attributed to "debris from
+an older aborted emission" was this defect, reproduced by my own run. `ls -l` dated the new one 95
+seconds before `date`; the old one was dated Oct 23 and I never checked whether a run of mine could have
+made it. **A timestamp is evidence only about time; I used it as evidence about authorship.**
