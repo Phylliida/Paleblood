@@ -695,3 +695,19 @@ no layout exists, but because no thread has ever reached the eboot init path tha
 Revised revisit condition: a thread implementation is admissible once the boot reaches the guest code that
 performs the depth-0 writes (`+0x10`, 611 of them) — that is the population that proves a TCB gets built,
 and it is measurable by running rather than by naming fields from their rank.
+
+**Second correction — the spill discriminator ran, and it does not support a spill.** `--spill K` reports,
+per function, whether `[tcb+K]` is written and read inside one window and how far apart. For `+0x10`:
+**457 functions have both, 71 read-only, 7 write-only; median write→read distance 27 instructions, zero
+pairs within 4, zero within 16, 12 over 64.** A save-before-call/restore-after slot is symmetric and a
+handful of instructions wide, so the numbers refuse that explanation; `+0x10` is used like a field, with
+readers that never write it. What it *is* remains unnamed — 611 writes over 457 functions is more traffic
+than a per-thread slot needs, and naming it from this rank is exactly what 1m forbids.
+
+Three zeros came out of `--spill` before this number did, all three the break rule: `add rax, [rip+G]`
+writes the holder and reads it, so a `not hop` test — and before that, any write to the holder — truncated
+every window at instruction one. And the first distances printed empty because the write/read lists
+accumulate across every `fs:0` site in a function, so `j - i` measured from whichever site came last;
+pairing distances are only meaningful in absolute instruction positions. **A pairing test whose anchors
+differ per element is not a pairing test**, and the tool now prints the windows it accepted before its
+counts.

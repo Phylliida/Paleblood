@@ -118,5 +118,72 @@ def main():
         print("  ", a, "->", " ; ".join(w))
 
 
+def spill(target):
+    """Is [tcb + K] a semantic field or a scratch slot?
+
+    A field is written by one function and read by another. A spill slot is written and read a few
+    instructions apart inside the same function -- save before a call, restore after. The discriminator is
+    pairing distance inside one function, so the holder register has to stay direct: any `mov r, [r]` hop
+    or non-deriving write ends the window, because past it the base is a different pointer.
+    """
+    image = open(BIN, "rb").read()
+    md = Cs(CS_ARCH_X86, CS_MODE_64)
+    md.detail = True
+    same, write_only, read_only, distances = 0, 0, 0, []
+    accepted = []
+    for addr, size in functions():
+        o = addr - FILE_BIAS
+        if o < 0 or o >= len(image):
+            continue
+        code = image[o:o + min(size, 8192)]
+        if b"\x64" not in code:
+            continue
+        insns = list(md.disasm(code, addr))
+        w, r = [], []
+        for i, ins in enumerate(insns):
+            if not (len(ins.operands) == 2 and ins.operands[0].type == X86_OP_REG
+                    and ins.operands[1].type == X86_OP_MEM
+                    and ins.reg_name(ins.operands[1].mem.segment) == "fs"):
+                continue
+            held = ins.reg_name(ins.operands[0].reg)
+            for j in range(i + 1, len(insns)):
+                nxt = insns[j]
+                # The same rule the main scan uses: only a write that does not read the holder ends the
+                # window. `add rax, [rip+G]` reads it, and a hand-written `not hop` test broke every
+                # window at instruction one -- the third zero this tool has printed from its own break.
+                if writes_without_reading(nxt, held):
+                    break
+                for m in nxt.operands:
+                    if m.type == X86_OP_MEM and nxt.reg_name(m.mem.base) == held and m.mem.disp == target:
+                        # absolute instruction index, never j - i: the lists accumulate over every fs:0 site in the
+                        # function, so a distance from "the" site is a distance from the wrong one
+                        (w if nxt.operands[0].type == X86_OP_MEM else r).append(j)
+        if (w or r) and len(accepted) < 5:
+            accepted.append((hex(addr), f"writes at {w[:3]}", f"reads at {r[:3]}"))
+        if w and r:
+            same += 1
+            fwd = [x - y for y in w for x in r if x > y]
+            if fwd:
+                distances.append(min(fwd))
+        elif w:
+            write_only += 1
+        elif r:
+            read_only += 1
+    distances.sort()
+    print("windows the walker accepted FIRST (function, write distances, read distances):")
+    for row in accepted:
+        print("  ", row)
+    print(f"[tcb{target:+#x}] functions: write+read {same}, write-only {write_only}, read-only {read_only}")
+    if distances:
+        n = len(distances)
+        print(f"  same-function write->read distances: median {distances[n // 2]}, "
+              f"<=4 {sum(1 for d in distances if d <= 4)}, <=16 {sum(1 for d in distances if d <= 16)}, "
+              f">64 {sum(1 for d in distances if d > 64)}")
+    print("  reading: distance <= 16 in most functions means a spill slot; write-only elsewhere means a field")
+
+
 if __name__ == "__main__":
-    main()
+    if "--spill" in sys.argv:
+        spill(int(sys.argv[sys.argv.index("--spill") + 1], 0))
+    else:
+        main()
