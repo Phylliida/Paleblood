@@ -90,7 +90,12 @@ def main(argv):
         print(f'    {v:5d}  {" + ".join(k) if k else "<none>"}')
     if o.out:
         with open(o.out, 'w', newline='') as f:
-            w = csv.writer(f); w.writerow(['address', 'size', 'shape', 'excluded_by']); w.writerows(rows)
+            # Every row here is EXCLUDED -- that is the file's whole content ("landable and missed: 0").
+            # A column saying so is not redundant with excluded_by: it is the difference between a list of
+            # candidates and a list of refusals, and the next reader gets one glance instead of an audit.
+            w = csv.writer(f)
+            w.writerow(['address', 'size', 'shape', 'excluded_by', 'landable'])
+            w.writerows([tuple(r) + ('no',) for r in rows])
         print(f'  wrote {len(rows)} (address, selector) rows to {o.out}')
     return 0
 
