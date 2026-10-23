@@ -500,3 +500,43 @@ runs the same bytes under the **guest** base. **One body, two meanings, decided 
 functions **33,974 → 38,008** · ledger **34,075 → 38,109** (surplus 101) · bytes **283,635 → 322,675**
 · byte-identical **11,112 → 15,146** (`differential 22,862 + 15,146 = 38,008`, so nothing is
 double-counted) · **9 batches, 8 × 500 + 34**.
+
+### 1h-b — the differential tier's TLS blind spot: TLS-touching bodies need capture, not a better assertion
+
+**Both sides of a differential run in the harness process, so `%fs` is the host TCB on both sides.**
+`tools/harness.py:167–187` maps the guest image itself (`rt_elf_map`, `LOADER_BIND`, `IMAGE =
+0x800000000`) and installs the replacement with `ctypes.CDLL(path)` + `getattr(lib, name)` (`:176`);
+`grep -rn wrfsbase tools/` finds only `instruction_trace.py`'s mnemonic list. Nothing on that path can
+set the guest FS base.
+
+**Consequence: a TLS-touching body is compared host-TLS-to-host-TLS.** The differential is green by
+construction and green *about the wrong subject* — it cannot detect the difference, because both sides
+carry the same error. Third member of one family: the comparator whose input was empty, the `.byte`
+body admitted by a range check over a guessed bound, now the base identity on both sides. **A
+measurement whose subject is outside the instrument is not repaired by a stronger assertion.**
+
+**In-game the same bytes run under the guest base** (`install_hook`'s 14-byte jump executes inside the
+guest), and the guest TLS block is modelled as **one** of three PT_TLS carriers with `tls.c:33`
+hardcoding `0x4a0` — so the in-game value comes from a block the runtime only partially models.
+
+**The rule, stated once so the deep tier inherits it:**
+- A **TLS-touching** body can be honestly `edge-verified` only as *"defined relative to whatever base
+  the caller supplies"* — which excludes the in-game value. That is not the claim a ledger row makes.
+  Its route to a claim is **capture** (an in-game witness), the same route pool B needs.
+- **Pool B can never produce `verified`** (a synthesized body has no in-game witness). Sharpen it:
+  **a TLS-touching body cannot honestly produce `edge-verified` either.** Two different reasons, one
+  destination.
+- Within the byte tier the shape is already refused (`fs:`/`gs:` tooth, §1j (iv)); the tier mechanism
+  for the differential tier is a case-level **TLS slot** — the `guest_address_slots` shape one tier
+  over, declared with before/after — **not built**, named here as the route.
+
+**Where it bites, measured (not estimated):** 7,914 rows / 16,854 instructions catalogue-wide, and
+**zero of them sit at or below 16 B** — the whole ≤16 B population is 44,331 rows (32,239 landed +
+12,092 unlanded) with **0** TLS-touching members. So **every one of the 7,914 lives in the deep tier**
+(113,426 rows above 16 B = **7.0%**), i.e. exactly the 2,277-body and 113,426-row work that inherits
+this rule rather than rediscovering it.
+
+**Measurement note:** the first attempt at a size histogram swept all 157,757 rows with `detail=True`
+and was killed by the 600 s tool cap. **A killed sweep is a censored measurement, not a zero, and not
+a sample** — so the question was narrowed to the population that can answer it (rows ≤16 B) instead of
+re-running the same sweep and hoping.
