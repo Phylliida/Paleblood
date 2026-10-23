@@ -173,6 +173,9 @@ def compare_case(orig: dict, repl: dict, case: dict | None = None) -> list[str]:
                 diffs.append(f'slot {name} {part}: original {a} replacement {b}')
     for group, regs in (('ret', RETURN_REGS), ('preserved', CALLEE_SAVED)):
         for r in regs:
+            if os.environ.get('BB_DEBUG_RET'):
+                print(f'DEBUG {group}.{r}: orig={orig.get(group)!r} repl={repl.get(group)!r}',
+                      file=sys.stderr)
             a = num(orig.get(group, {}).get(r))
             b = num(repl.get(group, {}).get(r))
             if a != b:

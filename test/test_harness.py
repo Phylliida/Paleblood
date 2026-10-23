@@ -1051,7 +1051,7 @@ class ReplacementLibrary(unittest.TestCase):
         self.assertIn(os.path.basename(self.lib), message)
 
     def test_a_present_symbol_resolves(self):
-        address = harness.load_replacement(self.lib, "bb_unrelated_symbol", 0x1000)
+        address, base_set = harness.load_replacement(self.lib, "bb_unrelated_symbol", 0x1000)
         self.assertTrue(address)
 
 

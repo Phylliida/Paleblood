@@ -764,10 +764,35 @@ class Run:
         return out
 
 
-def load_replacement(lib_path: str, symbol: str, size: int) -> int:
+def load_replacement(lib_path: str, symbol: str, size: int):
+    # RETURNS (address, image_base_set). A function attribute would be a per-comparison fact stored
+    # per-process: load a based library, then a plain one, and it still reads True from the previous
+    # call -- capture_ok.csv's shape in miniature. The fact is bound to the library it describes.
     """dlopen the game library, run its bbgame_init with a loader that installs no hooks, and
     return the address of SYMBOL."""
     lib = ctypes.CDLL(lib_path)
+    # The guest load base the generated leaf bodies read (game/leaf/rip_load_family.cpp). Set ONCE
+    # here, where the library is loaded -- not per case: 161 chances to forget, and forgetting
+    # faults on the dereference instead of mismatching, which reads as a harness bug. Asserted
+    # immediately, because a setter that silently failed and a body reading zero are the same
+    # fault one frame apart. IMAGE is this harness's own mapping, so these bodies are honest only
+    # under it; their default of 0 is the in-game value (Map is identity or refusal).
+    # THE SUBJECT IS THE LIBRARY THAT CONTAINS THE BODY, not "every library dlopened here". This
+    # function is called with argument-supplied fixture libraries too (test_harness's
+    # libnomatch/libplain), which carry no based body and legitimately export no base; refusing
+    # them reddened twelve tests over a property they do not have. Absent therefore records
+    # image_base_set = False -- the run says which condition it established instead of the reader
+    # reconstructing it from a fault -- and a based body compared under a False base faults on the
+    # dereference, which is the loud failure we want and is now readable in the record.
+    try:
+        pbl = ctypes.c_uint64.in_dll(lib, 'pbl_image_base')
+    except ValueError:
+        base_set = False
+    else:
+        pbl.value = IMAGE
+        if pbl.value != IMAGE:
+            raise BadInput(f'pbl_image_base did not take IMAGE: {pbl.value:#x}')
+        base_set = True
     hook = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p)(lambda o, s, t: 0)
     load_replacement.keep = (lib, hook)
 
@@ -778,7 +803,7 @@ def load_replacement(lib_path: str, symbol: str, size: int) -> int:
     if lib.bbgame_init(ctypes.byref(host)):
         raise BadInput('bbgame_init failed')
     try:
-        return ctypes.cast(getattr(lib, symbol), ctypes.c_void_p).value
+        return ctypes.cast(getattr(lib, symbol), ctypes.c_void_p).value, base_set
     except AttributeError:
         # Without this, a library that does not export SYMBOL surfaces as an opaque `exit 1` from
         # the child process, which reads as a fault rather than as a build that is missing the
@@ -960,7 +985,7 @@ def main() -> int:
         if a.replacement:
             if not a.lib:
                 raise BadInput('--replacement needs --lib')
-            target = load_replacement(a.lib, a.replacement, boot['size'])
+            target, a.image_base_set = load_replacement(a.lib, a.replacement, boot['size'])
         if a.trace_instruction_limit < 1 or a.trace_instruction_limit > 10_000_000:
             raise BadInput('--trace-instruction-limit must be 1..10000000')
         if a.case:
