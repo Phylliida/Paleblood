@@ -73,6 +73,9 @@ const rt_syslib_entry *rt_syslib_end(void);
     RT_SYSLIB_REGISTER(RT_SYSLIB_CAT(rt_syslib_unresolved_entry_, __LINE__), library, symbol, fn, \
                        RT_SYSLIB_CAPABILITY_UNRESOLVED, RT_SYSLIB_KIND_REFUSED)
 
+/* Section bounds provided by the linker. Weak: a build with no entries still links. */
+extern const rt_syslib_entry __start_rt_syslib[] __attribute__((weak));
+extern const rt_syslib_entry __stop_rt_syslib[] __attribute__((weak));
 #ifdef __cplusplus
 }
 #endif

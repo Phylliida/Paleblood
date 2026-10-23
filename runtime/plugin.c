@@ -10,8 +10,6 @@
 
 unsigned char *rt_image;
 
-extern const rt_hook_entry game_hooks[];
-extern const unsigned game_hook_count;
 
 /* Hook selection is ONE filter with two directions, never two filters:
  *

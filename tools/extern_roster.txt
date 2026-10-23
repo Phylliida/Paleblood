@@ -1,0 +1,12 @@
+# Function/linker-symbol externs in .c files. Enforced BOTH ways by tools/check_externs.py:
+# a new one is refused, and an entry that no longer exists is refused (prune it). Data externs
+# are not listed here because the gate refuses them absolutely -- they belong in headers.
+# Target: empty. Every entry is debt with a name.
+rt_host_hooks_installed_count
+rt_host_hooks_sites_checked
+rt_host_hooks_sites_refused
+rt_libc_guard_selftest
+rt_tls_guest_base
+rt_tls_host_base
+write
+# a stale justification

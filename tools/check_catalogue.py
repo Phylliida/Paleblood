@@ -82,7 +82,9 @@ def main():
     for rel in stale:
         print(f"REFUSED {rel}: allowlisted but no longer uses csv.DictReader -- prune the baseline")
     if bad or new or stale:
-        print(f"catalogue parses: {len(new)} new, {len(stale)} stale, {len(bad)} radix -- refusing")
+        sites = sum(r for _x, (_y, r) in hits.items())
+        print(f"catalogue parses: {len(new)} new, {len(stale)} stale, {len(bad)} radix -- refusing "
+              f"(baseline: {sites} raw DictReader site(s) in {len(allowed)} file(s), all grandfathered)")
         return 1
     print(f"catalogue parses: ok ({len(users)} grandfathered file(s) in tools/catalogue_allowlist.txt, 0 radix)")
     return 0

@@ -36,6 +36,11 @@ size_t rt_hook_count(void);
    same directory tools/verify.py reads for the ladder row it belongs to. */
 int rt_hook_invoke(uint32_t address, const uint64_t *args, size_t nargs, uint64_t *out);
 
+/* The generated hook table (tools/gen_hooks.py). Declared here, not in plugin.c: a .c file that
+ * declares `extern` data is the smell this campaign paid for once already (volatile uint32_t vs
+ * extern int32_t -- linker-invisible, resolved by whichever units happened to be linked). */
+extern const rt_hook_entry game_hooks[];
+extern const unsigned game_hook_count;
 #ifdef __cplusplus
 }
 #endif

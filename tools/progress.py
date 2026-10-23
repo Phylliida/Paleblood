@@ -468,6 +468,21 @@ def evidence_join(root, argv=None):
     return 0
 
 
+def _parses_clause():
+    """The catalogue-parse baseline, printed where it is READ.
+
+    A baseline stored in a file and never quoted shrinks to zero in the reader's mind while sitting still
+    at 101 sites. Unread is not zero: if the gate cannot be imported, the line says so.
+    """
+    try:
+        import check_catalogue as K
+        hits = K.scan()
+        sites = sum(reader for _x, (_radix, reader) in hits.items())
+        return f" · parses: {sites} raw DictReader site(s) in {len(hits)} file(s) grandfathered, 0 size radix"
+    except Exception as exc:  # noqa: BLE001
+        return f" · parses: unavailable ({exc}) -- run tools/check_catalogue.py; unread is not zero"
+
+
 def extent_line() -> str:
     """The catalogue's short-extent population, printed because a selector floor excludes it silently.
 
@@ -515,7 +530,8 @@ def extent_line() -> str:
             f"unlanded {len(short) - short_landed}) \u00b7 family_scan --min-size 14 excludes that whole band "
             f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest "
             "(expected 0: sizes are decimal and this catalogue's extents are disjoint, so the tie branch is "
-            "a guard against a catalogue that does not exist here, not a live condition)")
+            "a guard against a catalogue that does not exist here, not a live condition)"
+            + _parses_clause())
 
 
 def reach_line() -> str:
