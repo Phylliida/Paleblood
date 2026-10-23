@@ -1228,3 +1228,27 @@ above the `sys.path.insert` that makes `tools/` importable; with `-P` (no cwd on
 invocation died `ModuleNotFoundError`, while the tests passed because `PYTHONPATH=tools` was set — **an
 entry point that starts only with environment help, introduced by the commit that was making mistakes
 unrepresentable.** The import now sits below the path insert.
+
+### One roster, two assertions; and the ordering rule became five lines of AST
+
+`test_gates_bare` already derived its roster from `tools/*.py` carrying a `__main__` guard, and asserted
+**one** property: it does not exit 0 silently. A traceback satisfies that assertion, so `ModuleNotFoundError`
+passed it for as long as the suites ran with `PYTHONPATH=tools` — the harness supplying what the artifact
+needs, which is the `2>&1` lesson in another costume. The same roster now asserts a second property, and the
+assertion **names the missing module**: only a module that resolves to a file in `tools/` is a failure, so
+`terminal_gif.py`'s Pillow stays a different finding instead of forcing a second exception list.
+
+`tools/check_import_order.py` is the same rule as an AST check, because a rule about ordering loses to a
+shape: for every `tools/*.py`, an import naming a module that resolves to `tools/<name>.py` must sit below
+the `sys.path.insert` that makes `tools/` importable, and a sibling import with **no** insert is refused too.
+Proven three ways — real tree, a planted violation (new), and a planted stale baseline line — each arm run
+and each arm's rc read.
+
+**The first run refused 41 sites in 20 files**, and the population is the finding: those tools start only
+because a plain `python3 tools/x.py` puts the script's own directory on `sys.path`, which `-P` and any hook
+running under an empty environment do not. `progress.py:478/495/498`, `record_bytes_family.py:26/27/38/39`,
+`function_catalogue.py` thirteen deep, `join_import_pc.py:38`, `census_rip_load.py:32` (top level: dies at
+import), `check_pins.py:35` (above its own insert at :40 — the exact defect, in the file that introduced the
+pattern). Grandfathered by file+line in `tools/import_order_allowlist.txt`, shrink-only: a new violation
+refuses and a stale line refuses, so the list cannot become a permission slip. `progress.py` is the sharpest
+one: the pre-commit hook invokes it plainly, which is why nobody has seen it fail.

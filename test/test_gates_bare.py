@@ -9,13 +9,19 @@ PYTHONPATH DELETED from the environment -- and requires rc=0 from each. If a gat
 this is where it is told, not in a commit that happens to run under the right shell.
 """
 import os
+import re
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-GATES = ("check_externs.py", "check_catalogue.py")
+# the tools whose sibling imports the import-order gate grandfathers: today they start only when the
+# script's own directory reached sys.path some other way. One population, two assertions.
+TOOL_MODULES = {p.stem for p in (ROOT / "tools").glob("*.py")}
+EXEMPT_BARE_START = {l.split(":")[0] for l in
+                     (ROOT / "tools" / "import_order_allowlist.txt").read_text().splitlines() if l.strip()}
+GATES = ("check_externs.py", "check_catalogue.py", "check_import_order.py")
 
 
 class BareGates(unittest.TestCase):
@@ -52,6 +58,23 @@ class BareGates(unittest.TestCase):
                 said_something = bool((p.stdout + p.stderr).strip())
                 self.assertTrue(said_something or p.returncode != 0,
                                 f"{tool}: rc=0 and both streams empty -- a tool that did nothing")
+                # THE SECOND PROPERTY, on the same derived roster: it must not need the environment.
+                # A traceback satisfies the silence assertion above, so `ModuleNotFoundError` passed this
+                # test for as long as the suites ran with PYTHONPATH=tools -- the harness supplying what the
+                # artifact needs. This is the assertion that would have caught it.
+                both = p.stdout + p.stderr
+                # EXEMPT exactly the population check_import_order grandfathers, so the two instruments
+                # share one list and neither can drift into a second roster. A file leaves this set only
+                # by getting its sibling import below a path insert, which prunes the baseline too.
+                if tool in EXEMPT_BARE_START:
+                    continue
+                # The property is about SIBLING resolution, so the assertion names the missing module
+                # rather than matching the exception: a tool that cannot import a third-party package
+                # (terminal_gif.py needs Pillow, which this venv lacks) is a different finding and must
+                # not force a second exemption list -- that is how one roster becomes two.
+                missing = re.findall(r"No module named '([^']+)'", both)
+                self.assertFalse([mod for mod in missing if mod.split(".")[0] in TOOL_MODULES],
+                                 f"{tool}: a sibling import needs the environment -- " + both.strip()[-400:])
 
     def test_every_generator_can_still_re_emit_its_artifacts(self):
         # A committed artifact its generator cannot re-emit is a hand repair the next re-run silently
