@@ -44,6 +44,13 @@ add_executable(test_snapshot_stub test/test_snapshot_stub.c runtime/boundary_stu
 target_include_directories(test_snapshot_stub PRIVATE runtime/include)
 add_test(NAME snapshot_stub COMMAND test_snapshot_stub)
 
+# The guard triple's fixture: asserts the BYTE in guest memory (release -> byte 1, read back through the
+# guest mapping) and not the return codes, which a host-side set of seen guards satisfies without ever
+# writing the word. rc 3 is "no writable segment" / missing data and is a skip, not a failure.
+add_test(NAME guard_selftest
+         COMMAND pbboot ${CMAKE_SOURCE_DIR}/../data/bb/elf/eboot.elf --selftest-guard)
+set_tests_properties(guard_selftest PROPERTIES SKIP_RETURN_CODE 3)
+
 add_executable(test_guest_mem test/test_guest_mem.c runtime/guest_mem.c runtime/process.c)
 target_include_directories(test_guest_mem PRIVATE runtime/include)
 # A test whose failure flag is shadowed is green forever, and nothing before the suite would say so.

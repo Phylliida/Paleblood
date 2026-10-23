@@ -95,7 +95,7 @@ static sigjmp_buf back_to_host;
 static volatile enum outcome outcome = RUNNING;
 static volatile uint32_t stopped_at;            /* object << 20 | import index of the unimplemented call */
 static volatile uint64_t stopped_from;          /* the guest's return address of that call */
-static volatile uint64_t fault_rip, fault_address;
+static volatile uint64_t fault_rip, fault_address, fault_fs;
 static volatile uint64_t fault_regs[16];
 static volatile int fault_signal;
 static volatile int exit_code;
@@ -165,6 +165,15 @@ static void on_signal(int sig, siginfo_t *info, void *context)
     fault_in_handler = 1;
     /* First statement: this handler runs on whatever %fs was installed when control was lost, and
        everything below it -- dladdr, snprintf, printf -- is host code that needs the host base. */
+    /* The %fs this fault happened on. It must be read BEFORE rt_tls_enter_host() below, which is the very
+       act that would make every fault look like it happened on the host: the signal frame carries %fs's
+       selector and not its base (REG_FSBASE is not in gregs), so a live ARCH_GET_FS here is the only
+       record of it. A host body running on the guest TCB reads zeros for every glibc TLS slot, and the
+       first dereference of what those zeros point at faults at exactly 0x0. */
+    {
+        uint64_t base = 0;
+        if (syscall(158, 0x1003UL, &base) == 0) fault_fs = base;  /* ARCH_GET_FS */
+    }
     rt_tls_enter_host();
     fault_frame_count = fault_backtrace_enabled ? backtrace(fault_frames, 6) : 0;
     const ucontext_t *uc = context;
@@ -927,6 +936,18 @@ int main(int argc, char **argv)
             printf("pbboot: in flight: #%u args %#llx %#llx %#llx guest_pc %#llx\n", rt_syslib_in_flight,
                    (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
                    (unsigned long long)rt_syslib_args[2], (unsigned long long)rt_syslib_args[3]);
+        /* Which TLS the fault happened on. A host body running with %fs on the guest TCB reads zeros
+           for every glibc TLS slot -- errno, the stack protector's fs:0x28 -- and the first dereference
+           of anything those zeros point at faults at exactly 0x0 with a host pc and guest arguments,
+           which is indistinguishable from a null argument unless this is printed. */
+        {
+            const uint64_t guest = rt_tls_guest_base(), host = rt_tls_host_base();
+            const char *which = fault_fs == guest ? "GUEST TCB -- a host body ran with the guest %fs"
+                              : fault_fs == host ? "host TCB -- not the TLS base"
+                                                 : "neither -- a third %fs";
+            printf("pbboot: fault tls fs 0x%llx guest 0x%llx host 0x%llx -- %s\n",
+                   (unsigned long long)fault_fs, (unsigned long long)guest, (unsigned long long)host, which);
+        }
         printf("pbboot: fault regs rax %llx rbx %llx rcx %llx rdx %llx\n"
                "pbboot: fault regs rsi %llx rdi %llx rbp %llx rsp %llx\n"
                "pbboot: fault regs r8 %llx r9 %llx r10 %llx r11 %llx r12 %llx r13 %llx r14 %llx r15 %llx\n",

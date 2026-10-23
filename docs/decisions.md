@@ -956,3 +956,36 @@ NID) -- the same 848-vs-748 gap carried since the stub table.
 
 New wall: **signal 11 at address 0x0, pc in host space**, `rdi`/`rsi` image-space -- the guest reached 17
 imports and the fault is inside host code, not in the guest mapping.
+
+## The fault was on the guest %fs: a host body ran with the guest TCB
+
+`si_addr 0x0` with a **host** pc and image-space `rdi`/`rsi` is a null dereference. The candidate that
+explains it: a host body running with `%fs` still on the guest TCB reads **zero** for every glibc TLS
+slot -- `errno`, the stack protector's `fs:0x28` -- and the first dereference of what those zeros point at
+faults at exactly `0x0`. Measured, not reasoned: `fault tls fs 0x64c06bf64040 guest 0x64c06bf64040 host
+0x7b5c1f8a9740 -- GUEST TCB -- a host body ran with the guest %fs`. **The wall is the TLS base, not the
+argument.**
+
+It has to be read **before** `rt_tls_enter_host()`, which is the very act that would make every fault look
+like it happened on the host. The signal frame does not carry it -- `REG_FSBASE` is not in `gregs`, whose
+tail for x86-64 stops at the selector `ss` -- so a live `arch_prctl(ARCH_GET_FS)` at handler entry is the
+only record. First attempt used `gregs[REG_FSBASE]` and did not compile; that is the measurement refusing
+to be where I assumed it was.
+
+**Withdrawn the same slice: "the last entered import names the body."** The `entered #N` lines are emitted
+by the post-run summary loop in **import-index order** -- they are a set, not a sequence -- so `#669` being
+last printed says nothing about being last called. The chronological trace does not exist; building it is
+a separate instrument.
+
+## The guard fixture is placed, and the sweep is on the runtime's own key
+
+`add_test(NAME guard_selftest COMMAND pbboot …/eboot.elf --selftest-guard)` in the **top-level**
+`CMakeLists.txt`, `SKIP_RETURN_CODE 3`: ctest `#5 guard_selftest … Passed`. A fixture outside the gate is
+able, not placed.
+
+`tools/check_implemented.py` now joins on **(NID, library)** -- the tuple `boot.c:474-479` binds on -- over
+`docs/bind-order-eboot.txt`, the only population with a label per binding: **846 import rows + 2 module
+rows** (the module rows are classified, never skipped: they have no NID and no library). Controls: both
+labels of memset's NID must be served. **The first version of that control compared `("memset", lib)`
+against a table holding `(lib, symbol)`, refused, and that refusal is the only reason the reversed key was
+visible** -- a control that cannot be satisfied fails closed, which is why it is worth having.
