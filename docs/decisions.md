@@ -1561,3 +1561,32 @@ the vocabulary is `{edge-verified, original, verified}`), and `byte_totals` excl
 Corollary, learned by writing it wrong first: a `continue` that means "not landed" must not also mean
 "not a body". The first version of `byte_totals` skipped known-wrong rows entirely and reported
 322,873 B transcribed instead of 323,911 — dropping 1,072 B of a body that exists.
+
+### 1p — IN FORCE (landed): the `original` population is closed by decision, and the 77 are pre-registered both ways
+
+All five rows at status `original` now carry their reason on record, so the gap between `bytes_transcribed`
+and `bytes_landed` is a documented zero rather than a backlog:
+
+| address | bytes | class | reason |
+|---|---|---|---|
+| `0x00414040` | 1,072 | known_wrong | body uses `v_rcx|v_r9` for `eax`/`ebx` and `0x29` for `0x28`; a differential cannot tell it from a trampoline, so `landed` refuses it and raises if it is ever promoted |
+| `0x004632d0` | 67 | retired | calls `gettimeofday` and `stack_chk_fail`, and is the code cave the community patches overwrite — it needs a call model: deliberately not done |
+| `0x024264d0` | 34 | retired | signed magic division `eax % 10`, `0xa % 10 = 0`; no body in the tree since `rip_load_family.cpp` was withdrawn |
+| `0x0111a600` | 8 | retired | not an entry point: `movsxd rsi, esi`, no `install_mode` row, three instruments agree — nothing to verify as a function. Its old note, preserved here because the 200-character budget forced it out of the CSV: `MOVSXD RSI,ESI` then a tail call to `realloc` (import `0x02fbfe38`, NID `Y7aJ1uydPMo`), a 32-bit signed size sign-extended; 8 bytes, so the 14-byte hook does not fit (QUIRKS.md) |
+| `0x01735230` | 18 | backlog | the pilot: body written, differential measured, three mutants fired, not yet recorded |
+
+`transcribed` counts bodies that exist in the tree — one walk over `game/` — and does **not** consult the
+notes column. So `0x0111a600` still contributes its 8 B while being retired: a retired row that has a body
+is a body nobody will verify, and that is a follow-up (delete the body), not a number to adjust. A census
+that reads the ledger's opinions is how 34 B survived a family withdrawal and 67 B survived never being
+written.
+
+**Pre-registered for the 77** (to be checked the moment `verify.py --record edge` runs, and a disagreement is
+the finding):
+
+* `bytes_landed` **322,746 → 324,066** (+1,320, the whole family: all 78 rows become evidence at once)
+* `bytes_transcribed` **323,844 → 325,146** (+1,302, the 1,320 B of the batch minus the pilot's 18 B, which
+  is already on disk as a body)
+
+The two movements differ by exactly 1,302 B: the bytes that are *newly transcribed and also recorded*. The
+pilot's 18 B is already transcribed, so it can only move `landed`.

@@ -89,7 +89,7 @@ def byte_totals(path="symbols/functions.csv"):
     for r in rows:
         a = int(r['address'], 16)
         size = int(r['size'])
-        if 'retired:' in str(r.get('notes', '')) or not body_exists(r, index):
+        if not body_exists(r, index):
             continue   # no body exists: neither landed nor transcribed. `continue` here is the whole
                        # row's absence -- the first version of this patch wrote `continue` for
                        # KNOWN_WRONG too, which dropped 1,072 B of a body that DOES exist from

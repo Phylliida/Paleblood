@@ -130,7 +130,7 @@ address,size,name,system,status,notes
 0x00462fc0,9,leaf_bytes_00462fc0,leaf,edge-verified,
 0x00462fd0,9,leaf_bytes_00462fd0,leaf,edge-verified,
 0x00463040,5,leaf_lea_rdi_00463040,leaf,edge-verified,generated: return arg0 + K
-0x004632d0,67,frame_timing_get_time_us,frame_timing,original,dead in the stock game: only unwind entries refer to it; the community frame-rate patches overwrite it as a code cave (gettimeofday in microseconds)
+0x004632d0,67,frame_timing_get_time_us,frame_timing,original,"retired: needs a call model (gettimeofday, stack_chk_fail); code cave patches overwrite it; see decisions 1p."
 0x00463320,6,leaf_mov_eax_k_00463320,leaf,edge-verified,
 0x004634a0,1,leaf_ret_004634a0,leaf,edge-verified,
 0x00464d50,13,leaf_bytes_00464d50,leaf,edge-verified,
@@ -5289,7 +5289,7 @@ address,size,name,system,status,notes
 0x01117850,3,leaf_ret_zero_01117850,leaf,edge-verified,
 0x01117890,3,leaf_ret_zero_01117890,leaf,edge-verified,
 0x011183a0,3,leaf_ret_zero_011183a0,leaf,edge-verified,
-0x0111a600,8,frame_timing_realloc_thunk_0111a600,frame_timing,original,"MOVSXD RSI,ESI then a tail call to realloc (import 0x02fbfe38, NID Y7aJ1uydPMo): a 32-bit signed size is sign-extended. 8 bytes, so the 14-byte hook does not fit (QUIRKS.md)"
+0x0111a600,8,frame_timing_realloc_thunk_0111a600,frame_timing,original,"retired: not an entry point (movsxd rsi,esi; no install_mode row); 8 B realloc thunk, 14-byte hook does not fit; see decisions 1p."
 0x0111a620,129,frame_timing_open_and_stat,frame_timing,edge-verified,"Opens a path, fstats the descriptor; hands back the stat status word and the descriptor; returns 0x17 if the open or 0x21 if the fstat fails, writing neither out parameter"
 0x0111a6b0,23,frame_timing_close_0111a6b0,frame_timing,edge-verified,"Call to sceKernelClose (import 0x02fbf438, NID UK2Tl2DWUns); returns 0 on success and the fixed 0x13 on any failure, discarding the kernel error. Only the low 32 bits are tested"
 0x0111a6d0,3,leaf_ret_zero_0111a6d0,leaf,edge-verified,
