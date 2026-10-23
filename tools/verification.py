@@ -250,6 +250,9 @@ def cases_hash(captures: str) -> str:
 # content is the cost being avoided, so the cost stands until the ledger write itself is batched.
 
 
+# A hash PINNED BY TWO DIRECTORIES IS NOT AN IDENTIFIER: after the chain batch, 78 case directories
+# hold 62 distinct contents, so two rows can legitimately pin the same cases_sha256. Query the ledger
+# by `address`, never by hash.
 def evidence_hash(root: str, name: str) -> str:
     """What the ledger says the evidence for NAME is: each case set's name and its case pin.
 

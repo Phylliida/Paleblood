@@ -1590,3 +1590,11 @@ the finding):
 
 The two movements differ by exactly 1,302 B: the bytes that are *newly transcribed and also recorded*. The
 pilot's 18 B is already transcribed, so it can only move `landed`.
+
+**Pre-registered sharing, `tools/case_sharing.py`** (after the 77 land): **78 case directories must hold 62
+distinct contents.** Three outcomes and only three — 62 is the design; **78** means sharing did not happen
+and every address got its own copy, which is harmless on disk but leaves `case_key` carrying no information;
+**fewer than 62** means two behavioural keys collided in one case file, which is a **wrong-body hazard** and
+stops the record. The gate refuses only that last one, because it is the only one that can produce a body
+compared against a case authored for a different slot. Corollary, stated beside `evidence_hash`: **a hash
+pinned by two directories is not an identifier — query the ledger by `address`, never by hash.**
