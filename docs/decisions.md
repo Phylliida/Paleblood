@@ -540,3 +540,33 @@ this rule rather than rediscovering it.
 and was killed by the 600 s tool cap. **A killed sweep is a censored measurement, not a zero, and not
 a sample** — so the question was narrowed to the population that can answer it (rows ≤16 B) instead of
 re-running the same sweep and hoping.
+
+### 1h-c — the TLS-slot mechanism is `fork`, not a slot; and the byte tier's population is the partition's
+
+**Not buildable in-process.** Setting the guest FS base from inside the harness means `arch_prctl(
+ARCH_SET_FS)` or `wrfsbase` against the **harness's own thread**, and CPython's TCB lives there: `errno`,
+the exception state and the GIL would all break. A case-level slot the shape of `guest_address_slots`
+would be cheap and wrong, and it would present as a harness crash rather than as a TLS diagnosis. The
+mechanism is **`fork()` a child, set FS there, run both sides in it, report the verdict through a
+pipe** — the `differential.py` `_run_isolated` fork extended by one `wrfsbase`, and it is **not built**,
+because the deep tier is the only consumer and 0 of the ≤16 B rows touch TLS. Recorded so the next
+session does not start with the slot.
+
+**The byte tier's population is the catalogue's 1..16 B unlanded rows, not the leaf-shape census.**
+The shape census recognises **5,888** of the **12,092**; emitting from it gave **4,033 / 39,036 B**
+where the pre-registration says **4,034 / 39,040 B** — a near-match, which is the "two instruments, one
+number" trap and not agreement. Byte transcription is shape-agnostic, so the emitter now iterates the
+partition.
+
+**One tooth set, proved by two implementations counting to the same digit.** `refusal()` in
+`record_bytes_family` is now the only place the 1j (iv)/(v) predicates live — and it was **missing the
+relative branch/call tooth**, which the emitter's dry run exposed as a 5,076-row disagreement with
+`census_band.py`. After adding it, the two instruments print, independently:
+
+```
+emit_byte_leaves.py   4,034 leaves, 39,040 B   {control flow 1,298, decode 1, address dependent 6,694, trap 65}
+census_band.py        4,034 over 2,598 shapes   {address dependent 6,694, control flow 1,298, decode 1, trap 65}
+```
+
+**A tooth in the counter and not in the emitter is the 647 retraction waiting to happen**, and the
+emitter shipped with §1h alone — it would have emitted bodies for all 6,694 address-dependent rows.

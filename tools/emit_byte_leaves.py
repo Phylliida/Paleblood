@@ -19,6 +19,7 @@ import capstone
 
 import blocks as B
 import leaf_family_census as C
+import record_bytes_family as R
 
 FAMILY = 'leaf_bytes'
 BODY = 'game/leaf/bytes_family.cpp'
@@ -44,9 +45,15 @@ def transcribable():
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = False
     landed = {int(r['address'], 16) for r in csv.DictReader(open('symbols/functions.csv'))}
-    out, refused = [], collections.Counter()
-    for addr, size, ins in C.members(md, cs):
-        if addr in landed:
+    out, refused, members = [], collections.Counter(), []
+    # The population is the CATALOGUE's unlanded rows in the band, not the leaf-shape census: the
+    # shape census recognises 5,888 of the 12,092 rows, so emitting from it would land 4,033 where
+    # the pre-registration says 4,034 -- a near-match that is the "two instruments, one number"
+    # trap rather than agreement. Byte transcription is shape-agnostic; the population is the
+    # partition's, so the counter (census_band.py) and the emitter count the same rows.
+    for r in csv.DictReader(open('symbols/ghidra_functions.csv')):
+        addr, size = int(r['address'], 16), int(r['size'])
+        if not (1 <= size <= 16) or addr in landed:
             continue
         c = B.census(md, addr, size)
         if c['decoded'] != c['size'] or c['unplaced']:
@@ -56,9 +63,23 @@ def transcribable():
             refused['control flow'] += 1
             continue
         off = addr - C.FILE_BIAS
-        out.append({'address': addr, 'size': size, 'ins': ins,
+        members.append({'function': f'{FAMILY}_{addr:08x}', 'address': f'0x{addr:x}',
+                        'size': str(size)})
+        out.append({'address': addr, 'size': size,
+                    'ins': list(cs.disasm(md[off:off + size], addr)),
                     'bytes': md[off:off + size]})
-    return out, refused
+    # decisions.md 1j (iv)/(v), per row, through record_bytes_family.refusal -- ONE tooth set for
+    # the counter, the gate and this emitter. The first version applied 1h alone and would have
+    # emitted bodies for the 6,694 position-dependent and 65 trapping rows the census refuses: the
+    # 647 retraction class at ten times the scale, in the one artifact nobody re-reads.
+    kept = []
+    for i, m in enumerate(out):
+        reason, _ = R.refusal(members[i])
+        if reason:
+            refused[reason] += 1
+            continue
+        kept.append(m)
+    return kept, refused
 
 
 def main(argv):

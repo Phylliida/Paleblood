@@ -25,6 +25,16 @@ import re
 
 import blocks as B
 import leaf_family_census as C
+
+from capstone.x86_const import (X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_FS,
+                                X86_REG_GS, X86_REG_RIP)
+
+TRAPS = frozenset({
+    'int', 'int1', 'int3', 'into', 'ud0', 'ud1', 'ud2', 'syscall', 'sysenter', 'sysret',
+    'sysexit', 'iret', 'iretd', 'iretq', 'hlt', 'in', 'out', 'invd', 'wbinvd', 'cli', 'sti',
+    'clts', 'swapgs', 'wrfsbase', 'wrgsbase', 'rdmsr', 'wrmsr', 'lgdt', 'lidt', 'lldt', 'ltr',
+    'vmcall', 'vmrun',
+})
 import progress as P
 import verification as V
 
@@ -84,75 +94,84 @@ def assert_no_control_flow(members) -> None:
                              f"call(s): byte tier is single-block only (decisions.md 1h)")
 
 
-def assert_position_independent(members) -> None:
-    """A byte-identical body only means what the original meant if no instruction's VALUE depends
-    on where it sits. `lea rax,[rip+K]` in libbbgame.so computes .so_addr + K; the original
-    computed guest_addr + K -- different by the load offset. The bytes are identical, the behaviour
-    is not, and the byte assertion cannot see it. Same failure as `void f(){}` for `ret`, one tier
-    up: a green certifying the wrong claim. decisions.md 1j (iv).
+_MD = None
+_CS = None
 
-    Refuses on: a RIP-relative memory operand, a relative branch/call, or an immediate that lands
-    inside the image's own address range (>= 0x400000), which is how a two-part address such as
-    `lea rax,[rip+K]; add rax,K2` shows its second half.
+
+def _ctx():
+    """One read of the ELF and one Capstone handle for the whole process: a per-member `open` is
+    4,034 x 42 MB of I/O for the band, which is a filter that never finishes rather than a slow one."""
+    global _MD, _CS
+    if _MD is None:
+        import capstone
+        _MD = open(C.ELF, 'rb').read()
+        _CS = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+        _CS.detail = True
+    return _MD, _CS
+
+
+def refusal(m):
+    """('', '') if this member is admissible to the byte tier, else (reason, message).
+
+    THE single source of truth for decisions.md 1j (iv) -- RIP-relative, fs:/gs:-relative, and
+    guest-space immediates -- and 1j (v) -- traps. The two assert_* wrappers below and the
+    emitters all come through here, so a counter and a gate cannot disagree about the class, and
+    adding a tooth is one edit rather than four.
     """
-    import capstone
-    from capstone.x86_const import (X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_FS,
-                                   X86_REG_GS, X86_REG_RIP)
-    md = open(C.ELF, 'rb').read()
-    cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
-    cs.detail = True
+    md, cs = _ctx()
+    guest, size = int(m['address'], 16), int(m['size'])
+    off = guest - C.FILE_BIAS
+    for ins in cs.disasm(md[off:off + size], guest):
+        if ins.mnemonic in TRAPS:
+            return 'trap (1j v)', (f"refused: {m['function']} executes `{ins.mnemonic} "
+                                   f"{ins.op_str}`: a trap or privileged instruction is not a "
+                                   f"returning body -- byte identity would preserve a fault, and "
+                                   f"the differential would report it against the harness")
+        if ins.mnemonic.startswith(('j', 'call')):
+            return 'address dependent', (
+                f"refused: {m['function']} carries a relative branch or call "
+                f"(`{ins.mnemonic} {ins.op_str}`): its target is an address, so byte identity does "
+                f"not preserve behaviour (decisions.md 1j (iv))")
+        for op in ins.operands:
+            if op.type == X86_OP_MEM and op.mem.base in (X86_REG_RIP, X86_REG_EIP):
+                return 'address dependent', (
+                    f"refused: {m['function']} has a RIP-relative operand "
+                    f"({ins.mnemonic} {ins.op_str}): its value depends on where it sits, so byte "
+                    f"identity does not preserve behaviour")
+            if op.type == X86_OP_MEM and op.mem.segment in (X86_REG_FS, X86_REG_GS):
+                seg = 'fs' if op.mem.segment == X86_REG_FS else 'gs'
+                return 'address dependent', (
+                    f"refused: {m['function']} has a {seg}: -relative operand "
+                    f"({ins.mnemonic} {ins.op_str}): it computes from a segment base the "
+                    f"replacement does not control. The differential reaches a body from the host "
+                    f"(harness.py: ctypes.CDLL, then getattr(lib, name)), where %{seg} is the host "
+                    f"TCB; the hook path runs the same bytes with the guest base, so one body "
+                    f"would mean two things depending on how it was called")
+            if op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000:
+                return 'address dependent', (
+                    f"refused: {m['function']} carries an address-valued immediate "
+                    f"({ins.mnemonic} {ins.op_str}): {op.imm:#x} is guest space, not a constant")
+    return '', ''
+
+
+def admissible(m) -> bool:
+    return refusal(m)[0] == ''
+
+
+def assert_position_independent(members) -> None:
+    """decisions.md 1j (iv): no instruction whose VALUE depends on where the body sits."""
     for m in members:
-        guest, size = int(m['address'], 16), int(m['size'])
-        off = guest - C.FILE_BIAS
-        for ins in cs.disasm(md[off:off + size], guest):
-            for op in ins.operands:
-                if op.type == X86_OP_MEM and op.mem.base in (X86_REG_RIP, X86_REG_EIP):
-                    raise SystemExit(f"refused: {m['function']} has a RIP-relative operand "
-                                     f"({ins.mnemonic} {ins.op_str}): its value depends on where "
-                                     f"it sits, so byte identity does not preserve behaviour")
-                if op.type == X86_OP_MEM and op.mem.segment in (X86_REG_FS, X86_REG_GS):
-                    seg = 'fs' if op.mem.segment == X86_REG_FS else 'gs'
-                    raise SystemExit(f"refused: {m['function']} has a {seg}: -relative operand "
-                                     f"({ins.mnemonic} {ins.op_str}): it computes from a segment "
-                                     f"base the replacement does not control. The differential "
-                                     f"reaches a body from the host (harness.py: ctypes.CDLL, then "
-                                     f"getattr(lib, name)), where %{seg} is the host TCB; the hook "
-                                     f"path runs the same bytes with the guest base, so one body "
-                                     f"would mean two things depending on how it was called")
-                if op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000:
-                    raise SystemExit(f"refused: {m['function']} carries an address-valued "
-                                     f"immediate ({ins.mnemonic} {ins.op_str}): {op.imm:#x} is "
-                                     f"guest space, not a constant")
-
-
-TRAPS = frozenset({
-    'int', 'int1', 'int3', 'into', 'ud0', 'ud1', 'ud2', 'syscall', 'sysenter', 'sysret', 'sysexit',
-    'iret', 'iretd', 'iretq', 'hlt', 'in', 'out', 'invd', 'wbinvd', 'cli', 'sti', 'clts', 'swapgs',
-    'wrfsbase', 'wrgsbase', 'rdmsr', 'wrmsr', 'lgdt', 'lidt', 'lldt', 'ltr', 'vmcall', 'vmrun',
-})
+        reason, message = refusal(m)
+        if reason == 'address dependent':
+            raise SystemExit(message)
 
 
 def assert_no_trap(members) -> None:
-    """decisions.md 1j (v): a .byte body that traps is not a function that returns.
-
-    The differential would time out or die instead of comparing, and the failure would be
-    reported against the harness rather than against the body. Measured on the <=16 B band: 65
-    of the 4,099 transcribable, position-independent rows trap -- 64 `int 0x41`, 1 `ud2` -- so
-    the clause is not hypothetical, and adding it changes the population (4,099 -> 4,034).
-    """
-    import capstone
-    md = open(C.ELF, 'rb').read()
-    cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
-    cs.detail = False
+    """decisions.md 1j (v): a .byte body that traps is not a function that returns."""
     for m in members:
-        guest, size = int(m['address'], 16), int(m['size'])
-        off = guest - C.FILE_BIAS
-        for ins in cs.disasm(md[off:off + size], guest):
-            if ins.mnemonic in TRAPS:
-                raise SystemExit(f"refused: {m['function']} executes `{ins.mnemonic} "
-                                 f"{ins.op_str}`: a trap or privileged instruction is not a "
-                                 f"returning body -- byte identity would preserve a fault, and the "
-                                 f"differential would report it against the harness")
+        reason, message = refusal(m)
+        if reason == 'trap (1j v)':
+            raise SystemExit(message)
 
 
 def main(argv):
