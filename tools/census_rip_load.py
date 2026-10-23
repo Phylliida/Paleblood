@@ -1,4 +1,9 @@
-"""Count static-target rip-relative loads, split by containment, with the matcher's own drops.
+"""
+The behaviour this measures is pre-registered in docs/probe-rip-load-static.md: the 11
+filesz members, which five of them a +4 mutant can see, and the board numbers a commit is
+checked against. A pre-registration that lives in a chat message cannot be read by the
+person it constrains.
+Count static-target rip-relative loads, split by containment, with the matcher's own drops.
 
 The gate's table has one empty cell -- ('load','static') inside filesz -- and this asks the
 catalogue how many members would fill it, split filesz / bss / outside BEFORE anything is
