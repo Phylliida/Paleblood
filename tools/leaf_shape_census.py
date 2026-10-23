@@ -35,8 +35,12 @@ FRONTIER = os.path.join(ROOT, 'symbols', 'leaf_frontier.csv')
 BIAS = 0x3FC000
 
 
-def load_segments(md):
-    """PT_LOADs as (vaddr, filesz, memsz) in GUEST space.
+def load_segments(md, flags=False):
+    """PT_LOADs as (vaddr, filesz, memsz) in GUEST space, or 4-tuples with p_flags if asked.
+
+    `flags=True` is a defaulted keyword so every existing two- and three-value caller keeps its shape;
+    the seeding gate needs p_flags because "inside memsz" is not the same question as "writable", and
+    a destination that is reserved but read-only is a fault, not a target.
 
     guest = vaddr + 0x400000 (EBOOT_BASE) on this ELF; `file = guest - 0x3FC000` is the same fact
     one step later. Both halves of a segment matter and they are not the same number: p_filesz is
@@ -55,7 +59,8 @@ def load_segments(md):
         vaddr = int.from_bytes(b[0x10:0x18], 'little')
         filesz = int.from_bytes(b[0x20:0x28], 'little')
         memsz = int.from_bytes(b[0x28:0x30], 'little')
-        out.append((vaddr + 0x400000, filesz, memsz))
+        fl = int.from_bytes(b[0x04:0x08], 'little')
+        out.append((vaddr + 0x400000, filesz, memsz, fl) if flags else (vaddr + 0x400000, filesz, memsz))
     return out
 
 

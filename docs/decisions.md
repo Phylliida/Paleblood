@@ -1328,7 +1328,9 @@ is expressible without a literal: `{"addr": "0x5956678", "guest": "0x5400000"}`.
 stores through the loaded pointer, so in-game that pointer is a guest address. A `pointer` seed yields a
 **SANDBOX host address**; `snapshot()` at `:657` includes `self.buffers` as well as writable segments, so a
 sandbox store **is** observed, and a fixture writing into a space the game does not have would pass. **Link two
-therefore reads against the RW segment's `memsz`** (`0x50dc000 .. 0x56D30F4`), not against a buffer extent:
+therefore reads against the RW segment's `memsz`** (`0x54dc000 .. 0x5AD30F4` — guest space; the
+`0x50dc000/0x56D30F4` pair I first wrote was the ELF's *vaddr* space, one `EBOOT_BASE` short), not
+against a buffer extent:
 `base ≤ value`, `value + store_k2 + store_width ≤ base + memsz`, PF_W on that segment.
 
 **A third link, forced by measurement, and it is the void-instrument class recurring.** Of the 78 rows,
@@ -1348,3 +1350,28 @@ new place. So cases may be shared across those sixteen **and must be shown to be
 (same address, same offset, same immediate, same width — asserted), while bodies stay 78 because their bytes
 differ (sizes `{15: 28, 18: 50}`). One case file per *behaviour*, one body per *row*; a `--reemit` claim is
 still per row.
+
+### Retraction: the "one-character constant defect" at the RW segment was never a defect
+
+I published two numbers for the writable segment and then "corrected" a docstring from one to the other:
+`0x50dc000 .. 0x56D30F4` against a filesz end of `0x57e5b38`, which I called `0x400000` applied twice and
+replaced with `0x53E5B38`. **Both of my numbers were in the ELF's vaddr space; guest space is +`EBOOT_BASE`.**
+Reading the program headers (the only authority, and cheaper than the argument):
+
+| | vaddr | off | filesz | memsz | flags |
+|---|---|---|---|---|---|
+| seg 0 | `0x0` | `0x4000` | `0x50d96dc` | `0x50d96dc` | 5 (R+X) |
+| seg 1 | `0x50dc000` | `0x50e0000` | `0x309b38` | `0x5f70f4` | 6 (RW) |
+
+Guest space: RW base **`0x54dc000`**, filesz end **`0x57e5b38`**, memsz end **`0x5AD30F4`**, tail
+`memsz − filesz = 0x2ED5BC`; and `boot['size'] = 0x56d30f4` is that guest end **minus** `EBOOT_BASE`,
+i.e. a size, not a bound. **`emit_leaf_family.py:284` always said `0x57e5b38` — the tree was right every
+time, and the defect I claimed was a misreading of my own note.** The arithmetic that "closed" my
+correction added a vaddr-space base to a vaddr-space filesz and called the result a guest end; the tail
+matched by luck, because both ends shift by the same constant.
+
+**Two laws, arriving together.** *A correction is a claim too — the file wins over the note that says the
+file is wrong.* And: **a number that closes against a size has not thereby been shown to be a bound.**
+This ELF speaks two coordinate systems one `EBOOT_BASE` apart and **both close**, against different facts —
+vaddr-space end against `boot['size']`, guest-space end against `guest()`'s admissibility window. Closure
+is consistency, never correctness, which is the radix lesson in a new place.
