@@ -240,12 +240,16 @@ not the working tables that grow with the work. Exempt, each a text table the to
 on its own merits, 2.21 MB at 34,135 rows = 21.6% of the reach)**. Every further exception is a
 decision recorded here, never an edit made at the moment a commit is refused.
 
-### 1j — PROPOSED, NOT IN FORCE: shape-agnostic `.byte` bodies for the remaining leaf tier
+### 1j. shape-agnostic `.byte` bodies for the remaining leaf tier — RATIFIED 2026-10-22
 
-**This section deliberately does not satisfy `emit_byte_leaves.py::authorised()`, which looks for
-`### 1j.`. Ratifying it is a one-character-kind edit by the user: drop `PROPOSED` and the dot
-lands, and the tool starts working. Until then the tool refuses and no `.byte` body can be built,
-because absence refuses.**
+**Ratified by the user on 2026-10-22; the answers and their conditions are recorded in
+§1l, and the conditions are obligations of the tool, not of the ratifier.**
+
+This section satisfies `emit_byte_leaves.py::authorised()` as of 2026-10-22, which requires a line
+beginning `### 1j.` containing no `PROPOSED`. The guard is line-anchored and word-checked because
+the first version was a substring search, and a substring search was satisfied by the very prose of
+the proposal quoting the string it looked for. **A guard that a document can satisfy by describing
+the guard is not a guard.**
 
 The census: **4,776 transcribable leaves remain over 1,168 shapes (~4 members each), 47,655 B.**
 Per-shape `TEMPLATES` rows would be **1,168 rows for 4,776 members** — the per-family amortisation
@@ -586,3 +590,43 @@ said 4,034 + 8,059 = 12,093, both "right" about different populations. With one 
 `unlanded 12093 · 4,034 over 2,598 shapes · 39,040 B · {address dependent 6,695, control flow 1,298,
 decode 1, trap 65}`. **The deliverable did not move — 4,034 and 39,040 B are unchanged — only the
 denominator did**, and a corrected denominator that leaves the paid quantity alone is the cheap kind.
+
+### 1l. Answers of record — six asks and ask 7, 2026-10-22
+
+Recorded here because **an answer that lives in a chat message cannot be read by the person it
+constrains**, and every one of these carries obligations that outlive the conversation. Each is
+quoted as given, with the condition it attached; the conditions are the tool's work, and none of it
+is done yet.
+
+1. **Rule-level approval — YES.** One approval per *rule*, with a machine-checked transcription over
+   **every** member and **2–3 executed spot checks per template**. Condition: **the approval hash
+   must cover the rule predicate itself, not only the membership list**, and a membership-set change
+   triggers **delta review (what entered, what left), not a full re-review.** *Obligation: the hash
+   today (`member_set_hash`) covers membership only; a rule-predicate field must enter the same hash
+   or the approval renews itself silently when the predicate changes.*
+2. **Delegation — YES for stream/string/formatting; REFUSED for the allocator and `FILE*` interop.**
+   Two boundary conditions added: **`errno` never crosses — errors as return values only**, and
+   **locale is pinned in the delegation contract**, because formatting is locale-sensitive.
+   *Obligation: both conditions in the contract before any delegated family lands.*
+3. **SSE residual — YES, ≤0.05 as a stated bound, not a claim of exactness.** Conditions: **validate
+   the threshold against known SSE users before trusting it**, add a **minimum function size or
+   absolute-count floor**, and **weight by instruction class** (benign `xorps`/`movaps` versus
+   arithmetic SSE). *Obligation: an unweighted residual over a population that is mostly register
+   moves is a number about the population; the floor is what stops it being an average.*
+4. **The 528 `zero_init` — YES, by the user, for this class**, conditional on **machine-checked
+   transcription and mutation testing of the set**. The signature attests **the rule and the
+   checker, not 528 individually read rows**, and the tier must be labelled honestly —
+   **`shape-approved, machine-verified`**, never `approved`. *Obligation: a distinct status token,
+   and the existing `approved` column must not be reused for it.*
+5. **`ret` 7,761 — YES, naked asm**, one-byte `c3` assertion on each. Explicitly acknowledged: the
+   purchase is **flag-independence under an unverified compiler, not a different byte stream**, and
+   these must be **marked `asm-by-design`** so no one spends effort "finishing" them.
+6. **`scope` — YES, shape-scoped claims alongside function-scoped, the shape named in the row.**
+   Parser contract: **accept exactly `function`, `shape`, or absent (absent defaults to
+   `function`); reject anything else loudly.** *A typo must error, never silently narrow.*
+   *Obligation: the current `shape_answer` predicate matches `scope=shape` anywhere in a
+   non-comment line, which is a satisfied-by-description guard of the same family as 1j's; it must
+   become a field parse.*
+7. **`### 1j` — ratified 2026-10-22** by the user's own edit to this file. The byte tier is
+   authorised from this commit; the pre-registration in §1j (v) is unchanged, and
+   **it is re-run, never adjusted.**

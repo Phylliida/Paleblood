@@ -46,6 +46,28 @@ class LeafTargets(unittest.TestCase):
         self.assertIn('rip_load', r.stderr)
         self.assertIn('filesz', r.stderr)
 
+    def test_a_byte_tier_family_owes_no_access_kind_and_an_unlisted_one_still_does(self):
+        """Both halves of the precedence this gate got wrong on 1j's ratification.
+
+        A `.byte` transcription emits no constant of its own, so there is no target to classify and
+        demanding an access kind asked the family for a fact that cannot exist. The rule that
+        survives is narrower, not weaker: a family that is NOT byte-tier and declares nothing is
+        still refused. One fixture greening the other would hide whichever half regressed.
+        """
+        tmp = tempfile.mkdtemp(prefix='leaf-targets-')
+        self.addCleanup(shutil.rmtree, tmp, True)
+        with open(os.path.join(tmp, 'bytes_family.cpp'), 'w') as fh:
+            fh.write('extern "C" __attribute__((naked)) void bb_bytes_00414040(void) {\n'
+                     '  __asm__ volatile(".byte 0x90");\n}\n')
+        r = run_gate(tmp)
+        self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+        self.assertIn('bytes tier', r.stderr + r.stdout)
+        with open(os.path.join(tmp, 'undeclared_family.cpp'), 'w') as fh:
+            fh.write('extern "C" unsigned f(void) { return 0; }\n')
+        r = run_gate(tmp)
+        self.assertEqual(r.returncode, 1, 'the byte-tier exemption must not cover other families')
+        self.assertIn('declares no access kind', r.stderr)
+
     def test_malformed_table_is_a_refusal_not_a_traceback(self):
         tmp = tempfile.mkdtemp(prefix='leaf-targets-')
         self.addCleanup(shutil.rmtree, tmp, True)

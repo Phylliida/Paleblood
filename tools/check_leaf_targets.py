@@ -59,7 +59,8 @@ ACCESS = {  # family -> (kind, source)
 
 
 # Byte tier: the body's bytes are the original's bytes, so identity is the whole claim.
-TIERS = {'mov_mem_esi': 'bytes', 'mov_mem_rsi': 'bytes', 'mov_mem_imm8': 'bytes'}
+TIERS = {'mov_mem_esi': 'bytes', 'mov_mem_rsi': 'bytes', 'mov_mem_imm8': 'bytes',
+         'bytes': 'bytes'}   # emit_byte_leaves.py's family: 1j transcription, per decision 1l
 
 
 def segments():
@@ -103,6 +104,14 @@ def main():
             # refusal below, which is what fired on its first day.
             print(f'{fam:<20} infrastructure -- declares no target, nothing to check')
             continue
+        tier = TIERS.get(fam, 'differential')
+        if tier == 'bytes':
+            # A byte-tier body is the original's bytes under a new name: it emits no constant of its
+            # own, so there is no target to classify and nothing can be mistranslated. Demanding an
+            # access kind here asked the family for a fact that cannot exist -- the order was the
+            # defect, not the missing declaration. Families that DO emit constants still need ACCESS.
+            print(f'{fam:<20} bytes tier -- transcription, nothing to classify')
+            continue
         decl = ACCESS.get(fam)
         if decl is None:
             errs.append(f'{fname}: family {fam!r} declares no access kind -- add it to ACCESS '
@@ -110,7 +119,6 @@ def main():
                         'classify it')
             continue
         kind, source = decl
-        tier = TIERS.get(fam, 'differential')
         text = open(os.path.join(LEAF, fname)).read()
         # The form the target takes is part of the family's contract. `rip_*` families dereference
         # a constant they emit as `constexpr std::uint64_t v = 0x...u;`; a dereferencing family that
