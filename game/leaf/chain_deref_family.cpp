@@ -5,7 +5,513 @@
 #include <cstdint>
 #include "load_base.h"
 
-extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01735230(void) {
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0172e260(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1520;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0172fa40(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x2dc;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01736c10(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1550;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01738e50(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1544;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01738e60(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1544;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196cc90(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1544;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196cca0(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1544;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196ce70(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1494;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196cf60(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1520;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196e600(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x15e4;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196e6a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1614;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196e7e0(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1550;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196e800(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x1550;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196e8a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x154c;
+  constexpr std::uint64_t kImm = 0xffffffff;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0196ef70(void) {
+  constexpr std::uintptr_t kSlot = 0x5956678;
+  constexpr std::uintptr_t kStoreDisp = 0x15a0;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019ccbb0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x100;
+  constexpr std::uint64_t kImm = 0x2;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019ccbd0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x100;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019d0b00(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xb0;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019d0b40(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xb0;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019d0b60(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xb0;
+  constexpr std::uint64_t kImm = 0x3;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019d5700(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x138;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019d5720(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x138;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019d88d0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x114;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019dc0a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xac;
+  constexpr std::uint64_t kImm = 0x2;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019e7810(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x140;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_019ea980(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x140;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01a2d300(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x40;
+  constexpr std::uint64_t kImm = 0xa;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01a31620(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xc8;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01a857c0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xa8;
+  constexpr std::uint64_t kImm = 0x8;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01a98530(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x90;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01aaf8a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x58;
+  constexpr std::uint64_t kImm = 0x4;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01aaf8b0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x58;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ab11a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x58;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ab11b0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x58;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ab4cf0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x84;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ab4d30(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x84;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ab4d50(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x84;
+  constexpr std::uint64_t kImm = 0x4;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ab9440(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x78;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ad86c0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x130;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01ae7120(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xd4;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01aece90(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x98;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b01d60(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x80;
+  constexpr std::uint64_t kImm = 0xf;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b05f70(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x2f4;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b09fd0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x2f8;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b139a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x128;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b139c0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x128;
+  constexpr std::uint64_t kImm = 0x2;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b15940(void) {
   constexpr std::uintptr_t kSlot = 0x5962878;
   constexpr std::uintptr_t kStoreDisp = 0xf0;
   constexpr std::uint64_t kImm = 0x0;
@@ -13,5 +519,335 @@ extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01735230(void
   auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
   std::uintptr_t p = *slot;
   *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b1f510(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x9c;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b1f550(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x9c;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b2e1d0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x60;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b32b40(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x68;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b39bc0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x68;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b3c340(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x64;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b401a0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x64;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b41600(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x134;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b41640(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x134;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b45080(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x134;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b4a550(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x88;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b4a570(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x88;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b56310(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xa0;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b58310(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xdc;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b58350(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x250;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b6c790(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x2d8;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b6d5e0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xf0;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b6da80(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x16fc;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b6daa0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x128;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b6dac0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x128;
+  constexpr std::uint64_t kImm = 0x2;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01b76120(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x108;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01bf65e0(void) {
+  constexpr std::uintptr_t kSlot = 0x596bce0;
+  constexpr std::uintptr_t kStoreDisp = 0xb9;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01f6ea10(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xec0;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01fabc70(void) {
+  constexpr std::uintptr_t kSlot = 0x5980e38;
+  constexpr std::uintptr_t kStoreDisp = 0xb12;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01fc3d10(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x470;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01fc69c0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x474;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01fc6ad0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x474;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01fc6be0(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0x474;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01fcf440(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xec0;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0238d890(void) {
+  constexpr std::uintptr_t kSlot = 0x596bce0;
+  constexpr std::uintptr_t kStoreDisp = 0xb9;
+  constexpr std::uint64_t kImm = 0x1;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint8_t *>(p + kStoreDisp) = static_cast<std::uint8_t>(kImm);
   return p;
 }
