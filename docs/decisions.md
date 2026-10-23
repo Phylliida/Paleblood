@@ -765,3 +765,30 @@ be reconciled before both scopes are printed.
 The script's first pass printed "jmp-to-resolver sites: 1" because it only counted sites whose preceding
 bytes it could decode as a `push` -- **a filter printing its own acceptance count under the label "sites."**
 The 661 came from counting the jumps themselves.
+
+## Who calls scePthreadCreate, and what it does with the result (measured)
+
+**The three-population claim was mine and it is wrong.** `docs/bind-order-eboot.txt` is a concatenation of
+per-module bind tables, each renumbering from zero: line 252 is `bind 252 6UgtwV+0zb4 libkernel`, but lines
+701 and 838 read `bind 14` and `bind 72` -- **other modules' ordinal 14 and 72**, whose NIDs are
+`-L+-8F0+gBc` and `xeYO4u7uyJ0`, not aliases of `scePthreadCreate`. The assertion that caught it is the one
+worth copying: read the NID at the ordinal you are about to use, beside the stub you are about to scan.
+Scanning the union of 252/14/72 produced 546 sites, **528 of which are callers of different imports**; the
+real population is **18**.
+
+**The 18 callers, and none of them is in Ghidra's partition** -- every site falls in an uncatalogued gap
+(of the 157,757 catalogued functions, none contains any of the 18). Five of them sit in one consecutive
+cluster, `0x1087339 .. 0x108739e`, spaced 0x15 apart, and every one of the five has the same shape:
+
+    call <stub 252>          ; scePthreadCreate
+    cmp  eax, 0x805a1001     ; one specific code is expected
+    je   <continue>          ; tolerate it and carry on
+    test eax, eax
+    jne  <error path>        ; any other nonzero -> error
+    mov  edi, 0xb5           ; zero -> success, proceed
+
+**So the guest branches on `rax`, and it distinguishes a specific constant from generic failure.** The
+`rax == 0`-only case -- the one that would have made a returned error invisible -- **does not occur here**:
+returning a nonzero code lands on a real error handler, and returning `0x805a1001` is treated as an
+expected, tolerated condition rather than a failure. A modelled return code is therefore *visible* to this
+caller, which is the precondition (a) needed and the opposite of what I predicted.
