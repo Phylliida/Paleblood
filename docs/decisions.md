@@ -1814,3 +1814,15 @@ was made structurally unavailable. Shape: one loop (or one `next(...)` over a ge
 
 Collapsing (2) into (1) makes `seeded` invisible; collapsing it into (3) refuses 78 correct rows. **A two-way
 verdict over a three-way fact is a formatter.**
+
+**`1q`, fourth clause amended by measurement — a name is data; a spelling is data; a type is data.** The
+scanner assumed `constexpr std::uint64_t v = 0x…u;` and chain_deref emits `constexpr std::uintptr_t kSlot =
+0x…;`. Declaring the names in `ACCESS` fixed the first assumption and **left the second in place**, so the
+family was still invisible and the gate said *none of the constants it declares* — a refusal, thank God, not a
+shrug. **Each spelling a scanner assumes is a family it cannot see**, and they nest: name, then type, then
+suffix. Read all three from data; assume none.
+
+**And the property that a correct declaration actually expresses, now visible in the table:** `chain_deref` has
+**one static target (`kSlot`) and one derived one (`store`)** — the store's address is computed from the load's
+result, so it is argument-supplied and its bound lives in the case. The `0x1520` refusal is the evidence: the
+gate refused a **coordinate** handed to it as an address, 78 of 78, which is what a check should do.
