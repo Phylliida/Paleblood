@@ -6,6 +6,13 @@ usage:
   harness.py --elf EBOOT.elf (--case CASE.json | --cases DIR) --address 0xXXXXXXXX
              [--replacement SYMBOL --lib LIB.so] [--timeout SECONDS]
 
+CONTRACT: stdout is a JSON map keyed by case id, and NOTHING ELSE may appear there. A batch is a
+map from id to entry; a single case is one entry. differential.run_original requires
+set(stdout) == set(case stems) and refuses anything else as a malformed inventory -- which is how
+this rule last caught a per-run field I had stamped at the top level, turning `image_base_set` into
+a case name. Per-run facts go on the entries (or stderr); the top level belongs to case ids alone.
+Three fields have now been lost to that channel, so it is written here rather than remembered.
+
 The executable (your own dump's eboot.elf) is read by Paleblood's loader (runtime/loader.c,
 through build/runtime/libpbloader.so), mapped at the runtime's host address, relocated, and every imported
 library function becomes a stub that the case scripts. Game functions listed in the case's

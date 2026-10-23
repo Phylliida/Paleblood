@@ -19,6 +19,41 @@ import emit_byte_leaves as E
 import record_bytes_family as R
 
 FUNCTIONS = 'symbols/functions.csv'
+# THE APPLY OWES THREE TABLES, NOT ONE. The first version wrote functions.csv and left the other two
+# to nobody: validate_functions refused every band row with "no replacement_origins.csv row" and
+# test_install_mode refused with "absent installation record". Both guards were right -- an
+# edge-verified row with no installation record is a claim about a body nothing can place -- so the
+# writer grows the tables it owes rather than a repair tool growing beside it. Mode is `host`: these
+# bodies are naked asm inside libbbgame, reached through the host patch mechanism, and no guest
+# hook is installed for them (the 14-byte jump belongs to hook rows).
+INSTALL = 'symbols/install_mode.csv'
+ORIGINS = 'symbols/replacement_origins.csv'
+
+
+def _append_rows(path, rows, key, value_field):
+    """Append ADDRESS-KEYED rows, refuse on a conflicting value, sort, re-read."""
+    have = list(csv.DictReader(open(path)))
+    seen = {r['address']: r[value_field] for r in have}
+    clash = [(a, v) for a, v in rows if a in seen and seen[a] != v]
+    if clash:
+        raise SystemExit(f'refused: {path} already records {clash[0][0]} as '
+                         f'{clash[0][1]!r}, refusing to write {rows[0][1]!r}')
+    add = [{'address': a, value_field: v} for a, v in rows if a not in seen]
+    merged = have + [{'address': a, value_field: v} for a, v in add and
+                     [(r['address'], r[value_field]) for r in add]]
+    merged.sort(key=lambda r: int(r['address'], 16) if r['address'].startswith('0x') else 0)
+    dup = sum(1 for a, b in zip(merged, merged[1:]) if a['address'] == b['address'])
+    if dup:
+        raise SystemExit(f'refused: {path} merge would create {dup} duplicate addresses')
+    with open(path, 'w', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=['address', value_field], lineterminator='\n')
+        w.writeheader()
+        w.writerows(merged)
+    back = {r['address'] for r in csv.DictReader(open(path))}
+    missing = [r['address'] for r in add if r['address'] not in back]
+    if missing:
+        raise SystemExit(f'wrote, re-read, and {len(missing)} rows are absent in {path}')
+    print(f'{path}: +{len(add)} rows ({value_field}={rows[0][1]}), {len(merged)} total')
 
 
 def main(argv):
@@ -74,6 +109,25 @@ def main(argv):
     print(f'wrote {len(new)} rows at `original`; re-read confirms all of them present')
     print(f'  now: {len(back)} functions | '
           f'{sum(1 for r in back if r["status"] == "original")} at original')
+    # The band was written to functions.csv by the run before this one, so the two row-level tables
+    # are grown for the members that are ALREADY there rather than for a fresh emission: the
+    # population is the table, not the census, so a second run cannot disagree with the first about
+    # which rows owe a record.
+    present = [r for r in back if r['name'].startswith('leaf_bytes_')]
+    # The population is checked against the BODY, not against the census: transcribable() returns
+    # what is not yet landed, so after a landing it is empty by construction and the first version of
+    # this check compared 4,034 rows against a worklist that had just finished its work. The emitted
+    # file is the artifact that knows which bodies exist, and it knows by construction rather than by
+    # a number of mine.
+    with open(E.BODY) as fh:
+        in_body = sum(1 for line in fh if 'void bb_leaf_bytes_' in line)
+    if len(present) != in_body:
+        raise SystemExit(f'refused: {len(present)} leaf_bytes rows in the table, {in_body} bodies in '
+                         f'{E.BODY} -- the table and the body disagree, and wiring the missing ones '
+                         'would wire a population nobody emitted')
+    addrs = [(r['address'], 'host') for r in present]
+    _append_rows(INSTALL, addrs, 'address', 'mode')
+    _append_rows(ORIGINS, [(a, 'generated') for a, _ in addrs], 'address', 'origin')
     return 0
 
 
