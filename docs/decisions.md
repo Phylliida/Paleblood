@@ -1768,3 +1768,16 @@ repair: none                                                                  # 
 the frontier costs `161 h` when a night was already spent proving it does not.** A convention that starts after
 the event starts with a **false first data point**, which is the class this whole stretch was about: a history
 row is not a present state, and a cost that was true once is a claim.
+
+**The next two windows are separate, and each carries its own `repair:` line — the split is what gives the
+horizon a denominator.** If both land in one window, the first grep counts **one record for both** and the
+denominator is ambiguous exactly where it matters.
+
+- **Window A — repair, known scope:** `seeded` with **both** conditions, `chain_deref` as **two** decls,
+  `ACCESS` migrated whole, **six reds cleared**, and **a verdict at the new sha**. Line:
+  `repair: gate could not read chain_deref's constants (inherited) · six reds cleared, no rows`
+- **Window B — batch:** family #2, its rows, its record. Line: `repair: none` or the truth.
+
+**A is a repair window of known scope; B is a batch window. The ratio between them is the first honest estimate
+of what repair costs per batch** — the figure tonight could only *bound* at `n = 1` and cannot price. Two
+records with different subjects beat three figures with one denominator.
