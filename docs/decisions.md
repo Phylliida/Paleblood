@@ -1501,3 +1501,21 @@ not be seen because both sides read zero; the census whose `{'0x0': 16508}` was 
 literal. **A falsification that alters a value already at that value tests exactly as much as a differential
 that compares zero to zero** — so a mutation carries an assertion that it mutated, the way a write carries a
 read-back.
+
+### The push is delivered, and the read that proves it is `ls-remote`, not a bare clone
+
+`origin/main` is **`ec67d60`**, and `git ls-remote origin refs/heads/main` returns that full sha from
+GitHub. Push was never the missing instrument: **read** works from this shell and only push needs askpass
+(rc=128). A bare clone of `.` was suggested as the proof and it is the weaker one — **it copies local refs,
+so it shows the commit exists here, which I already knew.** The remote-side read is the one that carries
+weight, and the local corroboration is the `refs/remotes/origin/main` reflog entry `update by push`.
+
+**An item carried past its own resolution is a debt that reads as a risk**, so the caveat retires here.
+
+### A delivered tree cites evidence it does not contain
+
+`docs/data-requirements.md` states the external trees, what needs each, and **the three refusals measured
+at this commit** (`harness: … cannot open` rc=3; `seeding: refusing -- no case directory`; `progress:
+refusing -- cannot read …` rc=3). A pushed repository whose evidence lives only on one machine is **a
+delivery defect, not a hygiene note**: the instruments are public and their subjects are not, and nothing
+about a green suite says so.
