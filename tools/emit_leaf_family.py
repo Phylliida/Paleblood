@@ -150,18 +150,48 @@ TEMPLATES = {
 RAX_SEED = '0xdeadbeef00000000'
 
 
-def members(name):
+def landed_rows(name):
+    """{address: ladder name} for the rows this emitter owns: `leaf_<name>_<address>`.
+
+    Read here and in members(), from the same file, so the landing path and a re-emit cannot
+    disagree about how many members a family has.
+    """
+    key_prefix = f'leaf_{name}'
+    out = {}
+    for r in csv.DictReader(open(os.path.join(ROOT, 'symbols', 'functions.csv'))):
+        head, _, tail = r['name'].rpartition('_')
+        if head == key_prefix and len(tail) == 8 and all(c in '0123456789abcdef' for c in tail):
+            out[int(r['address'], 16)] = r['name']
+    return out
+
+
+def members(name, landed=False):
+    """Members of one family, from the census -- one selector, whichever path is asking.
+
+    landed=False (the landing path): every address that carries no row yet. A family must never
+    emit over an address that already has a row, because two ladder names for one address is a
+    duplicate coverage row and validate_functions refuses it ("addresses must be unique").
+    lea_disp_rdi was the first shape whose total (1,462) differed from its unlanded population
+    (979): the 483 already carried leaf_lea_rdi_* rows.
+
+    landed=True (the re-emit path): exactly the addresses that already carry a
+    `leaf_<name>_*` row. This is what makes "what did I emit" answerable by a program instead
+    of by parsing the artifact -- the 647 retraction was a name filter over a file and matched
+    362 of 647, which is the shape of a question the generator could not answer.
+    """
     spec = TEMPLATES[name]
     md, cs = open(C.ELF, 'rb').read(), capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = False
-    # A family must never re-emit an address that already has a row: two ladder names for one
-    # address is a duplicate coverage row and validate_functions refuses it ("addresses must be
-    # unique"). lea_disp_rdi was the first shape whose total (1,462) differed from its unlanded
-    # population (979) -- the 483 already carry leaf_lea_rdi_* rows.
-    landed = {int(r['address'], 16) for r in csv.DictReader(open('symbols/functions.csv'))}
+    taken = {int(r['address'], 16) for r in
+             csv.DictReader(open(os.path.join(ROOT, 'symbols', 'functions.csv')))}
+    owned = set(landed_rows(name))
+
+    def want(addr):
+        return addr in owned if landed else addr not in taken
+
     out = []
     for addr, size, ins in C.members(md, cs):
-        if addr in landed:
+        if not want(addr):
             continue
         if len(ins) != len(spec['mnemonics']) or tuple(i.mnemonic for i in ins) != spec['mnemonics']:
             continue
@@ -357,9 +387,75 @@ def case_docs(name, m):
         }
 
 
+def compare_text(generated, committed):
+    """(ok, message). Byte comparison that names the first differing line.
+
+    A re-emit that prints "ok" without saying where two texts differ cannot distinguish its own
+    success from a file nobody changed, so the message carries the line and both forms.
+    """
+    if committed is None:
+        return False, 'the committed body does not exist'
+    if generated == committed:
+        return True, 'byte-for-byte'
+    g, c = generated.splitlines(), committed.splitlines()
+    for i, (x, y) in enumerate(zip(g, c)):
+        if x != y:
+            return False, (f'first difference at line {i + 1}: '
+                           f'disk {y.strip()!r} vs generator {x.strip()!r}')
+    return False, f'line count differs: disk {len(c)}, generator {len(g)}'
+
+
+def reemit(name, write=False):
+    """Re-derive a landed family's body from its rows and compare it with the committed file.
+
+    The population is the family's own landed rows, and the census must reproduce every one of
+    them: a member that cannot be re-derived is a member whose body no program can vouch for, so
+    this refuses and names the addresses rather than emitting a slightly smaller family. Writing
+    is opt-in, because regenerate-from-source means the generator's output replaces the file --
+    after which `git status` is what shows whether they differed.
+    """
+    path = os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp')
+    owned = landed_rows(name)
+    if not owned:
+        return 1, f're-emit {name}: no `leaf_{name}_*` rows -- nothing was emitted for this family'
+    ms = members(name, landed=True)
+    have = {m['address'] for m in ms}
+    missing = sorted(set(owned) - have)
+    extra = sorted(have - set(owned))
+    if missing or extra:
+        return 1, (f're-emit {name} refused: {len(have)} of {len(owned)} landed members '
+                   f'reproduce; missing {len(missing)} {[hex(a) for a in missing[:4]]}; '
+                   f'unexpected {len(extra)} {[hex(a) for a in extra[:4]]}')
+    generated = body_text(name, ms)
+    committed = open(path).read() if os.path.exists(path) else None
+    ok, message = compare_text(generated, committed)
+    if ok:
+        return 0, f're-emit {name}: {path} reproduced byte-for-byte ({len(ms)} members)'
+    if write:
+        open(path, 'w').write(generated)
+        return 0, (f're-emit {name}: wrote {path} ({len(ms)} members); {message} -- run git '
+                   f'status: the generator has to be the thing that changed it')
+    return 1, f're-emit {name}: {message}'
+
+
 def main(argv):
     name = argv[0] if argv and not argv[0].startswith('-') else 'mov_eax_mem'
+    if '--reemit' in argv:
+        rc, message = reemit(name, write='--write' in argv)
+        print(message)
+        return rc
     ms = members(name)
+    owned = landed_rows(name)
+    if not ms:
+        # Zero members is a refusal with a reason, never `min() iterable argument is empty`:
+        # an emitter that cannot re-emit cannot repair either, so the message names the door.
+        if owned:
+            print(f'{name}: 0 unlanded members ({len(owned)} already landed). Nothing to land here; '
+                  f'`--reemit {name}` checks that the committed body is what this emitter produces.')
+        else:
+            print(f'{name}: 0 members -- the census found no unlanded extent matching this shape, '
+                  f'so there is nothing to land and nothing to re-emit.')
+        return 1
     ks = sorted({m['k'] for m in ms})
     sizes = {}
     for m in ms:

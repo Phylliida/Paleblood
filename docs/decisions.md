@@ -443,3 +443,28 @@ you what it emitted.**
 (22,218 → 23,304 with this family's 1,086 cases). The second is a doc quoting a **corpus count**, so
 every landing expires it — a fixture of the present with a dated label. Recorded as a cost, not a
 surprise; the predicate (`grep -rl '"memory"'`) is the stable thing and the number is not.
+
+### 1k, fourth — `--reemit`, and the third arrival of "a prefix is not a population"
+
+**The generator can now answer "what did I emit" without reading the artifact.** `members(name,
+landed=True)` selects exactly the addresses carrying a `leaf_<name>_*` row; `reemit()` re-derives the
+body from the census, **refuses if any landed member cannot be reproduced** (naming the addresses and
+the counts), and otherwise compares the regenerated text with the committed file **byte for byte**,
+with `--write` opt-in and `git status` as the witness. Landed: 14 families reproduce exactly, `ret`
+included at **7,761** members, and `rip_load` correctly reports that no rows exist for it.
+
+**Writing it reproduced the defect it was meant to prevent, in its third costume.** The first
+`landed_rows()` used `startswith(f'leaf_{name}_')`, so `ret` matched **12,482** rows — its own 7,761
+plus the 4,721 `leaf_ret_zero_*` members owned by a different emitter — and the refusal printed
+`7,761 of 12,482 landed members reproduce; missing 4,721 ['0x40c4c0', …]`. **The instrument caught the
+instrument**: a re-emit that emitted from that population would have written 4,721 bodies under the
+wrong family, exactly the 647/362 shape. Fixed by parsing the key (`rpartition('_')`, head equal to
+`leaf_<name>`, tail 8 hex digits) — never a prefix, never a segment count. Same rule as the retraction
+parse: **`rsplit('_', 1)`, always.**
+
+**Empty membership is now a refusal that names the door**, not `ValueError: min() iterable argument is
+empty`: a landed family prints `0 unlanded members (N already landed) … --reemit <name>`, and a family
+with nothing at all prints `0 members … nothing to land and nothing to re-emit`, both `rc=1`. Proved by
+`test/test_emit_leaf_family.py`, which asserts the property over **whichever families are landed**
+(so landing or retracting changes its coverage instead of reddening it), plus the partial-population
+refusal, the two empty messages, the named difference, and the key parse.
