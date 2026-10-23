@@ -9,6 +9,7 @@ import csv, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capstone
 import leaf_family_census as C
+from atomicio import atomic_write   # after the path insert: bare means bare
 
 ROOT = C.ROOT
 CASES = os.path.join(ROOT, '..', 'data', 'cases', 'leaf')
@@ -615,7 +616,7 @@ def reemit(name, write=False):
     if write:
         # The generator's text replaces the file. Print the difference being fixed, then prove the
         # write by re-reading it: a truncated write is otherwise found only at the next --reemit.
-        open(path, 'w').write(generated)
+        atomic_write(path, generated)
         back = open(path).read()
         if back != generated:
             return 1, (f're-emit {name}: WROTE {path} and the re-read does not match the generator '
@@ -679,27 +680,20 @@ def main(argv):
     # there -- the check that refused the family destroying the artifact it was protecting. It also
     # made --dry-run dishonest: the guard returned above body_text, so a dry run printed "nothing
     # written" and exited 0 for a family that refuses. Build, then ask, then write.
-    generated = body_text(name, ms)
-    if '--dry-run' in argv:
-        print(f'  dry run: nothing written ({len(generated)} bytes would be)')
-        return 0
-    # five tables and the body from one iteration, so they cannot differ by one member
-    open(os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp'), 'w').write(generated)
-    rows = []
+    generated = body_text(name, ms)   # the refusal fires HERE, before any file is opened
+    dry_run = '--dry-run' in argv
+    # Everything is assembled first and written second, so a dry run does all of it but the write:
+    # the refusal above, the cases, the tables and the clash assertions are the parts that can fail.
+    rows, pending = [], []
     for m in ms:
         k = key(name, m)
-        if TEMPLATES[name]['kind'].startswith('asm'):
-            rows.append({'address': f'{m["address"]:#010x}', 'size': str(m['size']), 'name': k,
-                         'system': 'leaf', 'status': 'original'})
-            continue
-        d = os.path.join(CASES, k)
-        os.makedirs(d, exist_ok=True)
-        for fn, doc in case_docs(name, m):
-            with open(os.path.join(d, fn), 'w') as f:
-                json.dump(doc, f, indent=1, sort_keys=True)
-                f.write('\n')
         rows.append({'address': f'{m["address"]:#010x}', 'size': str(m['size']), 'name': k,
                      'system': 'leaf', 'status': 'original'})
+        if TEMPLATES[name]['kind'].startswith('asm'):
+            continue
+        d = os.path.join(CASES, k)
+        for fn, doc in case_docs(name, m):
+            pending.append((os.path.join(d, fn), json.dumps(doc, indent=1, sort_keys=True) + '\n'))
     have = {int(r['address'], 16) for r in rows}
     tables = (
         ('functions.csv', lambda ex: (ex + rows, list(ex[0].keys()))),
@@ -708,12 +702,23 @@ def main(argv):
         ('replacement_origins.csv', lambda ex: (ex + [{'address': r['address'], 'origin': 'generated'}
                                                       for r in rows], ['address', 'origin'])),
     )
+    resolved = []
     for table, build in tables:
         path = os.path.join(ROOT, 'symbols', table)
         existing = list(csv.DictReader(open(path)))
         clash = have & {int(r['address'], 16) for r in existing}
         assert not clash, f'{table}: {len(clash)} addresses already present'
         all_rows, fields = build(existing)
+        resolved.append((path, fields, all_rows))
+    if dry_run:
+        print(f'  dry run: would have written {len(generated)} bytes to game/leaf/{name}_family.cpp, '
+              f'{len(pending)} case file(s), {len(resolved)} table(s); nothing written, no file opened')
+        return 0
+    atomic_write(os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp'), generated)
+    for path, text in pending:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        atomic_write(path, text)
+    for path, fields, all_rows in resolved:
         # One writer for every address-keyed table: sort, dup count, write, re-read. The sort has
         # been omitted by three separate writers; a fourth re-implementation arrives otherwise.
         C.write_table(path, fields, all_rows)

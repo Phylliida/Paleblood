@@ -1197,3 +1197,34 @@ file*; and the positive control on the same path is `rip_store --reemit` → *re
 an older aborted emission" was this defect, reproduced by my own run. `ls -l` dated the new one 95
 seconds before `date`; the old one was dated Oct 23 and I never checked whether a run of mine could have
 made it. **A timestamp is evidence only about time; I used it as evidence about authorship.**
+
+### Build-ask-write was a rule; `atomic_write` is a shape
+
+Reordering one call site fixed one call site. The property is what matters: **`open(path,'w')`
+truncates at the open**, so any failure in the producer — a refusal, a `KeyboardInterrupt`, a
+`MemoryError` — destroys the artifact it was about to replace. `tools/atomicio.py` writes beside the
+target, `fsync`s, then `os.replace`s, so the artifact is either the old bytes or the new ones. Four
+tests, including the refutation: patch `os.replace` to raise and the old bytes must survive with no
+`.tmp` left behind.
+
+`leaf_family_census.write_table` — **the** writer of address-keyed tables — now goes through it, so
+every family's three tables are covered by one call. `emit_leaf_family`'s body, case files and
+re-emit write all go through it.
+
+**`--dry-run` moved to the end of assembly**: the refusal, the case assembly, the table clash
+assertions and the sort all run; only the write does not. Its old guard returned before `body_text`
+and printed `nothing written`, which is a no-op with a reassuring message.
+
+**Unreached arm, named:** the dry-run *success* branch has **no population** — every family is either
+exhausted (`0 unlanded`) or refusing (`rip_load`, 161), so the sentence it prints has never been
+executed. It needs a fixture family, not an argument.
+
+**One of four generators wired.** `zero_init_gen:327/:397`, `slot_copy_gen:345/:394`,
+`leaf_mov_rax_gen:166/:168/:193–197/:249`, `static_guard_gen:209/:365` still call `open(...,'w')`.
+Each needs its own `--check` to be run before and after, which is not a change to make blind.
+
+**And the bare rule caught this slice's own patch.** I inserted `from atomicio import atomic_write`
+above the `sys.path.insert` that makes `tools/` importable; with `-P` (no cwd on `sys.path`) every bare
+invocation died `ModuleNotFoundError`, while the tests passed because `PYTHONPATH=tools` was set — **an
+entry point that starts only with environment help, introduced by the commit that was making mistakes
+unrepresentable.** The import now sits below the path insert.

@@ -387,7 +387,7 @@ class Run:
             # The guest thread pointer (gs:[0] must hold it too, as a TCB does).
             if libc.syscall(SYS_ARCH_PRCTL, ARCH_SET_GS, ctypes.c_ulong(self.value(self.case['gs']))):
                 raise BadInput(f'arch_prctl(ARCH_SET_GS) failed: errno {ctypes.get_errno()}')
-        for m in self.case.get('memory', []):
+        for m in fixture_seeds(self.case):
             target = m['addr']
             addr = self.value(target) if isinstance(target, str) and target.startswith('buf:') else self.guest(hexint(target))
             if 'pointer' in m:
@@ -1080,3 +1080,13 @@ def main() -> int:
 
 if __name__ == '__main__':
     sys.exit(main())
+
+
+def fixture_seeds(case):
+    """The `memory` entries the runner applies with source="fixture_setup".
+
+    THE reader of the seeding schema. A gate that decides whether a case seeds a slot asks this
+    function, never `json.load` the case a second time: two readers of one schema eventually
+    disagree, and the gate would then be certifying a run the runner does not perform.
+    """
+    return list(case.get('memory', []))

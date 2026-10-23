@@ -89,7 +89,7 @@ def landed_addresses():
     return landed.landed_addresses()
 
 
-def write_table(path, header, rows, key='address'):
+def write_table(path, header, rows, key='address', dry_run=False):
     """THE writer of an address-keyed table: sort -> adjacent-dup count -> write -> re-read.
 
     The sort has now been omitted by three separate writers, each correct about everything except
@@ -102,10 +102,15 @@ def write_table(path, header, rows, key='address'):
     print(f'{path}: {len(rows)} rows, adjacent dup {dups}')
     if dups:
         raise SystemExit(f'refused: {path}: {dups} adjacent duplicate {key}(es) -- nothing written')
-    with open(path, 'w', newline='') as f:
-        w = csv.DictWriter(f, fieldnames=header, lineterminator='\n')
-        w.writeheader()
-        w.writerows(rows)
+    if dry_run:
+        return len(rows)
+    import io
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=header, lineterminator='\n')
+    w.writeheader()
+    w.writerows(rows)
+    from atomicio import atomic_write
+    atomic_write(path, buf.getvalue())
     back = list(csv.DictReader(open(path)))
     if len(back) != len(rows) or [r[key] for r in back] != [r[key] for r in rows]:
         raise SystemExit(f'refused: {path}: re-read does not match what was written')
