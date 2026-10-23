@@ -194,8 +194,12 @@ def burndown_line(d: dict) -> str:
     t, r, e, v = d['total'], d['replaced'], d['edge_verified'], d['verified']
 
     def rung(name: str, x: dict) -> str:
+        # The referent, in words, beside the number. "bytes" fits two quantities -- the guest extent
+        # of the replaced functions (this column) and the size of the replacement body written for
+        # them (a different column that does not exist) -- and that confusion has produced a wrong
+        # total three times. A column whose name fits two quantities keeps being filled with either.
         return (f'{name} {x["functions"]} ({fmt_pct(x["functions_pct"])}, '
-                f'{x["bytes"]} B {fmt_pct(x["bytes_pct"])})')
+                f'{x["bytes"]} B guest-extent {fmt_pct(x["bytes_pct"])})')
 
     ex = d.get('statuses') or {}
     parts = [

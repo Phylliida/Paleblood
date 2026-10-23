@@ -24,6 +24,7 @@ import os
 import struct
 import sys
 
+from addrs import parse_address
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64
 from capstone.x86 import X86_OP_MEM, X86_OP_REG, X86_REG_RIP
 
@@ -76,7 +77,7 @@ def main():
     for label, max_size, exact_two in (('strict', 16, True), ('wide', 64, False)):
         counts, contain, samples, kept = {}, {}, [], 0
         for row in csv.DictReader(open(os.path.join(ROOT, 'symbols', 'ghidra_functions.csv'))):
-            addr, size = int(row['address'], 16), int(row['size'])
+            addr, size = parse_address(row['address']), int(row['size'])
             if size < 3 or size > max_size or addr < BASE:
                 continue
             o = addr - 0x3FC000
