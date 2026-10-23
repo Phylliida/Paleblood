@@ -1601,6 +1601,28 @@ pinned by two directories is not an identifier — query the ledger by `address`
 
 ### 1q — A family's access declaration is a set, and its value source may be `seeded`
 
+**IN FORCE — this block is the rule; everything below it is the reasoning, and the amendments are history.**
+**Where an amendment contradicts an earlier clause, the amendment is the rule and the clause is a record of the
+price that produced it.** (`1j`'s lesson applies to decisions too: a history row is not a present state.)
+
+1. **`ACCESS[fam]` is a SET of decls.** One family, two obligations, two rows: `chain_deref` is
+   `(('load','seeded','kSlot'), ('store','argument','kStoreDisp'))`.
+2. **A decl is `(kind, source, *names)`, and the names are DATA.** The table is the convention; no scanner
+   assumes a spelling, and no emitter is required to converge on one. Names are read from the declaration.
+3. **`source ∈ {static, argument, seeded}`.** `seeded` means *a static address whose value the case supplies*,
+   and it is **TWO conditions**: bound at **`memsz`** (not `filesz` — 78 of 78 sit in the zero-fill tail)
+   **and** the case must write the value the body reads, proved from artifacts that are not the row that
+   declared it.
+4. **Empty `targets` is a REFUSAL** for a kind that needs one, naming both the declared constants and what the
+   file actually declared. Never a nothing-to-check.
+5. **A refactor of a gate is proven by invariance on the real tree at its real rc.** Identity including the
+   failure path; a proof taken only on a passing gate has not been taken.
+
+Convergence of spelling conventions across emitters is **NOT in force** — it was rejected on price (a re-emit
+invalidates `source_hash` and staleness-refuses all 78 recorded rows), and it survives only as an optional
+tidy-up whenever a family is re-emitted for other reasons.
+
+
 `ACCESS` maps a family to ONE `(kind, source)` pair. `chain_deref` has two obligations with different bounds:
 it dereferences a rip-relative slot (78 rows, a static address) and writes through the pointer it loaded
 (argument-derived). Declaring either half alone prints a green that is true about half the family —
