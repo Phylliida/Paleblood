@@ -90,7 +90,13 @@ def batch_problems(root='.'):
     # "the family's landed set" moved owed from 78 to 77 and the byte total by exactly one body's 18 B,
     # which is the 647 retraction (a name filter standing in for a set) one tier down. Landed means
     # `in land`, and land is the status predicate.
-    fam = {r['address'] for r in rows
+    # `rows` is the CATALOGUE: 157,757 rows, no `name` column, so a name predicate over it is empty BY
+    # CONSTRUCTION and `owed` read 78 on a tree where all 78 were landed and recorded. A zero from a predicate
+    # that cannot be satisfied is not a measurement -- the 647 retraction, one column over. Names come from the
+    # file that has them; membership in `land` comes from the status predicate; the two are joined on the
+    # address, and the refusal prints BOTH populations so the next reader sees the disagreement.
+    _fam_rows = list(catalogue.read_rows(f'{root}/symbols/functions.csv'))
+    fam = {r['address'] for r in _fam_rows
            if str(r.get('name', '')).startswith('leaf_chain_deref_') and r['address'] in land}
     owed = PREREG['rows'] - len(fam)
     if owed not in (0, PREREG['rows']):
@@ -104,7 +110,8 @@ def batch_problems(root='.'):
     # on a correct post-record tree. A check whose applicability has an precondition must state it, not assume
     # the tree is the tree it was written against.
     if owed and (live_landed + owed != BATCH['landed_after'] or bt['landed'] + owed_b != BATCH['bytes_after']):
-        out.append(f'batch: owed derivation ({owed} rows / {owed_b} bytes) disagrees with the measured '
+        out.append(f'batch: fam {len(fam)} of {len(_fam_rows)} rows in symbols/functions.csv | owed {owed} rows / '
+                   f'{owed_b} bytes | landed {live_landed} -- disagrees with the measured '
                    f'before-state ({live_landed} rows / {bt["landed"]} bytes landed) plus after-state')
     if owed_b not in (0, PREREG['bytes']):
         out.append(f'batch: bytes {live_bytes} -> pre-registered {BATCH["bytes_after"]} owes {owed_b}, '
