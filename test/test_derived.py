@@ -35,10 +35,13 @@ class Derived(unittest.TestCase):
         return subprocess.run([PY, "-P", str(TOOL), "--compare", f.name], cwd=str(ROOT),
                               capture_output=True, text=True, timeout=300)
 
-    def test_compare_allows_a_provisional_key_to_move(self):
+    def test_compare_labels_an_absent_current_key_as_GONE_and_prints_both_values(self):
+        # build() does not yet emit the provisional keys, so until the migration lands them the only
+        # thing a provisional key can do is appear (NEW) or leave (GONE) -- "moved" is not expressible
+        # yet, and this test says so instead of pretending otherwise.
         p = self._doctored(lambda v: v.__setitem__("branch.functions", 1))
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
-        self.assertIn("[mutable] branch.functions", p.stdout)
+        self.assertIn("[mutable/GONE] branch.functions: 1 -> None", p.stdout)
 
     def test_compare_refuses_a_frozen_key_that_moves(self):
         p = self._doctored(lambda v: v.__setitem__("catalogue.functions", 1))

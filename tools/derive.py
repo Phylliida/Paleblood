@@ -74,12 +74,26 @@ def build() -> dict:
 
 def compare(old_path, payload) -> int:
     """Refuse a moved key the caller declared frozen. `derive.py --compare before.json`."""
-    old = json.loads(Path(old_path).read_text()).get("values", {})
+    path = Path(old_path)
+    if not path.exists():
+        print(f"derive: baseline {path} is missing -- a pre-registration that can evaporate is a sentence; refusing")
+        return 3
+    try:
+        old = json.loads(path.read_text()).get("values", {})
+    except (json.JSONDecodeError, AttributeError) as exc:
+        print(f"derive: baseline {path} is unreadable ({exc}) -- refusing rather than comparing nothing")
+        return 3
+    if not old:
+        print(f"derive: baseline {path} holds no values -- refusing")
     new = payload["values"]
     moved = sorted(k for k in set(old) | set(new) if old.get(k) != new.get(k))
     frozen = [k for k in moved if not k.startswith(MUTABLE_PREFIX)]
     for k in moved:
         tag = "mutable" if k.startswith(MUTABLE_PREFIX) else "FROZEN"
+        if k not in old:
+            tag += "/NEW"          # no before-value: "moved" and "appeared" must not read the same
+        elif k not in new:
+            tag += "/GONE"         # in the baseline, absent now
         print(f"derive: moved [{tag}] {k}: {old.get(k)!r} -> {new.get(k)!r}")
     if frozen:
         print(f"derive: {len(frozen)} frozen key(s) moved -- this refactor altered provenance it does not own")

@@ -13,6 +13,10 @@ Every refusal is counted by reason, so a zero cannot be a silent zero.
 import argparse
 import collections
 import csv
+import pathlib
+import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir; no PYTHONPATH help
+import sys
 
 import capstone
 from capstone.x86_const import (X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_FS,

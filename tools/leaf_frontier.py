@@ -17,6 +17,7 @@ import csv
 import gzip
 import pathlib
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir; no PYTHONPATH help
 
 import join_import_pc as J
 

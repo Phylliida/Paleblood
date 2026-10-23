@@ -18,7 +18,10 @@ A row with NO selector is landable and was missed. That count is printed first.
 import argparse
 import collections
 import csv
+import sys
 import pathlib
+import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir; no PYTHONPATH help
 import re
 
 import capstone
