@@ -741,3 +741,27 @@ argument, which is an address-shaped value and would print as a plausible return
 BSS-word-read-as-a-return-PC defect in its third costume. Read the frame through `rbx`, and note the offset
 differs per stub: a single constant would be wrong for whichever path was not being looked at.
 
+
+## The import stub table, measured (replaces three carried figures)
+
+Scanning the whole RX segment for `jmp rel32` whose target is the resolver `0x2fbe4a8` gives **661 sites,
+16 bytes apart**, first at `0x2fbe4c3`. Each stub is a fixed 16-byte record starting 11 bytes before its
+resolver jump, so the table is **`0x2fbe4b8` .. `0x2fc0e08`, 661 stubs**:
+
+    ff 25 <disp32>   jmp qword ptr [rip + disp]   ; the GOT slot, 6 bytes
+    68 <imm32>       push <index>                 ; 5 bytes, always imm32
+    e9 <rel32>       jmp 0x2fbe4a8                ; 5 bytes
+
+`push` values run contiguously `0 .. 0x294`, so **index = stack position = stub number = GOT slot number**
+(confirmed twice: stub 0 -> `0x2fbe4be + 0x28261d2 = 0x57e4690`; stub 660 -> `0x2fc0dfe + 0x2824d32 =
+0x57e5b30 = 0x57e4690 + 8*660`). Calling a stub is `call <0x2fbe4b8 + 16*index>`.
+
+Three carried figures corrected on the way here: the header is **not** variable-length (`push 0x2a1` and
+`push 0xfc` are both imm32); the table base is `0x2fbe4b8`, and reading from `0x2fbe4b3` -- five bytes
+early -- decodes as garbage, which is what my first dump did; and `docs/bind-order-eboot.txt` holds **848
+bind lines**, not the 747 I have been quoting. 661 stubs against 848 binds is another pair that must not
+be reconciled before both scopes are printed.
+
+The script's first pass printed "jmp-to-resolver sites: 1" because it only counted sites whose preceding
+bytes it could decode as a `push` -- **a filter printing its own acceptance count under the label "sites."**
+The 661 came from counting the jumps themselves.
