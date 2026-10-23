@@ -1598,3 +1598,36 @@ and every address got its own copy, which is harmless on disk but leaves `case_k
 stops the record. The gate refuses only that last one, because it is the only one that can produce a body
 compared against a case authored for a different slot. Corollary, stated beside `evidence_hash`: **a hash
 pinned by two directories is not an identifier — query the ledger by `address`, never by hash.**
+
+### 1q — A family's access declaration is a set, and its value source may be `seeded`
+
+`ACCESS` maps a family to ONE `(kind, source)` pair. `chain_deref` has two obligations with different bounds:
+it dereferences a rip-relative slot (78 rows, a static address) and writes through the pointer it loaded
+(argument-derived). Declaring either half alone prints a green that is true about half the family —
+`addr-only` would be vacuity with a new name, and `store/argument` prints "nothing to check" over 78 static
+loads. Three changes, in this order because each one makes the next safe:
+
+1. **The extractor must read the names the emitter emits.** `re.findall(r'constexpr std::uint64_t (?:v|at) = ...')`
+   matches ZERO of `chain_deref_family.cpp`'s 78 declarations (it emits `kImm`/`kSlot`/`kStoreDisp`), against
+   124 in `rip_store` and 10 in `rip_load_wide`. A scanner keyed on a naming convention the emitter does not
+   share reports a correct family as unparseable and the zero reads as clean — the `647` shape, third arrival.
+   Convergence on one name beats `ACCESS` carrying per-family names, because two names means every future
+   scanner picks one and half the families go unchecked. **And empty `targets` for a kind that needs them
+   must REFUSE, not print nothing-to-check.**
+2. **`ACCESS` becomes a uniform tuple of pairs** — `(('addr-only','static'),)` — never a union of a pair and a
+   tuple-of-pairs. Six migrations now beat one polymorphic branch forever; a union is how the next reader
+   writes `decl[0]` and gets a `str`.
+3. **`source` gains `seeded`**: a static address whose VALUE the case supplies. Its bound is `memsz`, not
+   `filesz`, because all 78 slots sit in the zero-fill tail (`inside p_filesz 0 | inside p_memsz past filesz
+   78 | in no segment 0`) and are safe precisely because the case presets them. Bound at `filesz`, a
+   `load/static` declaration would refuse 78 of 78 — a gate refusing a family whose load is satisfied by
+   seeding. This is the `rip_load` retraction in reverse: there zero-fill meant the differential compared
+   zeros; here it means the case supplies the value and the differential is real because of it.
+
+**`seeded` must be earned, not declared**: the gate checks that the family's rows declare a seeding for each
+`seeded` target, the same conjunction `check_seeding` already proves for these 78. The two instruments read
+different artifacts and must agree — two instruments that agree because they read the same table is the
+failure to avoid.
+
+So `chain_deref` is `(('load','seeded'), ('store','argument'))`: both rows true, and "who supplies this
+value" is answerable in the table instead of in a comment.
