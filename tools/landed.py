@@ -85,7 +85,10 @@ def byte_totals(path="symbols/functions.csv"):
     landed = transcribed = 0
     rows = list(csv.DictReader(open(path)))
     _refuse_known_wrong(rows)
-    index = _body_index()
+    # The walk belongs to the ROOT of the file being summed, not to this process's default: called bare, a
+    # fixture's rows were checked against the repository's game/, so a fixture's byte totals were a function of
+    # a directory it does not own. Same shape as image_base_set stored per process instead of per comparison.
+    index = _body_index(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(path))), 'game'))
     for r in rows:
         a = int(r['address'], 16)
         size = int(r['size'])
