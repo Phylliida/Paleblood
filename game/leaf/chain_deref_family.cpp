@@ -27,6 +27,17 @@ extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_0172fa40(void
   return p;
 }
 
+extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01735230(void) {
+  constexpr std::uintptr_t kSlot = 0x5962878;
+  constexpr std::uintptr_t kStoreDisp = 0xf0;
+  constexpr std::uint64_t kImm = 0x0;
+  (void)kImm;
+  auto *slot = reinterpret_cast<std::uintptr_t *>(reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);
+  std::uintptr_t p = *slot;
+  *reinterpret_cast<std::uint32_t *>(p + kStoreDisp) = static_cast<std::uint32_t>(kImm);
+  return p;
+}
+
 extern "C" __attribute__((used)) std::uint64_t bb_leaf_chain_deref_01736c10(void) {
   constexpr std::uintptr_t kSlot = 0x5956678;
   constexpr std::uintptr_t kStoreDisp = 0x1550;

@@ -753,6 +753,14 @@ def main(argv):
         print(message)
         return rc
     ms = members(name)
+    # The translation unit is SHARED by every declared member, so it is written from ALL of them and never
+    # from the selection: `--pilot` narrows which CASES get authored and which table rows get written, not
+    # which bodies exist. The batch emission once narrowed `ms` and the write silently dropped the pilot.
+    # DECLARED, not selected: the family table is the authority, and `landed_rows` is a NAME filter over
+    # functions.csv rather than a status predicate -- so once a member is named, `members(landed=False)`
+    # stops returning it and a selection-driven TU loses it. The union is the declared set.
+    _by = {m["address"]: m for m in list(members(name, landed=False)) + list(members(name, landed=True))}
+    all_ms = [_by[a] for a in sorted(_by)]
     if '--pilot' in argv:
         # SELECTED BY RULE, NOT BY ORDER. `--limit 1` takes the first address, which is width 1; the pilot
         # must exercise the widest truncation AND a shared case, because those are the two mechanisms the
@@ -809,7 +817,18 @@ def main(argv):
     # there -- the check that refused the family destroying the artifact it was protecting. It also
     # made --dry-run dishonest: the guard returned above body_text, so a dry run printed "nothing
     # written" and exited 0 for a family that refuses. Build, then ask, then write.
-    generated = body_text(name, ms)   # the refusal fires HERE, before any file is opened
+    generated = body_text(name, all_ms)   # the refusal fires HERE, before any file is opened
+    # THE THIRD CHECK: the write, the file, the PROGRAM. A shared TU's invariant is "every declared member
+    # is present", and it is asserted on the generated text -- not on the selection that produced it -- so
+    # no selection bug, present or future, can shorten the file. --pilot is safe by construction.
+    emitted = {int(a, 16) for a in re.findall(r"bb_leaf_" + re.escape(name) + r"_([0-9a-f]{8})\b", generated)}
+    declared = {m["address"] for m in all_ms}
+    if emitted != declared:
+        miss, extra = sorted(declared - emitted), sorted(emitted - declared)
+        print(f"{name}: REFUSED -- the generated TU carries {len(emitted)} of {len(declared)} declared "
+              f"members (missing {len(miss)}{chr(58) + hex(miss[0]) if miss else chr(0)*0}, extra {len(extra)}). "
+              f"A shared TU is written complete or not at all; no file was opened.", file=sys.stderr)
+        return 1
     dry_run = '--dry-run' in argv
     # Everything is assembled first and written second, so a dry run does all of it but the write:
     # the refusal above, the cases, the tables and the clash assertions are the parts that can fail.
