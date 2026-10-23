@@ -162,16 +162,37 @@ def main():
                         'family must name its target in a form the gate can parse; "nothing to check" '
                         'is legal only for addr-only')
             continue
-        bad = []
+        # ONE decision, in ONE place. The bound is chosen once, and the name travels with it, so the
+        # comparison and the sentence cannot disagree -- extent_line's defect is two copies of one decision
+        # that agreed until one of them changed. The predicate is what the loop FOUND, never a parallel
+        # `any()`: `any()` cannot say which segment admitted a target, and two PT_LOADs can overlap here.
+        bound = 'memsz' if (kind != 'load' or source == 'seeded') else 'filesz'
+        inside, gap, outside = [], [], []
         for t in targets:
-            ok = any(lo <= t < (hi if kind == 'load' else ms) for lo, hi, ms in segs)
-            if not ok:
-                bad.append(t)
-        where = 'filesz' if kind == 'load' else 'memsz'
-        if bad:
-            errs.append(f'{fam}: {len(bad)} of {len(targets)} {kind} targets outside every PT_LOAD '
-                        f'{where}; first {bad[0]:#x}'
+            hit = next(((hi if bound == 'filesz' else ms, bound)
+                        for lo, hi, ms in segs if lo <= t < (hi if bound == 'filesz' else ms)), None)
+            if hit:
+                inside.append(t)
+                continue
+            # Not admitted by its own bound. Distinguish "admitted by the OTHER bound" -- past filesz, inside
+            # memsz, the zero-fill tail where tonight's whole `seeded` distinction lives -- from "in no
+            # segment at all", which is a mis-emission. A two-way verdict over a three-way fact is a formatter.
+            other = next((True for lo, hi, ms in segs
+                          if (bound == 'filesz' and lo <= t < ms) or (bound == 'memsz' and lo <= t < hi)),
+                         False)
+            (gap if other else outside).append(t)
+        where = bound
+        if outside:
+            errs.append(f'{fam}: {len(outside)} of {len(targets)} {kind} targets outside every PT_LOAD '
+                        f'{where}; first {outside[0]:#x}'
                         + (' (zero-fill: a constant 0 no case can discriminate)' if kind == 'load' else ''))
+        elif gap and source != 'seeded':
+            errs.append(f'{fam}: {len(gap)} of {len(targets)} {kind} targets past {where} but inside the '
+                        f'other bound; first {gap[0]:#x} -- a target in the zero-fill tail is neither inside '
+                        'filesz nor absent, and only `seeded` may claim it')
+        elif gap:
+            print(f'{fam:20s} {kind:10s} {len(targets)} targets inside memsz past filesz -- {source}: '
+                  'the case supplies the value (supply check owed separately)')
         else:
             print(f'{fam:20s} {kind:10s} {len(targets)} targets inside {where} -- ok')
     for e in errs:
