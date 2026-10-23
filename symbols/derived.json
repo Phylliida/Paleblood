@@ -1,22 +1,19 @@
 {
  "schema": 1,
  "generated_by": "tools/derive.py",
- "head": "42f9b94",
- "pending_provisional": [
-  "branch.functions",
-  "branch.landed",
-  "band.unlanded_independent",
-  "band.nested",
-  "frontier.addressable",
-  "frontier.short",
-  "thunk.rows",
-  "thunk.branch_free"
- ],
+ "head": "4a5fc08",
+ "pending_provisional": [],
  "values": {
+  "band.nested": 0,
+  "band.unlanded_independent": 6888,
+  "branch.functions": 114023,
+  "branch.landed": 1172,
   "catalogue.bytes": 42487347,
   "catalogue.functions": 157757,
   "catalogue.maximal_contained": 0,
   "catalogue.maximal_extents": 157757,
+  "frontier.addressable": 6288,
+  "frontier.short": 600,
   "inputs.functions_sha256": "4b0e52e4e38b461f57f1dbdac5c9e9fb6b249b095b0f6759792a0cd6c3a91834",
   "inputs.ghidra_functions_sha256": "fc7e244dc9f211963118a9ab97716de03e0f342421c63cafc9a8ae747abb8ebd",
   "landed.edge_verified": 38018,
@@ -25,6 +22,8 @@
   "ledger.functions": 38018,
   "ledger.rows": 38119,
   "parses.files": 55,
-  "parses.sites": 99
+  "parses.sites": 99,
+  "thunk.branch_free": 5205,
+  "thunk.rows": 5805
  }
 }

@@ -24,27 +24,34 @@ import join_import_pc as J
 BAND = pathlib.Path('symbols') / 'branch_band.csv.gz'
 
 
-def main(argv):
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--out', default='symbols/leaf_frontier.csv')
-    o = ap.parse_args(argv)
-    with gzip.open(BAND, 'rt', newline='') as f:
+def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
+    """The four frontier figures. ONE implementation: derive.py calls this, it does not recount."""
+    with gzip.open(band, 'rt', newline='') as f:
         rows = list(csv.DictReader(f))
-    ext = J.load_extents('symbols/ghidra_functions.csv')
+    ext = J.load_extents(extents_path)
     free_unlanded = [(int(r['address'], 16), int(r['size'])) for r in rows
                      if r['branch'] == '0' and r['landed'] == 'False']
     indep = [(a, s) for a, s in free_unlanded if len(J.owners(ext, a)) == 1]
     out = [(a, s, 'short' if s < 14 else 'addressable') for a, s in indep]
-    pathlib.Path(o.out).write_text(''.join(
-        f'{a:#010x},{s},{b}\n' for a, s, b in out))
     short = sum(1 for _, _, b in out if b == 'short')
-    print(f'branch-free unlanded {len(free_unlanded)} · independent {len(indep)} '
-          f'· nested {len(free_unlanded) - len(indep)}')
-    print(f'  frontier by band: addressable (family_scan can propose them today) {len(out) - short} '
-          f'· short, size < 14 (floor + byte tier must move together) {short}')
-    print(f'  wrote {o.out}: {len(out)} rows')
-    return 0
+    return {'branch_free_unlanded': len(free_unlanded), 'independent': len(indep),
+            'nested': len(free_unlanded) - len(indep), 'addressable': len(out) - short,
+            'short': short, 'rows': out}
 
+
+def main(argv):
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--out', default='symbols/leaf_frontier.csv')
+    o = ap.parse_args(argv)
+    fig = compute()
+    pathlib.Path(o.out).write_text(''.join(
+        f'{a:#010x},{s},{b}\n' for a, s, b in fig['rows']))
+    print(f'branch-free unlanded {fig["branch_free_unlanded"]} · independent {fig["independent"]} '
+          f'· nested {fig["nested"]}')
+    print(f'  frontier by band: addressable (family_scan can propose them today) {fig["addressable"]} '
+          f'· short, size < 14 (floor + byte tier must move together) {fig["short"]}')
+    print(f'  wrote {o.out}: {len(fig["rows"])} rows')
+    return 0
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

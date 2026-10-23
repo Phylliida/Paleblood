@@ -41,12 +41,9 @@ def length_floor() -> int:
     return int(m.group(1))
 
 
-def main(argv):
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--max', type=int, default=13)
-    ap.add_argument('--out', default='')
-    o = ap.parse_args(argv)
-    floor = length_floor()
+def compute(max_b=13, floor=None):
+    """The two thunk figures. ONE implementation: derive.py calls this, it does not recount."""
+    floor = length_floor() if floor is None else floor
     md = open(C.ELF, 'rb').read()
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = True
@@ -54,7 +51,7 @@ def main(argv):
     extents = J.load_extents('symbols/ghidra_functions.csv')
     size_of = dict(extents)
     pop = sorted(a for a, s in extents
-                 if s <= o.max and a not in landed and len(J.owners(extents, a)) == 1)
+                 if s <= max_b and a not in landed and len(J.owners(extents, a)) == 1)
     rows, by_sel, multi, sets = [], collections.Counter(), 0, collections.Counter()
     none_e = []
     for a in pop:
@@ -81,28 +78,37 @@ def main(argv):
         shape = ' ; '.join((i.mnemonic + ' ' + i.op_str).strip() for i in ins) or '<undecoded>'
         for sel in sels:
             rows.append((f'{a:#010x}', s, shape, sel))
-    print(f'thunks: {len(pop)} independent unlanded rows <= {o.max} B')
-    print(f'  LANDABLE AND MISSED (no selector refuses them): {len(none_e)}'
-          + (f' -- {[hex(a) for a in none_e[:8]]}' if none_e else ''))
-    print(f'  EXCLUDED BY TWO OR MORE SELECTORS: {multi}'
+    return {'rows': len(pop), 'branch_free': by_sel.get('family_scan:jump-free', 0),
+            'multi': multi, 'none_e': none_e, 'by_sel': by_sel, 'sets': sets, 'table': rows,
+            'max_b': max_b}
+
+
+def main(argv):
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--max', type=int, default=13)
+    ap.add_argument('--out', default='')
+    o = ap.parse_args(argv)
+    f = compute(o.max)
+    print(f'thunks: {f["rows"]} independent unlanded rows <= {f["max_b"]} B')
+    print(f'  LANDABLE AND MISSED (no selector refuses them): {len(f["none_e"])}'
+          + (f' -- {[hex(a) for a in f["none_e"][:8]]}' if f['none_e'] else ''))
+    print(f'  EXCLUDED BY TWO OR MORE SELECTORS: {f["multi"]}'
           '  <- no individual selector report could surface these')
-    for k, v in by_sel.most_common():
+    for k, v in f['by_sel'].most_common():
         print(f'    {v:5d}  {k}')
     print('  by exact selector set:')
-    for k, v in sets.most_common():
+    for k, v in f['sets'].most_common():
         print(f'    {v:5d}  {" + ".join(k) if k else "<none>"}')
     if o.out:
-        with open(o.out, 'w', newline='') as f:
+        with open(o.out, 'w', newline='') as fh:
             # Every row here is EXCLUDED -- that is the file's whole content ("landable and missed: 0").
             # A column saying so is not redundant with excluded_by: it is the difference between a list of
             # candidates and a list of refusals, and the next reader gets one glance instead of an audit.
-            w = csv.writer(f)
+            w = csv.writer(fh)
             w.writerow(['address', 'size', 'shape', 'excluded_by', 'landable'])
-            w.writerows([tuple(r) + ('no',) for r in rows])
-        print(f'  wrote {len(rows)} (address, selector) rows to {o.out}')
+            w.writerows([tuple(r) + ('no',) for r in f['table']])
+        print(f'  wrote {len(f["table"])} (address, selector) rows to {o.out}')
     return 0
 
-
 if __name__ == '__main__':
-    import sys
     sys.exit(main(sys.argv[1:]))

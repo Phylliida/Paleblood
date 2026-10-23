@@ -11,6 +11,12 @@ restate digits. `--check` regenerates in memory and refuses on any difference, w
 Keys not yet present are listed in PENDING and are explicitly PROVISIONAL: they come from loaders still
 reading the CSV with their own DictReader rather than through tools/catalogue.py, and they enter this
 file only after that migration and one re-derivation pass.
+
+This module derives no figure. Every value is returned by the tool that owns it: `build()` calls the
+loader's `compute()`, and it never re-implements a size filter, a disjointness test or an owner count.
+Eight keys computed twice would be a second home born silently -- equal today only because two
+implementations happen to agree, which is exactly the failure `catalogue.read_rows` and `rosters.compare`
+were written to kill.
 """
 import json
 import subprocess
@@ -27,12 +33,7 @@ import rosters  # noqa: E402
 # frozen key that moves is a far stronger signal than the six provisional ones that are expected to.
 MUTABLE_PREFIX = ("branch.", "band.", "frontier.", "thunk.")
 
-PENDING = (
-    "branch.functions", "branch.landed",           # branch_census.py
-    "band.unlanded_independent", "band.nested",    # leaf_family_census.py / census_band.py
-    "frontier.addressable", "frontier.short",      # leaf_frontier.py
-    "thunk.rows", "thunk.branch_free",             # thunk_census.py
-)
+PENDING = ()   # emptied when the five loaders moved to catalogue.read_rows; see the eight keys in build()
 
 
 def head() -> str:
@@ -63,6 +64,21 @@ def build() -> dict:
         "inputs.ghidra_functions_sha256": d["inputs"]["ghidra_functions_sha256"],
         "inputs.functions_sha256": d["inputs"]["functions_sha256"],
     }
+    # NOT derived here: one call per owner, and no filtering logic in this file.
+    import branch_census as BC
+    import leaf_frontier as LF
+    import thunk_census as TC
+    f, lf, th = BC.compute(), LF.compute(), TC.compute()
+    values.update({
+        "branch.functions": f["branch"],
+        "branch.landed": f["branch_landed"],
+        "band.unlanded_independent": lf["independent"],
+        "band.nested": lf["nested"],
+        "frontier.addressable": lf["addressable"],
+        "frontier.short": lf["short"],
+        "thunk.rows": th["rows"],
+        "thunk.branch_free": th["branch_free"],
+    })
     return {
         "schema": 1,
         "generated_by": "tools/derive.py",
