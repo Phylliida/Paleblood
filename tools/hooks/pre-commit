@@ -6,7 +6,13 @@
 #      KICKOFF*.md, and the patterns in `git config --get-all bb.localOnly`)
 #   3. no game data (tools/check_no_game_data.py --staged)
 #   4. functions.csv, hooks.csv and the README progress block agree with the staged tree
-#   5. game/ is readable (tools/check_readable.py, STYLE.md); its allowlist only shrinks
+#   5. catalogue parses (tools/check_catalogue.py): no raw csv.DictReader outside its allowlist and
+#      no explicit size radix; the allowlist only shrinks, in both directions
+#   6. game/ is readable (tools/check_readable.py, STYLE.md); its allowlist only shrinks
+#
+# A gate that exists and is not invoked here is a gate nobody runs: progress.py prints the SAME
+# DictReader count as a summary line, and for one slice that number read like the verdict while the
+# verdict itself never ran.
 # Installed as commit-msg too: lines matching `git config --get-all bb.refuseMessage` (extended
 # regular expressions, case-insensitive) are refused, and every value of
 # `git config --get-all bb.requireMessage` (literal, case-insensitive) must appear in the message.
@@ -77,6 +83,11 @@ git checkout-index -a --prefix="$tmp/"
 python3 "$tmp/tools/validate_functions.py" --root "$tmp" || fail "functions.csv / hooks.csv validation failed"
 python3 "$tmp/tools/progress.py" --root "$tmp" --check \
     || fail "README progress block is stale: run tools/progress.py --update-readme and stage README.md"
+# check_catalogue derives ROOT from its own __file__, so the copy under $tmp checks the STAGED tree.
+if [ -f "$tmp/tools/check_catalogue.py" ]; then
+    python3 "$tmp/tools/check_catalogue.py" \
+        || fail "catalogue parses: raw csv.DictReader outside the allowlist, or a stale entry"
+fi
 if [ -f "$tmp/tools/check_readable.py" ]; then
     # the list may only shrink against HEAD's (when HEAD has one: not on the commit introducing it)
     base=()

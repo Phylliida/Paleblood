@@ -1375,3 +1375,41 @@ file is wrong.* And: **a number that closes against a size has not thereby been 
 This ELF speaks two coordinate systems one `EBOOT_BASE` apart and **both close**, against different facts —
 vaddr-space end against `boot['size']`, guest-space end against `guest()`'s admissibility window. Closure
 is consistency, never correctness, which is the radix lesson in a new place.
+
+### The retraction is shared, and its smaller law is the one to keep
+
+The `0x50dc000 / 0x309b38 / 0x5f70f4` triple reached me as **program-header bytes with no space named**, and
+I published it as if it were addresses in the space the seeding gate checks. So the object that let both
+readings "close" was **unlabelled units**, and the correction I then applied was a second reading of the same
+unlabelled number. **A number without its space is the address-bias rule one tier up.** Beside the two laws
+already written: **every number in these tables carries its space, or it is not a number yet.** vaddr space
+and guest space are one `EBOOT_BASE` apart here; `boot['size']` is a size in the second while the same digits
+are an end in the first, which is exactly how a wrong correction passes an arithmetic check.
+
+### A gate that existed, enforced in both directions, and was never invoked
+
+`tools/check_catalogue.py` had a shrink-only allowlist, a `rosters.compare` in both directions, and 55
+grandfathered files — **and the pre-commit hook never ran it.** What the hook printed was
+`progress.py:482`'s own DictReader count, in a line shaped like a verdict. So the new tool I committed last
+slice used a raw `csv.DictReader` and **rc=0**. `a count is not a constraint`, arriving where I had just
+written `a display is not a write`.
+
+Repaired in three places, each proven to fail before it was trusted:
+
+1. `check_seeding.py` reads the table through `catalogue.read_rows` — **the tool I write does not
+   reintroduce the pattern its own gate refuses.**
+2. `tools/hooks/pre-commit` invokes `check_catalogue.py` against `$tmp` (its `ROOT` derives from its own
+   `__file__`, so the staged copy checks the staged tree with no flag), and the numbered list gains it.
+3. `test/test_gates_wired.py` derives the roster **from the hook's own text, both directions**: every gate
+   that owns a shrink-only allowlist must be *invoked* against `$tmp`, and no `tools/check_*.py` may be
+   named in the header without being run.
+
+Arms executed: wiring test red with the invocation deleted and green on restore; the gate refusing a new raw
+reader (rc=1); accepting it once allowlisted (rc=0, so it enforces rather than counts); and refusing the
+entry as **stale** after the file was deleted (rc=1). The migration that follows is the one this shape always
+ends in: **move the 100 sites to `read_rows` and delete the file**, which is what the readable allowlist did
+when it reached zero.
+
+Also adopted: the catalogue baseline should be keyed on **`(file, enclosing function)`** rather than a site
+count, because line numbers move on every edit and a count cannot express "new"; the shrink is then honest
+and staleness stays expressible through the same `compare()`.

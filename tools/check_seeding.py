@@ -41,6 +41,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import catalogue
 import harness
 import leaf_shape_census as S
 
@@ -141,12 +142,10 @@ def main(argv=None):
         print(f'seeding: refusing -- cannot read {a.table}; unread is not zero', file=sys.stderr)
         return 3
     rows = []
-    with open(a.table) as f:
-        import csv as _csv
-        for r in _csv.DictReader(f):
-            rows.append({'address': int(r['address'], 16), 'load_target': int(r['load_target'], 16),
-                         'store_k2': int(r['store_k2'], 16), 'store_width': int(r['store_width']),
-                         'imm': int(r['imm'], 16)})
+    for r in catalogue.read_rows(a.table):        # the typed reader, never a second DictReader
+        rows.append({'address': r['address'], 'load_target': int(r['load_target'], 16),
+                     'store_k2': int(r['store_k2'], 16), 'store_width': int(r['store_width']),
+                     'imm': int(r['imm'], 16)})
     segs = S.load_segments(open(a.elf, 'rb').read(), flags=True)
     writable = [s for s in segs if s[3] & 2]
     if not writable:
