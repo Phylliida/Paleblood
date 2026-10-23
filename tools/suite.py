@@ -20,7 +20,10 @@ VERDICT = re.compile(r'^(Ran \d+ tests? in [\d.]+s|OK|FAILED)', re.MULTILINE)
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    pattern = argv[0] if argv else 'test_*.py'
+    # `argv[0] if argv else default` is not enough: an EMPTY first argument passes the truthiness test in
+    # the caller's head and fails argparse as `-p: expected one argument`, which is how a 302-byte usage
+    # message became the whole log of a thirteen-minute run. `or` is the operator that means "or else".
+    pattern = (argv[0] if argv else '') or 'test_*.py'
     out = ROOT / 'build-release' / 'suite.log'
     out.parent.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
