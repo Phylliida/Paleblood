@@ -22,6 +22,12 @@ class JoinTest(unittest.TestCase):
         # a stray must not read as an owner at address 0, the way a defaulted field would
         self.assertIsNone(j.owner([(0x1000, 0x10)], 0x0))
 
+    def test_tie_is_ambiguous_not_file_order(self):
+        # equal-size extents both containing the pc: the answer is "ambiguous", never the lower address,
+        # because the lower address is a property of the catalogue's order rather than of the binary.
+        table = [(0x0FF0, 0x40), (0x1000, 0x40)]
+        self.assertEqual(j.resolve(table, 0x1005), (None, "ambiguous"))
+
     def test_rows_parse_and_reject(self):
         text = "  #40 pc 0x8020b5c90 count 5\n  #not a row\n"
         rows = j.parse_rows(text)

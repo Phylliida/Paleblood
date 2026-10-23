@@ -46,10 +46,24 @@ def owners(extents, v):
     return [(a, s) for a, s in extents[lo:hi] if a <= v < a + s]
 
 
-def owner(extents, v):
-    """The smallest containing extent (ties: lower address), or None."""
+def resolve(extents, v):
+    """(owner, kind), kind in {owned, ambiguous, stray}.
+
+    A TIE IS NOT BROKEN. Two catalogued extents of the same size both containing v contradict each other
+    about the binary, and breaking the tie on the lower address would be breaking it on file order -- a
+    property of the catalogue's layout, not of the code that ran. So a tie returns (None, "ambiguous") and
+    is counted separately: owners=2 printed as though a choice had been made is the defect this refuses.
+    """
     c = owners(extents, v)
-    return min(c, key=lambda e: (e[1], e[0])) if c else None
+    if not c:
+        return None, "stray"
+    smallest = [e for e in c if e[1] == min(s for _, s in c)]
+    return (smallest[0], "owned") if len(smallest) == 1 else (None, "ambiguous")
+
+
+def owner(extents, v):
+    """The smallest containing extent, or None (also None when the answer is ambiguous)."""
+    return resolve(extents, v)[0]
 
 
 def parse_rows(text):
@@ -60,14 +74,19 @@ def parse_rows(text):
 def self_test():
     """Three synthetic cases with known owners, and the catalogue's first row on the real table."""
     table = [(0x1000, 0x100), (0x1020, 0x20), (0x2000, 0x40)]
-    cases = [(0x1000, (0x1000, 0x100), 1, "a pc at an extent's first byte is owned by it"),
-             (0x1030, (0x1020, 0x20), 2, "nested: the smaller extent wins"),
-             (0x1500, None, 0, "a hole is a stray")]
+    tie = [(0x0FF0, 0x40), (0x1000, 0x40)]
+    cases = [(table, 0x1000, (0x1000, 0x100), 1, "a pc at an extent's first byte is owned by it"),
+             (table, 0x1030, (0x1020, 0x20), 2, "nested: the smaller extent wins"),
+             (table, 0x1500, None, 0, "a hole is a stray"),
+             (tie, 0x1005, None, 2, "an equal-size tie refuses to pick (lower address is file order)")]
     bad = []
-    for v, want, want_n, why in cases:
-        got, n = owner(table, v), len(owners(table, v))
-        if got != want or n != want_n:
-            bad.append(f"{why}: {v:#x} -> {got} owners {n}, expected {want} owners {want_n}")
+    for tbl, v, want, want_n, why in cases:
+        got, n = owner(tbl, v), len(owners(tbl, v))
+        kind = resolve(tbl, v)[1]
+        want_kind = "stray" if want_n == 0 else "ambiguous" if want is None else "owned"
+        if got != want or n != want_n or kind != want_kind:
+            bad.append(f"{why}: {v:#x} -> {got} kind {kind} owners {n}, "
+                       f"expected {want} kind {want_kind} owners {want_n}")
     real = load_extents("symbols/ghidra_functions.csv")
     first = real[0][0]
     if owner(real, first) != (first, real[0][1]):
@@ -81,8 +100,11 @@ def self_test():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--functions", default="symbols/ghidra_functions.csv")
-    ap.add_argument("--boot-err", default="/dev/stdin")
+    ap.add_argument("--boot-err", default=None)
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--vaddr", action="append", default=[], metavar="V",
+                    help="ask about a guest vaddr directly (the ladder's addresses are already vaddrs, "
+                         "not pcs: converting them would be a base error wearing a query's clothes)")
     a = ap.parse_args()
     if a.self_test:
         return self_test()
@@ -95,6 +117,30 @@ def main():
         print("refusal: the join cannot own the catalogue's first row -- the rule is broken, not the data",
               file=sys.stderr)
         return 3
+    if a.boot_err is None:
+        # A query and a join are two subjects. Asking about one vaddr must not require boot rows: a
+        # refusal that fires on the path that does not need it teaches the reader to ignore refusals.
+        if not a.vaddr:
+            print("refusal: nothing to do -- give --boot-err for a join or --vaddr for a query",
+                  file=sys.stderr)
+            return 3
+        for text in a.vaddr:
+            v = int(text, 0)
+            o, kind = resolve(extents, v)
+            c = owners(extents, v)
+            print(f"vaddr {v:#09x}: {kind} owners {len(c)} smallest "
+                  f"{('none' if o is None else f'{o[0]:#09x}+{o[1]}')}"
+                  + "".join(f"\n    contains {x[0]:#09x}+{x[1]}" for x in c))
+        return 0
+
+    for text in a.vaddr:
+        v = int(text, 0)
+        o, kind = resolve(extents, v)
+        c = owners(extents, v)
+        print(f"vaddr {v:#09x}: {kind} owners {len(c)} smallest "
+              f"{('none' if o is None else f'{o[0]:#09x}+{o[1]}')}"
+              + ("".join(f"\n    contains {x[0]:#09x}+{x[1]}" for x in c) if c else ""))
+
     rows = parse_rows(open(a.boot_err).read())
     print(f"conversion: v = pc - {IMAGE:#x} + {EBOOT_BASE:#x}; extents {len(extents)}")
     if not rows:
