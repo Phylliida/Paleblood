@@ -1012,3 +1012,22 @@ pc-vs-trampoline (**inside slot 40**), then the bytes.
 
 With the fix the boot runs further and stops where a body is genuinely missing: `libc j4ViWNHEgww`, imports
 called 18. A stub that has never been disassembled is not known to be right because its source reads right.
+
+## Campaign frontier (a finding, not a decision -- this authorises nothing)
+
+Measured at this tree. The branch-free, unlanded, independently-owned catalogue population is **139
+rows** (`symbols/leaf_frontier.csv`): **117** pass every filter the leaf toolchain has (family_scan's
+`--min-size 14` and its jump-free default) and are simply not done, and **22** are shorter than 14
+bytes and need the floor and the byte tier's position-dependence rule to move together (ask 7).
+When those close, **no selector in this tree can address another catalogue row**: the remaining
+114,023 branch-containing rows belong to the function campaign, whose generated-C path carries no
+single-block constraint. So PROGRESS reaches 100% of 43,734 -- 27.7% of the catalogue -- and SCOPE
+stays 24.10% of Ghidra's reach.
+
+`verified` does not move for any of them, and this is the reason the pivot is scheduled now rather
+than discovered after the 139 land: every leaf protocol lands at `edge-verified`, the byte tier lands
+as `shape-approved, machine-verified` and never as "approved", and `verified` is gated on the user's
+30 approvals against 21,086 all-rows-clean. The leaf campaign's completion and the goal's criterion
+are different instruments. The same caveat stands on the other side: neither the function nor the
+runtime track moves `verified` either until asks 1-7 are answered, while `in-game: unknown (no
+runtime witness)` is the only entry the runtime track can change at all.
