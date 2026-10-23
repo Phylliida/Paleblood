@@ -669,3 +669,29 @@ thread on a zeroed TCB would manufacture the next fault in a fresh population an
 Revisit condition: name the field behind `+0x20`, `+0x58` and `+0x10` from evidence (a write site, a
 provider's write, or a catalogue function that both writes and reads the same offset), and only then
 emit a layout.
+
+**Correction, same day — the ranking above mixed two depths.** The chain is
+`mov rax, fs:[0]` · `add rax, qword ptr [rip + G]` · `mov rax, qword ptr [rax]` · `mov rdi, [rax + 0x58]`,
+so `+0x58` is a field of an object obtained *through* the TCB, not a TCB field. Two versions of the scan
+printed 0 for this reason and both were the predicate: `operands[0].mem` cannot match a load, and
+`add rax, [rip+G]` both writes and reads the holder, so a clobber rule named carelessly truncated the
+chain at instruction one. The walk is now depth-tracked and the pure-write mnemonics are listed
+explicitly. Re-measured:
+
+* **depth 0 — TCB fields: 31 distinct, 1,390 accesses**; `+0x10` 1,284 · `+0x30` 19 · `+0x20` 10 ·
+  `+0x120` 8 · `+0x210` 8 · `+0x8` 8. **Written by eboot: `+0x10` 611 times, `+0x30` 1, `+0x20` 1,
+  `+0x8` 5.**
+* **depth 1 — fields of the object the TCB points at: 21 distinct, 4,021 accesses**; `+0x58` 3,733,
+  then `+0x8` 72 · `+0x18` 69 · `+0x10` 56. Written by eboot: `+0x8` 31, `+0x18` 15, `+0x10` 17.
+* depth 2: 5 distinct, 41 accesses.
+
+So the layout **is** declared — in the guest's own code, not in the runtime — and 618 depth-0 writes are
+the guest building its own thread structure. The runtime's correct behaviour is therefore what it already
+does: a correctly sized zeroed block (now `0x750`, derived) with `tcb_self` pointing at itself. **Zeroing
+was never the defect; the defect is that the code which fills these fields has not run**, because the boot
+stops before it. `scePthreadCreate` stays refused for a narrower reason than 1m first stated: not because
+no layout exists, but because no thread has ever reached the eboot init path that writes it.
+
+Revised revisit condition: a thread implementation is admissible once the boot reaches the guest code that
+performs the depth-0 writes (`+0x10`, 611 of them) — that is the population that proves a TCB gets built,
+and it is measurable by running rather than by naming fields from their rank.
