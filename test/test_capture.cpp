@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "runtime/capture.h"
+#include "runtime/hooks.h"
 #include "runtime/recorder.hpp"
 
 unsigned char *rt_image;
@@ -68,6 +69,10 @@ static int emit_case()
     return 0;
 }
 
+/* A hook body with a real signature: the boundary reaches it through the same six-register
+   convention rt_hook_invoke uses, so the cast below adds no assumption the trampoline lacks. */
+static uint64_t probe_add(uint64_t a, uint64_t b) { return a + b; }
+
 int main(int argc, char **argv)
 {
     if (argc > 1 && std::strcmp(argv[1], "--emit") == 0) return emit_case();
@@ -108,6 +113,38 @@ int main(int argc, char **argv)
     CHECK(json.find("\"b0\": {\"size\": 16}, \"b1\": {\"size\": 16}") != std::string::npos);
     CHECK(json.find("\"bytes\": \"11111111\"") != std::string::npos);
     CHECK(json.find("\"bytes\": \"22222222\"") != std::string::npos);
+
+    /* The recorder caller. Until now nothing outside these tests called rt_capture_begin, so the
+       boundary could cross and no case could exist for the crossing. */
+    setenv("BB_CAPTURE_DIR", root, 1);
+    static const rt_hook_entry table[] = {
+        {0x00001000u, 4, "probe_add_hook", reinterpret_cast<rt_hook_fn>(probe_add)},
+    };
+    CHECK(rt_hooks_install(table, 1) == 0);
+    CHECK(rt_hook_lookup(0x00001000u) == reinterpret_cast<rt_hook_fn>(probe_add));
+    uint64_t out = 0;
+    const uint64_t args[2] = {7, 35};
+    CHECK(rt_hook_invoke(0x00001000u, args, 2, &out) == 0);
+    CHECK(out == 42);
+    const std::string hook_path = std::string(root) + "/probe_add_hook/deterministic-run_1_0000.json";
+    const std::string hook_json = read_file(hook_path);
+    CHECK(hook_json.find("\"address\": \"0x00001000\"") != std::string::npos);
+    CHECK(hook_json.find("\"rdi\": 7") != std::string::npos);
+    CHECK(hook_json.find("\"rsi\": 35") != std::string::npos);
+    CHECK(hook_json.find("\"rax\": 42") != std::string::npos);
+    CHECK(hook_json.find("\"run_id\": \"deterministic-run_1\"") != std::string::npos);
+    /* A miss is refused. Zero is a legal body return, so a miss reported as zero would be
+       indistinguishable from a body that ran and returned zero. */
+    CHECK(rt_hook_invoke(0x00001004u, args, 2, &out) == -1);
+    /* A seventh argument lives on a stack this side never saw, so it refuses rather than record a
+       case that cannot be replayed. */
+    const uint64_t seven_args[7] = {1, 2, 3, 4, 5, 6, 7};
+    CHECK(rt_hook_invoke(0x00001000u, seven_args, 7, &out) == -1);
+    /* Capture off: the body still runs, and the case already on disk is byte-unchanged. */
+    unsetenv("BB_CAPTURE_DIR");
+    CHECK(rt_hook_invoke(0x00001000u, args, 2, &out) == 0);
+    CHECK(out == 42);
+    CHECK(read_file(hook_path) == hook_json);
 
     const std::string blocked_root = std::string(root) + "/regular-file";
     { std::ofstream f(blocked_root); f << "keep"; }

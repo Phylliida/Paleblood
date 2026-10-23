@@ -27,6 +27,15 @@ rt_hook_fn rt_hook_lookup(uint32_t address);
 
 size_t rt_hook_count(void);
 
+/* Call the replacement for `address` on the host side, with `nargs` (<= 6) integer arguments in
+   the System V positional order, and record a capture case around the call when BB_CAPTURE_DIR is
+   set. Returns 0 and stores the body's return value in *out, or -1 when nothing is hooked there --
+   a miss is refused, never reported as a body returning zero, because a zero is a legal return and
+   the two would be indistinguishable to the caller that has to decide what ran.
+   The capture is written with the entry's `name` as the function key, so a capture lands in the
+   same directory tools/verify.py reads for the ladder row it belongs to. */
+int rt_hook_invoke(uint32_t address, const uint64_t *args, size_t nargs, uint64_t *out);
+
 #ifdef __cplusplus
 }
 #endif
