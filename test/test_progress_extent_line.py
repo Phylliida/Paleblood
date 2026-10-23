@@ -23,6 +23,45 @@ def run(*args):
 
 
 class ExtentLineTest(unittest.TestCase):
+    def _synthetic(self, rows):
+        """A catalogue the tie branch CAN fire on, because the real one is disjoint by construction.
+
+        A guard whose docstring says "this cannot occur here" is otherwise unfalsifiable: the fixture is
+        the only thing that ever enters the branch, and it is the receipt that the branch is reachable.
+        """
+        import os, tempfile, pathlib
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / "symbols").mkdir()
+        (d / "symbols" / "ghidra_functions.csv").write_text(
+            "address,size\n" + "".join(f"0x{a:08x},{s}\n" for a, s in rows))
+        (d / "symbols" / "functions.csv").write_text(
+            "address,size,name,system,status,notes\n")
+        return d
+
+    def _extent(self, d):
+        import os, subprocess, sys, pathlib
+        env = dict(os.environ, PB_SYMBOLS_DIR=str(d / "symbols"), PYTHONPATH="tools")
+        r = subprocess.run([sys.executable, "-P", str(pathlib.Path("tools/progress.py"))],
+                           capture_output=True, text=True, env=env, cwd=".")
+        return r.stdout + r.stderr
+
+    def test_tie_in_a_synthetic_catalogue_is_counted(self):
+        out = self._extent(self._synthetic([(0x1000, 10), (0x1005, 10)]))
+        self.assertIn("same-length overlapping extents 2", out)
+
+    def test_disjoint_catalogue_is_zero(self):
+        """The negative fixture, and the one that would have caught the tautology.
+
+        Without it, "2 counted" is satisfied by a predicate that counts everything -- the same blindness as
+        a mutant that cannot be seen. A guard's fixture needs an input where the ANSWER IS ZERO.
+        """
+        out = self._extent(self._synthetic([(0x1000, 10), (0x100A, 10), (0x1014, 4)]))
+        self.assertIn("same-length overlapping extents 0", out)
+
+    def test_duplicate_start_is_counted_as_tied(self):
+        out = self._extent(self._synthetic([(0x1000, 10), (0x1000, 10)]))
+        self.assertIn("same-length overlapping extents 2", out)
+
     def test_line_prints_on_every_mode(self):
         for mode in ((), ("--burndown",), ("--status",)):
             r = run(*mode)

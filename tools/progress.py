@@ -476,10 +476,17 @@ def extent_line() -> str:
     the same reason: "smallest containing extent" has no unique answer when two catalogued extents of one
     length both contain an address, so an ownership claim carries an undefined tail and must say so.
     """
+    import os
+    import landed as L
+    root = os.environ.get("PB_SYMBOLS_DIR", "symbols")   # override so a TEST can make a tie occur
     try:
         cat = [(int(r["address"], 16), int(r["size"]))
-               for r in csv.DictReader(open("symbols/ghidra_functions.csv"))]
-        landed = {int(r["address"], 16) for r in csv.DictReader(open("symbols/functions.csv"))}
+               for r in csv.DictReader(open(os.path.join(root, "ghidra_functions.csv")))]
+        # Landed is ONE selector, and it is leaf_family_census's: a row at "original" is bookkeeping for a
+        # body nobody has written, so counting it as landed understates the work by exactly those rows.
+        # Here it was one row, 0x0111a600 (8 B), which is why this line said 5,804 while thunk_census said
+        # 5,805 -- one element, and the element had an address.
+        landed = L.landed_addresses()
     except (OSError, KeyError, ValueError) as exc:
         return f"extents: cannot read the catalogue ({exc}) -- unread is not zero"
     import bisect
@@ -490,7 +497,16 @@ def extent_line() -> str:
     for a, s in cat:
         starts = by[s]
         k = bisect.bisect_right(starts, a)
-        if k < len(starts) and starts[k] < a + s:
+        # Two-sided, because a one-directional test (neighbour starts inside MY window) undercounts by
+        # construction: in a tie the later row never sees the earlier one. A row has no unique smallest
+        # extent when another extent of the same length OVERLAPS it -- starts in (a-s, a+s) -- or when a
+        # second extent occupies its own start. The bracket form of that second test is a tautology:
+        # bisect_left != bisect_right means "at least one occurrence", true for every row (157,757 of
+        # 157,757 counted as tied), so the duplicate is counted by OCCURRENCES, not by a bracket.
+        lo = bisect.bisect_right(starts, a - s)
+        hi = bisect.bisect_left(starts, a + s)
+        own = k - bisect.bisect_left(starts, a)
+        if (hi - lo) - own > 0 or own > 1:
             tied += 1
     short = [a for a, s in cat if s <= 13]
     short_landed = sum(1 for a in short if a in landed)

@@ -80,17 +80,13 @@ if __name__ == '__main__':
 
 
 def landed_addresses():
-    """Addresses whose BODY exists -- rows past `original`, not rows that merely exist.
+    """Delegates to landed.landed_addresses -- one implementation, capstone-free.
 
-    One selector for the counter (census_band.py) and the emitters, because they drifted by exactly
-    one row the moment `land_bytes_band.py` wrote a band of rows at `original`: the counter said
-    12,092 unlanded, the emitter said 4,034 + 8,059 = 12,093, and both were "right" about a
-    different population. A row at `original` is bookkeeping for a body nobody has written.
+    The body formerly lived here; it moved because progress.py needs the same selector and runs in a
+    pre-commit hook whose interpreter has no capstone.
     """
-    import csv
-    return {int(r['address'], 16)
-            for r in csv.DictReader(open('symbols/functions.csv'))
-            if r['status'] != 'original'}
+    import landed
+    return landed.landed_addresses()
 
 
 def write_table(path, header, rows, key='address'):
