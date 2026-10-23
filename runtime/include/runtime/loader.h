@@ -94,6 +94,10 @@ void rt_map_note(const rt_elf *elf, void *image);
    this is the base that turns an address the CPU computed into a guest address and back. */
 uint64_t rt_map_image(void);
 
+/* The noted executable's mapped extent in bytes, or 0 when none is noted. A space test needs a range,
+   not a threshold: a value past the end of the mapping is not in the mapping. */
+uint64_t rt_map_extent(void);
+
 /* Whether [guest_address, guest_address + length) lies inside one writable (PF_W) load segment,
    tested against memsz (the segment's mapped extent), not filesz. Zero when no executable is noted,
    when the range is empty, when it wraps, or when it is not wholly inside a single writable segment.

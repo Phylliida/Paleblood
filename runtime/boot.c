@@ -533,6 +533,10 @@ static const char *usage =
     "usage: pbboot EBOOT.elf [--module MODULE.elf]... [--nids NID_DB.xml] [--status OUT.json] [--timeout S] [--trace]\n"
     "       pbboot EBOOT.elf [--module MODULE.elf]... --imports [--nids NID_DB.xml]\n";
 
+/* The syslib bodies' self-tests, in libc.c; declared here so the linker, not a header, is what proves
+   the symbol exists in the target that runs (runtime/syslib/libc.c). */
+extern int rt_libc_guard_selftest(void *guard);
+
 int main(int argc, char **argv)
 {
     rt_announce_identity();
@@ -547,7 +551,7 @@ int main(int argc, char **argv)
     atexit(rt_import_pc_report);
     fault_backtrace_enabled = getenv("BB_FAULT_BACKTRACE") != NULL;
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
-    int timeout = 30, trace = 0, list = 0;
+    int timeout = 30, trace = 0, list = 0, selftest_guard = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--nids") && i + 1 < argc) nid_path = argv[++i];
         else if (!strcmp(argv[i], "--status") && i + 1 < argc) status_path = argv[++i];
@@ -555,6 +559,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--module") && i + 1 < argc && object_count && object_count < MAX_OBJECTS)
             objects[object_count++].path = argv[++i];
         else if (!strcmp(argv[i], "--trace")) trace = 1;
+        else if (!strcmp(argv[i], "--selftest-guard")) selftest_guard = 1;
         else if (!strcmp(argv[i], "--imports")) list = 1;
         else if (argv[i][0] != '-' && !object_count) objects[object_count++].path = argv[i];
         else {
@@ -797,6 +802,22 @@ int main(int argc, char **argv)
             const char *argv[3];
         } params = {1, 0, {"eboot.bin", NULL, NULL}};
         phase = "eboot";
+        /* The fixture runs here, not in the loop above: that loop is `for (k = 1; ...)` -- the MODULES --
+           and eboot's entry is called on this path. A block keyed on k == 0 inside the modules loop is
+           dead code, and a dead flag reads exactly like a flag that was never passed: the run proceeds,
+           the guest faults as usual, and the failure is attributed to the guest. */
+        if (selftest_guard) {
+            const rt_elf_load *loads = rt_elf_loads(objects[0].elf);
+            const size_t n = rt_elf_load_count(objects[0].elf);
+            uint64_t at = 0;
+            for (size_t j = 0; j < n; j++)
+                if ((loads[j].flags & 2) && loads[j].memsz >= 0x100) at = loads[j].vaddr + 0x40;
+            if (!at) {
+                fprintf(stderr, "pbboot: no writable load segment with room for a guard word\n");
+                return 3;
+            }
+            return rt_libc_guard_selftest(objects[0].image + at);
+        }
         run_guest(objects[0].image + rt_elf_entry(objects[0].elf), &params, (void *)guest_exit, NULL, stack_top, timeout);
     }
 

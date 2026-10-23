@@ -920,3 +920,39 @@ The boot then moved ten imports and stopped at **`memset`** (`8zTFvBIAIN8`, libS
 libc bind 61). `symbols/import_names.csv:24` already labels that row **`implemented`**, and the runtime
 has no body for it: **the file's status column is a claim about intent, and the run is the measurement**
 -- the same class as an approvals column that counts rows.
+
+## memset: the wall was a library label, and the sweep built for it cannot see that class
+
+`memset` was **registered all along** -- `runtime/syslib/kernel.c:88` under `libSceLibcInternal`. The
+guest imported it through the **libc** binding of the same NID (`bind 61 8zTFvBIAIN8#q#q libc`,
+`bind 11 8zTFvBIAIN8#D#E libSceLibcInternal`), and the bind loop at `boot.c:474-479` matches
+`!strncmp(name, nid, 12) && !strcmp(library, s->library)` -- **read, not inferred**. So the refusal
+"eboot calls libc 8zTFvBIAIN8" was a lookup that found no body under that label, not a runtime without
+one. Registering it again under `libc` served it: **58 registrations, 57 distinct bodies** -- one symbol
+under two labels, legitimately, and **the "real" count in the coverage line counts registrations**, so it
+now overstates distinct bodies by one.
+
+`memset`'s body returns its destination (a void body breaks every chained caller) and proves the range
+writable **before the first byte**; the conversion is one helper now, bounded **both ways**
+(`image <= v < image + extent`), because a threshold accepts infinity and a value past the mapping is not
+in the mapping.
+
+The guard fixture (`--selftest-guard`) asserts **the byte**, not the return codes: a body that remembers
+which guards it has seen on the host and never writes the word passes a return-value fixture and fails
+the moment a guest reads its own guard byte. Measured: `acquire=1 byte-after-acquire=0 release->byte=1
+second-acquire=0 byte=1 -- PASS`, the byte read back through the guest mapping.
+
+**The fixture's first placement was dead code and read exactly like a flag never passed.** It landed in
+`for (size_t k = 1; ...)` -- the MODULES loop -- while eboot's entry is called after that loop, so
+`selftest_guard && k == 0` could never hold, the guest ran, and the old fault came back as if nothing had
+changed. An index-by-constant into a loop whose bounds are the population, third arrival.
+
+**And the sweep is coarser than the lookup it checks.** Joining `import_names.csv`'s `implemented` rows to
+the registration table by symbol name gives 43 matched / 0 missing -- and would have matched memset
+through kernel.c's libSceLibcInternal entry **before the fix**, reporting zero missing about the row the
+run was refusing. A join key coarser than the lookup blesses the row that is broken. The population that
+can see labels is `bind-order-eboot.txt` (one row per module-table binding), not the csv (one row per
+NID) -- the same 848-vs-748 gap carried since the stub table.
+
+New wall: **signal 11 at address 0x0, pc in host space**, `rdi`/`rsi` image-space -- the guest reached 17
+imports and the fault is inside host code, not in the guest mapping.

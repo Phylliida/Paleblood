@@ -441,6 +441,8 @@ void rt_map_note(const rt_elf *elf, void *image)
 
 uint64_t rt_map_image(void) { return mapped_image; }
 
+uint64_t rt_map_extent(void) { return mapped_executable ? rt_elf_image_size(mapped_executable) : 0; }
+
 int rt_guest_writable(uint64_t guest_address, size_t length)
 {
     const rt_elf *elf = mapped_executable;
