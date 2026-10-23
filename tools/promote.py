@@ -153,11 +153,95 @@ def passes(name: str, directory: str, record: str | None, root: str = ROOT) -> t
     return ok, f"{r['passed']}/{n} passed" + (f', {held} quarantined' if held else '')
 
 
+
+# ── TIER TABLE ────────────────────────────────────────────────────────────────────────────────
+# promote.py owns ONE act -- read the ledger, move a status -- at two tiers. The tier decides
+# which evidence is required; it never decides which FILE is written, which is why this is one
+# tool and not a second recorder. (A byte-tier recorder gaining a differential mode would be two
+# identities behind one `kind` column: the install_mode.csv/hooks.csv split.)
+TIERS = {
+    'verified':      ('edge-verified', 'recorded + edge captures must both pass, plus a review'),
+    'edge-verified': ('original',      'a verification.csv row with cases=edge, failed=0, source==HEAD'),
+}
+
+
+def promote_edge(root, family, dry_run):
+    """original -> edge-verified, derived from a ledger row that already exists.
+
+    THREE REFUSALS, each a defect this campaign has paid for:
+      1. no `edge` ledger row           -> no flip on intent;
+      2. source != source_hash(name)    -> a flip against a stale row is a row paying for a paragraph;
+      3. address in retired.csv         -> a retired body cannot be promoted (closes the table both ways).
+    """
+    sys.path.insert(0, os.path.join(root, 'tools'))
+    import verification as V
+    fpath = os.path.join(root, 'symbols', 'functions.csv')
+    text = open(fpath, newline='').read()
+    rows = list(csv.reader(io.StringIO(text)))
+    head = rows[0]
+    st, nm, ad = head.index('status'), head.index('name'), head.index('address')
+    led = [r for r in csv.DictReader(open(os.path.join(root, 'symbols', 'verification.csv'), newline=''))
+           if r['cases'] == 'edge']
+    retired = set()
+    rp = os.path.join(root, 'symbols', 'retired.csv')
+    if os.path.exists(rp):
+        retired = {int(r['address'], 16) for r in csv.DictReader(open(rp)) if r.get('reason', '').strip()}
+    moved, refusals, skipped = [], [], []
+    for row in rows[1:]:
+        if row[st] != 'original':
+            continue
+        name = row[nm]
+        if not name.startswith(family):
+            continue
+        if int(row[ad], 16) in retired:
+            # A VERDICT IS A SKIP, NOT A REFUSAL. `024264d0` is finished by verdict, so it is not
+            # a candidate and must not make this tool exit 1 forever -- an rc that is always 1 is
+            # an rc nobody reads. Absent or stale evidence is a refusal; a closed row is not.
+            skipped.append(name)
+            continue
+        mine = [r for r in led if r['function'] == name and r['failed'] == '0'
+                and int(r['passed']) == int(r['total']) and r['source']]
+        if not mine:
+            refusals.append(f'{name}: no edge ledger row with failed=0 -- no flip on intent')
+            continue
+        cur = V.source_hash(root, name)
+        if not cur:
+            refusals.append(f'{name}: current source hash unavailable -- cannot tell stale from fresh')
+            continue
+        if mine[-1]['source'] != cur:
+            refusals.append(f'{name}: ledger source {mine[-1]["source"]} != current {cur} -- stale')
+            continue
+        row[st] = 'edge-verified'
+        moved.append(name)
+    if skipped:
+        print(f'promote: {len(skipped)} already finished by verdict (retired.csv): {", ".join(skipped)}')
+    for r in refusals:
+        print(f'promote: {r}', file=sys.stderr)
+    if moved and not dry_run:
+        out = io.StringIO()
+        csv.writer(out, lineterminator='\n').writerows(rows)
+        with open(fpath, 'w', newline='') as f:
+            f.write(out.getvalue())
+    print(f'promote: {len(moved)} -> edge-verified{" (dry run)" if dry_run else ""}'
+          + (f'; {len(refusals)} refused' if refusals else ''))
+    return 1 if refusals else 0
+
+
 def main(argv: list[str] | None = None, root: str = ROOT) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--captures', default=os.environ.get('BB_CAPTURES') or os.path.join(root, '..', 'captures'))
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--to', choices=sorted(TIERS), default='verified',
+                    help='the tier to move to; --to verified is the original behaviour')
+    ap.add_argument('--family', help='name prefix; REQUIRED for --to edge-verified')
     a = ap.parse_args(argv)
+    if a.to == 'edge-verified':
+        if not a.family:
+            print('promote: --family <prefix> is required for --to edge-verified: an unfiltered '
+                  'sweep would promote every `original` row, including the derived ones',
+                  file=sys.stderr)
+            return 2
+        return promote_edge(root, a.family, a.dry_run)
     if not os.path.isdir(a.captures):
         print(f'promote: no capture library at {a.captures}; nothing to do')
         return 0

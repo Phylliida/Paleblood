@@ -9,7 +9,7 @@ extern "C" std::uint64_t bb_leaf_rip_load_wide_00dfb9e0(std::uint64_t a1) {
   constexpr std::uint64_t at = 0x5693c80u;   // GUEST address
   const void *src = reinterpret_cast<const void *>
       (pbl_image_base + (at - kGuestLoadBase));
-  std::uint32_t out = 0;
+  std::uint64_t out = 0;
   std::memcpy(&out, src, sizeof out);
   return out;
 }
@@ -87,16 +87,6 @@ extern "C" std::uint64_t bb_leaf_rip_load_wide_023b7110(std::uint64_t a1) {
 extern "C" std::uint64_t bb_leaf_rip_load_wide_023b7120(std::uint64_t a1) {
   (void)a1;
   constexpr std::uint64_t at = 0x5528950u;   // GUEST address
-  const void *src = reinterpret_cast<const void *>
-      (pbl_image_base + (at - kGuestLoadBase));
-  std::uint32_t out = 0;
-  std::memcpy(&out, src, sizeof out);
-  return out;
-}
-
-extern "C" std::uint64_t bb_leaf_rip_load_wide_024264d0(std::uint64_t a1) {
-  (void)a1;
-  constexpr std::uint64_t at = 0x5528a00u;   // GUEST address
   const void *src = reinterpret_cast<const void *>
       (pbl_image_base + (at - kGuestLoadBase));
   std::uint32_t out = 0;

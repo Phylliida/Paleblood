@@ -32,7 +32,13 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
                 rc, message = E.reemit(name)
                 self.assertEqual(rc, 0, message)
                 self.assertIn('byte-for-byte', message)
-                self.assertIn(f'{len(E.landed_rows(name))} members', message)
+                # The expected count is DERIVED, never pinned: a retired member is a landed row
+                # with no body by verdict, so it is subtracted by the same predicate the emitter
+                # subtracts. Pinning 11 here went red the hour the population gained a verdict --
+                # a count in a fixture is a claim about the population that produced it.
+                ret = E.retired_addresses()
+                expect = len([a for a in E.landed_rows(name) if a not in ret])
+                self.assertIn(f'{expect} members', message)
 
     def test_a_member_the_census_cannot_reproduce_is_refused_and_named(self):
         # A partial reproduction must not look like a smaller family. Drop one member from the

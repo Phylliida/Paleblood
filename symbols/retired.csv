@@ -1,0 +1,2 @@
+address,reason,date,revisit
+0x024264d0,eax % 10 by signed magic-number division (imul 0x66666667; shr 0x3f; sar 0x22); the original is correct and the load-only template returns the raw dword; 0xa % 10 = 0,2026-10-23,split rip_load_wide into load-only and load-plus-arith shapes; the load half is then emittable

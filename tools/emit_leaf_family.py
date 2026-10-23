@@ -197,9 +197,18 @@ def members(name, landed=False):
                   csv.DictReader(open(os.path.join(ROOT, 'symbols', 'functions.csv')))}
         owned0 = set(landed_rows(name))
         recs = W.scan(64, False)[3]
+        # RETIRED members are excluded by a TABLE, not by a filter living in someone's head.
+        # symbols/retired.csv: address,reason,date,revisit. An exclusion with no row is refused
+        # by tools/check_retired.py; this line only implements the table's verdict.
+        retired = set()
+        rp = os.path.join(ROOT, 'symbols', 'retired.csv')
+        if os.path.exists(rp):
+            retired = {int(r['address'], 16) for r in csv.DictReader(open(rp)) if r.get('reason', '').strip()}
         out = []
         for r in recs:
             if r['where'] != 'filesz':
+                continue
+            if r['address'] in retired:
                 continue
             # KEEP the members this mode is about -- landed: the owned ones; landing: the free ones.
             # The first version of this test dropped exactly the rows it was asked to reproduce, and
@@ -208,7 +217,7 @@ def members(name, landed=False):
             if not keep:
                 continue
             out.append({'address': r['address'], 'size': r['size'], 'k': r['target'],
-                        'k2': 0, 'res': r['target']})
+                        'width': r.get('width', 4), 'k2': 0, 'res': r['target']})
         return sorted(out, key=lambda m: m['address'])
     md, cs = open(C.ELF, 'rb').read(), capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = False
@@ -433,9 +442,13 @@ def body_text(name, ms):
                     f'  constexpr std::uint64_t at = {m["res"]:#x}u;   // GUEST address',
                     '  const void *src = reinterpret_cast<const void *>',
                     '      (pbl_image_base + (at - kGuestLoadBase));',
-                    '  std::uint32_t out = 0;',
-                    '  std::memcpy(&out, src, sizeof out);',
-                    '  return out;', '}', '']
+                    # WIDTH PER MEMBER from the decode: 8 only for a `48 8b` qword load. A
+                    # 4-byte read of a relocated pointer returns the low half and the discarded
+                    # half IS the base -- which is why 00dfb9e0 looked like a space bug.
+                    ('  std::uint64_t out = 0;\n  std::memcpy(&out, src, sizeof out);\n  return out;'
+                     if m.get('width') == 8 else
+                     '  std::uint32_t out = 0;\n  std::memcpy(&out, src, sizeof out);\n  return out;'),
+                    '}', '']
         return '\n'.join(out)
     if any(m for m in ms) and spec['kind'] == 'c_addr_load':
         # The base a dereferencing body runs against, supplied by the RUNNER: the harness sets it to
@@ -524,6 +537,18 @@ def compare_text(generated, committed):
     return False, f'line count differs: disk {len(c)}, generator {len(g)}'
 
 
+def retired_addresses(root=None):
+    """Addresses with a verdict against a body, from symbols/retired.csv.
+
+    ONE implementation: the emitter's exclusion, the test's expected count and promote.py's skip
+    all mean the same set, and a row with a blank reason is not a verdict -- absence refuses.
+    """
+    rp = os.path.join(root or ROOT, 'symbols', 'retired.csv')
+    if not os.path.exists(rp):
+        return set()
+    return {int(r['address'], 16) for r in csv.DictReader(open(rp)) if r.get('reason', '').strip()}
+
+
 def reemit(name, write=False):
     """Re-derive a landed family's body from its rows and compare it with the committed file.
 
@@ -539,12 +564,21 @@ def reemit(name, write=False):
         return 1, f're-emit {name}: no `leaf_{name}_*` rows -- nothing was emitted for this family'
     ms = members(name, landed=True)
     have = {m['address'] for m in ms}
-    missing = sorted(set(owned) - have)
+    # A RETIRED member is a landed row with no body, BY VERDICT. Both directions are refusals:
+    # a retired row that still has a body is code running under a verdict, and a member that is
+    # missing and NOT retired is a body the generator can no longer vouch for.
+    retired = retired_addresses()
+    still_there = sorted(have & retired)
+    if still_there:
+        return 1, (f're-emit {name} refused: {len(still_there)} retired member(s) still carry a body '
+                   f'-- {[hex(a) for a in still_there]}; retirement is a verdict about the body')
+    missing = sorted(set(owned) - have - retired)
     extra = sorted(have - set(owned))
+    unlisted = sorted((set(owned) - have) & retired)
     if missing or extra:
         return 1, (f're-emit {name} refused: {len(have)} of {len(owned)} landed members '
-                   f'reproduce; missing {len(missing)} {[hex(a) for a in missing[:4]]}; '
-                   f'unexpected {len(extra)} {[hex(a) for a in extra[:4]]}')
+                   f'reproduce ({len(unlisted)} retired); missing {len(missing)} '
+                   f'{[hex(a) for a in missing[:4]]}; unexpected {len(extra)} {[hex(a) for a in extra[:4]]}')
     generated = body_text(name, ms)
     committed = open(path).read() if os.path.exists(path) else None
     ok, message = compare_text(generated, committed)
@@ -564,7 +598,20 @@ def reemit(name, write=False):
 
 
 def main(argv):
-    name = argv[0] if argv and not argv[0].startswith('-') else 'mov_eax_mem'
+    # THE SUBJECT IS REQUIRED. This line used to fall back to 'mov_eax_mem', so
+    # `--reemit rip_load_wide` (family after the flag) re-emitted 765 mov_eax_mem bodies,
+    # exited 0, and printed a success line naming a family nobody asked about. A tool whose
+    # subject defaults can succeed about the wrong thing; the third instance this session
+    # after build/ vs build-release and --lib defaulting to Path('.').
+    if not argv or argv[0].startswith('-'):
+        print(f'emit_leaf_family: family name required as the FIRST argument, before any flag. '
+              f'Known families: {", ".join(sorted(TEMPLATES))}', file=sys.stderr)
+        return 2
+    name = argv[0]
+    if name not in TEMPLATES:
+        print(f'emit_leaf_family: unknown family {name!r}; refusing rather than guessing. '
+              f'Known families: {", ".join(sorted(TEMPLATES))}', file=sys.stderr)
+        return 2
     if '--reemit' in argv:
         rc, message = reemit(name, write='--write' in argv)
         print(message)

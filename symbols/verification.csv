@@ -36793,6 +36793,16 @@ leaf_rip_add_store_02e17540,edge,,3,3,0,0,8537eadf048b19ee,a9a9ad559d784892,2026
 leaf_rip_add_store_02e55430,edge,,3,3,0,0,8537eadf048b19ee,e3a970a6da8cad38,2026-10-22
 leaf_rip_add_store_02e6cff0,edge,,3,3,0,0,8537eadf048b19ee,b877d984817a3291,2026-10-22
 leaf_rip_add_store_02f8aa30,edge,,3,3,0,0,8537eadf048b19ee,e9508c9b85c0d4d9,2026-10-22
+leaf_rip_load_wide_00dfb9e0,edge,,1,1,0,0,08d6e34a3ffc7eca,b1844508c8c2f6cd,2026-10-23
+leaf_rip_load_wide_01839d00,edge,,1,1,0,0,08d6e34a3ffc7eca,150aff3af109a9f8,2026-10-23
+leaf_rip_load_wide_0186ea40,edge,,1,1,0,0,08d6e34a3ffc7eca,d5c9e606a659da53,2026-10-23
+leaf_rip_load_wide_0186ea50,edge,,1,1,0,0,08d6e34a3ffc7eca,beac62950ae898a8,2026-10-23
+leaf_rip_load_wide_0186ea60,edge,,1,1,0,0,08d6e34a3ffc7eca,f0e6a11be7b9e442,2026-10-23
+leaf_rip_load_wide_0186ea70,edge,,1,1,0,0,08d6e34a3ffc7eca,d54704a0fc834d79,2026-10-23
+leaf_rip_load_wide_01f98fa0,edge,,1,1,0,0,08d6e34a3ffc7eca,6378272de44b3929,2026-10-23
+leaf_rip_load_wide_023b7110,edge,,1,1,0,0,08d6e34a3ffc7eca,d5494033c0226799,2026-10-23
+leaf_rip_load_wide_023b7120,edge,,1,1,0,0,08d6e34a3ffc7eca,7f49da343b81d100,2026-10-23
+leaf_rip_load_wide_02c6d570,edge,,1,1,0,0,08d6e34a3ffc7eca,83ab592f19d84afe,2026-10-23
 leaf_rip_store_01631c60,edge,,3,3,0,0,6e332554d8d597e5,d7d5d8e645beb05f,2026-10-22
 leaf_rip_store_0163f7f0,edge,,3,3,0,0,6e332554d8d597e5,9cf8247b48ae780c,2026-10-22
 leaf_rip_store_016cf0c0,edge,,3,3,0,0,6e332554d8d597e5,d9b536a82af03819,2026-10-22

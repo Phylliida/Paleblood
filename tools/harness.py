@@ -838,6 +838,18 @@ def load_replacement(lib_path: str, symbol: str, size: int):
         if pbl.value != IMAGE:
             raise BadInput(f'pbl_image_base did not take IMAGE: {pbl.value:#x}')
         base_set = True
+    # THE GUARD THAT OUTLIVES THE PROBE (the temporary probe is retired here). The flag
+    # `base_set` proves a WRITE at the moment of writing; this proves the VALUE at the moment of
+    # USE, in the same process that dispatches, after the call that could silently undo it.
+    # stderr, never stdout: harness.py's stdout is a JSON map keyed by case id and nothing else
+    # may appear there -- a probe on stdout broke every case with `Expecting value: line 1`.
+    def _check_base_after_init():
+        if base_set is True and pbl.value != IMAGE:
+            raise BadInput(
+                'pbl_image_base is %#x after bbgame_init, expected IMAGE %#x (pid %d): the base '
+                'that was set did not survive the call it was set for' % (pbl.value, IMAGE, os.getpid()))
+        sys.stderr.write('boundary: pid=%d base_set=%s pbl_image_base=%#x IMAGE=%#x\n' % (
+            os.getpid(), base_set, pbl.value if base_set is True else 0, IMAGE))
     hook = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_void_p)(lambda o, s, t: 0)
     load_replacement.keep = (lib, hook)
 
@@ -847,6 +859,7 @@ def load_replacement(lib_path: str, symbol: str, size: int):
     host = Host(1, IMAGE, size, ctypes.cast(hook, ctypes.c_void_p).value)
     if lib.bbgame_init(ctypes.byref(host)):
         raise BadInput('bbgame_init failed')
+    _check_base_after_init()
     try:
         return ctypes.cast(getattr(lib, symbol), ctypes.c_void_p).value, base_set
     except AttributeError:

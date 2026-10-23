@@ -149,7 +149,11 @@ def scan(max_size, exact_two):
             samples.append((hex(addr), size, hex(target), '%08x' % d0, '%08x' % d1, disc))
             if d0 == d1:
                 contain['filesz_indiscriminate'] = contain.get('filesz_indiscriminate', 0) + 1
+        # `size` is BODY LENGTH (instruction + ret); the width of the load is a property of the
+        # DECODED DESTINATION OPERAND. Keying on len==7 vs 8 is a proxy that breaks on a 66/44 prefix.
+        width = a.operands[0].size
         records.append({'address': addr, 'size': size, 'target': target, 'where': where,
+                        'width': width,
                         'd0': d0, 'd1': d1, 'discriminating': (d0 is not None and d0 != d1)})
     return counts, contain, samples, records, drops, kept
 
