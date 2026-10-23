@@ -119,7 +119,10 @@ def main():
                         'with (load|store|addr-only, static|argument) rather than letting a guess '
                         'classify it')
             continue
-        kind, source = decl
+        # `kind, source, *names` unpacks a 2-tuple and a 3-tuple alike: an entry that names its own
+        # constants gets them here, and one that does not gets (). A family that forgets its name
+        # therefore fails the empty-targets refusal below rather than passing on a default spelling.
+        kind, source, *names = decl
         text = open(os.path.join(LEAF, fname)).read()
         # The form the target takes is part of the family's contract. `rip_*` families dereference
         # a constant they emit as `constexpr std::uint64_t v = 0x...u;`; a dereferencing family that
@@ -138,8 +141,17 @@ def main():
         # the constant IS the target and the body adds pbl_image_base - kGuestLoadBase to it). One
         # regex, two names -- a gate that parses only the spelling its author wrote first reports a
         # correct family as unparseable, which is the zero-by-predicate failure in a checker.
+        # A name in a table is not an assumption, it is an input. With no names declared the family must
+        # expose its target under one of the two spellings the tree already uses; with names declared the
+        # scanner reads the spelling the emitter actually emits (`kSlot`, `kStoreDisp`), so two conventions
+        # can coexist without either family being invisible to the gate -- 647's shape, closed by data.
+        spelling = '|'.join(names) if names else 'v|at'
         targets = [int(x, 16) for x in
-                   re.findall(r'constexpr std::uint64_t (?:v|at) = (0x[0-9a-f]+)u', text)]
+                   re.findall(r'constexpr std::uint64_t (?:%s) = (0x[0-9a-f]+)u' % spelling, text)]
+        if names and not targets:
+            errs.append(f'{fname}: family {fam!r} declares constants {names} but the body declares none of '
+                        f'them -- empty targets is a REFUSAL for a kind that needs one, never a nothing-to-check')
+            continue
         if not targets and source == 'argument':
             print(f'{fam:20s} {kind:10s} argument-supplied -- the bound lives in the case: '
                   'the buffer must be declared')
