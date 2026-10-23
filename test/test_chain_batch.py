@@ -46,6 +46,8 @@ def tree_with(**edit):
 
 class TheBatchIsPreRegistered(unittest.TestCase):
     def test_the_real_tree_owes_exactly_the_batch(self):
+        # owed == 0 ==> no refusal: the property, at every point in the record's life. (unittest's diff shows
+        # the FIRST argument with '-', so a '-' refusal and a '+' [] means the tool refused, not the test.)
         self.assertEqual(C.batch_problems(ROOT), [])
 
     def test_a_byte_delta_the_batch_cannot_explain_is_refused(self):
