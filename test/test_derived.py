@@ -47,7 +47,42 @@ class Derived(unittest.TestCase):
         p = self._doctored(lambda v: v.__setitem__("catalogue.functions", 1))
         self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
         self.assertIn("[FROZEN] catalogue.functions", p.stdout)
-        self.assertIn("frozen key(s) moved", p.stdout)
+        self.assertIn("moved against the pre-registration", p.stdout)
+
+    def _prereg(self, mutate, prereg):
+        """Baseline = the real store, so the only disagreement is the one the test introduces."""
+        import tempfile
+        values = json.loads((ROOT / "symbols" / "derived.json").read_text())["values"]
+        mutate(values)
+        f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump(prereg, f); f.close()
+        g = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump({"values": values}, g); g.close()
+        return subprocess.run([PY, "-P", str(TOOL), "--compare", g.name, "--prereg", f.name], cwd=str(ROOT),
+                              capture_output=True, text=True, timeout=300)
+
+    def test_an_empty_baseline_refuses_instead_of_comparing_nothing(self):
+        import tempfile
+        f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump({"values": {}}, f); f.close()
+        p = subprocess.run([PY, "-P", str(TOOL), "--compare", f.name], cwd=str(ROOT),
+                           capture_output=True, text=True, timeout=300)
+        self.assertEqual(p.returncode, 3, p.stdout + p.stderr)   # it used to print a refusal and then compare
+
+    def test_a_key_predicted_to_move_that_does_not_move_is_a_finding(self):
+        # catalogue.functions is in both sides with the same value; predicting a change makes silence a finding
+        p = self._prereg(lambda v: None, {"predicted": {"catalogue.functions": {"prediction": "up"}}})
+        self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+        self.assertIn("[MISSED] catalogue.functions", p.stdout)
+
+    def test_a_key_that_moves_against_its_predicted_direction_is_a_finding(self):
+        p = self._prereg(lambda v: v.__setitem__("catalogue.functions", v["catalogue.functions"] + 1),
+                         {"predicted": {"catalogue.functions": {"prediction": "up"}}})
+        self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+        self.assertIn("[AGAINST] catalogue.functions", p.stdout)
+
+    def test_a_key_predicted_to_move_in_the_right_direction_passes(self):
+        p = self._prereg(lambda v: v.__setitem__("catalogue.functions", v["catalogue.functions"] - 1),
+                         {"predicted": {"catalogue.functions": {"prediction": "up"}}})
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn("[mutable] catalogue.functions", p.stdout)
 
     def test_a_wrong_value_is_refused_and_named(self):
         store = ROOT / "symbols" / "derived.json"

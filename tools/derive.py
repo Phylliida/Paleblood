@@ -72,40 +72,93 @@ def build() -> dict:
     }
 
 
-def compare(old_path, payload) -> int:
-    """Refuse a moved key the caller declared frozen. `derive.py --compare before.json`."""
-    path = Path(old_path)
+def _load_json(path, what):
+    path = Path(path)
     if not path.exists():
-        print(f"derive: baseline {path} is missing -- a pre-registration that can evaporate is a sentence; refusing")
-        return 3
+        print(f"derive: {what} {path} is missing -- a pre-registration that can evaporate is a sentence; refusing")
+        return None
     try:
-        old = json.loads(path.read_text()).get("values", {})
+        return json.loads(path.read_text())
     except (json.JSONDecodeError, AttributeError) as exc:
-        print(f"derive: baseline {path} is unreadable ({exc}) -- refusing rather than comparing nothing")
+        print(f"derive: {what} {path} is unreadable ({exc}) -- refusing rather than comparing nothing")
+        return None
+
+
+def compare(old_path, payload, prereg_path=None) -> int:
+    """Refuse any move the pre-registration did not predict. `derive.py --compare before.json [--prereg p.json]`."""
+    before = _load_json(old_path, "baseline")
+    if before is None:
         return 3
+    old = before.get("values", {})
     if not old:
-        print(f"derive: baseline {path} holds no values -- refusing")
+        print(f"derive: baseline {old_path} holds no values -- refusing")   # this printed and then COMPARED
+        return 3
+    predicted = {}
+    if prereg_path:
+        doc = _load_json(prereg_path, "pre-registration")
+        if doc is None:
+            return 3
+        predicted = doc.get("predicted", {})
+        if not predicted:
+            print(f"derive: pre-registration {prereg_path} holds no predictions -- refusing")
+            return 3
     new = payload["values"]
-    moved = sorted(k for k in set(old) | set(new) if old.get(k) != new.get(k))
-    frozen = [k for k in moved if not k.startswith(MUTABLE_PREFIX)]
-    for k in moved:
-        tag = "mutable" if k.startswith(MUTABLE_PREFIX) else "FROZEN"
-        if k not in old:
-            tag += "/NEW"          # no before-value: "moved" and "appeared" must not read the same
-        elif k not in new:
-            tag += "/GONE"         # in the baseline, absent now
-        print(f"derive: moved [{tag}] {k}: {old.get(k)!r} -> {new.get(k)!r}")
-    if frozen:
-        print(f"derive: {len(frozen)} frozen key(s) moved -- this refactor altered provenance it does not own")
+    bad, lines = [], []
+    for k in sorted(set(old) | set(new)):
+        o, n = old.get(k), new.get(k)
+        did_move = o != n
+        pred = predicted.get(k, {}).get("prediction")
+        if pred is None:
+            # no prediction for this key: the prefix rule stands (mutable may move, everything else may not)
+            if not did_move:
+                continue
+            tag = "mutable" if k.startswith(MUTABLE_PREFIX) else "FROZEN"
+            if tag == "FROZEN":
+                bad.append(k)
+        elif pred == "identical":
+            if not did_move:
+                continue
+            tag = "FROZEN"                      # predicted identical and moved -> the refactor altered a number
+            bad.append(k)
+        elif pred in ("up", "down"):
+            if k not in old or k not in new:
+                # appeared or vanished: a direction cannot be tested against None, and "moved" must not
+                # be reported for a key that is simply absent from one side
+                tag = "FROZEN/" + ("NEW" if k not in old else "GONE")
+                bad.append(k)
+            elif not did_move:
+                tag = "MISSED"                  # predicted to move and did not: the migration missed a call site
+                bad.append(k)
+            elif (n > o) == (pred == "up"):
+                tag = "mutable"
+            else:
+                tag = "AGAINST"                 # moved the other way: the parse was never that field
+                bad.append(k)
+        else:
+            print(f"derive: pre-registration for {k} says {pred!r} -- refusing an unknown prediction")
+            return 3
+        if k not in old and not tag.endswith("/NEW"):
+            tag += "/NEW"
+        elif k not in new and not tag.endswith("/GONE"):
+            tag += "/GONE"
+        lines.append(f"derive: moved [{tag}] {k}: {o!r} -> {n!r}")
+    for line in lines:
+        print(line)
+    if prereg_path:
+        hit = sum(1 for k in predicted if k in old and k in new and old[k] == new[k])
+        print(f"derive: pre-registration checked: {len(predicted)} key(s), {hit} with a before and after value")
+    if bad:
+        print(f"derive: {len(bad)} key(s) moved against the pre-registration -- {', '.join(bad)}")
         return 1
-    print(f"derive: compare ok ({len(moved)} key(s) moved, all provisional)")
+    print(f"derive: compare ok ({len(lines)} key(s) moved, none against the pre-registration)")
     return 0
 
 
 def main(argv) -> int:
     payload = build()
     if "--compare" in argv:
-        return compare(argv[argv.index("--compare") + 1], payload)
+        prereg = argv[argv.index("--prereg") + 1] if "--prereg" in argv else None
+        return compare(argv[argv.index("--compare") + 1], payload, prereg)
     if "--check" in argv:
         if not OUT.exists():
             print(f"derive: {OUT.relative_to(ROOT)} is missing -- run tools/derive.py")
