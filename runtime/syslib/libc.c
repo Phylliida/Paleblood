@@ -80,7 +80,11 @@ static uint64_t guest_address_of(uint64_t raw, const char *symbol)
         g = raw;                                 /* guest space: what a PS4 pointer holds */
         space = "guest";
     }
-    fprintf(stderr, "%s: 0x%llx (%s space)", symbol, (unsigned long long)raw, space);
+    /* Behind a trace flag, not unconditional: a library body must print nothing, and this printed on
+     * every call -- 34 lines per boot from memcmp alone, in a log whose parser has no reason to expect
+     * them. The evidence it used to give ("all (image space)") is one env var away. */
+    if (getenv("RT_TRACE_ADDR"))
+        fprintf(stderr, "%s: 0x%llx (%s space)", symbol, (unsigned long long)raw, space);
     return g;
 }
 
