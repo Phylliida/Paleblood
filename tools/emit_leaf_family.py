@@ -3,6 +3,19 @@
 The five-table write, rows-at-original-then-flip, size-from-the-member's-own-bytes and
 per-constant mutants are the same code for every family; only the parse and the body
 differ, so they live in TEMPLATES and nothing else is family-specific.
+
+THE OPERATING RULE FOR A FAMILY, and the only order that does not cost the whole family:
+
+    author every member to final  ->  verify.py --record edge over all of them  ->  stop editing
+
+`source_hash` is a function of the defining FILE list and those files' contents, so every member of a
+generated family shares one hash (3,619 mov_rax members, one translation unit). One body edited after a
+record therefore staleness-refuses the other members of the family, not just itself: the refusal is
+conservative and correct, and the rework is the entire family.
+
+**An emitter run after a record invalidates the family's evidence by definition, so a post-record emission
+is a re-record, not an edit.** Author to final, record once, and if a body must change, change it before
+the record or plan to re-record all of them.
 """
 import csv, json, os, re, sys
 

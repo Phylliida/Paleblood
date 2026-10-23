@@ -11,6 +11,7 @@ one shape rather than three spellings of ["size"].
 saying `address,size` / `0x00400020,102`.
 """
 import csv
+import gzip
 
 
 def parse_size(text):
@@ -31,8 +32,13 @@ def parse_address(text):
 
 
 def read_rows(path):
-    """Yield dicts with int `address`/`size` (and every other column untouched)."""
-    with open(path) as f:
+    """Yield dicts with int `address`/`size` (and every other column untouched).
+
+    `.gz` is opened transparently: branch_band.csv.gz is a table like any other, and the alternative
+    was a second reader outside this module -- which the catalogue gate refused, correctly, twice.
+    """
+    opener = gzip.open if str(path).endswith('.gz') else open
+    with opener(path, 'rt') as f:
         for r in csv.DictReader(f):
             row = dict(r)
             row["address"] = parse_address(r["address"])

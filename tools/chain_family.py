@@ -47,6 +47,67 @@ COLUMNS = ('address', 'size', 'load_disp', 'load_target', 'where', 'store_k2', '
 PREREG = {'rows': 78, 'bytes': 1320, 'seeding_required': 78, 'discriminating': 0,
           'distinct_triples': 78, 'distinct_store_k2': 47}
 
+# The BATCH's arithmetic, pre-registered before a single body is emitted. Each constant is derived from an
+# artifact, never copied from a report, and each is checked against the live tree on --check. Before the
+# batch the live state is exactly these minus the batch; after it, exactly these. A disagreement after the
+# run IS the finding -- and one already has a history: BYTES_BEFORE was quoted as 322,675 in a report, a
+# figure my own record had withdrawn, and the measured value is 322,746. Off by 71, carried from a number
+# nobody re-derived.
+BATCH = {
+    'landed_after': 38096,        # 38,018 measured + 78 rows
+    'bytes_before': 322746,       # sum of sizes over landed rows of symbols/functions.csv, measured
+    'bytes_after': 324066,        # + 1,320 B, PREREG['bytes']
+    'scope_after': 24.15,         # 38,096 / 157,757 = 24.1485
+    'progress_free_landed_after': 36924,   # 36,846 branch-free landed (measured) + 78
+    'progress_free_total': 43734,
+    'progress_after': 84.43,      # 36,924 / 43,734 = 84.4286
+    'verified_after': 21,         # unchanged: these rows land as edge, and byte evidence is not behaviour
+}
+
+
+def batch_problems(root='.'):
+    """The batch's five constants against the live tree. Before the run they differ by exactly the batch.
+
+    A pre-registration that cannot say `not yet` is a wish; this one prints the owed delta and refuses only
+    on a disagreement that the batch cannot explain.
+    """
+    import catalogue, landed
+    rows = catalogue.read_rows(f'{root}/symbols/functions.csv')
+    land = landed.landed_addresses(f'{root}/symbols/functions.csv')  # ONE root: rows, membership, band
+    L = [r for r in rows if r['address'] in land]
+    live_landed, live_bytes = len(L), sum(int(r['size']) for r in L)
+    gz = f'{root}/symbols/branch_band.csv.gz'
+    band = list(catalogue.read_rows(gz))
+    fl = sum(1 for r in band if r['branch'] == '0' and r['landed'] == 'True')
+    free = sum(1 for r in band if r['branch'] == '0')
+    out = []
+    owed = BATCH['landed_after'] - live_landed
+    if owed not in (0, PREREG['rows']):
+        out.append(f'batch: landed {live_landed} -> pre-registered {BATCH["landed_after"]} is {owed} rows, '
+                   f'not 0 or {PREREG["rows"]}')
+    owed_b = BATCH['bytes_after'] - live_bytes
+    if owed_b not in (0, PREREG['bytes']):
+        out.append(f'batch: bytes {live_bytes} -> pre-registered {BATCH["bytes_after"]} owes {owed_b}, '
+                   f'not 0 or {PREREG["bytes"]} (measured {BATCH["bytes_before"]} + {PREREG["bytes"]})')
+    owed_p = BATCH['progress_free_landed_after'] - fl
+    if owed_p not in (0, PREREG['rows']):
+        out.append(f'batch: branch-free landed {fl} -> pre-registered '
+                   f'{BATCH["progress_free_landed_after"]} is {owed_p} rows, not 0 or {PREREG["rows"]}')
+    # The sentence is chosen by `out`, never by the branch that computed it: my first version printed
+    # "complete ... pre-registered exactly" while returning two problems, because the else-branch meant
+    # "not before the batch" and I read it as "after".
+    if out:
+        print(f'batch: live {live_landed} rows / {live_bytes} B is neither the pre-registered before-state '
+              f'nor its after-state')
+    elif owed == PREREG['rows']:
+        print(f'batch: owed {owed} row(s) / {owed_b} B / {owed_p} branch-free; pre-registered after-state '
+              f'{BATCH["landed_after"]} rows, {BATCH["bytes_after"]} B, SCOPE {BATCH["scope_after"]}%, '
+              f'PROGRESS {BATCH["progress_free_landed_after"]}/{BATCH["progress_free_total"]} = '
+              f'{BATCH["progress_after"]}%, verified {BATCH["verified_after"]}')
+    else:
+        print(f'batch: complete at {live_landed} rows / {live_bytes} B; pre-registered exactly')
+    return out
+
 
 def scan(elf=None, max_insns=3):
     """One pass over the committed frontier. Returns rows, each carrying what its case must satisfy."""
@@ -114,6 +175,7 @@ def main(argv=None):
           f"distinct (load K, store K2, imm) {got['distinct_triples']} | "
           f"distinct store K2 {got['distinct_store_k2']}")
     bad = [f'{k}: pre-registered {v}, scan says {got[k]}' for k, v in PREREG.items() if got[k] != v]
+    bad += batch_problems(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     if bad:
         for line in bad:
             print(f'REFUSED {line}', file=sys.stderr)
