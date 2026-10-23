@@ -764,6 +764,22 @@ class Run:
         return out
 
 
+def _mapping_perms(addr: int) -> str:
+    """The permission string of the mapping containing ADDR, or '' when none does.
+
+    A wrong-type or read-only symbol is otherwise indistinguishable from a writable one until the
+    write: one fixture segfaulted the interpreter proving it. Reading the mapping is the same
+    mechanism the plugin's region_is_executable uses, applied to the other permission.
+    """
+    with open('/proc/self/maps') as fh:
+        for line in fh:
+            fields = line.split()
+            lo, hi = (int(x, 16) for x in fields[0].split('-'))
+            if lo <= addr < hi:
+                return fields[1]
+    return ''
+
+
 def load_replacement(lib_path: str, symbol: str, size: int):
     # RETURNS (address, image_base_set). A function attribute would be a per-comparison fact stored
     # per-process: load a based library, then a plain one, and it still reads True from the previous
@@ -784,11 +800,33 @@ def load_replacement(lib_path: str, symbol: str, size: int):
     # image_base_set = False -- the run says which condition it established instead of the reader
     # reconstructing it from a fault -- and a based body compared under a False base faults on the
     # dereference, which is the loud failure we want and is now readable in the record.
-    try:
-        pbl = ctypes.c_uint64.in_dll(lib, 'pbl_image_base')
-    except ValueError:
-        base_set = False
+    #
+    # THREE VALUES, NOT TWO. 'n/a' means this library exports no base at all -- fixture libraries,
+    # and every family that reads no guest constant: nothing to set, nothing claimed. True means the
+    # symbol exists, took IMAGE, and read back. A symbol that EXISTS and does not take IMAGE is a
+    # refusal, never a False: `image_base_set: false` beside a based body is the sentence "this
+    # green is about an instrument", which is what this flag exists to make unsayable, and a single
+    # False for both meanings records a failure as if it were a fact about the body.
+    # Existence is decided by dlsym -- a mechanism independent of the call that can fail -- because
+    # in_dll raising ValueError cannot distinguish "no such symbol" from "symbol present, read or
+    # slot failed", and those are opposite facts that were sharing one value.
+    libdl = ctypes.CDLL('libdl.so.2', use_errno=True)
+    libdl.dlsym.restype = ctypes.c_void_p
+    libdl.dlsym.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    sym = libdl.dlsym(ctypes.c_void_p(lib._handle), b'pbl_image_base')
+    if not sym:
+        base_set = 'n/a'
     else:
+        # WRITABILITY IS CHECKED BEFORE THE WRITE, because the check I wrote first did not exist:
+        # a fixture exporting `void pbl_image_base(void)` made in_dll hand back a c_uint64 bound to
+        # the function's CODE, and assigning it killed the process with SIGSEGV rather than raising
+        # ValueError. A symbol of the wrong type, or a const in .rodata, is a refusal -- and it has
+        # to be decided from the mapping, which is a mechanism independent of the write it guards.
+        perms = _mapping_perms(int(sym))
+        if 'w' not in perms:
+            raise BadInput(f'pbl_image_base at {int(sym):#x} is exported but not writable '
+                           f'(mapping {perms or "not mapped"}); refusing to write it')
+        pbl = ctypes.c_uint64.in_dll(lib, 'pbl_image_base')
         pbl.value = IMAGE
         if pbl.value != IMAGE:
             raise BadInput(f'pbl_image_base did not take IMAGE: {pbl.value:#x}')
@@ -995,6 +1033,23 @@ def main() -> int:
         else:
             result = batch(machine, a.cases, a.address, target, a.timeout,
                            a.trace_instructions, a.trace_instruction_limit, a.lib)
+        # The base is stamped on each CASE ENTRY, not at the top level: the harness's stdout is a map
+        # from case id to entry, so a top-level key becomes a pseudo-case and run_original's
+        # inventory check refuses the run -- correctly, and it caught this exact mistake by name
+        # ("incomplete or malformed fixture inventory"). Per-entry is the only namespace the contract
+        # offers, and the record is per comparison, which is the granularity the evidence has.
+        base_fact = a.image_base_set if a.replacement else 'n/a'
+        #
+        # TWO SHAPES, and the first version of this loop assumed one: a batch returns a map from case
+        # id to entry, a single case returns AN ENTRY. Iterating `.values()` over the second walks its
+        # fields, and the dict-valued ones took the stamp -- `preserved` stopped saying 'kept' in four
+        # tests, which is what a stamp landing inside a register map looks like from outside.
+        if a.case:
+            result['image_base_set'] = base_fact
+        else:
+            for entry in result.values():
+                if isinstance(entry, dict):
+                    entry['image_base_set'] = base_fact
     except (OSError, ValueError, KeyError, BadInput, json.JSONDecodeError, AttributeError) as e:
         print(f'harness: {e}', file=sys.stderr)
         return 3
