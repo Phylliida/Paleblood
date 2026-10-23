@@ -466,6 +466,38 @@ def evidence_join(root, argv=None):
     return 0
 
 
+def extent_line() -> str:
+    """The catalogue's short-extent population, printed because a selector floor excludes it silently.
+
+    family_scan.py:238 --min-size defaults to 14, so no family is ever proposed from a function shorter
+    than that, and the unlanded short tail lies entirely inside that shadow. The tie count is here for
+    the same reason: "smallest containing extent" has no unique answer when two catalogued extents of one
+    length both contain an address, so an ownership claim carries an undefined tail and must say so.
+    """
+    try:
+        cat = [(int(r["address"], 16), int(r["size"], 16))
+               for r in csv.DictReader(open("symbols/ghidra_functions.csv"))]
+        landed = {int(r["address"], 16) for r in csv.DictReader(open("symbols/functions.csv"))}
+    except (OSError, KeyError, ValueError) as exc:
+        return f"extents: cannot read the catalogue ({exc}) -- unread is not zero"
+    import bisect
+    by = {}
+    for a, s in cat:
+        by.setdefault(s, []).append(a)
+    tied = 0
+    for a, s in cat:
+        starts = by[s]
+        k = bisect.bisect_right(starts, a)
+        if k < len(starts) and starts[k] < a + s:
+            tied += 1
+    short = [a for a, s in cat if s <= 13]
+    short_landed = sum(1 for a in short if a in landed)
+    pct = 100.0 * tied / len(cat)
+    return (f"extents: {len(cat)} catalogued \u00b7 <=13B {len(short)} (landed {short_landed}, "
+            f"unlanded {len(short) - short_landed}) \u00b7 family_scan --min-size 14 excludes that whole band "
+            f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--root', default=DEFAULT_ROOT)
@@ -478,6 +510,9 @@ def main() -> int:
     a = ap.parse_args()
 
     data = compute(a.root)
+    # Every run, not one branch: a line that prints only under a flag is a line that is
+    # absent from the run that needed it. stderr, because the default output is JSON.
+    print(extent_line(), file=sys.stderr)
     if a.burndown:
         print(burndown_line(data))
         return 0
