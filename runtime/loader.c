@@ -3,6 +3,7 @@
    published ELF and SCE dynamic-linking formats, not from another loader's code. */
 #define _GNU_SOURCE
 #include "runtime/loader.h"
+#include "runtime/guest.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -423,4 +424,34 @@ size_t rt_elf_thread_pointer_to_gs(const rt_elf *e, void *base)
         }
     }
     return changed;
+}
+
+/* The executable the guest is running in, noted by the boot after rt_elf_open. A syslib body that is
+   handed a guest pointer has no ELF of its own, and the segments are the only authority on which
+   guest addresses are writable, so the boot hands them over once rather than each body re-deriving
+   them from constants (runtime/include/runtime/loader.h). */
+static const rt_elf *mapped_executable;
+static uint64_t mapped_image;
+
+void rt_map_note(const rt_elf *elf, void *image)
+{
+    mapped_executable = elf;
+    mapped_image = (uint64_t)(uintptr_t)image;
+}
+
+uint64_t rt_map_image(void) { return mapped_image; }
+
+int rt_guest_writable(uint64_t guest_address, size_t length)
+{
+    const rt_elf *elf = mapped_executable;
+    if (!elf || length == 0 || guest_address < RT_EBOOT_BASE) return 0;
+    const uint64_t offset = guest_address - RT_EBOOT_BASE;
+    if (offset + length < offset) return 0;                    /* the sum wrapped: not a range */
+    const rt_elf_load *loads = rt_elf_loads(elf);
+    const size_t count = rt_elf_load_count(elf);
+    for (size_t i = 0; i < count; i++) {
+        if (!(loads[i].flags & 2)) continue;                    /* PF_W only: a read-only page refuses a write */
+        if (offset >= loads[i].vaddr && offset + length <= loads[i].vaddr + loads[i].memsz) return 1;
+    }
+    return 0;
 }

@@ -885,3 +885,38 @@ succeeded.
 `test_plugin` -- `hooks.c` references `rt_capture_begin/run_id/write` and that target does not link
 `capture.c`. `runtime/pbboot` links fine, so `--target pbboot` is the honest build until the test target
 is fixed; building the default target and reading rc=1 as "my change broke it" would have been wrong.
+
+## The cxa_guard triple, guest memory behind the segment table, and a stopped boot that says so
+
+`__cxa_guard_acquire` / `release` / `abort` are registered (imports implemented 64 -> 66, registered
+89 -> 93 = **57 real** + 25 modelled + 5 noop + 6 refused). **Three registered, two counted:** `abort`
+appears nowhere in `symbols/import_names.csv`, so it is a body no eboot import reaches -- registration
+counts bodies, implemented counts imports, and the two numbers differ by exactly that.
+
+The run: two acquires at **byte 0 -- initialiser must run**, two releases setting the byte, two distinct
+guards (`0x8056a5740`, `0x8056a2558`). **The property that makes the triple load-bearing is
+implemented and NOT yet observed**: a third acquire of either guard would print `byte 1 -- already
+initialised`, and no call in this boot makes one. Until one does, `release`'s write is a body I wrote
+and the read-back is a claim.
+
+**The guard arrives in image space, not guest space.** Raw value `0x8056a5740` = `IMAGE + 0x16a5740`,
+because the guest executes at the image mapping, so a `lea rip`-computed address is what the CPU
+addresses. **An instruction to convert it with `rt_guest()` would have double-mapped it** -- `rt_image +
+(0x8056a5740 - 0x400000)` -- and written a plausible address that is not the guard. The space is now
+measured and printed on every call; the normalisation accepts both spaces and stops the boot when
+neither applies.
+
+**And `rt_image` is defined in `plugin.c`, which `pbboot` does not link** -- my first version of this
+body did not link, and the linker named it. That is the shared-emitter defect in my own code, caught by
+the build rather than by review. The mapping now comes from `rt_map_note(elf, image)` in the loader,
+which is in `pbboot`; a body that needs the mapping asks the loader rather than reaching for a global
+owned by another target.
+
+**The return code now distinguishes stopping from finishing**: `unimplemented` -> **4**, fault -> 1,
+timeout -> 2, and the guest's own exit code passed through (so a guest exiting 4 is indistinguishable
+from an unbound import; the stdout line is the discriminator).
+
+The boot then moved ten imports and stopped at **`memset`** (`8zTFvBIAIN8`, libSceLibcInternal 11 /
+libc bind 61). `symbols/import_names.csv:24` already labels that row **`implemented`**, and the runtime
+has no body for it: **the file's status column is a claim about intent, and the run is the measurement**
+-- the same class as an approvals column that counts rows.

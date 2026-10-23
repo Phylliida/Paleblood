@@ -85,6 +85,22 @@ int rt_elf_map(const rt_elf *elf, void *base, rt_elf_bind_fn bind, void *user, c
    guest thread's control block. Returns the number of instructions changed. */
 size_t rt_elf_thread_pointer_to_gs(const rt_elf *elf, void *base);
 
+/* The executable whose segments the guest is running in, so a syslib body can ask whether an
+   address it was handed is really guest memory it may write. Set once by the boot after the
+   executable is opened; unset in any process that never boots a guest, where every query fails. */
+void rt_map_note(const rt_elf *elf, void *image);
+
+/* The address the noted executable is mapped at, or 0 when none is noted. Guest code runs there, so
+   this is the base that turns an address the CPU computed into a guest address and back. */
+uint64_t rt_map_image(void);
+
+/* Whether [guest_address, guest_address + length) lies inside one writable (PF_W) load segment,
+   tested against memsz (the segment's mapped extent), not filesz. Zero when no executable is noted,
+   when the range is empty, when it wraps, or when it is not wholly inside a single writable segment.
+   A caller uses this as a refusal: guest memory the runtime cannot prove it may write is not
+   written. */
+int rt_guest_writable(uint64_t guest_address, size_t length);
+
 #ifdef __cplusplus
 }
 #endif

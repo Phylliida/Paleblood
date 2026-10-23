@@ -582,6 +582,12 @@ int main(int argc, char **argv)
         }
         /* the address the object will have, known before mapping so exports can be bound */
         o->image = (unsigned char *)(uintptr_t)(k ? MODULE_BASE + (k - 1) * MODULE_STRIDE : GUEST_BASE);
+        /* The executable's segments and its mapping are what a syslib body consults before writing
+           guest memory. Object 0 is the executable the guest runs in; a module is not the segment
+           authority for a pointer the guest computed. Noted before any guest code runs, so the note is
+           live for the first import call. The address comes from here because plugin.c owns rt_image
+           and pbboot does not link it -- the linker named that, which is why this is not a global. */
+        if (k == 0) rt_map_note(o->elf, o->image);
         o->imports = rt_elf_import_count(o->elf);
         const size_t n = o->imports ? o->imports : 1;
         o->bound = calloc(n, sizeof *o->bound);
@@ -997,5 +1003,15 @@ int main(int argc, char **argv)
     }
     free(db);
     free(db_text);
-    return 0;
+    /* A stopped boot and a finished boot must not share a return code: `unimplemented` used to leave
+       rc=0, which every downstream reader -- and I have been one -- takes as success. The guest's own
+       exit code is passed through unchanged, so a guest that exits 4 is indistinguishable from this
+       program's "stopped at an unbound import"; the printed line is the discriminator, and a caller
+       that needs certainty reads stdout. */
+    switch (outcome) {
+    case UNIMPLEMENTED: return 4;   /* the guest reached an import this runtime cannot serve */
+    case FAULT: return 1;           /* the guest faulted (signal) */
+    case TIMEOUT: return 2;         /* the guest did not finish within --timeout */
+    default: return outcome == EXITED ? exit_code : 0;
+    }
 }
