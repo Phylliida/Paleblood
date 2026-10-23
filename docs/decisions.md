@@ -1720,3 +1720,21 @@ a claim.** Both rates print together, with these labels, wherever the horizon is
 The lesson, stated so it outlives the arithmetic: **an instrument that has never been checked on a family it
 could not read was not free — its repair is part of the family cost, and a price that omits repair prices the
 one window in which nothing goes wrong.**
+
+**Correction to the figure above, made within the hour and before it settles into the board — `8 rows/h` is a
+BOUND at `n=1`, not a rate.** Tonight's ten hours bought 78 rows **and** a scanner that will read every future
+family, a `fixture_tree` that makes a whole class of reds honest, and an access declaration that is data rather
+than a spelling. **A repair that amortises is not a cost per batch**, and attributing all of it to those 78 rows
+is the most pessimistic reading available — the same error as the clean rate, pointed the other way.
+
+So the horizon is **three labelled figures, not two**:
+
+- **`161 h`** — if repair is **zero** (the assumption; `2.0 h / 78 rows`).
+- **`~790 h`** — if **every** window costs what tonight cost (the **bound**, `n = 1`).
+- **The truth is in between, and only a third window can price it.** Two numbers with one presented as the rate
+  invites exactly the misreading tonight is about: a reader deciding *against* 790 h when the frontier may be
+  161 h plus two repair windows.
+
+`n = 1` is a bound and never a denominator. The next horizon revision waits for a second measured window, and
+the first thing that window must record is **whether repair was needed at all** — because a window with zero
+repair is the only observation that moves the middle figure down.
