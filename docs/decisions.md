@@ -1753,3 +1753,18 @@ repair: <what broke, how long it cost>
 pre-registration kept in `../scratch/` dies with the machine; one kept in the history cannot. This is the same
 rule as the ledger's: **derive from the artifact that exists, never from a note about it** — and it costs one
 line at the moment the batch lands, which is the only moment at which the answer is still known.
+
+**The convention's first data point predates the convention, and it is a repair.** The gate could not read
+`chain_deref`'s constants (`kSlot`/`kStoreDisp` against a scanner keyed on `v|at`), it reported that as
+nothing-to-check, and closing it cost **one full window and zero rows**. So the window that lands family #2
+carries **two** lines, not one:
+
+```
+repair: gate could not read chain_deref's constants (one window, zero rows)   # the history it inherits
+repair: none                                                                  # that window, if it goes clean
+```
+
+**Otherwise the first `git log --grep='^repair:'` counts one batch and zero repairs, and the denominator says
+the frontier costs `161 h` when a night was already spent proving it does not.** A convention that starts after
+the event starts with a **false first data point**, which is the class this whole stretch was about: a history
+row is not a present state, and a cost that was true once is a claim.
