@@ -176,10 +176,22 @@ LOADER_BIND = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_void_p, ctypes.c_size_t
 
 def loader_library():
     """runtime's executable loader as a shared library: $BB_LOADER, else the build's."""
-    path = os.environ.get('BB_LOADER') or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                                       'build', 'runtime', 'libpbloader.so')
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = os.environ.get('BB_LOADER')
+    path = env or os.path.join(root, 'build', 'runtime', 'libpbloader.so')
+    # A PATH THE BUILD GRAPH ALREADY KNOWS IS DISCOVERED OR REFUSED BY TYPE, NEVER TYPED. `BB_LOADER=build-release`
+    # used to produce "build the repository first (the loader is runtime/loader.c)" -- a sentence that sends the
+    # reader to a compiler when the defect is a string. It was believed for six slices while it reddened 51
+    # tests, because the same run had no verdict line. A refusal can be right about its question and wrong in
+    # the sentence it prints, and the sentence outlives the check.
+    if env and os.path.isdir(env):
+        candidate = os.path.join(env, 'runtime', 'libpbloader.so')
+        hint = f' -- one exists here: {candidate}' if os.path.isfile(candidate) else ''
+        raise BadInput(f'BB_LOADER must be a path to a .so, not a directory: {env}{hint}')
     if not os.path.isfile(path):
-        raise BadInput(f'{path}: build the repository first (the loader is runtime/loader.c)')
+        raise BadInput(f'{path}: no loader shared library at that path. Build it (runtime/loader.c) or set '
+                       f'BB_LOADER to the file itself, e.g. '
+                       f'{os.path.join(root, "build-release", "runtime", "libpbloader.so")}')
     lib = ctypes.CDLL(path)
     lib.rt_elf_open.restype = ctypes.c_void_p
     lib.rt_elf_open.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
