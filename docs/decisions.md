@@ -1469,3 +1469,35 @@ Also mine, and caught by its own run: the partial-landing test zeroed **byte 7 o
 `0x00` already**, so the "mutation" changed nothing and the test demanded a refusal that was not owed. **A
 falsification that alters a byte already at that value tests exactly as much as a differential that compares
 two zero-filled tails.**
+
+### Three structural invariants, because an anchor protects the write and nothing else
+
+The patcher's checks, in the order they were learned, each one a defect that got past the one before:
+
+1. `assert s.count(old) == 1` protects the **write** — one site, the intended one.
+2. `ast.parse(s)` after the write protects the **file** — a two-phase write is atomic, not correct.
+3. A **structural invariant** protects the **program**. My anchor was unique, the text was correct, the file
+   parsed, and 44 tests died: inserting one definition above another moved `fixture_seeds` below
+   `if __name__ == '__main__'`, so a script run reached the call site before the name existed.
+
+**No amount of anchor discipline can protect execution order; only structure can.** The invariants now
+enforced, one per artifact: **a module's is import-order** (a sibling import below the `sys.path.insert` that
+resolves it) and **the harness's is guard-last** (the entry point is the last top-level statement) — both in
+`check_import_order.py`, one AST walk, **one roster, two key shapes** (`file:line` for a site, `guard:file`
+for a whole file, so neither can grandfather the other). **A table's is sortedness** — `write_table`'s
+sort → adjacent-dup count → write → re-read, which is why that writer is shared rather than copied.
+
+The first run found **one** violation in `tools/leaf_family_census.py`: guard at :78, definitions below it.
+It was **latent, not live** — `main()` reaches nothing below the guard, proven by an exec of the module with
+`__file__` supplied (my first proof of that omitted `__file__` and died of it, proving nothing). Repaired
+anyway: **a violation is not an incident, and the invariant is what makes the next insertion safe.**
+
+### A mutation must be verified to have mutated
+
+Fourth member of one family, recorded by name rather than as a lesson: a partial-landing test zeroed **byte 7
+of `0x5956678`, which is `0x00` already**, so the mutation changed nothing and the test demanded a refusal
+that was not owed. Beside it: the differential that compared two zero-filled tails; the mutant that could
+not be seen because both sides read zero; the census whose `{'0x0': 16508}` was a histogram of a fallback
+literal. **A falsification that alters a value already at that value tests exactly as much as a differential
+that compares zero to zero** — so a mutation carries an assertion that it mutated, the way a write carries a
+read-back.

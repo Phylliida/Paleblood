@@ -75,10 +75,6 @@ def main():
     print(f'{"total":20s} {total:7d}')
 
 
-if __name__ == '__main__':
-    main()
-
-
 def landed_addresses():
     """Delegates to landed.landed_addresses -- one implementation, capstone-free.
 
@@ -115,3 +111,10 @@ def write_table(path, header, rows, key='address', dry_run=False):
     if len(back) != len(rows) or [r[key] for r in back] != [r[key] for r in rows]:
         raise SystemExit(f'refused: {path}: re-read does not match what was written')
     return len(rows)
+
+# The entry point is the LAST statement in the file. Definitions below it are unbound when this module
+# runs as a script: main() executes at the guard. Nothing below the guard was reached from main(), so
+# this violation was latent rather than live -- but a violation is not an incident, and the invariant is
+# what makes the next insertion safe. Found by check_import_order.py's second property.
+if __name__ == '__main__':
+    main()

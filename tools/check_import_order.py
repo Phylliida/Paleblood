@@ -17,6 +17,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 
+def _is_main_guard(node):
+    """`if __name__ == '__main__':` and nothing cleverer."""
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    t = node.test
+    return (isinstance(t.left, ast.Name) and t.left.id == '__name__'
+            and len(t.ops) == 1 and isinstance(t.ops[0], ast.Eq)
+            and len(t.comparators) == 1 and isinstance(t.comparators[0], ast.Constant)
+            and t.comparators[0].value == '__main__')
+
+
 def scan(root=None):
     root = Path(root) if root else ROOT
     tools = root if root.name == 'tools' else root / 'tools'
@@ -52,7 +63,31 @@ def scan(root=None):
                 elif node.lineno < first:
                     problems.append(f'REFUSED {path.name}:{node.lineno}: imports sibling {name!r} '
                                     f'above the sys.path.insert at :{first} -- bare start dies')
+        # SECOND PROPERTY, same walk. The entry point must be the LAST top-level statement: a function
+        # defined below it is unbound when the module runs as a script, because main() executes at the
+        # guard. I inserted one definition above another, the anchor was unique and correct, the file
+        # parsed, and 44 tests died with `name 'fixture_seeds' is not defined`. No anchor discipline can
+        # protect execution order; only structure can, and this is the structure.
+        for i, node in enumerate(tree.body):
+            if _is_main_guard(node):
+                after = tree.body[i + 1:]
+                if after:
+                    nxt = after[0]
+                    problems.append(f'REFUSED {path.name}:{nxt.lineno}: top-level statement after the '
+                                    f'__main__ guard at :{node.lineno} -- main() runs before it is bound')
+                break
     return problems
+
+
+def key_of(problem):
+    """The allowlist key for a problem: `file:line` for a site, `guard:file` for a whole file.
+
+    Two properties share one roster, so their keys must not share a shape: a key collision would let an
+    import-order line grandfather a guard violation that happened to land on the same line number.
+    """
+    _, rest = problem.split(' ', 1)
+    name, line = rest.split(':', 2)[:2]
+    return f'guard:{name}' if '__main__ guard' in problem else f'{name}:{line}'
 
 
 def main(argv):
@@ -68,11 +103,7 @@ def main(argv):
     tdir = tdir if tdir.name == 'tools' else tdir / 'tools'
     base = tdir / 'import_order_allowlist.txt'
     allowed = {l.strip() for l in base.read_text().splitlines() if l.strip()} if base.exists() else set()
-    keys = {}
-    for p in problems:
-        _, rest = p.split(' ', 1)
-        where = rest.split(':', 2)
-        keys[f'{where[0]}:{where[1]}'] = p
+    keys = {key_of(p): p for p in problems}
     new = sorted(k for k in keys if k not in allowed)
     stale = sorted(allowed - set(keys))
     for k in new:
