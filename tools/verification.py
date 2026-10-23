@@ -48,6 +48,15 @@ import shutil
 import subprocess
 import re
 
+# The prologue of a file is its FIRST import, not its first line -- and a path insert belongs AFTER every
+# stdlib import it uses, or the insert itself runs before `os` exists. Placed immediately above the first
+# module-level constant, which is the first statement after the import block.
+import sys
+
+if os.path.dirname(os.path.abspath(__file__)) not in sys.path:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from atomicio import atomic_write  # noqa: E402 -- sibling; the insert above is what makes this resolve bare
+
 VERIFICATION_HEADER = ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
                        'cases_sha256', 'date']
 QUARANTINE_HEADER = ['function', 'cases', 'option', 'case', 'reason', 'date']
@@ -303,8 +312,10 @@ def write_csv(path: str, header: list[str], rows: list[dict]) -> None:
     w.writerow(header)
     for r in rows:
         w.writerow([r[k] for k in header])
-    with open(path, 'w', newline='') as f:
-        f.write(out.getvalue())
+    # Through atomicio, because the ledger is the one artifact no re-run can reconstruct: a kill or an
+    # ENOSPC mid-write leaves a TRUNCATED verification.csv, and the flock in _append_rows guards against a
+    # concurrent writer, not against an interrupted one. A lock is not a transaction.
+    atomic_write(path, out.getvalue())
 
 
 def quarantined(root: str, function: str, cases: str, option: str) -> dict[str, str]:
