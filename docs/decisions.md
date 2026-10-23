@@ -989,3 +989,26 @@ rows** (the module rows are classified, never skipped: they have no NID and no l
 labels of memset's NID must be served. **The first version of that control compared `("memset", lib)`
 against a table holding `(lib, symbol)`, refused, and that refusal is the only reason the reversed key was
 visible** -- a control that cannot be satisfied fails closed, which is why it is worth having.
+
+## One byte: `49 8b 04 24` is `[r12]`, and it was carrying three anomalies at once
+
+Every trampoline has been emitted with `mov rax, [r12]` where `mov rax, [rsp]` was meant. `REX.B` extends the
+SIB base field, so `49 8b 04 24` reads r12 and only `48 8b 04 24` reads rsp. What that one bit explains:
+
+- **The null fault.** `fault pc is inside trampoline slot 40 of 686 (offset 53 in the slot)`; offset 53 *is*
+  that instruction; the earlier register dump had `r12 0`. It was never a body at fault and never the guest.
+- **The pc column.** The stored "guest return address" was whatever r12 happened to point at -- which is why
+  rows printed the resolver address, or nothing. After the fix: `#40 pc 0x8020b5c90 count 5`, and **zero rows
+  at pc 0**.
+- **The %fs reading.** A fault inside a slot happens *before* the crossing, so guest `%fs` there is the
+  prologue's own state: the classifier's sentence ("a host body ran with the guest %fs") was a verdict printed
+  by the code that produced the situation. It now prints the three bases and their relations, and says where
+  the pc is, so the reader must join two lines instead of believing one.
+
+Sequence that found it, each step cheaper than the last: in-flight import (reused the trampoline's own store,
+cleared in a reachable epilogue), emit-time bases (correct: host base, guest base, process on host), the body's
+own entry read (`entry fs 0x79ca... ` = host -- so the crossing worked), then pc-vs-image (outside), then
+pc-vs-trampoline (**inside slot 40**), then the bytes.
+
+With the fix the boot runs further and stops where a body is genuinely missing: `libc j4ViWNHEgww`, imports
+called 18. A stub that has never been disassembled is not known to be right because its source reads right.

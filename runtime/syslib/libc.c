@@ -10,8 +10,12 @@
 #include "runtime/loader.h"
 #include "runtime/process.h"
 #include "runtime/syslib.h"
+#include "runtime/tls.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 static void libc_init_env(void) {}
 
@@ -87,6 +91,19 @@ static volatile unsigned char *guard_byte(uint64_t *guard, const char *symbol)
 
 static int cxa_guard_acquire(uint64_t *guard)
 {
+    /* WHOSE %fs IS THIS? The crossing stub is handed the right bases and switches before the call, so a body
+       that opens on the GUEST TCB means the body was not entered through that stub -- and a body that opens on
+       host and closes on guest means something inside switched back. One read at each end answers which. */
+    extern volatile int32_t rt_syslib_in_flight;
+    if (getenv("BB_GUARD_TRACE")) {
+        unsigned long long fs = 0, fs2 = 0;
+        syscall(158, 0x1003UL, &fs);
+        fprintf(stderr, "guard acquire: entry fs %#llx (guest %#llx host %#llx) in_flight %d\n",
+                fs, (unsigned long long)rt_tls_guest_base(), (unsigned long long)rt_tls_host_base(),
+                (int32_t)rt_syslib_in_flight);
+        syscall(158, 0x1003UL, &fs2);
+        fprintf(stderr, "guard acquire: fs stable across the print %s\n", fs == fs2 ? "yes" : "NO");
+    }
     volatile unsigned char *byte = guard_byte(guard, "__cxa_guard_acquire");
     const int run = *byte == 0;
     fprintf(stderr, ", byte %d -- %s\n", *byte, run ? "initialiser must run" : "already initialised");

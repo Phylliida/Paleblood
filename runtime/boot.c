@@ -277,7 +277,7 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
            rax is caller-saved and holds the return value anyway, so nothing live is clobbered. */
         if (which < RT_IMPORT_PC_MAX) {
             const uint64_t slot = (uint64_t)(uintptr_t)&rt_import_pc[which][0];
-            *p++ = 0x49, *p++ = 0x8b, *p++ = 0x04, *p++ = 0x24;        /* mov rax, [rsp] */
+            *p++ = 0x48, *p++ = 0x8b, *p++ = 0x04, *p++ = 0x24;        /* mov rax, [rsp] */  /* 0x48 not 0x49: REX.B extends the SIB base, so 49 8b 04 24 is [r12] and only 48 8b 04 24 is [rsp] */
             *p++ = 0x49, *p++ = 0xbb, memcpy(p, &slot, 8), p += 8;     /* movabs r11, &pc[which] */
             *p++ = 0x49, *p++ = 0x89, *p++ = 0x03;                     /* mov [r11], rax  (this import's PC) */
             *p++ = 0x49, *p++ = 0xff, *p++ = 0x43, *p++ = 0x08;        /* incq [r11+8]    (and its count) */
@@ -295,6 +295,15 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         /* The capacity is this slot's remaining budget, so the bound is checked before the first
            store instead of after it. An addition to the import path must displace something: the slot
            is TRAMPOLINE_SIZE bytes and the emitter returns 0 rather than overrun it. */
+        if (getenv("BB_TLS_TRACE") && ((which & 0xfffffu) == 40 || (which & 0xfffffu) < 2)) {
+            /* The base the CROSSING will be emitted with, read at the moment of emission: a stub whose
+               wrfsbase is correct still lands on the wrong TCB if the value baked into it is the wrong
+               one, and emit-time bake-in is exactly how a %fs = 0 or %fs = guest gets installed. */
+            unsigned long long fs = 0;
+            syscall(158, 0x1003UL, &fs);
+            fprintf(stderr, "tls trace trampoline %u: emit host_fs %#llx guest_fs %#llx current fs %#llx\n",
+                    which, (unsigned long long)rt_tls_host_base(), (unsigned long long)rt_tls_guest_base(), fs);
+        }
         const size_t room = TRAMPOLINE_SIZE - (size_t)(p - t);
         const size_t stub = rt_write_boundary_stub(p, room, target, rt_tls_host_base(),
                                                    rt_tls_guest_base(),
@@ -942,11 +951,60 @@ int main(int argc, char **argv)
            which is indistinguishable from a null argument unless this is printed. */
         {
             const uint64_t guest = rt_tls_guest_base(), host = rt_tls_host_base();
-            const char *which = fault_fs == guest ? "GUEST TCB -- a host body ran with the guest %fs"
-                              : fault_fs == host ? "host TCB -- not the TLS base"
-                                                 : "neither -- a third %fs";
-            printf("pbboot: fault tls fs 0x%llx guest 0x%llx host 0x%llx -- %s\n",
-                   (unsigned long long)fault_fs, (unsigned long long)guest, (unsigned long long)host, which);
+            printf("pbboot: fault tls fs 0x%llx guest 0x%llx host 0x%llx -- %s; a fault inside a trampoline "
+                   "slot happens BEFORE the crossing, so guest %%fs there is the prologue's own state "
+                   "and says nothing about a body. Read this beside the pc-space lines, never alone.\n",
+                   (unsigned long long)fault_fs, (unsigned long long)guest, (unsigned long long)host,
+                   fault_fs == guest ? "fs == guest tcb" : fault_fs == host ? "fs == host tcb" : "fs == neither");
+        }
+        /* "no module resolved" is the resolver's opinion, not a fact about the pc: the guest image is an
+           mmap too, so a pc inside guest code is a host address by construction. Print the arithmetic
+           that decides it instead of the verdict that assumed it. */
+        {
+            /* The trampolines are an mmap of their own: a pc in there is MY emitted bytes, and the slot
+               index names which import's stub it is. Outside every region, the pc is the guest's. */
+            const uint64_t tr = (uint64_t)(uintptr_t)objects[0].tramp;
+            const uint64_t pc = fault_rip;
+            if (tr && pc >= tr && pc < tr + (uint64_t)TRAMPOLINE_SIZE * objects[0].imports) {
+                const uint64_t slot = (pc - tr) / TRAMPOLINE_SIZE;
+                printf("pbboot: fault pc is inside trampoline slot %llu of %zu (offset %llu in the slot)\n",
+                       (unsigned long long)slot, (size_t)objects[0].imports,
+                       (unsigned long long)((pc - tr) % TRAMPOLINE_SIZE));
+            } else {
+                printf("pbboot: fault pc is outside the trampoline region (0x%llx + %llu slots)\n",
+                       (unsigned long long)tr, (unsigned long long)objects[0].imports);
+            }
+        }
+        {
+            const uint64_t img = (uint64_t)(uintptr_t)objects[0].image, ext = rt_map_extent();
+            const uint64_t pc = fault_rip;
+            printf("pbboot: fault pc space image 0x%llx extent 0x%llx pc 0x%llx -- %s\n",
+                   (unsigned long long)img, (unsigned long long)ext, (unsigned long long)pc,
+                   (pc >= img && pc < img + ext) ? "INSIDE the guest image (guest code, guest %fs is correct)"
+                                                 : "outside the guest image (host code)");
+        }
+        /* WHICH import, chronologically, and no print per entry: the trampoline stores `which` into
+           rt_syslib_in_flight BEFORE the crossing and nothing clears it on a fault, so at the fault this
+           is the import whose body was running. -1 means the fault happened outside every import body --
+           and then it was guest code, which is entitled to run on the guest %fs and the tls line above is
+           a statement about correct behaviour, not a defect. The entered#N list is index-ordered and can
+           never answer this. */
+        if ((int32_t)rt_syslib_in_flight < 0) {
+            printf("pbboot: fault import none in flight (the fault is not inside an import body)\n");
+        } else {
+            const uint32_t v = rt_syslib_in_flight;
+            const unsigned k = v >> 20, i = v & 0xfffffu;
+            const char *lib = "?", *sym = "?";
+            if (k < object_count && objects[k].elf && i < objects[k].imports) {
+                lib = rt_elf_import_library(objects[k].elf, i);
+                sym = rt_elf_import_name(objects[k].elf, i);
+            }
+            printf("pbboot: fault import in flight #%u %s:%s (object %u import %u)\n", v, lib ? lib : "?",
+                   sym ? sym : "?", k, i);
+            printf("pbboot: fault import args rdi %llx rsi %llx rdx %llx rcx %llx r8 %llx r9 %llx\n",
+                   (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
+                   (unsigned long long)rt_syslib_args[2], (unsigned long long)rt_syslib_args[3],
+                   (unsigned long long)rt_syslib_args[4], (unsigned long long)rt_syslib_args[5]);
         }
         printf("pbboot: fault regs rax %llx rbx %llx rcx %llx rdx %llx\n"
                "pbboot: fault regs rsi %llx rdi %llx rbp %llx rsp %llx\n"
