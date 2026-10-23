@@ -36,6 +36,11 @@ ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 LEAF = os.environ.get('LEAF_TARGETS_DIR') or os.path.join(ROOT, 'game', 'leaf')
 BASE = 0x400000
 
+# Files in game/leaf that are infrastructure rather than replacement families. Additions here
+# are decisions, reviewed like any other: a family that dereferences belongs in ACCESS, and
+# absence from both lists is a refusal (the gate is fail-closed for a reason).
+INFRASTRUCTURE = {'load_base'}
+
 ACCESS = {  # family -> (kind, source)
     # kind: load | store | addr-only        source: static | argument
     # dereference a displacement computed from %rip -> static target in the body
@@ -90,6 +95,14 @@ def main():
         fam = family_of(fname)
         if fam.startswith('leaf_ret_zero'):
             fam = 'leaf_ret_zero'
+        if fam in INFRASTRUCTURE:
+            # Not a family and not a guess: a file in game/leaf that declares no target because it
+            # dereferences nothing. It holds the two facts every based family needs -- the guest load
+            # base as a name and the image base the runner sets -- so it has no access kind to
+            # declare. Listing it here is a decision in the artifact; leaving it unlisted is the
+            # refusal below, which is what fired on its first day.
+            print(f'{fam:<20} infrastructure -- declares no target, nothing to check')
+            continue
         decl = ACCESS.get(fam)
         if decl is None:
             errs.append(f'{fname}: family {fam!r} declares no access kind -- add it to ACCESS '

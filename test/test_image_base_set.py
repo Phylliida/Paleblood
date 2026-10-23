@@ -66,5 +66,40 @@ class ImageBaseSet(unittest.TestCase):
         self.assertFalse(base_set, 'a library with no base must not inherit the previous True')
 
 
+
+class ExportedByTheArtifact(unittest.TestCase):
+    """The mechanism must exist in the SHIPPED library, not only in a fixture that vendors it.
+
+    pbl_image_base and kGuestLoadBase lived only inside game/leaf/rip_load_family.cpp; withdrawing
+    that family removed both and no test noticed, because test_image_base_set's fixtures compile
+    their own .so. This asserts the export on build-release/game/libbbgame.so, and asserts the
+    assertion can fail by checking a library that has no base at all.
+    """
+
+    LIB = os.path.join(ROOT, 'build-release', 'game', 'libbbgame.so')
+
+    def exported(self, path):
+        r = subprocess.run(['nm', '-D', '--defined-only', path], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr[-400:])
+        return any('pbl_image_base' in line for line in r.stdout.splitlines())
+
+    def test_the_shipped_library_exports_the_base(self):
+        if not os.path.exists(self.LIB):
+            self.fail(f'{self.LIB} is missing: the export cannot be asserted against an unbuilt '
+                      'artifact, and a skip here would read as a green')
+        self.assertTrue(self.exported(self.LIB),
+                        'libbbgame.so does not export pbl_image_base: load_base.cpp left the build')
+
+    def test_the_assertion_can_fail(self):
+        with tempfile.TemporaryDirectory(prefix='nobase-') as d:
+            src = os.path.join(d, 'plain.cpp')
+            lib = os.path.join(d, 'libplain.so')
+            open(src, 'w').write('extern "C" int bbgame_init(void*){return 0;}')
+            r = subprocess.run(['c++', '-shared', '-fPIC', '-o', lib, src], capture_output=True, text=True)
+            if r.returncode != 0:
+                self.skipTest('cannot build the control library')
+            self.assertFalse(self.exported(lib), 'a library with no base must not pass this check')
+
+
 if __name__ == '__main__':
     unittest.main()

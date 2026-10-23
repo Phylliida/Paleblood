@@ -126,8 +126,21 @@ def main():
             counts[key] = counts.get(key, 0) + 1
             contain[where] = contain.get(where, 0) + 1
             kept += 1
-            if where == 'filesz' and len(samples) < 6:
-                samples.append((hex(addr), size, hex(target)))
+            if where == 'filesz':
+                # Whether a +4 mutation of this member's constant could be SEEN, computed from the
+                # image rather than from a mutant run: the body reads a dword, so the mutant reads
+                # the next dword. If they are equal the differential returns the same value whether
+                # the constant is right or wrong by four, and the row would be evidence from a
+                # comparison that cannot discriminate the number defining the family. Such a member
+                # stays `original` with a recorded reason; it is the 161's defect at one member's
+                # width. The mutant then checks this prediction instead of producing it.
+                o2 = target - 0x3FC000
+                d0, = struct.unpack_from('<I', image, o2)
+                d1, = struct.unpack_from('<I', image, o2 + 4)
+                disc = 'discriminating' if d0 != d1 else 'NEIGHBOUR-UNIFORM within +4'
+                samples.append((hex(addr), size, hex(target), '%08x' % d0, '%08x' % d1, disc))
+                if d0 == d1:
+                    contain['filesz_indiscriminate'] = contain.get('filesz_indiscriminate', 0) + 1
         print('[%s] max_size=%d exactly_two=%s' % (label, max_size, exact_two))
         for k in sorted(counts):
             print('  tail_insns=%-3d %-8s %6d' % (k[0], k[1], counts[k]))
