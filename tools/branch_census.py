@@ -72,8 +72,17 @@ def compute(out=None):
 
 def main(argv):
     ap = argparse.ArgumentParser()
-    ap.add_argument('--out', default='symbols/branch_band.csv')
+    ap.add_argument('--out', default='symbols/branch_band.csv.gz')
     o = ap.parse_args(argv)
+    if not o.out.endswith('.gz'):
+        # The READERS open gzip -- reach_line reads gzip.open(path, 'rt') and the committed file is `.gz`.
+        # This writer honours the suffix (text to .csv, gzip to .gz), so a `.csv` name produced a textbook
+        # census that nothing in the tree opens: the tool's stdout right and the artifact old, fifth time.
+        # A writer that knows which encoding its readers need can check its own output NAME in one line, and
+        # then the default no longer has to be memorised -- it can be wrong safely, because it refuses.
+        print(f'branch_census: REFUSED --out {o.out}: every reader opens gzip (gzip.open), so this name '
+              f'would produce an artifact nothing reads. Use {o.out.rsplit(".", 1)[0]}.gz', file=sys.stderr)
+        return 2
     f = compute(out=o.out)
     print(f'branch census over {f["total"]} catalogue rows (undecoded {f["undecoded"]}):')
     print(f'  branch or call      {f["branch"]:6d}  ({f["branch"]/f["total"]:.1%})  landed {f["branch_landed"]}')

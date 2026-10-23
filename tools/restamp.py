@@ -29,6 +29,7 @@ import io
 import os
 import subprocess
 import sys
+import time
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,8 +41,9 @@ STAMPS = [
     {'artifact': 'symbols/capture_ok.csv',
      'argv': ['capture_precheck.py', '--table'],
      'cost': 2,
-     'stages': False,
-     'note': 'writes its own table path: no --out, so it cannot be staged, so it is NOT checked here'},
+     'stages': True,
+     'stdout': True,
+     'note': 'stdout IS the stage: write_table() to stdout, so no --out is needed and the tree is never written'},
     {'artifact': 'symbols/leaf_frontier.csv',
      'argv': ['leaf_frontier.py', '--out', '{out}'],
      'cost': 200,
@@ -82,6 +84,11 @@ def stamp_once(spec: dict, workdir: str, timeout: float) -> tuple[bytes | None, 
     rc, stdout, err = run(argv, timeout)
     if rc != 0:
         return None, f'rc={rc}: {err.strip().splitlines()[-1][:120] if err.strip() else "no stderr"}'
+    if spec.get('stdout'):
+        # The tool's own stdout is the artifact. Stageable by construction: nothing in the tree is opened.
+        if not stdout:
+            return None, 'tool printed nothing on stdout, so there is nothing to stage'
+        return stdout, ''
     if os.path.isfile(out):
         return open(out, 'rb').read(), ''
     if spec['artifact'] and os.path.isfile(os.path.join(ROOT, spec['artifact'])):
@@ -105,36 +112,90 @@ def check(only: list[str] | None, allow_slow: bool) -> int:
         if spec['cost'] > 30 and not allow_slow:
             print(f'{spec["artifact"]}: NOT CHECKED (declared cost {spec["cost"]} s; pass --allow-slow)')
             continue
+        clock = time.monotonic()
         with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
             first, why_a = stamp_once(spec, a, timeout=spec['cost'] * 6)
+            mid = time.monotonic()
             second, why_b = stamp_once(spec, b, timeout=spec['cost'] * 6)
+        observed = time.monotonic() - clock
+        # The claim is printed beside the measurement on EVERY run, and the tool never rewrites its own table:
+        # a table that certifies its own estimate is the fixture-that-vendors-its-property defect with a
+        # stopwatch. The disagreement staying visible is the whole remedy.
+        claim = f'declared {spec["cost"]:g} s x2, observed {observed:.1f} s'
         if first is None or second is None:
-            print(f'{spec["artifact"]}: could not re-stamp -- {why_a or why_b}')
+            print(f'{spec["artifact"]}: could not re-stamp -- {why_a or why_b} ({claim})')
             bad += 1
             continue
         if first != second:
             at = next((i for i in range(min(len(first), len(second))) if first[i] != second[i]),
                       min(len(first), len(second)))
-            print(f'{spec["artifact"]}: NOT IDEMPOTENT -- first difference at byte {at} '
+            print(f'{spec["artifact"]}: NOT IDEMPOTENT ({claim}) -- first difference at byte {at} '
                   f'({len(first)} vs {len(second)} B); a regenerator that does not reproduce itself '
                   f'cannot certify any tree')
             bad += 1
             continue
         committed = os.path.join(ROOT, spec['artifact'])
         agree = (os.path.isfile(committed) and open(committed, 'rb').read() == first)
-        print(f'{spec["artifact"]}: idempotent ({len(first)} B) | committed copy '
+        print(f'{spec["artifact"]}: idempotent ({len(first)} B) | {claim} | committed copy '
               f'{"agrees" if agree else "DIFFERS -- this is the stale photograph"} | {spec["note"]}')
     return 0 if bad == 0 else 1
+
+
+def apply(only: list[str] | None, allow_slow: bool) -> int:
+    """Stage every artifact, prove it idempotent, then write -- and read back what was written.
+
+    atomic_write gives a whole file or the old one; the read-back gives the RIGHT file. A write that returns
+    success and a read that returns the staged bytes are two different claims, and the second is the only one
+    that survives the next process.
+    """
+    staged: list[tuple[dict, bytes]] = []
+    for spec in STAMPS:
+        if only and not any(o in spec['artifact'] for o in only):
+            continue
+        if spec['cost'] > 30 and not allow_slow:
+            print(f'{spec["artifact"]}: NOT STAGED (declared {spec["cost"]} s; pass --allow-slow)')
+            continue
+        clock = time.monotonic()
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            first, why_a = stamp_once(spec, a, timeout=spec['cost'] * 6)
+            second, why_b = stamp_once(spec, b, timeout=spec['cost'] * 6)
+        observed = time.monotonic() - clock
+        claim = f'declared {spec["cost"]:g} s x2, observed {observed:.1f} s'
+        if first is None or second is None or first != second:
+            print(f'{spec["artifact"]}: REFUSED, nothing written -- '
+                  f'{why_a or why_b or "not idempotent"} ({claim})')
+            return 1
+        print(f'{spec["artifact"]}: staged {len(first)} B, idempotent ({claim})')
+        staged.append((spec, first))
+    if not staged:
+        print('restamp: nothing staged, nothing written')
+        return 2
+    sys.path.insert(0, TOOLS)
+    from atomicio import atomic_write  # one writer, so a partial file is impossible
+    wrote = 0
+    for spec, text in staged:
+        target = os.path.join(ROOT, spec['artifact'])
+        already = os.path.isfile(target) and open(target, 'rb').read() == text
+        if already:
+            print(f'{spec["artifact"]}: already current, not rewritten')
+            continue
+        atomic_write(target, text)
+        back = open(target, 'rb').read()
+        if back != text:
+            print(f'{spec["artifact"]}: WROTE AND READ BACK DIFFERENT BYTES '
+                  f'({len(text)} staged, {len(back)} on disk) -- the file is not what was certified')
+            return 1
+        print(f'{spec["artifact"]}: written {len(back)} B, read back identical')
+        wrote += 1
+    print(f'restamp: {wrote} artifact(s) written, {len(staged) - wrote} already current')
+    return 0
 
 
 def main(argv: list[str]) -> int:
     only = [a for a in argv if not a.startswith('-')]
     allow_slow = '--allow-slow' in argv
     if '--apply' in argv:
-        print('restamp: --apply is NOT implemented and will not be until a stamp has been observed idempotent '
-              'on this tree. Staging before writing is the point; a half-written protocol is worse than an '
-              'unwritten one.', file=sys.stderr)
-        return 2
+        return apply(only, allow_slow)
     return check(only, allow_slow)
 
 
