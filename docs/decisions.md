@@ -1698,3 +1698,25 @@ about a *different artifact*: the case must write the value the body will read. 
 ever wrote it** — which is the whole history of the `rip_load` family, where zero-fill meant the differential
 compared zero to zero and the mutant was invisible. Both conditions, or the word `seeded` is a synonym for
 `static` that reads as if it were safer.
+
+### 1r — HORIZON (recorded 2026-02-14): two rates, both labelled, and the repair time is in one of them
+
+The frontier is **6,288 branch-free rows**. The figure a reader uses to decide the four open asks has been
+printed for weeks as **one** number built from **one** rate. It is two numbers, and tonight is the measurement
+that makes the second honest.
+
+- **Clean rate, ASSUMED: `2.0 h / 78 rows` ≈ `39 rows/h`.** One emitter, one record, one revert, when nothing
+  in the instrument is wrong. **This is still an assumption, not a measurement** — its only support is the
+  chain family's own window, and that window was chosen after the repairs were done.
+- **Measured rate INCLUDING REPAIR: `≈ 8 rows/h`** — the chain family's window plus this one, `78 rows / ~10 h`,
+  in which **zero batches landed** because the gate could not read a family it had been quoting for a week.
+  That work was not optional: it is now why six reds and the next family are reachable at all.
+- **Ceiling at the measured rate: `6,288 / 8 ≈ 790 h`**, against **`161 h`** at the clean rate.
+
+**A horizon built only from the clean rate is the `8 s` cost line again — a number that was true once and is now
+a claim.** Both rates print together, with these labels, wherever the horizon is quoted. Neither moves
+`verified`: `21 → 21`.
+
+The lesson, stated so it outlives the arithmetic: **an instrument that has never been checked on a family it
+could not read was not free — its repair is part of the family cost, and a price that omits repair prices the
+one window in which nothing goes wrong.**
