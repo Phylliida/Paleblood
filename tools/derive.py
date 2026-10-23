@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "symbols" / "derived.json"
 sys.path.insert(0, str(ROOT / "tools"))
+import rosters  # noqa: E402
 
 PENDING = (
     "branch.functions", "branch.landed",           # branch_census.py
@@ -73,6 +74,14 @@ def main(argv) -> int:
             print(f"derive: {OUT.relative_to(ROOT)} is missing -- run tools/derive.py")
             return 3
         old = json.loads(OUT.read_text())
+        unlisted, stale = rosters.compare(old.get("pending_provisional", []),
+                                          payload["pending_provisional"])
+        if unlisted or stale:
+            for k in unlisted:
+                print(f"derive: PENDING entry {k!r} is not pending in this derivation")
+            for k in stale:
+                print(f"derive: PENDING entry {k!r} is stale -- prune it")
+            return 1
         if old.get("values") != payload["values"]:
             keys = sorted(set(old.get("values", {})) | set(payload["values"]))
             for k in keys:

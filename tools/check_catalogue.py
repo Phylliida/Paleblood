@@ -17,6 +17,8 @@ Also scans test/, because `tools/*.py` misses it -- a gate that greps the wrong 
 import ast
 import pathlib
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir
+import rosters  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ALLOW = ROOT / "tools" / "catalogue_allowlist.txt"
@@ -75,8 +77,7 @@ def main():
     if ALLOW.exists():
         allowed = {l.strip() for l in ALLOW.read_text().splitlines() if l.strip() and not l.startswith("#")}
     users = {rel for rel, (_, reader) in hits.items() if reader}
-    new = sorted(users - allowed)
-    stale = sorted(allowed - users)
+    new, stale = rosters.compare(allowed, users)   # both directions, one implementation
     for rel in new:
         print(f"REFUSED {rel}: csv.DictReader outside catalogue.py -- add a typed reader instead")
     for rel in stale:

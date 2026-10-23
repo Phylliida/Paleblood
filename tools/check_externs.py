@@ -21,6 +21,8 @@ declaration, and a gate that fires on prose gets an exemption added instead of a
 import pathlib
 import re
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir
+import rosters  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROSTER = ROOT / "tools" / "extern_roster.txt"
@@ -76,8 +78,8 @@ def main():
         roster = {l.strip() for l in ROSTER.read_text().splitlines()
                   if l.strip() and not l.startswith("#")}
     functions = {name for (kind, name) in found if kind == "function"}
-    new = sorted(functions - roster)
-    stale = sorted(roster - functions)
+    # both directions from ONE implementation (tools/rosters.py), so the next list inherits the rule
+    new, stale = rosters.compare(roster, functions)
     for name in new:
         errors.append(f"REFUSED: function extern `{name}` in a .c file is not in tools/extern_roster.txt")
     for name in stale:
