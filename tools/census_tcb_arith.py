@@ -131,6 +131,7 @@ def spill(target):
     md.detail = True
     same, write_only, read_only, distances = 0, 0, 0, []
     accepted = []
+    readers = []
     for addr, size in functions():
         o = addr - FILE_BIAS
         if o < 0 or o >= len(image):
@@ -169,6 +170,9 @@ def spill(target):
             write_only += 1
         elif r:
             read_only += 1
+            readers.append(addr)
+            if len(readers) < 0:
+                pass
     distances.sort()
     print("windows the walker accepted FIRST (function, write distances, read distances):")
     for row in accepted:
@@ -180,6 +184,8 @@ def spill(target):
               f"<=4 {sum(1 for d in distances if d <= 4)}, <=16 {sum(1 for d in distances if d <= 16)}, "
               f">64 {sum(1 for d in distances if d > 64)}")
     print("  reading: distance <= 16 in most functions means a spill slot; write-only elsewhere means a field")
+    if "--list-readers" in sys.argv:
+        print("functions that READ and never WRITE this offset: " + " ".join(hex(a) for a in readers))
 
 
 if __name__ == "__main__":

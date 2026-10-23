@@ -711,3 +711,18 @@ accumulate across every `fs:0` site in a function, so `j - i` measured from whic
 pairing distances are only meaningful in absolute instruction positions. **A pairing test whose anchors
 differ per element is not a pairing test**, and the tool now prints the windows it accepted before its
 counts.
+
+**The three-way split was the real output, and the risk population is measured at zero.** Of the functions
+touching `[tcb+0x10]`: 457 write and read it (a zeroed TCB cannot victimise them), 7 write only, and
+**71 read it and never write it** -- the only population a zeroed TCB could fault. Intersecting those 71
+against the walk from `0x004000a0`: **770 direct-edge reachable addresses, 0 hits.** On the paths the boot
+can walk, the zeroed TCB cannot fault before the guest writes the field itself, so the thread question
+separates from the TCB question.
+
+**The bound is part of the result:** `guest_reach.py` follows direct edges only and **1,523 unresolved
+indirect call sites** leave the visited set, so this says "no read-only `[tcb+0x10]` reader is a
+direct-edge descendant of entry", not "none can run". `guest_reach.py --visited` exists for this -- its
+summary reports counts, and an intersection computed against a summary is a coincidence test dressed as a
+query. The first intersection I attempted read that summary and would have printed zero for the wrong
+reason.
+

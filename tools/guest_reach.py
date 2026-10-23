@@ -81,6 +81,10 @@ def main(argv=None):
     ap.add_argument('--elf', default='../data/bb/elf/eboot.elf')
     ap.add_argument('--edges', default='../data/exports/edges.csv')
     ap.add_argument('--limit', type=int, default=64)
+    # The walk's answer is a set, so asking a question of the form "is any of these N addresses in
+    # it" needs the set, not the counts. `--visited` prints it, because an intersection computed
+    # against a summary line is a coincidence test dressed as a query.
+    ap.add_argument('--visited', action='store_true')
     a = ap.parse_args(argv)
     # e_entry is an offset from the image base, and the loader enters at image + e_entry
     # (loader.c:133 -> boot.c:632). Formatting it alone would walk from 0xa0, find nothing,
@@ -98,6 +102,9 @@ def main(argv=None):
     direct, indirect = load_edges(a.edges)
     indirect_count = indirect
     depth, hits, deep, unresolved = bfs(entry, direct, hooks, a.limit)
+    if a.visited:
+        for addr in sorted(depth, key=lambda x: int(x, 16)):
+            print(f'visited {addr} depth {depth[addr]}')
     print(f'entry {entry}: {len(depth)} addresses reachable over direct edges '
           f'({len(direct)} callers carry any); hooks installed {len(hooks)}')
     print(f'frontier stopped at depth {a.limit}: {len(deep)} nodes, '
