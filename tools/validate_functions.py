@@ -13,11 +13,11 @@ import re
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-try:                                  # a hanging gate should print its own frame, not hang
-    import stacks
-    stacks.arm()
-except ImportError:                   # run from a tree without tools/ on sys.path
-    pass
+# The stack dump used to be armed HERE, at module scope, by a `try: import stacks; stacks.arm()`. Four test
+# modules import this file, so merely READING it -- in the suite's own interpreter -- armed a repeating
+# 60-second faulthandler dump for the whole run, which is where 37 MB of dumps and a missing verdict came
+# from. A gate that arms a watchdog on import arms it in every process that looks at it. The arm belongs to
+# the process that RUNS the gate, so it lives under __main__ and is cancelled on the way out.
 
 import verification
 
@@ -379,5 +379,17 @@ def check_reviews(root: str, funcs: list[dict]) -> list[str]:
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        import stacks
+        stacks.arm()      # this process is about to do the work; its own frames are wanted
+    except ImportError:
+        pass
+    try:
+        sys.exit(main())
+    finally:
+        try:
+            import stacks
+            stacks.cancel()
+        except ImportError:
+            pass
 

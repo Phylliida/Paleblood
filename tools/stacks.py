@@ -14,6 +14,7 @@ failure would be a new defect of the same family.
 """
 from __future__ import annotations
 
+import atexit
 import faulthandler
 import os
 
@@ -27,7 +28,20 @@ def arm(seconds: float | None = None) -> bool:
         faulthandler.dump_traceback_later(every, repeat=True, exit=False)
     except (RuntimeError, ValueError):
         return False
+    # THE TIMER MUST NOT OUTLIVE THE CALLER. repeat=True means a single arm() keeps dumping every `every`
+    # seconds for the life of the interpreter, and nothing in this file could stop it -- which is how a run of
+    # the suite produced 37 MB of dumps from a process that had already finished the work. atexit covers the
+    # normal exit; a caller that keeps running must call cancel() itself.
+    atexit.register(cancel)
     return True
+
+
+def cancel() -> None:
+    """Stop periodic dumps. Safe to call when nothing is armed, and safe to call twice."""
+    try:
+        faulthandler.cancel_dump_traceback_later()
+    except (RuntimeError, ValueError):
+        pass
 
 
 if __name__ == '__main__':
