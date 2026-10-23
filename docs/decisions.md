@@ -1781,3 +1781,18 @@ denominator is ambiguous exactly where it matters.
 **A is a repair window of known scope; B is a batch window. The ratio between them is the first honest estimate
 of what repair costs per batch** — the figure tonight could only *bound* at `n = 1` and cannot price. Two
 records with different subjects beat three figures with one denominator.
+
+**Two implementation clauses for Window A, recorded because each closes a defect that already has a name:**
+
+1. **The bound and its label are ONE assignment.** Not `ok = any(lo <= t < (hi if kind=='load' else ms))` plus a
+   separate `where = 'filesz' if kind=='load' else 'memsz'` — that is **two copies of one decision**, and it
+   agrees only until one of them changes: the `extent_line` defect, *a label and a predicate that agreed until
+   they didn't.* The form:
+   `end, end_name = (ms, 'memsz') if (kind, source) in (('load','seeded'),) or kind != 'load' else (hi, 'filesz')`
+   — comparison and sentence read **the same variable**, so they cannot disagree, and a future source inherits
+   the shape instead of a second ternary.
+2. **The supply check is an EQUALITY across two files, and the refusal names both values.** The body's `kSlot`
+   constant against the case's seed address: equal, or the differential runs over a slot the case never wrote.
+   **A gate that reads two artifacts and prints one of them** is how `chain_family.csv` became a shared premise
+   — both instruments "agreeing" because they read the same table. Here the two reads are **compared**, and a
+   mismatch prints `body says 0x…, case seeds 0x…` so the disagreement is the message, not a boolean.
