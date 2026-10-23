@@ -49,12 +49,16 @@ def violations(functions, hooks, install):
             return_ = 'hook mode but no game/hooks.csv entry'
             if addr not in hook_addrs:
                 errs.append(f'install_mode.csv: {addr} is {return_}')
+    # AN INDEX, NOT A SCAN. This was `any(r['address'] == addr and r['mode'] == 'host' for r in install)`
+    # inside a loop over every landed function: 38k rows x |install_mode| Python comparisons, which is
+    # defining_files one tier down -- a per-row search that belongs in a per-process index. The predicate is
+    # unchanged; it is simply answered once instead of 38,096 times.
+    host_addrs = {r['address'] for r in install if r['mode'] == 'host'}
     for row in functions:
         addr = row['address']
         if row['status'] == 'original':
             continue
-        if addr not in hook_addrs and not any(r['address'] == addr and r['mode'] == 'host'
-                                              for r in install):
+        if addr not in hook_addrs and addr not in host_addrs:
             errs.append(f'functions.csv: {row["name"]} is {row["status"]} with neither a '
                         f'game/hooks.csv entry nor an install_mode row saying host')
     return errs
