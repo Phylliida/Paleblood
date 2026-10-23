@@ -416,3 +416,30 @@ board by 41 — the same shape as the surplus, one layer down.
 
 `rip_add_store` (362 members, +5,430 B) is **not** in this commit: its body stores `resolved + K2`, so
 it needs the same channel and its own both-directions control before it prices anything.
+
+### 1k, third — `rip_add_store` lands, and two instruments had to be read rather than invoked
+
+`rip_add_store` (362 members, `{15: 362}` → **+5,430 B**) landed on the same channel with the same
+both-directions control: a body storing `0x80513f7f0` instead of `0x553f7f0` fails **rc=1, failed 3**,
+`slot buf:out+0x0 after: original f0f7530500000000 replacement f0f7130508000000` — the two spaces
+visible in one hex string pair. Board to the unit: functions **33,974**, ledger **34,075** (surplus
+**101**), bytes **283,635**, differential **22,862**, byte-identical **11,112**, **`verified` 21**.
+
+**`normalised()` is range-gated**, so the slot channel is only correct for values that land inside the
+mapped image: `if IMAGE <= v < IMAGE + boot_size`. Before applying, all 362 stored values were checked
+and land in `0x553f7d0..0x57623e0`, inside the guest image — measured, because a value outside the
+range would be compared untranslated on both sides and fail for a reason that has nothing to do with
+the body.
+
+**The emitter's `members()` returns nothing for a landed family**, by design (`members()` skips
+landed addresses, which is the single-selector repair from the `12482 flipped` defect). Consequence
+found the hard way: the control could not be built from `members()` and had to be built from the
+**artifact** — parse the body file for name/constant pairs. That is the `--reemit` debt arriving as a
+concrete cost rather than a predicted one: **once a family is landed, the generator is not able to tell
+you what it emitted.**
+
+**Two stale numbers per family, both forced, both caught by their guards:** `symbols/capture_ok.csv`
+(`so_sha256` moves on every relink) and the `memory` corpus count in `docs/capture-protocol.md`
+(22,218 → 23,304 with this family's 1,086 cases). The second is a doc quoting a **corpus count**, so
+every landing expires it — a fixture of the present with a dated label. Recorded as a cost, not a
+surprise; the predicate (`grep -rl '"memory"'`) is the stable thing and the number is not.

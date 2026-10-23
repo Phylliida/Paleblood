@@ -51,7 +51,7 @@ def declared_words(header):
 # second reader that runs is the structural answer, so the numbers are recomputed here from ../data/cases.
 CAPTURE_CLAIMS = [
     ("docs/capture-protocol.md", "4,169", "pointer"),
-    ("docs/capture-protocol.md", "22,218", "memory"),
+    ("docs/capture-protocol.md", "23,304", "memory"),
 ]
 
 
