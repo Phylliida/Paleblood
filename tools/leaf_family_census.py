@@ -77,3 +77,17 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+def landed_addresses():
+    """Addresses whose BODY exists -- rows past `original`, not rows that merely exist.
+
+    One selector for the counter (census_band.py) and the emitters, because they drifted by exactly
+    one row the moment `land_bytes_band.py` wrote a band of rows at `original`: the counter said
+    12,092 unlanded, the emitter said 4,034 + 8,059 = 12,093, and both were "right" about a
+    different population. A row at `original` is bookkeeping for a body nobody has written.
+    """
+    import csv
+    return {int(r['address'], 16)
+            for r in csv.DictReader(open('symbols/functions.csv'))
+            if r['status'] != 'original'}

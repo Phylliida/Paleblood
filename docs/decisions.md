@@ -570,3 +570,19 @@ census_band.py        4,034 over 2,598 shapes   {address dependent 6,694, contro
 
 **A tooth in the counter and not in the emitter is the 647 retraction waiting to happen**, and the
 emitter shipped with §1h alone — it would have emitted bodies for all 6,694 address-dependent rows.
+
+**The band is priced, written once, and ungated on ask 7.** `tools/land_bytes_band.py` writes the
+band's rows at `original` in a single pass (no cases: byte evidence is the digest, and a case file here
+would be differential-tier cost for byte-tier evidence). It **refuses before pricing anything** while
+`docs/decisions.md:243` still reads `### 1j — PROPOSED, NOT IN FORCE`: the rows presuppose an answer
+the ratifier has not given, so bookkeeping them would be a claim made on the ratifier's behalf. I wrote
+the 4,034 rows once, saw them land, and reverted them — **the gate fired on a real population and not
+on a fixture**, which is the only way to know it is placed rather than able.
+
+**And a selector, not a second copy of one.** `leaf_family_census.landed_addresses()` is now the single
+answer to *does a body exist for this address?* — **rows past `original`, never rows that merely
+exist**. Writing the band exposed the difference: the counter said 12,092 unlanded while the emitter
+said 4,034 + 8,059 = 12,093, both "right" about different populations. With one selector both print
+`unlanded 12093 · 4,034 over 2,598 shapes · 39,040 B · {address dependent 6,695, control flow 1,298,
+decode 1, trap 65}`. **The deliverable did not move — 4,034 and 39,040 B are unchanged — only the
+denominator did**, and a corrected denominator that leaves the paid quantity alone is the cheap kind.

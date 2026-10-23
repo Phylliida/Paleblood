@@ -44,7 +44,7 @@ def transcribable():
     md = open(C.ELF, 'rb').read()
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = False
-    landed = {int(r['address'], 16) for r in csv.DictReader(open('symbols/functions.csv'))}
+    landed = C.landed_addresses()   # a BODY exists, not merely a row
     out, refused, members = [], collections.Counter(), []
     # The population is the CATALOGUE's unlanded rows in the band, not the leaf-shape census: the
     # shape census recognises 5,888 of the 12,092 rows, so emitting from it would land 4,033 where

@@ -32,7 +32,7 @@ def main(argv):
     o = ap.parse_args(argv)
 
     md = open(C.ELF, 'rb').read()
-    landed = {int(r['address'], 16) for r in csv.DictReader(open('symbols/functions.csv'))}
+    landed = C.landed_addresses()   # the emitter's selector, not a second copy of it
     cat = [(int(r['address'], 16), int(r['size'])) for r in csv.DictReader(open('symbols/ghidra_functions.csv'))]
     band = [(a, s) for a, s in cat if o.min <= s <= o.max and a not in landed]
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
