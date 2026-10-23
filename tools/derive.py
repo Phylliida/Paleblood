@@ -192,6 +192,24 @@ def main(argv) -> int:
         print("  no flags: write symbols/derived.json.  --check: stored == derived.  "
               "--compare: every move against a baseline, refused unless predicted.")
         return 0
+    # ABSENCE BEFORE WORK. `compare` already refuses a baseline that is missing or holds no values -- but it
+    # was reached only after `build()`, which is three capstone censuses (116 s for branch_census alone, 290 s
+    # measured for the three). So the refusal was correct and arrived 290 s late, and the test that exercises it
+    # carried a 300 s subprocess timeout, which is a bet against build() growing. One stat and one json.load
+    # answer the question; nothing about the censuses can change the answer.
+    if "--compare" in argv:
+        _b = Path(argv[argv.index("--compare") + 1])
+        if not _b.exists():
+            print(f"derive: baseline {_b} is missing -- refusing before any census runs")
+            return 3
+        try:
+            _bv = json.loads(_b.read_text()).get("values")
+        except (OSError, ValueError) as exc:
+            print(f"derive: baseline {_b} is unreadable ({exc}) -- refusing before any census runs")
+            return 3
+        if not _bv:
+            print(f"derive: baseline {_b} holds no values -- refusing before any census runs")
+            return 3
     # --payload injects the current side: the comparison logic is what seven tests exercise, and it does
     # not care what the numbers are. Without it, every test pays three capstone censuses (290 s measured).
     if "--payload" in argv:

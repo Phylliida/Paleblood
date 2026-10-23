@@ -5,6 +5,7 @@ committed store matches a fresh derivation and one plants a wrong value and asse
 """
 import json
 import subprocess
+import os
 import sys
 import tempfile
 import unittest
@@ -20,6 +21,9 @@ class Derived(unittest.TestCase):
         return subprocess.run([PY, "-P", str(TOOL), *args], cwd=str(ROOT),
                               capture_output=True, text=True, timeout=300)
 
+    @unittest.skipUnless(os.environ.get('BB_SLOW'),
+                         'capstone consistency: this derivation IS the three censuses (290 s measured), so it '
+                         'runs under BB_SLOW=1. Unchecked here: that symbols/derived.json matches a fresh build.')
     def test_committed_store_matches_a_fresh_derivation(self):
         p = self.run_tool("--check")
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
