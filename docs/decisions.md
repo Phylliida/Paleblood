@@ -1437,3 +1437,35 @@ would see two rows with one case hash and read copy-paste. So each row carries `
 `store_k2` + `imm` + width, and the shared hash becomes **a fact checkable against a column instead of a
 coincidence taken on trust.** Same move as `distinct bodies` in the pool-B families: one question the
 reviewer can ask, and a re-derivation they can run.
+
+### The seed is read back through the mapping, once per body, before the body runs
+
+`check_seeding.py` is a static gate on a case FILE: it proves the file says to seed a slot. It cannot prove
+the seed landed, because the image is mapped once and mutated by every run. The failure it cannot see is
+quiet and expensive: **the body reads zero, the store goes to `0 + K2`, the differential compares two
+zero-filled tails, and the row lands green.** So `apply_case`'s write path records every range it writes —
+the seed and the destination sentinel alike — and after the loop calls
+`read_back_mismatch(lambda a, n: ctypes.string_at(a, n), writes)`, refusing before the body runs with both
+values printed.
+
+`read_back_mismatch` takes its reader as a parameter so it can be falsified without an image: the tests show
+a landed seed passing, a missed seed returning the zero the body would have read, a partial landing, and a
+second written range — the sentinel — being checked rather than the first only. Same move that made the
+`rt_guest_writable` fixture trustworthy: **the byte read back through the mapping, never the write's return
+code.**
+
+### An anchor is not a claim about execution order: the entry point belongs last
+
+Wiring the read-back, I inserted `read_back_mismatch` above `def fixture_seeds`. The anchor was unique and
+correct, the file parsed, and **44 of 64 harness tests failed with `name 'fixture_seeds' is not defined`.**
+Mechanism: `if __name__ == '__main__': sys.exit(main())` sat at line 1092 and `fixture_seeds` at 1085, above
+it; my insertion pushed it below, so when the module runs as a script `main()` reaches the call site before
+the name exists. **A definition inserted between a call site and the entry point is a change to the
+program's execution order, which is not a property of the anchor** — the same family as *a guard above its
+own measurement shadows it*, one tier up: here the shadow fell on a whole function. The guard is now the
+last statement of the file, with that history in a comment above it.
+
+Also mine, and caught by its own run: the partial-landing test zeroed **byte 7 of `0x5956678`, which is
+`0x00` already**, so the "mutation" changed nothing and the test demanded a refusal that was not owed. **A
+falsification that alters a byte already at that value tests exactly as much as a differential that compares
+two zero-filled tails.**

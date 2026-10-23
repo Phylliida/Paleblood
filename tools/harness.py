@@ -387,6 +387,7 @@ class Run:
             # The guest thread pointer (gs:[0] must hold it too, as a TCB does).
             if libc.syscall(SYS_ARCH_PRCTL, ARCH_SET_GS, ctypes.c_ulong(self.value(self.case['gs']))):
                 raise BadInput(f'arch_prctl(ARCH_SET_GS) failed: errno {ctypes.get_errno()}')
+        writes = []
         for m in fixture_seeds(self.case):
             target = m['addr']
             addr = self.value(target) if isinstance(target, str) and target.startswith('buf:') else self.guest(hexint(target))
@@ -398,6 +399,16 @@ class Run:
                 data = bytes.fromhex(m['bytes'])
             self.check_memory(addr, len(data), write=True, source="fixture_setup")
             ctypes.memmove(addr, data, len(data))
+            writes.append((addr, data))
+        # THE READ-BACK, once per body and before it runs. A write is a claim; what the body reads is the
+        # state. If a seed misses -- wrong guest() arithmetic, a slot outside the mapping, a case applied
+        # to a stale image -- the body reads zero, stores to 0 + K2, and the differential then compares two
+        # zero-filled tails and lands the row green. A static gate on the case FILE cannot see any of that.
+        miss = read_back_mismatch(lambda a, n: ctypes.string_at(a, n), writes)
+        if miss is not None:
+            addr, want, got = miss
+            raise BadInput(f'fixture seed did not land at 0x{addr:x}: expected {want.hex()}, read back '
+                           f'{got.hex()} -- refusing before the body runs; a seed that misses reads zero')
 
     def guest(self, ps4: int) -> int:
         '''PS4 address -> host address. The `- EBOOT_BASE` belongs here and nowhere else: it is
@@ -1078,8 +1089,18 @@ def main() -> int:
     return 0
 
 
-if __name__ == '__main__':
-    sys.exit(main())
+def read_back_mismatch(read, writes):
+    """(addr, expected, got) for the first written range that does not read back -- None if all did.
+
+    `read(addr, len) -> bytes` is a parameter so this can be falsified without an image. The harness passes
+    `ctypes.string_at`, i.e. reads through the GUEST mapping -- the same move that made the rt_guest_writable
+    fixture trustworthy: the byte read back through the mapping, never the write's return code.
+    """
+    for addr, data in writes:
+        got = read(addr, len(data))
+        if got != data:
+            return addr, data, got
+    return None
 
 
 def fixture_seeds(case):
@@ -1090,3 +1111,11 @@ def fixture_seeds(case):
     disagree, and the gate would then be certifying a run the runner does not perform.
     """
     return list(case.get('memory', []))
+
+# The entry point is the LAST statement in the file. A function defined below it is unbindable when the
+# module runs as a script: main() executes at the guard, reaches the call site, and the name does not exist
+# yet. I put read_back_mismatch above fixture_seeds and thereby pushed fixture_seeds below this guard --
+# 44 tests failed with `name 'fixture_seeds' is not defined` and the anchor had been correct all along.
+# An anchor is a claim about where a construct is; it is not a claim about the file's execution order.
+if __name__ == '__main__':
+    sys.exit(main())
