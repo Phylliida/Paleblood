@@ -99,9 +99,13 @@ def batch_problems(root='.'):
     owed_b = PREREG['bytes'] - sum(int(r['size']) for r in rows if r['address'] in fam)
     from landed import byte_totals
     bt = byte_totals(f'{root}/symbols/functions.csv')
-    if live_landed + owed != BATCH['landed_after'] or bt['landed'] + owed_b != BATCH['bytes_after']:
-        out.append(f'batch: owed derivation ({owed} rows / {owed_b} B) disagrees with the measured '
-                   f'before-state ({live_landed} rows / {bt["landed"]} B landed) plus after-state')
+    # `owed` is what the batch still owes, so the predicate only holds while the batch is UNLANDED: adding it to
+    # a live count that already includes the batch double-counts, and the sentence then reports a disagreement
+    # on a correct post-record tree. A check whose applicability has an precondition must state it, not assume
+    # the tree is the tree it was written against.
+    if owed and (live_landed + owed != BATCH['landed_after'] or bt['landed'] + owed_b != BATCH['bytes_after']):
+        out.append(f'batch: owed derivation ({owed} rows / {owed_b} bytes) disagrees with the measured '
+                   f'before-state ({live_landed} rows / {bt["landed"]} bytes landed) plus after-state')
     if owed_b not in (0, PREREG['bytes']):
         out.append(f'batch: bytes {live_bytes} -> pre-registered {BATCH["bytes_after"]} owes {owed_b}, '
                    f'not 0 or {PREREG["bytes"]} (measured {BATCH["bytes_before"]} + {PREREG["bytes"]})')
