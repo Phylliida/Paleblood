@@ -13,6 +13,7 @@
 
 #include <sched.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 enum { BSD_ENOMEM = 12, BSD_EINVAL = 22 };
@@ -163,7 +164,22 @@ int rt_thread_attr_detach_state(void *const *attr, const char *caller)
     return a->detach_state;
 }
 
+/* EXPERIMENT A. scePthreadCreate reports a generic failure and creates nothing, so the guest's own
+   error path runs. FreeBSD EAGAIN (35) is "resource temporarily unavailable", the error a real system
+   returns when it cannot make a thread; SCE_KERNEL_ERROR(35) = 0x80020023, deliberately NOT 0x805a1001,
+   the one code eboot's caller is written to tolerate. Declared MODELLED, not REAL: no thread exists, and
+   any guest state that implies one is fabricated. The print goes to stderr because the boot harness
+   treats stdout as a JSON map keyed by case id. */
+static int sce_pthread_create_a(void **thread, const char *name, void *entry, void *arg, const void *attr)
+{
+    (void)thread; (void)name; (void)entry; (void)arg; (void)attr;
+    fprintf(stderr, "scePthreadCreate: EXPERIMENT A -- reached, returning 0x80020023 (EAGAIN), "
+                    "no thread created, failure modelled\n");
+    return SCE_KERNEL_ERROR(35);
+}
+
 RT_SYSLIB("libkernel", scePthreadSelf, thread_self);
+RT_SYSLIB_MODELLED("libkernel", scePthreadCreate, sce_pthread_create_a);
 RT_SYSLIB("libkernel", scePthreadEqual, thread_equal);
 RT_SYSLIB("libkernel", sched_yield, kernel_sched_yield);
 RT_SYSLIB_UNRESOLVED("libkernel", scePthreadYield, thread_yield);

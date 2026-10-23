@@ -859,3 +859,29 @@ field read. The ambiguity exists only when creations succeed, which is B, and B 
 reached**. If the output instead shows two or more creations attempted, the short-circuit reading is wrong
 and the `je`s go somewhere other than the next call's argument -- which would contradict a linear walk
 already printed, and would mean the walk and the runtime disagree about the same bytes.
+
+## Experiment A: blocked before create #1, by a chain of unbound libc imports
+
+Run with A's body in force (`sce_pthread_create_a`, returning `0x80020023` EAGAIN, declared MODELLED).
+**The guest never reached thread creation.** The boot stopped at **libc import #33, `atexit`**
+(`8G2LB+A3rzg`), with `imports called: 2`. So the pre-registered prediction -- *stops at the refusal with
+one create attempted* -- is **untested, not refuted**: no create was attempted, because the init path
+calls two libc imports before it gets anywhere near the threads.
+
+**`atexit` answered as MODELLED** (registration accepted, handler never runs, because the runtime does not
+exit through libc): registered 89 -> **90 = 54 real + 25 modelled + 5 noop + 6 refused**, imports
+implemented 63 -> **64**, imports called 2 -> **3**, and `#33` itself called **twice**. The boot then
+moved one import and stopped at **libc #40, `__cxa_guard_acquire`** (`3GPpjQdAMTw`) -- the C++ static
+initialisation guard, which is a real body (read the guard byte; 1 = you must run the initialiser and call
+release, 0 = already done) and the next rung, not a stub.
+
+**A defect found by the run and unrelated to it:** `pbboot` exits **rc=0** while printing
+`unimplemented` and stopping. **A stopped boot and a finished boot have the same rc**, so any harness
+keying on the return code reads "the guest stopped at an unbound import" as success. `rc` is not a pass
+here; the stdout line is the only signal, and a caller that does not read stdout is told the boot
+succeeded.
+
+**Confirmed, having been carried as a prediction for two slices:** the default build fails to link
+`test_plugin` -- `hooks.c` references `rt_capture_begin/run_id/write` and that target does not link
+`capture.c`. `runtime/pbboot` links fine, so `--target pbboot` is the honest build until the test target
+is fixed; building the default target and reading rc=1 as "my change broke it" would have been wrong.
