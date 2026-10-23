@@ -44,6 +44,33 @@ class LeafShapeCensus(unittest.TestCase):
         self.assertIn(f'frontier {addressable} addressable rows', out,
                       'the tool and the artifact disagree about the population it names')
 
+    def test_the_three_way_split_is_an_identity(self):
+        rc, out, err = run('--targets-for', 'mov rax,[rip+K] ; mov [rax+K],K ; ret')
+        self.assertEqual(rc, 0, f'{out}\n{err}')
+        m = re.search(r'rows (\d+) \| load target inside filesz (\d+) \| zero-fill tail (\d+) '
+                      r'\| unmapped (\d+)', out)
+        self.assertIsNotNone(m, out.splitlines()[1] if out else '<empty stdout>')
+        total, filesz, zerofill, unmapped = (int(x) for x in m.groups())
+        self.assertEqual(filesz + zerofill + unmapped, total,
+                         'a target is unaccounted for: the split must partition the shape')
+        self.assertGreater(total, 0, 'a shape filter matching nothing is not a measurement')
+
+    def test_a_cross_segment_address_is_unmapped_not_zerofill(self):
+        # Positive control on the classifier itself: code is file-backed, an address in the gap
+        # between the two PT_LOADs is in no segment at all, and these must not be confused with
+        # the zero-fill tail -- the difference decides whether a body may be authored.
+        import sys as _s
+        _s.path.insert(0, os.path.join(ROOT, 'tools'))
+        import leaf_shape_census as S
+        md = open(S.ELF, 'rb').read()
+        segs = S.load_segments(md)
+        self.assertEqual(S.classify_target(segs, 0x400000), 'filesz')
+        self.assertEqual(S.classify_target(segs, 0x090dc000), 'unmapped')
+        self.assertEqual(S.classify_target(segs, 0x5956678), 'zerofill')
+        # the RW segment's reservations are what make a seeding case possible at all
+        self.assertTrue(any(b <= 0x5956678 < b + m for b, f, m in segs),
+                        'the seeded slot must lie inside some segment memsz, not past all of them')
+
     def test_missing_bytes_are_a_refusal_not_an_empty_census(self):
         rc, out, err = run('--elf', '/tmp/does-not-exist-eboot.elf')
         self.assertEqual(rc, 3, f'expected the refusal arm, got rc={rc}\n{out}\n{err}')

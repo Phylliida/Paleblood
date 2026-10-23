@@ -35,6 +35,69 @@ FRONTIER = os.path.join(ROOT, 'symbols', 'leaf_frontier.csv')
 BIAS = 0x3FC000
 
 
+def load_segments(md):
+    """PT_LOADs as (vaddr, filesz, memsz) in GUEST space.
+
+    guest = vaddr + 0x400000 (EBOOT_BASE) on this ELF; `file = guest - 0x3FC000` is the same fact
+    one step later. Both halves of a segment matter and they are not the same number: p_filesz is
+    what the loader FILLS, p_memsz what it RESERVES. A target past filesz and inside memsz reads
+    as a constant zero in the shipped process, so a body and its mutant both see it and the
+    differential compares zero to zero.
+    """
+    phoff = int.from_bytes(md[0x20:0x28], 'little')
+    entsize = int.from_bytes(md[0x36:0x38], 'little')
+    n = int.from_bytes(md[0x38:0x3a], 'little')
+    out = []
+    for i in range(n):
+        b = md[phoff + i * entsize:]
+        if int.from_bytes(b[0:4], 'little') != 1:  # PT_LOAD
+            continue
+        vaddr = int.from_bytes(b[0x10:0x18], 'little')
+        filesz = int.from_bytes(b[0x20:0x28], 'little')
+        memsz = int.from_bytes(b[0x28:0x30], 'little')
+        out.append((vaddr + 0x400000, filesz, memsz))
+    return out
+
+
+def classify_target(segs, addr):
+    """'filesz' / 'zerofill' / 'unmapped' for a guest address -- the gate's three outcomes."""
+    for base, filesz, memsz in segs:
+        if base <= addr < base + filesz:
+            return 'filesz'
+        if base + filesz <= addr < base + memsz:
+            return 'zerofill'
+    return 'unmapped'
+
+
+def targets_for(md, cs, rows, want, segs):
+    """Per-row targets for one shape: the rip load's static address and the store's K.
+
+    The load target is static (addr + insn size + disp) and therefore checkable before a body is
+    written. The store target is NOT: it is [loaded pointer + K], so the case has to supply the
+    pointer -- argument->obligation, not addr-only.
+    """
+    out = []
+    for addr, size in rows:
+        ins = list(cs.disasm(md[addr - BIAS:addr - BIAS + size], addr))
+        if len(ins) < 2 or shape_of(ins, 3) != want:
+            continue
+        load_disp = next((op.mem.disp for op in ins[0].operands
+                          if op.type == capstone.x86.X86_OP_MEM), None)
+        if load_disp is None:
+            continue
+        tgt = addr + ins[0].size + load_disp
+        store = next((op.mem.disp for op in ins[1].operands
+                      if op.type == capstone.x86.X86_OP_MEM), 0)
+        src = next((op for op in ins[1].operands
+                    if op.type in (capstone.x86.X86_OP_IMM, capstone.x86.X86_OP_REG)), None)
+        out.append({'address': addr, 'size': size, 'load_target': tgt,
+                    'where': classify_target(segs, tgt),
+                    'store_k': store,
+                    'src': ('imm' if src is not None and src.type == capstone.x86.X86_OP_IMM
+                            else 'reg' if src is not None else 'none')})
+    return out
+
+
 def frontier():
     rows = [r for r in (l.split(',') for l in open(FRONTIER, newline='').read().splitlines()) if r]
     return [(int(r[0], 16), int(r[1])) for r in rows if r[2] == 'addressable']
@@ -69,6 +132,11 @@ def main(argv):
     # --elf exists so the refusal arm is reachable by a test. A path constant that no argument can
     # vary gives a refusal nobody can execute, and an unexecuted refusal arm is a paragraph.
     ap.add_argument('--elf', default=ELF)
+    # --targets-for answers the question that must be answered BEFORE a body is written: is the
+    # static load target inside p_filesz? A shape whose targets are in the zero-fill tail cannot
+    # be discriminated by any case, so authoring it first and refusing it after is 78 bodies of
+    # evidence for nothing.
+    ap.add_argument('--targets-for', default=None, metavar='SHAPE')
     a = ap.parse_args(argv)
     if a.max_insns < 1 or a.top < 1:
         print('leaf_shape_census: --max-insns and --top must be positive', file=sys.stderr)
@@ -107,6 +175,41 @@ def main(argv):
                     ks[s].add(op.mem.disp)
                 elif op.type == capstone.x86.X86_OP_IMM:
                     ks[s].add(op.imm)
+    if a.targets_for is not None:
+        segs = load_segments(md)
+        t = targets_for(md, cs, rows, a.targets_for, segs)
+        if not t:
+            print(f'leaf_shape_census: no frontier row has shape {a.targets_for!r} -- a shape '
+                  f'filter that matches nothing is not a measurement of that shape',
+                  file=sys.stderr)
+            return 1
+        import collections as _c
+        where = _c.Counter(x['where'] for x in t)
+        print(f'shape {a.targets_for}')
+        print(f'rows {len(t)} | load target inside filesz {where["filesz"]} | '
+              f'zero-fill tail {where["zerofill"]} | unmapped {where["unmapped"]}')
+        print(f'store src {_c.Counter(x["src"] for x in t)} | '
+              f'distinct store K {len({x["store_k"] for x in t})} | '
+              f'distinct load K {len({x["load_target"] - x["address"] for x in t})}')
+        for x in t[:5]:
+            print(f'  {x["address"]:#010x} size {x["size"]:>3} load->{x["load_target"]:#x} '
+                  f'{x["where"]:>8} store +{x["store_k"]:#x} src {x["src"]}')
+        # WHICH OUTCOMES ADMIT A BODY, and why this is not the same question as "is the target
+        # file-backed". A target past p_filesz but inside p_memsz is a constant zero in the
+        # SHIPPED process -- but the case is not limited to the shipped state: harness.py:458
+        # admits a `fixture_setup` write anywhere inside a segment's memsz, and snapshot() reads
+        # memsz, so a case can seed the slot and the snapshot will see what the body did with it.
+        # Verified by mapping the image and reading the seed back through it. So `zerofill` is
+        # admissible WITH a seeding case, and only `unmapped` -- outside every memsz, where a
+        # write faults -- refuses. The old blanket refusal had the wrong reason: it said no case
+        # can discriminate, when the case supplies the discriminating value itself.
+        good = [x for x in t if x['where'] in ('filesz', 'zerofill')]
+        seeded = sum(1 for x in good if x['where'] == 'zerofill')
+        print(f'BATCH {len(good)} rows / {sum(x["size"] for x in good)} B '
+              f'({seeded} needing a fixture-seeded slot, {len(good) - seeded} file-backed) | '
+              f'{len(t) - len(good)} refused as unmapped')
+        return 0 if good else 1
+
     covered = sum(shapes.values())
     print(f'frontier {len(rows)} addressable rows | decoded {covered} | over {a.max_insns} '
           f'insns {over} (counted, not dropped) | undecoded {undecoded} | '

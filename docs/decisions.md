@@ -1109,3 +1109,43 @@ message pre-registers rows and bytes. First batch: the 78-row shape, with the sp
 emit time — **the load is image-via-supplied-base, the store target is an indirect through a pointer
 loaded at runtime, so the gate must classify it as argument→obligation and the case must supply the
 buffer**, and every case must discriminate (marker bytes, not zero-fill).
+
+### Correction, same session: the 78-row batch is 78, and `_refuse_zerofill`'s reason was wrong
+
+The companion's instruction was to run `_refuse_zerofill`'s check over the 78 rows' `rip+K` targets
+**before** authoring any of them. Done, with a positive control on the segment parse (code address →
+`filesz`; `0x090dc000`, in the gap between the two PT_LOADs → `unmapped`):
+
+| shape `mov rax,[rip+K] ; mov [rax+K],K ; ret` | rows |
+|---|---|
+| load target inside `p_filesz` | **0** |
+| inside `p_memsz`, past `p_filesz` (zero-fill tail) | **78** |
+| in no segment at all | 0 |
+
+So authoring first would have produced 78 bodies whose shipped-state load is a constant zero. That part
+of the warning was exactly right. **But the reason the refusal states — "a constant 0 no case can
+discriminate" — is false**, and three facts in `tools/harness.py` say so:
+
+* `:458` admits a `fixture_setup` write anywhere inside any segment's **`memsz`**, not `filesz`.
+* `snapshot()` at `:657` reads **`memsz`** bytes per segment, so BSS is part of the compared state.
+* `boot['size']` is `0x50dc000 + 0x5f70f4 = 0x56d30f4` (the extent), so the slot is inside the mapped
+  image.
+
+Then measured rather than argued: mapped the image at `IMAGE` with that size, wrote a pointer into the
+BSS slot `IMAGE + (0x5956678 − 0x400000)`, **read it back through the image**, stored `0x1234` at
+`pointer + 0x1520`, and read `34120000` back with the marker at offset 0 intact. A case supplies the
+discriminating value itself; the shipped zero is a state the body can never execute in (in-game the
+global is initialised before the call, and calling it with 0 would fault).
+
+**Corrected predicate: a target past `p_filesz` but inside `p_memsz` is admissible with a seeding case;
+only a target in no segment at all refuses, because a write there faults.** Implemented in
+`--targets-for`, which now prints the split as an identity and names how many rows need a seeded slot.
+
+**Consequence that is not being quietly re-run.** The same reason retired **161 `rip_load` members**
+("161 of 161 outside filesz") and removed them from the frontier. If the reason was wrong there too,
+those rows are landable. That is a change to a rule that has already moved rows, so it is recorded here
+as an open item with its predicate, to be decided deliberately — not re-derived in passing.
+
+**Batch, pre-registered:** 78 rows / 1,320 B, one **family** emitter, not one shape — parameters
+`(load K, store K2, immediate K3)` from the decode, because seven of the top fifteen shapes are this
+same chain and a template per shape is how `parse_size` became four call sites.
