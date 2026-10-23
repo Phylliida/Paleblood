@@ -12,6 +12,8 @@ import struct
 import subprocess
 import time
 from pathlib import Path
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import function_catalog as catalog
 

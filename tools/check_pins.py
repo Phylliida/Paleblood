@@ -30,6 +30,7 @@ import argparse
 import csv
 import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:                                  # a hanging gate should print its own frame, not hang
     import stacks
@@ -37,7 +38,6 @@ try:                                  # a hanging gate should print its own fram
 except ImportError:                   # run from a tree without tools/ on sys.path
     pass
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import verification
 import validate_functions as vf
 

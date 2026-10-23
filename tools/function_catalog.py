@@ -19,6 +19,7 @@ import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from verification import source_hash as replacement_source_hash
 

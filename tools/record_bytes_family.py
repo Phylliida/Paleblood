@@ -22,6 +22,7 @@ import sys
 import tempfile
 
 import re
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import blocks as B
 import leaf_family_census as C

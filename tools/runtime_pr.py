@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 from pathlib import PurePosixPath
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import session_report
 

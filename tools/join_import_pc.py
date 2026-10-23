@@ -23,6 +23,8 @@ import bisect
 import csv
 import re
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 IMAGE = 0x800000000
 EBOOT_BASE = 0x400000

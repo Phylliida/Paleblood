@@ -28,6 +28,7 @@ import csv
 import os
 import struct
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from addrs import parse_address
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64

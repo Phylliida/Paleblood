@@ -7,6 +7,8 @@ from collections import Counter
 import hashlib
 import json
 from pathlib import Path
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import differential
 import function_catalog as catalog

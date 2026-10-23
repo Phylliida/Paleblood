@@ -17,6 +17,8 @@ import hashlib
 import struct
 import sys
 import time
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import simd_census  # noqa: F401  (proves PYTHONPATH=tools: the campaign's other census tool)
 

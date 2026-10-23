@@ -14,6 +14,8 @@ bytes (check_asm_bytes.py). A case file would be differential-tier cost for byte
 """
 import csv
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import emit_byte_leaves as E
 import record_bytes_family as R

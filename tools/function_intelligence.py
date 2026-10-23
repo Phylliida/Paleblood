@@ -8,6 +8,8 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import function_catalog as catalog
 

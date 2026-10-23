@@ -11,6 +11,7 @@ import csv
 import os
 import re
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:                                  # a hanging gate should print its own frame, not hang
     import stacks

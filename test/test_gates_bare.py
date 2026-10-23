@@ -19,8 +19,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # the tools whose sibling imports the import-order gate grandfathers: today they start only when the
 # script's own directory reached sys.path some other way. One population, two assertions.
 TOOL_MODULES = {p.stem for p in (ROOT / "tools").glob("*.py")}
-EXEMPT_BARE_START = {l.split(":")[0] for l in
-                     (ROOT / "tools" / "import_order_allowlist.txt").read_text().splitlines() if l.strip()}
+# no exemption set: every tool with a __main__ guard starts bare and does not need the environment. The
+# 40 grandfathered sibling imports were fixed rather than tracked, and the shrink-only list was deleted
+# rather than left empty -- an empty allowlist is a tool waiting to be re-populated.
 GATES = ("check_externs.py", "check_catalogue.py", "check_import_order.py")
 
 
@@ -63,11 +64,7 @@ class BareGates(unittest.TestCase):
                 # test for as long as the suites ran with PYTHONPATH=tools -- the harness supplying what the
                 # artifact needs. This is the assertion that would have caught it.
                 both = p.stdout + p.stderr
-                # EXEMPT exactly the population check_import_order grandfathers, so the two instruments
-                # share one list and neither can drift into a second roster. A file leaves this set only
-                # by getting its sibling import below a path insert, which prunes the baseline too.
-                if tool in EXEMPT_BARE_START:
-                    continue
+
                 # The property is about SIBLING resolution, so the assertion names the missing module
                 # rather than matching the exception: a tool that cannot import a third-party package
                 # (terminal_gif.py needs Pillow, which this venv lacks) is a different finding and must

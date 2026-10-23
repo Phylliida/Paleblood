@@ -1252,3 +1252,31 @@ import), `check_pins.py:35` (above its own insert at :40 — the exact defect, i
 pattern). Grandfathered by file+line in `tools/import_order_allowlist.txt`, shrink-only: a new violation
 refuses and a stale line refuses, so the list cannot become a permission slip. `progress.py` is the sharpest
 one: the pre-commit hook invokes it plainly, which is why nobody has seen it fail.
+
+### The 40 grandfathered imports were fixed, and the allowlist deleted rather than emptied
+
+Shrink-only is not small, it is slow. All 40 sites were one statement placed beside the imports, so they were
+edited rather than tracked: 16 files, **+23 lines, −41** (the 41st is `check_pins.py`'s insert, moved above the
+import it was supposed to precede — the file that introduced the pattern had it in the wrong order).
+`tools/import_order_allowlist.txt` is **deleted**, not left empty: an empty allowlist is a tool waiting to be
+re-populated, the same doctrine that says a `--apply` flag is deleted the day its authorisation is refused.
+`test_gates_bare` loses its exemption set entirely — every tool with a `__main__` guard now starts bare, which
+is one assertion over a derived roster with nothing to drift.
+
+**Two of the 40 were load-bearing.** `census_rip_load.py:32` was a **top-level** sibling import, so that module
+could not be imported under `-P` by anything, including the emitter that will want its scan.
+`progress.py`'s three imports sat behind `--help`, unexecuted — the hook would have reached them the day
+someone added a flag.
+
+**And the repair's first attempt was caught by its own subject, not by me.** I computed the insertion point as
+"after the prologue", which for a file with **no docstring** is line 0 — so `sys.path.insert` landed above
+`import sys` in 16 files. `py_compile` passed, because the name is only needed at execution; my verification
+loop grepped for sibling misses and `SyntaxError` and so reported sixteen clean rc=1s while every one of them
+died `NameError: name 'sys' is not defined`. **A check that greps for the failure it expects will miss the one
+it caused** — the insert point now comes from the AST's own import nodes, and the check greps `NameError` too.
+
+**Measured defect, not fixed here.** `progress.py --root <abs> --check` run from `/tmp` exits **0** while printing
+`cannot read the catalogue … unread is not zero` and `reach: unavailable …` (rc read directly, no pipe): either
+`--root` is not threaded to the catalogue read or absence is read as clean in `--check` mode. Both are
+violations of *absence refuses*; the hook is unaffected because it runs from the repo root, which is exactly
+why it has never been seen.
