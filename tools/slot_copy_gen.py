@@ -303,7 +303,13 @@ def build(address, source_register, dest_register, moves):
              "dest": {"size": DEST_SIZE, "bytes": destination.hex()}},
             note)))
 
-    region = pattern(OVERLAP_OFFSET + DEST_SPAN, OVERLAP)
+    # The destination sits OVERLAP_SHIFT past the source in one case and before it in the other; the
+    # region must reach past the WIDEST destination extent, not merely the span. Members do not all store
+    # from their destination's start: 0x00dd73e0 loads from source+0x10/+0x20 and stores at
+    # destination+0x60/+0x70, so its last 16-byte store ends 0x80 past the destination pointer. This
+    # line was repaired in the generated artifact once and NOT here, so re-running the generator
+    # reintroduced the defect -- a generator that cannot re-emit a repair is a repair with an expiry.
+    region = pattern(OVERLAP_OFFSET + OVERLAP_SHIFT + DEST_SPAN, OVERLAP)
     buffers = {"region": {"size": len(region), "bytes": region.hex()}}
     for case_id, destination_offset in (
             ("overlap_dest_above_source", OVERLAP_OFFSET + OVERLAP_SHIFT),
@@ -390,6 +396,9 @@ def main(argv):
         print(f'wrote {path}')
     if '--check' not in argv:
         os.chmod(os.path.join(root, 'slot_copy_cases.py'), 0o755)
+        # A write that did what it was asked is rc 0. Returning the staleness count here made a correct
+        # run indistinguishable from --check finding drift -- promote.py's defect, arriving again.
+        return 0
     return stale
 
 
