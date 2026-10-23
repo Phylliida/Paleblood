@@ -1661,3 +1661,18 @@ side, and the two instruments must keep reading different artifacts.
 **A family with two obligations is two decls**, and the loop iterates decls: `chain_deref` is
 `(('load','seeded','kSlot'), ('store','argument','kStoreDisp'))`. One family, two rows, two bounds, one table —
 the set, not the pair, which is the whole of (1) through (3) in one line of data.
+
+**How (1) was proven, and the standard it sets for every refactor that touches a gate:** the gate's full output
+before and after the two edits is **byte-identical — 71 lines, `rc=1` on both sides**. The `rc=1` is the
+stronger half: identity **including the failure path** means the refactor covered the branch that actually runs
+on this tree, not only a happy path no family here takes. **A refactor is proven by invariance on the real
+tree at its real rc; an invariance proof taken only on a passing gate has not been taken**, because a gate that
+exits 0 exercises a branch the refusal path never reaches.
+
+**`seeded` is TWO conditions, and the second is not arithmetic.** The bound is arithmetic on the ELF —
+`msz` end, not `fsz` end, because the slot lives in the zero-fill tail (78 of 78). The **supply** is a claim
+about a *different artifact*: the case must write the value the body will read. **A branch that implements only
+`memsz` passes every family whose slot happens to sit in zero-fill while saying nothing about whether anything
+ever wrote it** — which is the whole history of the `rip_load` family, where zero-fill meant the differential
+compared zero to zero and the mutant was invisible. Both conditions, or the word `seeded` is a synonym for
+`static` that reads as if it were safer.
