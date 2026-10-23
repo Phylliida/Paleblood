@@ -22,6 +22,11 @@ OUT = ROOT / "symbols" / "derived.json"
 sys.path.insert(0, str(ROOT / "tools"))
 import rosters  # noqa: E402
 
+# A refactor must not move a number it did not touch. Any key NOT under these prefixes has provenance
+# independent of the five loaders being migrated, so it must be byte-identical across that commit; a
+# frozen key that moves is a far stronger signal than the six provisional ones that are expected to.
+MUTABLE_PREFIX = ("branch.", "band.", "frontier.", "thunk.")
+
 PENDING = (
     "branch.functions", "branch.landed",           # branch_census.py
     "band.unlanded_independent", "band.nested",    # leaf_family_census.py / census_band.py
@@ -67,8 +72,26 @@ def build() -> dict:
     }
 
 
+def compare(old_path, payload) -> int:
+    """Refuse a moved key the caller declared frozen. `derive.py --compare before.json`."""
+    old = json.loads(Path(old_path).read_text()).get("values", {})
+    new = payload["values"]
+    moved = sorted(k for k in set(old) | set(new) if old.get(k) != new.get(k))
+    frozen = [k for k in moved if not k.startswith(MUTABLE_PREFIX)]
+    for k in moved:
+        tag = "mutable" if k.startswith(MUTABLE_PREFIX) else "FROZEN"
+        print(f"derive: moved [{tag}] {k}: {old.get(k)!r} -> {new.get(k)!r}")
+    if frozen:
+        print(f"derive: {len(frozen)} frozen key(s) moved -- this refactor altered provenance it does not own")
+        return 1
+    print(f"derive: compare ok ({len(moved)} key(s) moved, all provisional)")
+    return 0
+
+
 def main(argv) -> int:
     payload = build()
+    if "--compare" in argv:
+        return compare(argv[argv.index("--compare") + 1], payload)
     if "--check" in argv:
         if not OUT.exists():
             print(f"derive: {OUT.relative_to(ROOT)} is missing -- run tools/derive.py")

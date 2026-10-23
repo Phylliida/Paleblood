@@ -25,6 +25,27 @@ class Derived(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.assertIn("derive: ok", p.stdout)
 
+    def _doctored(self, mutate):
+        import tempfile
+        store = ROOT / "symbols" / "derived.json"
+        payload = json.loads(store.read_text())
+        mutate(payload["values"])
+        f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(payload, f); f.close()
+        return subprocess.run([PY, "-P", str(TOOL), "--compare", f.name], cwd=str(ROOT),
+                              capture_output=True, text=True, timeout=300)
+
+    def test_compare_allows_a_provisional_key_to_move(self):
+        p = self._doctored(lambda v: v.__setitem__("branch.functions", 1))
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn("[mutable] branch.functions", p.stdout)
+
+    def test_compare_refuses_a_frozen_key_that_moves(self):
+        p = self._doctored(lambda v: v.__setitem__("catalogue.functions", 1))
+        self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+        self.assertIn("[FROZEN] catalogue.functions", p.stdout)
+        self.assertIn("frozen key(s) moved", p.stdout)
+
     def test_a_wrong_value_is_refused_and_named(self):
         store = ROOT / "symbols" / "derived.json"
         orig = store.read_text()          # restore the BYTES read, never a retyped digit
