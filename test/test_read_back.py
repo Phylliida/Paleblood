@@ -14,6 +14,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 
 import harness as H
+from mutate import mutate
 
 SLOT, SEED = 0x5956678 + 0x400000, (0x5956678).to_bytes(8, 'little')
 
@@ -37,10 +38,8 @@ class TheSeedMustLand(unittest.TestCase):
         # 0x00 anyway, so the "mutation" changed nothing and the test asserted a refusal that was not owed
         # -- a falsification that alters a byte already at that value tests exactly as much as a differential
         # that compares two zero-filled tails.
-        half = bytearray(SEED)
-        i = next(k for k, b in enumerate(half) if b)
-        half[i] = 0
-        self.assertNotEqual(bytes(half), SEED)
+        i = next(k for k, b in enumerate(SEED) if b)
+        half = mutate(SEED, i, 0, 'seed')   # refuses if that byte were already zero
         out = H.read_back_mismatch(image({0x1000: bytes(half)}), [(0x1000, SEED)])
         self.assertIsNotNone(out)
 

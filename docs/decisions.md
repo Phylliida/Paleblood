@@ -1519,3 +1519,23 @@ at this commit** (`harness: … cannot open` rc=3; `seeding: refusing -- no case
 refusing -- cannot read …` rc=3). A pushed repository whose evidence lives only on one machine is **a
 delivery defect, not a hygiene note**: the instruments are public and their subjects are not, and nothing
 about a green suite says so.
+
+### An anchor is unique as a substring without being unique as a line
+
+`assert s.count(old) == 1` passed for `import harness` against a file whose line was `import harness as H`.
+The write was unique and wrong: the alias migrated onto the new import line, `harness` lost it, and five
+tests died with `'function' object has no attribute 'read_back_mismatch'` — a message that names the wrong
+object because the name had been rebound to something else entirely.
+
+**The anchor must be a whole line or a whole block: `assert ('\n' + old + '\n') in s`.** Uniqueness of a
+substring is a property of the text; uniqueness of a line is the property the patch actually needs.
+
+### Mutations that cannot fail to mutate
+
+Three occurrences in one stretch — a partial-landing test that zeroed byte 7 of `0x5956678` (already
+`0x00`), a batch check whose "mutation" wrote `status='unknown'` (still landed), and, before them, 117
+survivors that were cases putting the only value at offset 0 — is the threshold where a rule has failed and
+a shape is owed. `tools/mutate.py`: `mutate(data, offset, new)` and `replace_field(row, field, value)`
+**refuse when the new value equals the old**, with a message that says the offset and that nothing would be
+tested. The mistake is no longer observable; it is unrepresentable. Same shape as `atomic_write` refusing to
+leave its temp file behind, and it costs one line at each call site instead of a paragraph in a log.

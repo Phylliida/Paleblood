@@ -17,6 +17,7 @@ sys.path.insert(0, TOOLS)
 
 import catalogue
 import chain_family as C
+from mutate import replace_field
 
 
 def tree_with(**edit):
@@ -30,9 +31,11 @@ def tree_with(**edit):
         header = list(rows[0].keys())
         for r in rows:
             if r['status'] in ('edge', 'verified'):
-                assert edit['field'] != 'status' or edit['value'] != r['status']  # must actually mutate
-                r[edit['field']] = r[edit['field']] + edit['delta'] if edit['field'] == 'size' \
-                    else edit['value']
+                # replace_field refuses if the value is already there; no separate assertion needed
+                if edit['field'] == 'size':
+                    r[edit['field']] += edit['delta']
+                else:
+                    replace_field(r, edit['field'], edit['value'], 'landed row')
                 break
         with open(path, 'w', newline='') as f:
             w = csv.DictWriter(f, fieldnames=header)

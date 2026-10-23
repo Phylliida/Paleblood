@@ -100,8 +100,11 @@ def batch_problems(root='.'):
         print(f'batch: live {live_landed} rows / {live_bytes} B is neither the pre-registered before-state '
               f'nor its after-state')
     elif owed == PREREG['rows']:
+        # The byte pair is printed BOTH ways on one line: the number that was carried wrong once is exactly
+        # the number a reader will carry next, so the before-value is measured here rather than remembered.
         print(f'batch: owed {owed} row(s) / {owed_b} B / {owed_p} branch-free; pre-registered after-state '
-              f'{BATCH["landed_after"]} rows, {BATCH["bytes_after"]} B, SCOPE {BATCH["scope_after"]}%, '
+              f'{BATCH["landed_after"]} rows, bytes {live_bytes:,} -> {BATCH["bytes_after"]:,}, '
+              f'SCOPE {BATCH["scope_after"]}%, '
               f'PROGRESS {BATCH["progress_free_landed_after"]}/{BATCH["progress_free_total"]} = '
               f'{BATCH["progress_after"]}%, verified {BATCH["verified_after"]}')
     else:
