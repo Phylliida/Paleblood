@@ -1796,3 +1796,21 @@ records with different subjects beat three figures with one denominator.
    **A gate that reads two artifacts and prints one of them** is how `chain_family.csv` became a shared premise
    — both instruments "agreeing" because they read the same table. Here the two reads are **compared**, and a
    mismatch prints `body says 0x…, case seeds 0x…` so the disagreement is the message, not a boolean.
+
+**One more correction to the shape, before it is written wrong:** `any(lo <= t < … for lo, hi, ms in segs)` cannot
+say **which** segment admitted a target — and two PT_LOADs can overlap in this ELF, so the label must come from
+the segment that admitted it. **The predicate is whatever an explicit loop found, not a parallel `any()`**; leave
+`any()` in place and add a second comprehension for the name and the two-copies defect is back, one line after it
+was made structurally unavailable. Shape: one loop (or one `next(...)` over a generator) that yields
+`(end, end_name)` and `break`s — the comparison and the sentence then read the same pair.
+
+**And the three outcomes are three, not two:**
+
+1. **admitted by the right bound** — `load/static` inside `filesz`, `load/seeded` or any store inside `memsz`.
+2. **admitted only by the other bound** — *past `filesz`, inside `memsz`*. **This is the gap tonight's whole
+   `seeded` distinction lives in**, and it must print as its own sentence (`past filesz, inside memsz`), not as
+   a failure and not as an `ok`.
+3. **in no segment** — the target misses every PT_LOAD, which is a mis-emission, full stop.
+
+Collapsing (2) into (1) makes `seeded` invisible; collapsing it into (3) refuses 78 correct rows. **A two-way
+verdict over a three-way fact is a formatter.**
