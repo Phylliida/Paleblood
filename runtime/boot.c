@@ -536,20 +536,9 @@ static const char *usage =
 int main(int argc, char **argv)
 {
     rt_announce_identity();
-    /* The guest's own TLS image, before any trampoline exists: the stub inlines both bases, so they must be
-       final by then. */
-    if (objects[0].elf) {
-        const rt_elf_tls *t = rt_elf_tls_segment(objects[0].elf);
-        if (t) {
-            /* A TLS vaddr is a guest address; rt_guest_to_image is the only place the bias lives. */
-            /* The TLS vaddr is a guest address and objects[0].image is the eboot image, so the bias is
-               RT_EBOOT_BASE -- the same arithmetic rt_guest() performs, done here without pulling the plugin
-               TU into pbboot (rt_image is defined in plugin.c, which this executable does not link). */
-            const unsigned char *img = t->filesz ? objects[0].image + (t->vaddr - RT_EBOOT_BASE) : NULL;
-            rt_tls_layout(img, (unsigned)t->filesz, (unsigned)t->memsz);
-        }
-    }
-    rt_tls_init();
+    /* TLS is laid out after the loading loop below: it needs the executable open. A layout placed here
+       (where it lived until now) runs with objects[0].elf == NULL on every boot, so its scan never fired
+       and the hardcoded default 0x4a0 was the only layout the runtime ever had. */
     {
         void *p = malloc(48);
         fprintf(stderr, "pbboot: heap probe at init (before any guest code): malloc(48) = %p\n", p);
@@ -602,6 +591,29 @@ int main(int argc, char **argv)
         o->called = calloc(n, 1);
         rt_elf_set_tls_module_id(o->elf, k + 1);
     }
+
+    /* The guest's TLS layout, derived from the executable that declares it, now that it is open. It has to
+       land before the trampolines, which bake the guest base into every stub as a literal.
+       The main executable is the module whose @tpoff constants the guest's own code uses, so its memsz is
+       the one a variant-II layout must satisfy: image sits exactly memsz below the TCB, because any padding
+       there shifts every TLS variable to a different address. */
+    {
+        const rt_elf_tls *t = rt_elf_tls_segment(objects[0].elf);
+        const unsigned char *img = t->filesz ? objects[0].image + (t->vaddr - RT_EBOOT_BASE) : NULL;
+        rt_tls_layout(img, (unsigned)t->filesz, (unsigned)t->memsz);
+        fprintf(stderr, "pbboot: tls: modelled from %s: filesz 0x%x memsz 0x%x\n", objects[0].label,
+                (unsigned)t->filesz, (unsigned)t->memsz);
+        /* One module of however many declare PT_TLS. Say so at every boot rather than let a reader assume
+           the block covers everything: which module's @tpoff constants are in play is a measurement this
+           runtime has not made, and a modelled block that is a default is a silent truncation. */
+        for (size_t m = 1; m < object_count; m++) {
+            const rt_elf_tls *o = rt_elf_tls_segment(objects[m].elf);
+            if (o->memsz)
+                fprintf(stderr, "pbboot: tls: %s declares PT_TLS filesz 0x%x memsz 0x%x -- not modelled\n",
+                        objects[m].label, (unsigned)o->filesz, (unsigned)o->memsz);
+        }
+    }
+    rt_tls_init();
     char *db_text;
     db_count = read_nid_db(nid_path, &db, &db_text);
     for (size_t k = 0; k < object_count; k++) resolve(&objects[k]);

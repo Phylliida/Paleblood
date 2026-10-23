@@ -64,6 +64,22 @@ static void probe_fsgsbase(void)
                              "swapped between guest and host code at syslib call boundaries");
 }
 
+/* The one read that proves the install. A C pointer into the block proves the bytes were written;
+   wrfsbase returning cleanly proves nothing about which register it wrote -- 0xdb is wrgsbase, legal,
+   silent and wrong, and it cost seven slices. Reading through %fs ITSELF is the only check that both
+   the bytes and the base are what the guest's 16,854 fs:[0] reads will find. */
+static int fs0_reads_self(uint64_t fs)
+{
+    if (!have_wrfsbase) return -1; /* the arch_prctl path has never run; it is not proved here */
+    uint64_t seen = 0;
+    asm volatile("wrfsbase %0" ::"r"((unsigned long)fs));
+    asm volatile("movq %%fs:0, %0" : "=r"(seen));
+    asm volatile("wrfsbase %0" ::"r"(host_fsbase));
+    fprintf(stderr, "pbboot: tls: fs:[0] reads 0x%llx, base is 0x%llx -- %s\n", (unsigned long long)seen,
+            (unsigned long long)fs, seen == fs ? "self-pointer" : "MISMATCH");
+    return seen == fs ? 0 : 1;
+}
+
 void rt_tls_init(void)
 {
     rt_mirror_host_tls = getenv("BB_TLS_MIRROR") != NULL;
@@ -78,8 +94,13 @@ void rt_tls_init(void)
        past threads. */
     if (!guest_block) rt_tls_layout(NULL, 0, guest_memsz);
     *(uint64_t *)guest_block = (uint64_t)(uintptr_t)guest_block; /* the guest's own self-pointer */
-    fprintf(stderr, "pbboot: tls: guest block at %p, self-pointer set, swap via %s\n", (void *)guest_block,
-            have_wrfsbase ? "wrfsbase" : "arch_prctl");
+    fprintf(stderr, "pbboot: tls: guest block at %p, modelled memsz 0x%x, swap via %s\n", (void *)guest_block,
+            guest_memsz, have_wrfsbase ? "wrfsbase" : "arch_prctl");
+    /* Written is not verified: the guest reads this slot 16,854 times and a zero here is a null TCB base
+       for every one of them. Reread it through the register the guest will use and refuse if it differs. */
+    if (fs0_reads_self((uint64_t)(uintptr_t)guest_block) == 1)
+        rt_fatal("TLS", "%%fs:[0] does not read back as the TCB base, so every guest fs:[0] read would find "
+                        "something else; the boot cannot be interpreted past this point");
 }
 
 /* Places the image and the TCB inside one region and sets %fs to the TCB. Idempotent: later calls with a
