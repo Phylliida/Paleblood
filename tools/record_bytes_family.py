@@ -96,7 +96,8 @@ def assert_position_independent(members) -> None:
     `lea rax,[rip+K]; add rax,K2` shows its second half.
     """
     import capstone
-    from capstone.x86_const import X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_RIP
+    from capstone.x86_const import (X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_FS,
+                                   X86_REG_GS, X86_REG_RIP)
     md = open(C.ELF, 'rb').read()
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = True
@@ -109,10 +110,49 @@ def assert_position_independent(members) -> None:
                     raise SystemExit(f"refused: {m['function']} has a RIP-relative operand "
                                      f"({ins.mnemonic} {ins.op_str}): its value depends on where "
                                      f"it sits, so byte identity does not preserve behaviour")
+                if op.type == X86_OP_MEM and op.mem.segment in (X86_REG_FS, X86_REG_GS):
+                    seg = 'fs' if op.mem.segment == X86_REG_FS else 'gs'
+                    raise SystemExit(f"refused: {m['function']} has a {seg}: -relative operand "
+                                     f"({ins.mnemonic} {ins.op_str}): it computes from a segment "
+                                     f"base the replacement does not control. The differential "
+                                     f"reaches a body from the host (harness.py: ctypes.CDLL, then "
+                                     f"getattr(lib, name)), where %{seg} is the host TCB; the hook "
+                                     f"path runs the same bytes with the guest base, so one body "
+                                     f"would mean two things depending on how it was called")
                 if op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000:
                     raise SystemExit(f"refused: {m['function']} carries an address-valued "
                                      f"immediate ({ins.mnemonic} {ins.op_str}): {op.imm:#x} is "
                                      f"guest space, not a constant")
+
+
+TRAPS = frozenset({
+    'int', 'int1', 'int3', 'into', 'ud0', 'ud1', 'ud2', 'syscall', 'sysenter', 'sysret', 'sysexit',
+    'iret', 'iretd', 'iretq', 'hlt', 'in', 'out', 'invd', 'wbinvd', 'cli', 'sti', 'clts', 'swapgs',
+    'wrfsbase', 'wrgsbase', 'rdmsr', 'wrmsr', 'lgdt', 'lidt', 'lldt', 'ltr', 'vmcall', 'vmrun',
+})
+
+
+def assert_no_trap(members) -> None:
+    """decisions.md 1j (v): a .byte body that traps is not a function that returns.
+
+    The differential would time out or die instead of comparing, and the failure would be
+    reported against the harness rather than against the body. Measured on the <=16 B band: 65
+    of the 4,099 transcribable, position-independent rows trap -- 64 `int 0x41`, 1 `ud2` -- so
+    the clause is not hypothetical, and adding it changes the population (4,099 -> 4,034).
+    """
+    import capstone
+    md = open(C.ELF, 'rb').read()
+    cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+    cs.detail = False
+    for m in members:
+        guest, size = int(m['address'], 16), int(m['size'])
+        off = guest - C.FILE_BIAS
+        for ins in cs.disasm(md[off:off + size], guest):
+            if ins.mnemonic in TRAPS:
+                raise SystemExit(f"refused: {m['function']} executes `{ins.mnemonic} "
+                                 f"{ins.op_str}`: a trap or privileged instruction is not a "
+                                 f"returning body -- byte identity would preserve a fault, and the "
+                                 f"differential would report it against the harness")
 
 
 def main(argv):
@@ -142,7 +182,8 @@ def main(argv):
         raise SystemExit(f'refused: {len(bad)} rows are already past `original` ({bad[0]}...)')
     members = [{'function': r['name'], 'address': r['address'], 'size': r['size']} for r in fam]
     assert_no_control_flow(members)   # decisions.md 1h, before any digest and before any write
-    assert_position_independent(members)   # decisions.md 1j (iv)
+    assert_position_independent(members)   # decisions.md 1j (iv), incl. fs:/gs:
+    assert_no_trap(members)                # decisions.md 1j (v)
     sizes = {}
     for m in members:
         sizes[int(m['size'])] = sizes.get(int(m['size']), 0) + 1

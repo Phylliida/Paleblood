@@ -468,3 +468,35 @@ with nothing at all prints `0 members … nothing to land and nothing to re-emit
 `test/test_emit_leaf_family.py`, which asserts the property over **whichever families are landed**
 (so landing or retracting changes its coverage instead of reddening it), plus the partial-population
 refusal, the two empty messages, the named difference, and the key parse.
+
+### 1j (v) — traps, and the fifth tooth: `fs:`/`gs:`, `rip`-relative one register over
+
+**Traps: 65 rows, measured before the clause was written.** In the ≤16 B band, of the **4,099** rows
+that passed every existing tooth, **64 execute `int 0x41` and one executes `ud2`**. A trap is not a
+returning body: the differential would time out or die and the failure would be reported against the
+harness rather than the body. `record_bytes_family.TRAPS` (one list, used by both the writer and
+`census_band.py`, so counter and gate cannot disagree about the class) refuses `int`/`int1`/`int3`/
+`into`/`ud0-2`/`syscall`/`sysenter`/`sysret`/`sysexit`/`iret*`/`hlt`/`in`/`out`/`invd`/`wbinvd`/`cli`/
+`sti`/`clts`/`swapgs`/`wrfsbase`/`wrgsbase`/`rdmsr`/`wrmsr`/`lgdt`/`lidt`/`lldt`/`ltr`/`vmcall`/`vmrun`.
+
+**`fs:`/`gs:`: the tooth costs nothing here and is still the right refusal.** Counted with control
+first (capstone `op.mem.segment` reads `0x20` for `fs:` and `0x21` for `gs:`; a zero from a guessed
+field is this campaign's most repeated defect): across the catalogue **7,914 rows / 16,854
+instructions** — the 16,854 is an *instruction* count, not a row count, so the two numbers are two
+scopes and never an average — and in the ≤16 B unlanded band **zero**, measured on the **superset**
+(12,092 unlanded rows), so zero in the 4,034 as well. Segment-relative leaves in this catalogue are
+longer than 16 B.
+
+**The call-path answer, read rather than assumed.** `tools/harness.py:176` is `ctypes.CDLL(path)` and
+the body is reached with `getattr(lib, name)` from CPython, and **`grep -rn wrfsbase tools/` finds only
+`instruction_trace.py`'s mnemonic list — no code on the differential path can install the guest FS
+base**, so `%fs` there is the host TCB. The hook path (`install_hook`'s 14-byte jump inside the guest)
+runs the same bytes under the **guest** base. **One body, two meanings, decided by how it was called**
+— which is why the tooth is right even though it moves no row today.
+
+**Re-registered on the new population, not adjusted.** refusal counted by reason, zero silent:
+`{'address dependent': 6,694, 'control flow': 1,298, 'decode': 1, 'trap (1j v)': 65}` →
+**4,034 members over 2,598 shapes, 39,040 B** (was 4,099 / 2,602 / 39,488). Landing all of it:
+functions **33,974 → 38,008** · ledger **34,075 → 38,109** (surplus 101) · bytes **283,635 → 322,675**
+· byte-identical **11,112 → 15,146** (`differential 22,862 + 15,146 = 38,008`, so nothing is
+double-counted) · **9 batches, 8 × 500 + 34**.

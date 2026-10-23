@@ -5,15 +5,20 @@
     python3 -P tools/census_band.py --min 17 --max 64     # the band the companion asked about
 
 Passes means: blocks.census -> decoded == size, no unplaced target, ONE block, zero calls (1h), AND
-no instruction whose value depends on its own address (1j iv: RIP-relative operand, relative branch,
-guest-space immediate). Every refusal is counted by reason, so a zero cannot be a silent zero.
+no instruction whose value depends on its own address (1j iv: RIP-relative operand, fs:/gs: segment
+base, relative branch, guest-space immediate), and no trap or privileged instruction (1j v, via
+record_bytes_family.TRAPS -- one list, so the counter and the gate cannot disagree about the class).
+Every refusal is counted by reason, so a zero cannot be a silent zero.
 """
 import argparse
 import collections
 import csv
 
 import capstone
-from capstone.x86_const import X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_RIP
+from capstone.x86_const import (X86_OP_IMM, X86_OP_MEM, X86_REG_EIP, X86_REG_FS,
+                                  X86_REG_GS, X86_REG_RIP)
+
+import record_bytes_family as R
 
 import blocks as B
 import leaf_family_census as C
@@ -43,8 +48,11 @@ def main(argv):
         if c['blocks'] != 1 or c['calls']:
             why['control flow'] += 1; continue
         ins = list(cs.disasm(md[off:off + size], addr))
+        if any(i.mnemonic in R.TRAPS for i in ins):
+            why['trap (1j v)'] += 1; continue
         hit = any(i.mnemonic.startswith(('j', 'call'))
                   or any((op.type == X86_OP_MEM and op.mem.base in (X86_REG_RIP, X86_REG_EIP))
+                         or (op.type == X86_OP_MEM and op.mem.segment in (X86_REG_FS, X86_REG_GS))
                          or (op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000)
                          for op in i.operands) for i in ins)
         if hit:
