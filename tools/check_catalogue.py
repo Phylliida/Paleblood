@@ -18,6 +18,7 @@ import ast
 import pathlib
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir
+import gateline  # noqa: E402
 import rosters  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -49,11 +50,14 @@ def _count(tree):
     return radix, reader
 
 
-def scan():
+def scan(root=None):
+    """hits keyed by repo-relative path. `root` is the tree to scan: the hook runs the staged copy,
+    whose ROOT is $tmp, but a caller that was handed a --root must not be answered about this one."""
+    base = ROOT if root is None else pathlib.Path(root)
     hits = {}
     for d in ("tools", "test"):
-        for p in sorted((ROOT / d).glob("*.py")):
-            rel = str(p.relative_to(ROOT))
+        for p in sorted((base / d).glob("*.py")):
+            rel = str(p.relative_to(base))
             if rel in EXEMPT:
                 continue
             try:
@@ -68,27 +72,35 @@ def scan():
     return hits
 
 
-def main():
-    hits = scan()
+def audit(root=None):
+    """(rc, detail, problems) -- THE verdict. main() prints it; progress.py prints it; nobody recomputes."""
+    hits = scan(root)
     bad = sorted(rel for rel, (radix, _) in hits.items() if radix)
-    for rel in bad:
-        print(f"REFUSED {rel}: explicit size radix (sizes are decimal) -- use catalogue.read_rows")
+    problems = [f"REFUSED {rel}: explicit size radix (sizes are decimal) -- use catalogue.read_rows"
+                for rel in bad]
     allowed = set()
-    if ALLOW.exists():
-        allowed = {l.strip() for l in ALLOW.read_text().splitlines() if l.strip() and not l.startswith("#")}
+    allow = (ROOT if root is None else pathlib.Path(root)) / "tools" / "catalogue_allowlist.txt"
+    if allow.exists():
+        allowed = {l.strip() for l in allow.read_text().splitlines() if l.strip() and not l.startswith("#")}
     users = {rel for rel, (_, reader) in hits.items() if reader}
     new, stale = rosters.compare(allowed, users)   # both directions, one implementation
-    for rel in new:
-        print(f"REFUSED {rel}: csv.DictReader outside catalogue.py -- add a typed reader instead")
-    for rel in stale:
-        print(f"REFUSED {rel}: allowlisted but no longer uses csv.DictReader -- prune the baseline")
+    problems += [f"REFUSED {rel}: csv.DictReader outside catalogue.py -- add a typed reader instead"
+                 for rel in new]
+    problems += [f"REFUSED {rel}: allowlisted but no longer uses csv.DictReader -- prune the baseline"
+                 for rel in stale]
+    sites = sum(r for _x, (_y, r) in hits.items())
     if bad or new or stale:
-        sites = sum(r for _x, (_y, r) in hits.items())
-        print(f"catalogue parses: {len(new)} new, {len(stale)} stale, {len(bad)} radix -- refusing "
-              f"(baseline: {sites} raw DictReader site(s) in {len(allowed)} file(s), all grandfathered)")
-        return 1
-    print(f"catalogue parses: ok ({len(users)} grandfathered file(s) in tools/catalogue_allowlist.txt, 0 radix)")
-    return 0
+        return 1, (f"{len(new)} new, {len(stale)} stale, {len(bad)} radix; baseline {sites} raw "
+                   f"DictReader site(s) in {len(allowed)} file(s)"), problems
+    return 0, f"{len(users)} grandfathered file(s) in tools/catalogue_allowlist.txt, 0 radix", problems
+
+
+def main():
+    rc, detail, problems = audit()
+    for line in problems:
+        print(line)
+    print(gateline.gate_line('catalogue parses', rc, detail))
+    return rc
 
 
 if __name__ == "__main__":

@@ -1413,3 +1413,27 @@ when it reached zero.
 Also adopted: the catalogue baseline should be keyed on **`(file, enclosing function)`** rather than a site
 count, because line numbers move on every edit and a count cannot express "new"; the shrink is then honest
 and staleness stays expressible through the same `compare()`.
+
+### `gate_line`: no tool prints a verdict it did not get from the gate
+
+Three instances of display standing in for check, now one helper (`tools/gateline.py`):
+`describe()` formatting while the comparison was decided elsewhere; `extent_line()` rebuilding a relative
+`symbols/` beside a compare that had used an absolute one; and `progress.py`'s `parses:` clause computing
+its own DictReader count **while `check_catalogue.py` — the tool that refuses a new raw reader — was never
+invoked at all.** That is how a raw `csv.DictReader` rode a green commit.
+
+The shape: `gate_line(name, rc, detail)` where **`rc` is what the check returned**. `rc=None` prints
+`not checked` in the same position, because **a line whose shape implies a verdict it never ran is worse
+than silence — silence at least reads as nothing.** `check_catalogue.audit(root)` is now the only verdict;
+`main()` prints it and `progress._parses_clause(root)` prints it, and nobody recomputes a count to print.
+Threading the root repaired a second two-roots defect in the same line: the clause called `scan()` with no
+root, so `--root <tmp>` answered about this tree.
+
+### Item for the emitter: the behavioural key goes in the row
+
+The chain family's 78 rows reduce to **62 behavioural cases**, so sixteen pairs will carry an identical
+`cases_sha256`, because `evidence_hash()` pins it. **That is correct and it is unreadable** — a reviewer
+would see two rows with one case hash and read copy-paste. So each row carries `case_key` = resolved slot +
+`store_k2` + `imm` + width, and the shared hash becomes **a fact checkable against a column instead of a
+coincidence taken on trust.** Same move as `distinct bodies` in the pool-B families: one question the
+reviewer can ask, and a re-derivation they can run.

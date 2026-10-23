@@ -469,19 +469,24 @@ def evidence_join(root, argv=None):
     return 0
 
 
-def _parses_clause():
-    """The catalogue-parse baseline, printed where it is READ.
+def _parses_clause(root="."):
+    """The catalogue-parse verdict, printed where it is READ -- and obtained from the gate.
 
-    A baseline stored in a file and never quoted shrinks to zero in the reader's mind while sitting still
-    at 101 sites. Unread is not zero: if the gate cannot be imported, the line says so.
+    Two defects repaired in one line. It recomputed the count itself, in a shape that read like a verdict,
+    while `check_catalogue.py` -- the tool that REFUSES a new raw DictReader -- was never invoked by the
+    hook at all: a count is not a constraint, and a shaped line is not a check. And it called `scan()`
+    with no root, so `--root <tmp>` printed a summary of THIS tree: two instruments, two roots, one output
+    line, the second time on this page.
+
+    Unread is not zero: if the gate cannot be imported the line says `not checked` in the same position.
     """
     try:
         import check_catalogue as K
-        hits = K.scan()
-        sites = sum(reader for _x, (_radix, reader) in hits.items())
-        return f" · parses: {sites} raw DictReader site(s) in {len(hits)} file(s) grandfathered, 0 size radix"
+        import gateline
+        rc, detail, _problems = K.audit(root)
     except Exception as exc:  # noqa: BLE001
-        return f" · parses: unavailable ({exc}) -- run tools/check_catalogue.py; unread is not zero"
+        return f" · parses: not checked ({exc.__class__.__name__}); unread is not zero"
+    return f" · {gateline.gate_line('parses', rc, detail)}"
 
 
 def _symbols_dir(root=".") -> str:
@@ -543,7 +548,7 @@ def extent_line(root=".") -> str:
             f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest "
             "(expected 0: sizes are decimal and this catalogue's extents are disjoint, so the tie branch is "
             "a guard against a catalogue that does not exist here, not a live condition)"
-            + _parses_clause())
+            + _parses_clause(root))
 
 
 def reach_line(root=".") -> str:
