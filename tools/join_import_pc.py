@@ -29,17 +29,14 @@ EBOOT_BASE = 0x400000
 PC_ROW = re.compile(r"^\s+#(\d+) pc (0x[0-9a-fA-F]+) count (\d+)\s*$")
 
 
-def load_extents(path):
-    # The address column is hex and the size column is DECIMAL in ghidra_functions.csv. Parsing the
-    # size as hex inflates every extent by up to 156 bytes, which widens every owners() window and
-    # silently converts independent entries into "nested" ones -- the exact class of error that
-    # reported a leaf frontier of 139 rows. One decode of one known row settles the radix.
-    out = [(int(r["address"], 16), int(r["size"])) for r in csv.DictReader(open(path))]
-    if not out:
-        raise ValueError("extent table is empty")
-    out.sort()
-    return out
+def load_extents(path="symbols/ghidra_functions.csv"):
+    """[(address, size)] with ints, via catalogue.read_rows -- the size string never arrives here.
 
+    This used to be `int(r["size"], 16)` against a decimal column, which inflated every extent and put
+    every neighbour inside its predecessor's window: 6,749 rows called nested that are independent.
+    """
+    import catalogue
+    return catalogue.load_extents(path)
 
 def owners(extents, v):
     """Every extent containing v. extents must be sorted by address.

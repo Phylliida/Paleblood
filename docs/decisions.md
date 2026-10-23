@@ -1043,3 +1043,23 @@ as `shape-approved, machine-verified` and never as "approved", and `verified` is
 are different instruments. The same caveat stands on the other side: neither the function nor the
 runtime track moves `verified` either until asks 1-7 are answered, while `in-game: unknown (no
 runtime witness)` is the only entry the runtime track can change at all.
+
+### 1n — One size parse, and a predicate is counted over the population before it gets a fixture
+
+`tools/catalogue.py` yields rows whose `address` and `size` are already ints. A helper would still need
+every site to remember it; four sites each failed to remember. `tools/check_catalogue.py` refuses an
+explicit size radix absolutely (zero today) and refuses a NEW `csv.DictReader` outside that module,
+grandfathering the existing 55 files in `tools/catalogue_allowlist.txt` — which may only shrink, because
+the gate also refuses an entry whose file no longer uses it. The detector walks the AST, not the text:
+a regex version refused a docstring that quoted the defect it had just stopped making.
+
+Two rules recorded here because both were learned by paying:
+
+* **A predicate true of every input is not a predicate — count it over the population before writing a
+  fixture.** A duplicate-start test was `bisect_left != bisect_right`, which means "at least one
+  occurrence" and therefore returned 157,757 of 157,757. Two fixtures passed while it did. The negative
+  fixture caught it; counting the predicate over the loaded catalogue would have caught it first, in one
+  command, with no test authored.
+* **A tool a hook runs has its import graph as part of its contract.** Importing `leaf_family_census`
+  into `progress.py` pulled in capstone, which the pre-commit interpreter lacks, and the commit died.
+  `tools/landed.py` exists in the capstone-free form that fix required.

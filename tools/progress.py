@@ -480,8 +480,8 @@ def extent_line() -> str:
     import landed as L
     root = os.environ.get("PB_SYMBOLS_DIR", "symbols")   # override so a TEST can make a tie occur
     try:
-        cat = [(int(r["address"], 16), int(r["size"]))
-               for r in csv.DictReader(open(os.path.join(root, "ghidra_functions.csv")))]
+        import catalogue
+        cat = catalogue.load_extents(os.path.join(root, "ghidra_functions.csv"))
         # Landed is ONE selector, and it is leaf_family_census's: a row at "original" is bookkeeping for a
         # body nobody has written, so counting it as landed understates the work by exactly those rows.
         # Here it was one row, 0x0111a600 (8 B), which is why this line said 5,804 while thunk_census said
