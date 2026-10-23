@@ -792,3 +792,23 @@ cluster, `0x1087339 .. 0x108739e`, spaced 0x15 apart, and every one of the five 
 returning a nonzero code lands on a real error handler, and returning `0x805a1001` is treated as an
 expected, tolerated condition rather than a failure. A modelled return code is therefore *visible* to this
 caller, which is the precondition (a) needed and the opposite of what I predicted.
+
+## The scePthreadCreate caller is a bool, and its error path only returns false
+
+`0x1087330` is `push rbp; mov rbp,rsp` followed by five `mov edi,<id>; call <stub 252>` in a row
+(`0x1c, 0xb5, 0x19, 0xb2, 0x1a`), each followed by the same three-instruction test:
+
+    cmp eax, 0x805a1001 ; je <next thread>      ; tolerated, carry on
+    test eax, eax       ; jne <its own error stub>  ; any other nonzero
+    <next thread>                               ; eax == 0, carry on
+
+and **five separate error stubs, each exactly `xor eax,eax; jmp <epilogue>`**, against a success epilogue
+of `mov al,1`. So the function returns **1 if every creation succeeded or was tolerated, 0 if any did not**,
+and the failure path **logs nothing, aborts nothing, and does not jump to a main-loop handler** -- it
+returns false. Experiment A ("return a generic failure") therefore **cannot kill the boot at this level**:
+it makes one `bool` false and the consequence moves up to whoever consumes it, which is the next thing to
+read rather than the next thing to assume.
+
+Labelling, per the two-experiment split: A measures *the consequence of a failed creation*, B (returning
+`0x805a1001`) measures *the guest's tolerance of a code it is coded to accept*. B is a **modelled tolerance**
+and any printout from it must say so -- a boot that reaches the init path through B has no thread in it.
