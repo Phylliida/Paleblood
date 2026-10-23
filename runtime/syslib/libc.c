@@ -84,7 +84,7 @@ static uint64_t guest_address_of(uint64_t raw, const char *symbol)
      * every call -- 34 lines per boot from memcmp alone, in a log whose parser has no reason to expect
      * them. The evidence it used to give ("all (image space)") is one env var away. */
     if (getenv("RT_TRACE_ADDR"))
-        fprintf(stderr, "%s: 0x%llx (%s space)", symbol, (unsigned long long)raw, space);
+        fprintf(stderr, "%s: 0x%llx (%s space)\n", symbol, (unsigned long long)raw, space);
     return g;
 }
 
@@ -92,10 +92,8 @@ static unsigned char *guest_write_ptr(uint64_t raw, size_t length, const char *s
 {
     const uint64_t image = rt_map_image();
     const uint64_t g = guest_address_of(raw, symbol);
-    if (!image || !rt_guest_writable(g, length)) {
-        fprintf(stderr, "\n");
+    if (!image || !rt_guest_writable(g, length))
         rt_fatal(symbol, "the range is not inside a writable load segment");
-    }
     return (unsigned char *)(uintptr_t)(image + (g - RT_EBOOT_BASE));
 }
 
@@ -120,21 +118,22 @@ static int cxa_guard_acquire(uint64_t *guard)
     }
     volatile unsigned char *byte = guard_byte(guard, "__cxa_guard_acquire");
     const int run = *byte == 0;
-    fprintf(stderr, ", byte %d -- %s\n", *byte, run ? "initialiser must run" : "already initialised");
+    fprintf(stderr, "__cxa_guard_acquire: byte %d -- %s\n", *byte,
+            run ? "initialiser must run" : "already initialised");
     return run;
 }
 
 static void cxa_guard_release(uint64_t *guard)
 {
     volatile unsigned char *byte = guard_byte(guard, "__cxa_guard_release");
-    fprintf(stderr, ", byte %d -- setting it\n", *byte);
+    fprintf(stderr, "__cxa_guard_release: byte %d -- setting it\n", *byte);
     *byte = 1;
 }
 
 static void cxa_guard_abort(uint64_t *guard)
 {
     volatile unsigned char *byte = guard_byte(guard, "__cxa_guard_abort");
-    fprintf(stderr, ", byte %d -- leaving it clear\n", *byte);
+    fprintf(stderr, "__cxa_guard_abort: byte %d -- leaving it clear\n", *byte);
     *byte = 0;
 }
 
@@ -168,7 +167,6 @@ static size_t libc_strlen(const char *s)
     const uint64_t image = rt_map_image();
     const uint64_t g = guest_address_of((uint64_t)(uintptr_t)s, "strlen");
     const size_t span = image ? rt_guest_readable_span(g) : 0;
-    fprintf(stderr, "\n");
     if (!span) rt_fatal("strlen", "the pointer is not inside a readable load segment");
     const unsigned char *p = (const unsigned char *)(uintptr_t)(image + (g - RT_EBOOT_BASE));
     const unsigned char *nul = memchr(p, 0, span);
@@ -176,7 +174,7 @@ static size_t libc_strlen(const char *s)
         fprintf(stderr, "strlen: 0x%llx: no NUL in %zu readable bytes\n", (unsigned long long)g, span);
         rt_fatal("strlen", "the string runs off the end of its mapping -- refusing to report a length");
     }
-    fprintf(stderr, " strlen: %zu bytes\n", (size_t)(nul - p));
+    fprintf(stderr, "strlen: %zu bytes\n", (size_t)(nul - p));
     return (size_t)(nul - p);
 }
 
@@ -194,13 +192,12 @@ static int libc_memcmp(const void *a, const void *b, size_t n)
     const uint64_t gb = guest_address_of((uint64_t)(uintptr_t)b, "memcmp");
     const size_t sa = image ? rt_guest_readable_span(ga) : 0;
     const size_t sb = image ? rt_guest_readable_span(gb) : 0;
-    fprintf(stderr, "\n");
     if (!sa || n > sa) rt_fatal("memcmp", "the first range is not readable for the requested length");
     if (!sb || n > sb) rt_fatal("memcmp", "the second range is not readable for the requested length");
     const unsigned char *pa = (const unsigned char *)(uintptr_t)(image + (ga - RT_EBOOT_BASE));
     const unsigned char *pb = (const unsigned char *)(uintptr_t)(image + (gb - RT_EBOOT_BASE));
     const int r = memcmp(pa, pb, n);
-    fprintf(stderr, " memcmp: %zu bytes -> %d\n", n, r);
+    fprintf(stderr, "memcmp: %zu bytes -> %d\n", n, r);
     return r;
 }
 
