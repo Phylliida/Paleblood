@@ -34,8 +34,20 @@ class Root:
     def __fspath__(self):
         return self.path
 
+    def p(self, rel):
+        """A path relative to this root, and the ONLY way to reach into it: an absolute path or a climbing
+        component is REFUSED here, so no caller can pass one at all. This is not a guard on a path that might
+        escape -- it is an accessor that cannot express an escape. Three per-process caches and one per-process
+        list this stretch taught the same lesson: make the shared thing unnameable, don't add a guard to it."""
+        if os.path.isabs(rel):
+            raise ValueError(f'fixture_root: REFUSED absolute path {rel!r} -- paths are relative to the root')
+        parts = rel.replace(os.sep, '/').split('/')
+        if any(part == '..' for part in parts):
+            raise ValueError(f'fixture_root: REFUSED climbing path {rel!r} -- the root is a boundary')
+        return _note(os.path.join(self.path, *parts))
+
     def at(self, *parts):
-        return os.path.join(self.path, *parts)
+        return self.p('/'.join(str(x) for x in parts))
 
     def __repr__(self):
         return f"Root({self.path!r}, {self.facts})"
@@ -104,3 +116,13 @@ if __name__ == '__main__':
     assert tb == {'landed': 0, 'transcribed': 0}, tb
     assert real['landed'] > 0, 'the repo still has bodies; the two root sums must differ from it'
     print(f'two-root test: OK -- A={ta["landed"]} B={tb["landed"]} repo={real["landed"]}, each its own')
+
+    # The accessor's own refusals, BOTH arms observed -- a guard never shown to fire is a guard nobody has tested.
+    for bad in ('/etc/passwd', '../outside', 'symbols/../../outside'):
+        try:
+            a.p(bad)
+        except ValueError as e:
+            print(f'refused {bad!r}: {str(e).split(" REFUSED ")[1][:44]}')
+        else:
+            raise AssertionError(f'fixture_root: {bad!r} was NOT refused -- the accessor can escape')
+    print(f'accessor: {len(a.p("symbols/functions.csv"))} chars inside the root, 3 escapes refused')
