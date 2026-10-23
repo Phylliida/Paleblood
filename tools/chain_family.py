@@ -81,11 +81,27 @@ def batch_problems(root='.'):
     fl = sum(1 for r in band if r['branch'] == '0' and r['landed'] == 'True')
     free = sum(1 for r in band if r['branch'] == '0')
     out = []
-    owed = BATCH['landed_after'] - live_landed
+    # ONE LAW, THREE STATES. `owed` is derived from the FAMILY's landed set, not by comparing a global
+    # after-state to a global live count: that subtraction was an enumeration in disguise, right at 78
+    # and wrong at 1. The byte names are the same partition as landed/transcribed -- a row can carry a
+    # body without carrying evidence, and one `live_bytes` would have to pick which it means.
+    # NOT `E.landed_rows()`: that is a NAME filter over functions.csv, and it returns the pilot row
+    # whose status is still 'original' -- a body that exists with no evidence behind it. Using it as
+    # "the family's landed set" moved owed from 78 to 77 and the byte total by exactly one body's 18 B,
+    # which is the 647 retraction (a name filter standing in for a set) one tier down. Landed means
+    # `in land`, and land is the status predicate.
+    fam = {r['address'] for r in rows
+           if str(r.get('name', '')).startswith('leaf_chain_deref_') and r['address'] in land}
+    owed = PREREG['rows'] - len(fam)
     if owed not in (0, PREREG['rows']):
         out.append(f'batch: landed {live_landed} -> pre-registered {BATCH["landed_after"]} is {owed} rows, '
                    f'not 0 or {PREREG["rows"]}')
-    owed_b = BATCH['bytes_after'] - live_bytes
+    owed_b = PREREG['bytes'] - sum(int(r['size']) for r in rows if r['address'] in fam)
+    from landed import byte_totals
+    bt = byte_totals(f'{root}/symbols/functions.csv')
+    if live_landed + owed != BATCH['landed_after'] or bt['landed'] + owed_b != BATCH['bytes_after']:
+        out.append(f'batch: owed derivation ({owed} rows / {owed_b} B) disagrees with the measured '
+                   f'before-state ({live_landed} rows / {bt["landed"]} B landed) plus after-state')
     if owed_b not in (0, PREREG['bytes']):
         out.append(f'batch: bytes {live_bytes} -> pre-registered {BATCH["bytes_after"]} owes {owed_b}, '
                    f'not 0 or {PREREG["bytes"]} (measured {BATCH["bytes_before"]} + {PREREG["bytes"]})')
@@ -97,18 +113,19 @@ def batch_problems(root='.'):
     # "complete ... pre-registered exactly" while returning two problems, because the else-branch meant
     # "not before the batch" and I read it as "after".
     if out:
-        print(f'batch: live {live_landed} rows / {live_bytes} B is neither the pre-registered before-state '
+        print(f'batch: live {live_landed} rows / bytes_landed {bt["landed"]:,} is neither the pre-registered before-state '
               f'nor its after-state')
     elif owed == PREREG['rows']:
         # The byte pair is printed BOTH ways on one line: the number that was carried wrong once is exactly
         # the number a reader will carry next, so the before-value is measured here rather than remembered.
         print(f'batch: owed {owed} row(s) / {owed_b} B / {owed_p} branch-free; pre-registered after-state '
-              f'{BATCH["landed_after"]} rows, bytes {live_bytes:,} -> {BATCH["bytes_after"]:,}, '
+              f'{BATCH["landed_after"]} rows, bytes_landed {bt["landed"]:,} (transcribed {bt["transcribed"]:,}) -> {BATCH["bytes_after"]:,}, '
               f'SCOPE {BATCH["scope_after"]}%, '
               f'PROGRESS {BATCH["progress_free_landed_after"]}/{BATCH["progress_free_total"]} = '
               f'{BATCH["progress_after"]}%, verified {BATCH["verified_after"]}')
     else:
-        print(f'batch: complete at {live_landed} rows / {live_bytes} B; pre-registered exactly')
+        print(f'batch: complete at {live_landed} rows / bytes_landed {bt["landed"]:,} '
+              f'(transcribed {bt["transcribed"]:,}); pre-registered exactly')
     return out
 
 

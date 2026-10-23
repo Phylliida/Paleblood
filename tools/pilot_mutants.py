@@ -18,8 +18,8 @@ ROOT = os.path.dirname(HERE)
 FAMILY = os.path.join(ROOT, 'game', 'leaf', 'chain_deref_family.cpp')
 LIB = os.path.join(ROOT, 'build-release', 'game', 'libbbgame.so')
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
-CASE = os.path.join(ROOT, '..', 'data', 'cases', 'leaf', 'leaf_chain_deref_01735230',
-                    'leaf_chain_deref_01735230.json')
+from case_dir import case_dir
+CASE = os.path.join(case_dir('chain_deref'), '01735230', 'case.json')
 ADDRESS = '0x01735230'
 SYMBOL = 'bb_leaf_chain_deref_01735230'
 

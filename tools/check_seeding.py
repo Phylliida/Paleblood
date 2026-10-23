@@ -153,12 +153,12 @@ def main(argv=None):
         return 3
     base, memsz = writable[-1][0], writable[-1][2]
     sentinel, used = derive_sentinel(rows)
-    print(f"seeding: {len(rows)} rows | writable segment {base:#x}..{base + memsz:#x} | "
-          f"sentinel {sentinel:#04x} derived from {len(used)} masked immediate(s)")
     if not os.path.isdir(a.cases):
         print(f'seeding: refusing -- no case directory {a.cases}; 0 cases is not 0 refusals',
               file=sys.stderr)
         return 3
+    print(f"seeding: {len(rows)} rows | writable segment {base:#x}..{base + memsz:#x} | "
+          f"sentinel {sentinel:#04x} derived from {len(used)} masked immediate(s)")
     bad = 0
     for r in rows:
         p = os.path.join(a.cases, f"{r['address']:08x}", 'case.json')

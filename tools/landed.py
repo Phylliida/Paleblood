@@ -18,3 +18,21 @@ def landed_addresses(path="symbols/functions.csv"):
     """{address} for rows whose status is anything but `original`."""
     with open(path) as f:
         return {int(r["address"], 16) for r in csv.DictReader(f) if r["status"] != "original"}
+
+
+def byte_totals(path="symbols/functions.csv"):
+    """The same partition as `landed` vs `transcribed`, in BYTES.
+
+    `landed` counts rows with status != 'original': evidence exists. `transcribed` counts every row
+    that carries a body, which is every row in the file: transcription exists, evidence may not.
+    Writing 78 bodies moves byte_totals['transcribed'] by 1,320 and byte_totals['landed'] by ZERO until
+    the differentials record -- and one `live_bytes` would have to pick which it means, then be quoted
+    as if it meant the other.
+    """
+    landed = transcribed = 0
+    for r in csv.DictReader(open(path)):
+        size = int(r['size'])
+        transcribed += size
+        if r.get('status', 'original') != 'original':
+            landed += size
+    return {'landed': landed, 'transcribed': transcribed}

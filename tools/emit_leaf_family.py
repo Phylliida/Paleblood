@@ -26,7 +26,8 @@ import leaf_family_census as C
 from atomicio import atomic_write   # after the path insert: bare means bare
 
 ROOT = C.ROOT
-CASES = os.path.join(ROOT, '..', 'data', 'cases', 'leaf')
+from case_dir import case_dir  # ONE definition of the case root; check_seeding imports the same one
+# (was: a second literal 'data/cases/leaf' -- the string check_seeding disagreed with)
 # The chain family's sentinel byte: no masked immediate (0x0 31x, 0x1 36x, 0x2, 0x3, 0x4, 0x8, 0xa, 0xf,
 # 0xffffffff) collides with its own repetition at either width. Derived from the family, not guessed.
 CHAIN_SENTINEL = 0x05
@@ -819,8 +820,18 @@ def main(argv):
                      'system': 'leaf', 'status': 'original'})
         if TEMPLATES[name]['kind'].startswith('asm'):
             continue
-        d = os.path.join(CASES, k)
-        for fn, doc in case_docs(name, m):
+        # THE LAYOUT IS THE PRE-REGISTERED SCHEMA, not the legacy one. check_seeding looks for
+        # `chain/<address:08x>/case.json` -- one directory per ROW, decided before any body existed --
+        # while this emitter copied `<key>/<key>.json` from the leaf families. Two layouts, one family:
+        # the decision that predates the artifact is the spec, and the artifact moved.
+        if TEMPLATES[name].get('chain_selector'):
+            d = os.path.join(case_dir(name), f'{m["address"]:08x}')
+        else:
+            d = os.path.join(case_dir(name), k)
+        docs = case_docs(name, m)
+        if TEMPLATES[name].get('chain_selector'):
+            docs = [('case.json', doc) for _, doc in docs]
+        for fn, doc in docs:
             pending.append((os.path.join(d, fn), json.dumps(doc, indent=1, sort_keys=True) + '\n'))
     have = {int(r['address'], 16) for r in rows}
     tables = (
@@ -852,7 +863,7 @@ def main(argv):
         C.write_table(path, fields, all_rows)
     print(f'  body: game/leaf/{name}_family.cpp, {len(ms)} symbols')
     if not TEMPLATES[name]['kind'].startswith('asm'):
-        print(f'  cases: {len(ms)} directories under {CASES}')
+        print(f'  cases: {len(ms)} directories under {case_dir(name)}')
     return 0
 
 
