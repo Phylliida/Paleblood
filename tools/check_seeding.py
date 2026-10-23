@@ -40,6 +40,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from case_dir import case_dir  # ONE definition of the case root, imported after the prologue
 
 import catalogue
 import harness
@@ -159,22 +160,27 @@ def main(argv=None):
         return 3
     print(f"seeding: {len(rows)} rows | writable segment {base:#x}..{base + memsz:#x} | "
           f"sentinel {sentinel:#04x} derived from {len(used)} masked immediate(s)")
-    bad = 0
+    owed = violated = 0   # owed: no case file yet. violated: a case that exists and fails a link.
     for r in rows:
         p = os.path.join(a.cases, f"{r['address']:08x}", 'case.json')
         if not os.path.isfile(p):
             print(f"REFUSED {r['address']:#x}: no case file at {p}", file=sys.stderr)
-            bad += 1
+            owed += 1
             continue
         with open(p) as f:
             case = json.load(f)
         out = check(r, case, (base, memsz), sentinel)
         if out:
-            bad += 1
+            violated += 1
             for line in out:
                 print(f"REFUSED {r['address']:#x}: {line}", file=sys.stderr)
-    print(f"seeding: {len(rows) - bad}/{len(rows)} cases satisfy all three links")
-    return 0 if bad == 0 else 1
+    print(f"seeding: {len(rows) - owed - violated}/{len(rows)} cases satisfy all three links"
+          f" | owed {owed} (no case file yet) | violated {violated}")
+    # rc is about VIOLATIONS, never about completeness. A batch is legitimately mid-flight -- 1 of 78
+    # today, 78 of 78 when the family lands -- and a gate that is red at every honest intermediate state
+    # teaches its reader to ignore red. `owed` is the progress line; `chain_family --check` owns the
+    # before/after arithmetic that says when the batch as a whole is done.
+    return 0 if violated == 0 else 1
 
 
 if __name__ == '__main__':

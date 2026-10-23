@@ -574,10 +574,19 @@ def reach_line(root=".") -> str:
     free = sum(1 for r in rows if r['branch'] == '0')
     landed = sum(1 for r in rows if r['landed'] == 'True')
     free_landed = sum(1 for r in rows if r['branch'] == '0' and r['landed'] == 'True')
+    # TWO BYTE NAMES, never the bare word: `landed` counts rows whose status is not 'original'
+    # (evidence exists), `transcribed` counts every row that carries a body (evidence may not). One
+    # name for both would have to pick which question it answers and would then be quoted as the other.
+    try:
+        from landed import byte_totals
+        bt = byte_totals(os.path.join(_symbols_dir(root), 'functions.csv'))
+        bytes_line = (f' · bytes_landed {bt["landed"]:,} (bytes_transcribed {bt["transcribed"]:,})')
+    except OSError as exc:
+        bytes_line = f' · bytes: unavailable ({exc}) -- unread is not zero'
     return (f'reach: {landed} landed / {free} branch-free = {100 * free_landed / free:.2f}% PROGRESS '
             f'· {landed} / {total} catalogued = {100 * landed / total:.2f}% SCOPE '
             f'· branch {branch} (landed {landed - free_landed}) '
-            f'· unlanded branch-free {free - free_landed}')
+            f'· unlanded branch-free {free - free_landed}' + bytes_line)
 
 
 def main() -> int:

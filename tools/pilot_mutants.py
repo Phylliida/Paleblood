@@ -11,6 +11,9 @@ import os
 import subprocess
 import sys
 
+# the prologue of a file is its FIRST import, not its first line: `-P` removes the script's
+# directory from sys.path, so a sibling import above this line needs environment help to start.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mutate
 
 HERE = os.path.dirname(os.path.abspath(__file__))
