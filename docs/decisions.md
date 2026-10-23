@@ -1648,3 +1648,16 @@ byte moves**.
 Empty `targets` still REFUSES — now printing the declaration's names beside what the file actually declared, so
 the next reader sees `kSlot` next to `kStoreDisp` rather than a zero. Convergence becomes an optional tidy-up
 taken whenever a family is re-emitted for other reasons: **never a tax paid today for zero rows.**
+
+**How the uniform shape arrives without a migration table (recorded so the next author does not reintroduce the
+branch):** `kind, source, *names = decl` unpacks a 2-tuple and a 3-tuple through **one statement**, with no
+`isinstance`, no `decl[0]`-is-a-string test, and no legacy path. A `seeded` family that forgets its constant
+name gets `names == ()`, finds no targets, and **hits the empty-`targets` refusal** — the forgetting is caught
+by the mechanism that exists for it rather than by a check written for forgetting. Two consequences worth
+stating: the migration is a **data edit** (every entry becomes a decl it already is), and **an entry may not
+silently carry neither names nor a case obligation** — that is the shape `check_seeding` covers from the case
+side, and the two instruments must keep reading different artifacts.
+
+**A family with two obligations is two decls**, and the loop iterates decls: `chain_deref` is
+`(('load','seeded','kSlot'), ('store','argument','kStoreDisp'))`. One family, two rows, two bounds, one table —
+the set, not the pair, which is the whole of (1) through (3) in one line of data.
