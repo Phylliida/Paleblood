@@ -1063,3 +1063,49 @@ Two rules recorded here because both were learned by paying:
 * **A tool a hook runs has its import graph as part of its contract.** Importing `leaf_family_census`
   into `progress.py` pulled in capstone, which the pre-commit interpreter lacks, and the commit died.
   `tools/landed.py` exists in the capstone-free form that fix required.
+
+## Blast radius of the open list, and the frontier batch it selects
+
+The open list had thirteen items and twelve stretches of instrument work behind it, chosen by recency:
+each fix revealed the next defect, so the exit condition was never written down. Here it is, chosen by
+rows moved instead, computed once.
+
+**No open item moves a row.** Of the thirteen, twelve move 0: the allowlist prune, the `parses.*` FROZEN
+conflict, the two uncovered readers, `branch_census --out`, `family_scan`'s `116,475 / 1,919`, the pbboot
+re-run, `__cxa_atexit`, ctest including `tools`, two generators' `--check`, the 290 s store test, the
+`chdir` anchor. One — `source_hash` per file against 4,034 bodies in `bytes_family.cpp` — moves 0 and puts
+**4,034 landed rows at risk of losing their evidence**, which is a different quantity from a gain. Two
+more, ask 7 and the `--min-size 14` re-decision, gate **600 rows / 5,826 B** and belong to the user.
+`verified` is behind the 30 approvals against 21,086 all-rows-clean and is not reachable from any of them.
+
+**And the ladder's own generator has nothing left to land.** Measured, all sixteen templates:
+fifteen report `0 unlanded members` (`ret` 7,761 landed · `lea_disp_rdi` 979 · `mov_al_imm` 793 ·
+`mov_eax_mem` 765 · `rip_add_store` 362 · …), and the sixteenth, `rip_load`, offers 161 members that
+`_refuse_zerofill` refuses **161 of 161** — every target outside `filesz`, a constant zero no case can
+discriminate. So the 6,288 addressable frontier rows were never blocked by a repair; they are a
+population that has no family, and the missing thing is *template coverage*, not correctness.
+
+**The lever, from `tools/leaf_shape_census.py` (frontier CSV + ELF, no catalogue JSON):**
+
+| instructions | rows | cumulative | what it is |
+|---|---|---|---|
+| 3 | 284 | 284 (4.5%) | expressible by a three-instruction template today |
+| 4–6 | 1,714 | 1,998 (31.8%) | short chains |
+| 7–12 | 1,905 | 3,903 (62.1%) | small functions, not leaves |
+| >12 | 2,385 | 6,288 | functions; 1,654 instructions at the tail |
+
+Top shape: `mov rax,[rip+K] ; mov [rax+K],K ; ret` — **78 rows / 1,320 B**, and seven of the fifteen
+most common shapes are the same rip-load-then-dereference chain. That is the TCB census's "six chains,
+six K globals unread" arriving as a population rather than a paragraph.
+
+**Ceiling if the whole addressable frontier landed:** SCOPE 24.10% → 28.09% (44,306 / 157,757), PROGRESS
+84.25% → 98.63% (43,134 / 43,734). **Zero of it is `verified`**, because a byte tier row is never
+behaviour. The 600 "short" rows stay out with ask 7.
+
+**Exit condition, in force from here.** No further instrument work until a frontier batch lands.
+*A batch lands* when the rows are in `symbols/functions.csv` at `edge-verified`, the differential is green
+against the shipped bytes, `--reemit <family>` reports the committed body unchanged, and the commit
+message pre-registers rows and bytes. First batch: the 78-row shape, with the space rule applied at
+emit time — **the load is image-via-supplied-base, the store target is an indirect through a pointer
+loaded at runtime, so the gate must classify it as argument→obligation and the case must supply the
+buffer**, and every case must discriminate (marker bytes, not zero-fill).
