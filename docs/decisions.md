@@ -726,3 +726,18 @@ summary reports counts, and an intersection computed against a summary is a coin
 query. The first intersection I attempted read that summary and would have printed zero for the wrong
 reason.
 
+## The stub frame, computed from the emitted bytes rather than remembered
+
+`boundary_stub.c` emits `push rdi, rsi, rdx, rcx, r8, r9` (capture form only) then `push rbx;
+mov rbx,rsp; and rsp,-16; call r10`. With the guest `rsp0` pointing at its return address at stub entry:
+
+* capture wrapper -- `rbx = rsp0-56`: `[rbx+0]` saved rbx, `+8` r9, `+16` r8, `+24` rcx, `+32` rdx,
+  `+40` rsi, `+48` rdi, **`+56` the guest return address**.
+* syslib boundary stub -- `rbx = rsp0-8`: `[rbx+0]` saved rbx, **`[rbx+8]` the guest return address**.
+
+**No fixed offset from `rsp` is valid in either stub**, because `and rsp,-16` runs after `mov rbx,rsp`:
+with a 16-aligned `rsp0` the handler's `rsp` is `rsp0-72`, so `[rsp+48]` reads the pushed `rdx` -- a guest
+argument, which is an address-shaped value and would print as a plausible return PC. That is the
+BSS-word-read-as-a-return-PC defect in its third costume. Read the frame through `rbx`, and note the offset
+differs per stub: a single constant would be wrong for whichever path was not being looked at.
+
