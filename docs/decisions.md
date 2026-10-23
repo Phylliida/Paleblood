@@ -643,3 +643,29 @@ is done yet.
    body's own bytes (the `bb_<name>` definition as emitted), not the file that happens to hold it.
    Until then, `promote.py --to edge-verified` over-reports staleness at family granularity and
    never under-reports it -- the direction that refuses work rather than crediting it.
+
+### 1m — TCB fields are measured, and a zeroed TCB is a permissive zero
+
+`tools/census_tcb_arith.py` over `symbols/ghidra_functions.csv`: **16,508 `%fs` sites, one distinct
+displacement, `0x0`** — every one of them `mov rax, qword ptr fs:[0]`, the `tcb_self` slot. But the
+displacement histogram measures where the door is, not the room behind it: **8,992 of those reads take
+the pointer out of `fs:0` and dereference it within sixteen instructions, reaching 71 distinct offsets in
+8,933 accesses.** Rank: `+0x58` 3,870 · `+0x20` 3,787 · `+0x10` 815 · `+0x8` 83 · `+0x18` 41 · `+0x50` 30 ·
+`+0x60` 26 · `+0x30` 24 · `+0x90` 20 · `-0x8` 18 · `+0x80` 15 · `+0x28` 14. Negatives total 18, so module
+TLS at negative offsets is *nearly absent* from eboot and cannot be what the TCB is for.
+
+The first run of that tool printed `0` for the second number. That zero was **the instrument**: Intel
+syntax puts the load's destination at operand 0, so a filter reading `operands[0].mem` cannot match a
+load, and `0 reads` looked exactly like an absence. Printed shapes are now part of its output.
+
+So the runtime installs a **zeroed 0x100-byte TCB** and the guest reads `[rax+0x58]`, `[rax+0x20]`,
+`[rax+0x10]` from it **8,933 times**. A zero there is not a missing feature, it is a permissive zero in
+the one structure the whole thread model is built on: `mov rdi, [rax+0x58]` yields null and the next
+dereference of `rdi` is the `address 0x0` fault this campaign has already spent slices diagnosing.
+
+In force: **`scePthreadCreate` is not implemented before these offsets have meanings.** The refusal it
+emits today is the correct behaviour for a runtime whose TCB has no declared layout. Implementing a
+thread on a zeroed TCB would manufacture the next fault in a fresh population and pay for it there.
+Revisit condition: name the field behind `+0x20`, `+0x58` and `+0x10` from evidence (a write site, a
+provider's write, or a catalogue function that both writes and reads the same offset), and only then
+emit a layout.
