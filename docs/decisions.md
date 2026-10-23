@@ -840,3 +840,22 @@ are load-bearing, which no return code can tell me.
 
 Order: A first. B only after A's consequence is read, because A is the experiment whose result cannot be
 mistaken for the other.
+
+## Correction: the fifth term is inverted, and `0x1088360` is a getter
+
+`0x1088360` is `mov al, byte ptr [rdi + 0x192]; ret` -- **not a predicate over the creations**, a field read
+on the object returned by `0x1088610`. Combined with `test al,al; je 0x10873ae`, where the target is
+`mov al,1` (**success**), the function is **`creations_ok && field == 0`**, not a plain conjunction: **the
+field being zero is the healthy path**, and create #5 (`0x1a`) runs only when the field is nonzero. The
+earlier "conjunction of five creations and an internal predicate" inverted that term; corrected here.
+
+**Why that does not need site instrumentation for A:** the five creations are straight-line, each
+`jne <xor eax,eax; jmp epilogue>`, so **the first failure short-circuits and `0x1088360` is never reached**
+-- its call site is four calls later. A fails create #1, so the false it produces cannot have come from the
+field read. The ambiguity exists only when creations succeed, which is B, and B produces no false at all.
+**One print still required: the refusal must say it was reached**, or a silent stop is unattributable.
+
+**Prediction registered for A:** the boot stops **at the refusal with one create attempted and four never
+reached**. If the output instead shows two or more creations attempted, the short-circuit reading is wrong
+and the `je`s go somewhere other than the next call's argument -- which would contradict a linear walk
+already printed, and would mean the walk and the runtime disagree about the same bytes.
