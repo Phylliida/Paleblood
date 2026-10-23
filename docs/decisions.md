@@ -812,3 +812,31 @@ read rather than the next thing to assume.
 Labelling, per the two-experiment split: A measures *the consequence of a failed creation*, B (returning
 `0x805a1001`) measures *the guest's tolerance of a code it is coded to accept*. B is a **modelled tolerance**
 and any printout from it must say so -- a boot that reaches the init path through B has no thread in it.
+
+## Pre-registration: the two scePthreadCreate experiments
+
+Linear walk of `0x1087330..0x10873c6`, 50 instructions, exact: **5 creates** (`0x1c, 0xb5, 0x19, 0xb2,
+0x1a`) each followed by `cmp eax,0x805a1001 / je <next call's argument> / test eax,eax / jne <xor eax,eax;
+jmp epilogue>`, plus **2 internal calls** between #4 and #5 (`0x1088610`, then `0x1088360` against `test
+al,al`). The boolean returned is therefore a conjunction of five creations **and** an internal predicate.
+Every one of the five `je`s lands on a following instruction that is an argument, not a handler -- the
+"error argument" reading was adjacency, not control flow, and a linear walk is what retires it.
+
+**Experiment A** -- the refusal returns a generic nonzero code (not `0x805a1001`).
+Pre-registered expectation: `0x1087330` returns **0** at the first `jne`, no logging, no abort, and the
+measurement is what **its caller** does with that false. Outcomes, named in advance:
+  * boot continues past the false  -> the five threads are not load-bearing at init; record as such.
+  * boot stops with a printed reason -> the false is load-bearing one frame up; name the handler.
+  * boot stops without printing    -> the false reached a path with no message; that absence is a finding.
+A cannot be confused with success, because no code path through it produces a live thread.
+
+**Experiment B** -- the refusal returns exactly `0x805a1001`. This is **modelled tolerance, not thread
+creation**: `je` carries the guest past all five checks and the function returns **1** with zero threads in
+existence. Pre-registered expectation: **a hang, not progress** -- the guest waits on something the five
+threads would have signalled. **A timeout here must be reported as "the tolerated code did not unblock the
+boot,"** never as a slow boot, never as a pass; B gets its own explicit timeout because a hang and a
+deadlock share an rc in this harness. **If B hangs, that is a positive result**: it proves the five threads
+are load-bearing, which no return code can tell me.
+
+Order: A first. B only after A's consequence is read, because A is the experiment whose result cannot be
+mistaken for the other.
