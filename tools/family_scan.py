@@ -235,6 +235,11 @@ def main(argv):
     parser.add_argument('--functions', default=str(pathlib.Path(__file__).resolve().parent.parent
                                                     / 'symbols' / 'functions.csv'))
     parser.add_argument('--min-members', type=int, default=4)
+    # The floor excludes every catalogue row <= 13 bytes: 37,629 of 157,757, of which 3,826 are
+    # unlanded and 64 are independent entries (owned, owners==1) -- the rest nest inside a
+    # larger extent and have no entry a guest can call. Whether the floor COSTS anything is
+    # unmeasured: this tree has no catalog artifact ("catalog has not been built") and the
+    # objdump fd path below fails here, so --min-size 0 has never been read against a control.
     parser.add_argument('--min-size', type=int, default=14)
     parser.add_argument('--max-size', type=int, default=256)
     parser.add_argument('--base', type=lambda v: int(v, 0), default=None,
