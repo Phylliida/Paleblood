@@ -1,0 +1,180 @@
+address,size,shape,excluded_by
+0x004101a0,9,"mov rdi, qword ptr [rdi + 8] ; jmp 0x411850",family_scan:min-size=14
+0x004101a0,9,"mov rdi, qword ptr [rdi + 8] ; jmp 0x411850",family_scan:jump-free
+0x004101a0,9,"mov rdi, qword ptr [rdi + 8] ; jmp 0x411850",bytes:address dependent
+0x009f97d0,9,"mov rdi, qword ptr [rdi + 0x10] ; jmp 0xa26cb0",family_scan:min-size=14
+0x009f97d0,9,"mov rdi, qword ptr [rdi + 0x10] ; jmp 0xa26cb0",family_scan:jump-free
+0x009f97d0,9,"mov rdi, qword ptr [rdi + 0x10] ; jmp 0xa26cb0",bytes:address dependent
+0x00e98520,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:min-size=14
+0x00e98520,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:jump-free
+0x00e98520,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",bytes:address dependent
+0x00e98550,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:min-size=14
+0x00e98550,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:jump-free
+0x00e98550,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",bytes:address dependent
+0x00e98580,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:min-size=14
+0x00e98580,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:jump-free
+0x00e98580,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",bytes:address dependent
+0x00e985b0,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:min-size=14
+0x00e985b0,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:jump-free
+0x00e985b0,5,"mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",bytes:address dependent
+0x011cb010,8,"mov qword ptr [rip + 0x46dcc19], rdi ; ret",family_scan:min-size=14
+0x011cb010,8,"mov qword ptr [rip + 0x46dcc19], rdi ; ret",bytes:address dependent
+0x011cb020,8,"mov rax, qword ptr [rip + 0x46dcc09] ; ret",family_scan:min-size=14
+0x011cb020,8,"mov rax, qword ptr [rip + 0x46dcc09] ; ret",bytes:address dependent
+0x01384ed0,9,"add rdi, 8 ; jmp 0x13e88f0",family_scan:min-size=14
+0x01384ed0,9,"add rdi, 8 ; jmp 0x13e88f0",family_scan:jump-free
+0x01384ed0,9,"add rdi, 8 ; jmp 0x13e88f0",bytes:address dependent
+0x01e07f00,9,"vmovss xmm0, dword ptr [rip + 0x2f20458] ; ret",family_scan:min-size=14
+0x01e07f00,9,"vmovss xmm0, dword ptr [rip + 0x2f20458] ; ret",bytes:address dependent
+0x0278e3c0,9,"mov rax, qword ptr [rdi] ; mov rax, qword ptr [rax + 0x10] ; jmp rax",family_scan:min-size=14
+0x0278e3c0,9,"mov rax, qword ptr [rdi] ; mov rax, qword ptr [rax + 0x10] ; jmp rax",family_scan:jump-free
+0x0278e3c0,9,"mov rax, qword ptr [rdi] ; mov rax, qword ptr [rax + 0x10] ; jmp rax",bytes:address dependent
+0x027d8050,8,"mov rdi, rsi ; jmp 0x45a4b0",family_scan:min-size=14
+0x027d8050,8,"mov rdi, rsi ; jmp 0x45a4b0",family_scan:jump-free
+0x027d8050,8,"mov rdi, rsi ; jmp 0x45a4b0",bytes:address dependent
+0x027d8060,8,"mov rdi, rsi ; jmp 0x45a4c0",family_scan:min-size=14
+0x027d8060,8,"mov rdi, rsi ; jmp 0x45a4c0",family_scan:jump-free
+0x027d8060,8,"mov rdi, rsi ; jmp 0x45a4c0",bytes:address dependent
+0x028010b0,9,"add rdi, -0x30 ; jmp 0x574ef0",family_scan:min-size=14
+0x028010b0,9,"add rdi, -0x30 ; jmp 0x574ef0",family_scan:jump-free
+0x028010b0,9,"add rdi, -0x30 ; jmp 0x574ef0",bytes:address dependent
+0x02801140,9,"add rdi, -0x30 ; jmp 0x578b10",family_scan:min-size=14
+0x02801140,9,"add rdi, -0x30 ; jmp 0x578b10",family_scan:jump-free
+0x02801140,9,"add rdi, -0x30 ; jmp 0x578b10",bytes:address dependent
+0x02802070,9,"add rdi, -0x30 ; jmp 0x578b10",family_scan:min-size=14
+0x02802070,9,"add rdi, -0x30 ; jmp 0x578b10",family_scan:jump-free
+0x02802070,9,"add rdi, -0x30 ; jmp 0x578b10",bytes:address dependent
+0x02803980,9,"add rdi, -0x20 ; jmp 0x5696e0",family_scan:min-size=14
+0x02803980,9,"add rdi, -0x20 ; jmp 0x5696e0",family_scan:jump-free
+0x02803980,9,"add rdi, -0x20 ; jmp 0x5696e0",bytes:address dependent
+0x02803a30,9,"add rdi, -0x70 ; jmp 0x5b2560",family_scan:min-size=14
+0x02803a30,9,"add rdi, -0x70 ; jmp 0x5b2560",family_scan:jump-free
+0x02803a30,9,"add rdi, -0x70 ; jmp 0x5b2560",bytes:address dependent
+0x02804680,9,"add rdi, -0x20 ; jmp 0x5696e0",family_scan:min-size=14
+0x02804680,9,"add rdi, -0x20 ; jmp 0x5696e0",family_scan:jump-free
+0x02804680,9,"add rdi, -0x20 ; jmp 0x5696e0",bytes:address dependent
+0x028a13e0,9,"movzx esi, sil ; jmp 0x6d9ed0",family_scan:min-size=14
+0x028a13e0,9,"movzx esi, sil ; jmp 0x6d9ed0",family_scan:jump-free
+0x028a13e0,9,"movzx esi, sil ; jmp 0x6d9ed0",bytes:address dependent
+0x028a14e0,9,"add rdi, -0x38 ; jmp 0x6dbfc0",family_scan:min-size=14
+0x028a14e0,9,"add rdi, -0x38 ; jmp 0x6dbfc0",family_scan:jump-free
+0x028a14e0,9,"add rdi, -0x38 ; jmp 0x6dbfc0",bytes:address dependent
+0x028a17b0,9,"add rdi, -0x38 ; jmp 0x6dbfc0",family_scan:min-size=14
+0x028a17b0,9,"add rdi, -0x38 ; jmp 0x6dbfc0",family_scan:jump-free
+0x028a17b0,9,"add rdi, -0x38 ; jmp 0x6dbfc0",bytes:address dependent
+0x028a17d0,9,"add rdi, -0x38 ; jmp 0x6dcdc0",family_scan:min-size=14
+0x028a17d0,9,"add rdi, -0x38 ; jmp 0x6dcdc0",family_scan:jump-free
+0x028a17d0,9,"add rdi, -0x38 ; jmp 0x6dcdc0",bytes:address dependent
+0x028a19a0,9,"add rdi, -0x48 ; jmp 0x6dbfc0",family_scan:min-size=14
+0x028a19a0,9,"add rdi, -0x48 ; jmp 0x6dbfc0",family_scan:jump-free
+0x028a19a0,9,"add rdi, -0x48 ; jmp 0x6dbfc0",bytes:address dependent
+0x028a19c0,9,"add rdi, -0x48 ; jmp 0x6dcdc0",family_scan:min-size=14
+0x028a19c0,9,"add rdi, -0x48 ; jmp 0x6dcdc0",family_scan:jump-free
+0x028a19c0,9,"add rdi, -0x48 ; jmp 0x6dcdc0",bytes:address dependent
+0x028a1c80,9,"add rdi, -0x38 ; jmp 0x6dbfc0",family_scan:min-size=14
+0x028a1c80,9,"add rdi, -0x38 ; jmp 0x6dbfc0",family_scan:jump-free
+0x028a1c80,9,"add rdi, -0x38 ; jmp 0x6dbfc0",bytes:address dependent
+0x028a1cb0,9,"add rdi, -0x38 ; jmp 0x6dcee0",family_scan:min-size=14
+0x028a1cb0,9,"add rdi, -0x38 ; jmp 0x6dcee0",family_scan:jump-free
+0x028a1cb0,9,"add rdi, -0x38 ; jmp 0x6dcee0",bytes:address dependent
+0x028a1d40,9,"add rdi, -0x48 ; jmp 0x6dbfc0",family_scan:min-size=14
+0x028a1d40,9,"add rdi, -0x48 ; jmp 0x6dbfc0",family_scan:jump-free
+0x028a1d40,9,"add rdi, -0x48 ; jmp 0x6dbfc0",bytes:address dependent
+0x028a1d70,9,"add rdi, -0x48 ; jmp 0x6dcee0",family_scan:min-size=14
+0x028a1d70,9,"add rdi, -0x48 ; jmp 0x6dcee0",family_scan:jump-free
+0x028a1d70,9,"add rdi, -0x48 ; jmp 0x6dcee0",bytes:address dependent
+0x028a1db0,9,"add rdi, -0x48 ; jmp 0x6d82c0",family_scan:min-size=14
+0x028a1db0,9,"add rdi, -0x48 ; jmp 0x6d82c0",family_scan:jump-free
+0x028a1db0,9,"add rdi, -0x48 ; jmp 0x6d82c0",bytes:address dependent
+0x028a1dc0,9,"add rdi, -0x48 ; jmp 0x6d8680",family_scan:min-size=14
+0x028a1dc0,9,"add rdi, -0x48 ; jmp 0x6d8680",family_scan:jump-free
+0x028a1dc0,9,"add rdi, -0x48 ; jmp 0x6d8680",bytes:address dependent
+0x028a1e20,9,"add rdi, -0x50 ; jmp 0x6dbfc0",family_scan:min-size=14
+0x028a1e20,9,"add rdi, -0x50 ; jmp 0x6dbfc0",family_scan:jump-free
+0x028a1e20,9,"add rdi, -0x50 ; jmp 0x6dbfc0",bytes:address dependent
+0x028a1e50,9,"add rdi, -0x50 ; jmp 0x6dcee0",family_scan:min-size=14
+0x028a1e50,9,"add rdi, -0x50 ; jmp 0x6dcee0",family_scan:jump-free
+0x028a1e50,9,"add rdi, -0x50 ; jmp 0x6dcee0",bytes:address dependent
+0x028a1e90,9,"add rdi, -0x50 ; jmp 0x6d82c0",family_scan:min-size=14
+0x028a1e90,9,"add rdi, -0x50 ; jmp 0x6d82c0",family_scan:jump-free
+0x028a1e90,9,"add rdi, -0x50 ; jmp 0x6d82c0",bytes:address dependent
+0x028a1ea0,9,"add rdi, -0x50 ; jmp 0x6d8680",family_scan:min-size=14
+0x028a1ea0,9,"add rdi, -0x50 ; jmp 0x6d8680",family_scan:jump-free
+0x028a1ea0,9,"add rdi, -0x50 ; jmp 0x6d8680",bytes:address dependent
+0x028a2f90,9,"add rdi, -0x38 ; jmp 0x6dcee0",family_scan:min-size=14
+0x028a2f90,9,"add rdi, -0x38 ; jmp 0x6dcee0",family_scan:jump-free
+0x028a2f90,9,"add rdi, -0x38 ; jmp 0x6dcee0",bytes:address dependent
+0x028a31e0,9,"add rdi, -0x48 ; jmp 0x6dcee0",family_scan:min-size=14
+0x028a31e0,9,"add rdi, -0x48 ; jmp 0x6dcee0",family_scan:jump-free
+0x028a31e0,9,"add rdi, -0x48 ; jmp 0x6dcee0",bytes:address dependent
+0x028cd3d0,9,"mov rdi, qword ptr [rdi + 0x50] ; jmp 0x8be3a0",family_scan:min-size=14
+0x028cd3d0,9,"mov rdi, qword ptr [rdi + 0x50] ; jmp 0x8be3a0",family_scan:jump-free
+0x028cd3d0,9,"mov rdi, qword ptr [rdi + 0x50] ; jmp 0x8be3a0",bytes:address dependent
+0x028cd3e0,9,"mov rdi, qword ptr [rdi + 0x50] ; jmp 0x8be3e0",family_scan:min-size=14
+0x028cd3e0,9,"mov rdi, qword ptr [rdi + 0x50] ; jmp 0x8be3e0",family_scan:jump-free
+0x028cd3e0,9,"mov rdi, qword ptr [rdi + 0x50] ; jmp 0x8be3e0",bytes:address dependent
+0x028cd470,9,"add rdi, 0x70 ; jmp 0x836890",family_scan:min-size=14
+0x028cd470,9,"add rdi, 0x70 ; jmp 0x836890",family_scan:jump-free
+0x028cd470,9,"add rdi, 0x70 ; jmp 0x836890",bytes:address dependent
+0x02ba2fb0,8,"mov rdi, rsi ; jmp 0x2b41470",family_scan:min-size=14
+0x02ba2fb0,8,"mov rdi, rsi ; jmp 0x2b41470",family_scan:jump-free
+0x02ba2fb0,8,"mov rdi, rsi ; jmp 0x2b41470",bytes:address dependent
+0x02bed130,9,"add rdi, 0x30 ; jmp 0x2beda80",family_scan:min-size=14
+0x02bed130,9,"add rdi, 0x30 ; jmp 0x2beda80",family_scan:jump-free
+0x02bed130,9,"add rdi, 0x30 ; jmp 0x2beda80",bytes:address dependent
+0x02bed140,9,"add rdi, 0x30 ; jmp 0x2bedc90",family_scan:min-size=14
+0x02bed140,9,"add rdi, 0x30 ; jmp 0x2bedc90",family_scan:jump-free
+0x02bed140,9,"add rdi, 0x30 ; jmp 0x2bedc90",bytes:address dependent
+0x02bed240,9,"add rdi, 0x30 ; jmp 0x2bee430",family_scan:min-size=14
+0x02bed240,9,"add rdi, 0x30 ; jmp 0x2bee430",family_scan:jump-free
+0x02bed240,9,"add rdi, 0x30 ; jmp 0x2bee430",bytes:address dependent
+0x02bed250,9,"add rdi, 0x30 ; jmp 0x2bee3c0",family_scan:min-size=14
+0x02bed250,9,"add rdi, 0x30 ; jmp 0x2bee3c0",family_scan:jump-free
+0x02bed250,9,"add rdi, 0x30 ; jmp 0x2bee3c0",bytes:address dependent
+0x02c1fc20,9,"mov rdi, qword ptr [rdi + 0x20] ; mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:min-size=14
+0x02c1fc20,9,"mov rdi, qword ptr [rdi + 0x20] ; mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",family_scan:jump-free
+0x02c1fc20,9,"mov rdi, qword ptr [rdi + 0x20] ; mov rax, qword ptr [rdi] ; jmp qword ptr [rax]",bytes:address dependent
+0x02c206e0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c206e0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c206e0,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02c207a0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c207a0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c207a0,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02c20850,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c20850,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c20850,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02c20900,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c20900,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c20900,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02c209b0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c209b0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c209b0,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02c20ab0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c20ab0,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c20ab0,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02c20b60,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:min-size=14
+0x02c20b60,9,"add rdi, -0x10 ; jmp 0x2fbe588",family_scan:jump-free
+0x02c20b60,9,"add rdi, -0x10 ; jmp 0x2fbe588",bytes:address dependent
+0x02df7ae0,9,"mov rdi, qword ptr [rdi + 0x68] ; jmp 0x8be3e0",family_scan:min-size=14
+0x02df7ae0,9,"mov rdi, qword ptr [rdi + 0x68] ; jmp 0x8be3e0",family_scan:jump-free
+0x02df7ae0,9,"mov rdi, qword ptr [rdi + 0x68] ; jmp 0x8be3e0",bytes:address dependent
+0x02e4fc80,8,"int 0x41 ; mov eax, 0x80000001 ; ret",family_scan:min-size=14
+0x02e4fc80,8,"int 0x41 ; mov eax, 0x80000001 ; ret",bytes:trap (1j v)
+0x02e4fc90,8,"int 0x41 ; mov eax, 0x80000001 ; ret",family_scan:min-size=14
+0x02e4fc90,8,"int 0x41 ; mov eax, 0x80000001 ; ret",bytes:trap (1j v)
+0x02e4fca0,8,"int 0x41 ; mov eax, 0x80000001 ; ret",family_scan:min-size=14
+0x02e4fca0,8,"int 0x41 ; mov eax, 0x80000001 ; ret",bytes:trap (1j v)
+0x02e4fcb0,8,"int 0x41 ; mov eax, 0x80000001 ; ret",family_scan:min-size=14
+0x02e4fcb0,8,"int 0x41 ; mov eax, 0x80000001 ; ret",bytes:trap (1j v)
+0x02e55290,8,"int 0x41 ; mov eax, 0x80000001 ; ret",family_scan:min-size=14
+0x02e55290,8,"int 0x41 ; mov eax, 0x80000001 ; ret",bytes:trap (1j v)
+0x02e552a0,8,"int 0x41 ; mov eax, 0x80000001 ; ret",family_scan:min-size=14
+0x02e552a0,8,"int 0x41 ; mov eax, 0x80000001 ; ret",bytes:trap (1j v)
+0x02f97dd0,8,"mov byte ptr [rip + 0x29a3289], dil ; ret",family_scan:min-size=14
+0x02f97dd0,8,"mov byte ptr [rip + 0x29a3289], dil ; ret",bytes:address dependent
+0x02f97de0,8,"mov byte ptr [rip + 0x27804b9], dil ; ret",family_scan:min-size=14
+0x02f97de0,8,"mov byte ptr [rip + 0x27804b9], dil ; ret",bytes:address dependent
+0x02f97df0,7,"mov al, byte ptr [rip + 0x29a326a] ; ret",family_scan:min-size=14
+0x02f97df0,7,"mov al, byte ptr [rip + 0x29a326a] ; ret",bytes:address dependent
+0x02f97e00,7,"mov al, byte ptr [rip + 0x278049a] ; ret",family_scan:min-size=14
+0x02f97e00,7,"mov al, byte ptr [rip + 0x278049a] ; ret",bytes:address dependent

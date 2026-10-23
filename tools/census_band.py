@@ -24,6 +24,32 @@ import blocks as B
 import leaf_family_census as C
 
 
+def refusal(md, cs, addr, size):
+    """The byte tier's refusal for one catalogue row, or None if it is transcribable.
+
+    One implementation, two callers: this census and the thunk census. A second copy of these four
+    predicates is a second thing to drift, and the counter and the gate would then disagree about
+    which class a row belongs to -- the failure mode that made a name-only join report zero.
+    """
+    off = addr - C.FILE_BIAS
+    c = B.census(md, addr, size)
+    if c['decoded'] != c['size'] or c['unplaced']:
+        return 'decode'
+    if c['blocks'] != 1 or c['calls']:
+        return 'control flow'
+    ins = list(cs.disasm(md[off:off + size], addr))
+    if any(i.mnemonic in R.TRAPS for i in ins):
+        return 'trap (1j v)'
+    hit = any(i.mnemonic.startswith(('j', 'call'))
+              or any((op.type == X86_OP_MEM and op.mem.base in (X86_REG_RIP, X86_REG_EIP))
+                     or (op.type == X86_OP_MEM and op.mem.segment in (X86_REG_FS, X86_REG_GS))
+                     or (op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000)
+                     for op in i.operands) for i in ins)
+    if hit:
+        return 'address dependent'
+    return None
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument('--min', type=int, default=1)
@@ -41,22 +67,11 @@ def main(argv):
     shapes = collections.Counter()
     good = []
     for addr, size in band:
+        refused = refusal(md, cs, addr, size)
+        if refused:
+            why[refused] += 1; continue
         off = addr - C.FILE_BIAS
-        c = B.census(md, addr, size)
-        if c['decoded'] != c['size'] or c['unplaced']:
-            why['decode'] += 1; continue
-        if c['blocks'] != 1 or c['calls']:
-            why['control flow'] += 1; continue
         ins = list(cs.disasm(md[off:off + size], addr))
-        if any(i.mnemonic in R.TRAPS for i in ins):
-            why['trap (1j v)'] += 1; continue
-        hit = any(i.mnemonic.startswith(('j', 'call'))
-                  or any((op.type == X86_OP_MEM and op.mem.base in (X86_REG_RIP, X86_REG_EIP))
-                         or (op.type == X86_OP_MEM and op.mem.segment in (X86_REG_FS, X86_REG_GS))
-                         or (op.type == X86_OP_IMM and 0x400000 <= op.imm < 0x600000)
-                         for op in i.operands) for i in ins)
-        if hit:
-            why['address dependent'] += 1; continue
         good.append((addr, size))
         shapes[' ; '.join(f'{i.mnemonic} {i.op_str}'.strip() for i in ins)] += 1
     print(f'band {o.min}..{o.max} B: unlanded {len(band)} · '
