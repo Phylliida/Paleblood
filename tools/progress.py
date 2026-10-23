@@ -24,6 +24,8 @@ usage: progress.py [--root DIR] [--out FILE] [--update-readme] [--check] [--stat
 from __future__ import annotations
 
 import argparse
+import gzip
+import pathlib
 import csv
 import hashlib
 import json
@@ -498,6 +500,35 @@ def extent_line() -> str:
             f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest")
 
 
+def reach_line() -> str:
+    """Both denominators, because two numbers have been doing one job.
+
+    38,018 / 157,757 is SCOPE: a fraction of Ghidra's reach, every row a leaf selector could ever be
+    asked about. 36,846 / 43,734 is PROGRESS: a fraction of the BRANCH-FREE population, which is what
+    the leaf toolchain can address at all -- byte transcription needs one basic block and
+    family_scan's default keeps only jump-free bodies. A branch-containing row belongs to the
+    function campaign (generated C, no single-block constraint), so this line counts the boundary and
+    never moves it: widening jump_free would let leaf machinery accept control flow it cannot express.
+    """
+    path = pathlib.Path('symbols') / 'branch_band.csv.gz'
+    try:
+        with gzip.open(path, 'rt', newline='') as f:
+            rows = list(csv.DictReader(f))
+    except OSError as exc:
+        return f'reach: unavailable ({exc}) -- regenerate with tools/branch_census.py; unread is not zero'
+    if not rows:
+        return f'reach: {path} has no rows -- refusing to print a denominator about nothing'
+    total = len(rows)
+    branch = sum(1 for r in rows if r['branch'] == '1')
+    free = sum(1 for r in rows if r['branch'] == '0')
+    landed = sum(1 for r in rows if r['landed'] == 'True')
+    free_landed = sum(1 for r in rows if r['branch'] == '0' and r['landed'] == 'True')
+    return (f'reach: {landed} landed / {free} branch-free = {100 * free_landed / free:.2f}% PROGRESS '
+            f'· {landed} / {total} catalogued = {100 * landed / total:.2f}% SCOPE '
+            f'· branch {branch} (landed {landed - free_landed}) '
+            f'· unlanded branch-free {free - free_landed}')
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--root', default=DEFAULT_ROOT)
@@ -513,6 +544,7 @@ def main() -> int:
     # Every run, not one branch: a line that prints only under a flag is a line that is
     # absent from the run that needed it. stderr, because the default output is JSON.
     print(extent_line(), file=sys.stderr)
+    print(reach_line(), file=sys.stderr)
     if a.burndown:
         print(burndown_line(data))
         return 0
