@@ -1,7 +1,6 @@
 {
  "schema": 1,
  "generated_by": "tools/derive.py",
- "head": "2bd2172",
  "pending_provisional": [],
  "values": {
   "band.nested": 0,

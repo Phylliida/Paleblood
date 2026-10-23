@@ -19,8 +19,9 @@ GATES = ("check_externs.py", "check_catalogue.py")
 
 
 class BareGates(unittest.TestCase):
-    def run_bare(self, tool, *args):
+    def run_bare(self, tool, *args, env_extra=None):
         env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+        env.update(env_extra or {})
         return subprocess.run([sys.executable, "-P", str(ROOT / "tools" / tool), *args],
                               cwd="/tmp", capture_output=True, text=True, timeout=300, env=env)
 
@@ -51,6 +52,28 @@ class BareGates(unittest.TestCase):
                 said_something = bool((p.stdout + p.stderr).strip())
                 self.assertTrue(said_something or p.returncode != 0,
                                 f"{tool}: rc=0 and both streams empty -- a tool that did nothing")
+
+    def test_every_generator_can_still_re_emit_its_artifacts(self):
+        # A committed artifact its generator cannot re-emit is a hand repair the next re-run silently
+        # reverts -- it happened here, to slot_copy_cases.py. So: regenerate-and-diff, bare, and the
+        # failure names the generator. A generator that does not implement --check cannot be held to this
+        # at all, so it is named in a baseline that may only SHRINK: a new generator without --check is red.
+        UNCHECKABLE = {"leaf_mov_rax_gen.py", "static_guard_gen.py"}   # owe: --check in both
+        gens = sorted(p.name for p in (ROOT / "tools").glob("*_gen.py"))
+        self.assertGreaterEqual(len(gens), 1, f"no generators found: {gens}")
+        checkable = [g for g in gens if "--check" in (ROOT / "tools" / g).read_text()]
+        self.assertEqual(sorted(set(gens) - set(checkable)), sorted(UNCHECKABLE),
+                         "a generator without --check appeared or the baseline was not pruned")
+        # a generator that needs the image says which variable to set; supply the artifact it names, and
+        # when the untracked sibling is absent SAY SO rather than let a skip read as a pass
+        image = ROOT.parent / "data" / "bb" / "elf" / "eboot.elf"
+        extra = {"BB_IMAGE": str(image)} if image.exists() else {}
+        if not extra:
+            print(f"note: {image} absent -- generators needing BB_IMAGE cannot be held to regenerate-and-diff")
+        for tool in checkable:
+            with self.subTest(tool=tool):
+                p = self.run_bare(tool, "--check", env_extra=extra)
+                self.assertEqual(p.returncode, 0, f"{tool} cannot reproduce its committed artifact:\n" + p.stdout + p.stderr)
 
     def test_the_store_check_starts_bare_too(self):
         # injected payload: import resolution is the subject here, not the figures -- and the real build is

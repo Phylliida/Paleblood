@@ -12,6 +12,10 @@ Keys not yet present are listed in PENDING and are explicitly PROVISIONAL: they 
 reading the CSV with their own DictReader rather than through tools/catalogue.py, and they enter this
 file only after that migration and one re-derivation pass.
 
+Provenance for this store is its commit, not a field in it: `head` was a second home for a fact git already
+stores immutably, and self-invalidating by construction -- a value cannot name the commit that contains it.
+The two input digests below stay, because git does not store those and they are the actual subject.
+
 This module derives no figure. Every value is returned by the tool that owns it: `build()` calls the
 loader's `compute()`, and it never re-implements a size filter, a disjointness test or an owner count.
 Eight keys computed twice would be a second home born silently -- equal today only because two
@@ -36,15 +40,9 @@ MUTABLE_PREFIX = ("branch.", "band.", "frontier.", "thunk.")
 PENDING = ()   # emptied when the five loaders moved to catalogue.read_rows; see the eight keys in build()
 
 
-def head() -> str:
-    try:
-        return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
-                              capture_output=True, text=True).stdout.strip() or "unknown"
-    except OSError:
-        return "unknown"
-
-
 def _chdir(path):
+    """The three censuses resolve `symbols/...` against the working directory; progress/check_catalogue
+    anchor at ROOT. Until the loaders carry path constants, build() supplies the anchor here."""
     import contextlib
     import os
 
@@ -101,7 +99,6 @@ def build() -> dict:
     return {
         "schema": 1,
         "generated_by": "tools/derive.py",
-        "head": head(),
         "pending_provisional": list(PENDING),
         "values": dict(sorted(values.items())),
     }
@@ -229,10 +226,10 @@ def main(argv) -> int:
                 if a != b:
                     print(f"derive: {k}: stored {a!r} != derived {b!r}")
             return 1
-        print(f"derive: ok ({len(payload['values'])} keys, head {payload.get('head', 'unknown')})")
+        print(f"derive: ok ({len(payload['values'])} keys)")
         return 0
     OUT.write_text(json.dumps(payload, indent=1, sort_keys=False) + "\n")
-    print(f"derive: wrote {OUT.relative_to(ROOT)} ({len(payload['values'])} keys, head {payload['head']})")
+    print(f"derive: wrote {OUT.relative_to(ROOT)} ({len(payload['values'])} keys)")
     return 0
 
 

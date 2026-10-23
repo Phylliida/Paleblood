@@ -26,7 +26,8 @@ Deliberately NOT pinned:
 * The order of the zero stores. They write to disjoint eight-byte spans, so no permutation of them
   changes a byte of the result.
 * The value left in eax. The original returns a constant zero rather than anything computed, and the
-  cases pin the register, which is the observable part.
+  cases pin it twice over: they enter with a nonzero rax and compare the return, so a wrapper that
+  returns nothing shows up as 0xdeadbeef where the original gives 0.
 """
 
 import json
