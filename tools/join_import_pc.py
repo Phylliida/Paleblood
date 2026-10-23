@@ -42,7 +42,12 @@ def load_extents(path):
 
 
 def owners(extents, v):
-    """Every extent containing v. extents must be sorted by address."""
+    """Every extent containing v. extents must be sorted by address.
+    NOTE: on this catalogue the tie branch cannot fire. Sizes are decimal, extents are disjoint
+    (a + size <= next address at every one of 157,756 adjacent pairs, 0 true overlaps, 0 duplicate
+    starts), so `owners` is 1 for every catalogued address and `ambiguous` is a guard against a
+    catalogue that does not exist here -- not evidence that ownership is usually unique by luck.
+    """
     starts = [a for a, _ in extents]
     widest = max(s for _, s in extents)
     lo = bisect.bisect_left(starts, v - widest)

@@ -82,6 +82,12 @@ file(GLOB PB_TEST_SYSLIB CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/runtime/syslib/
 add_executable(test_syslib test/test_syslib.c runtime/guest_mem.c runtime/process.c runtime/loader.c
                               runtime/tls.c runtime/syslib_flight.c ${PB_TEST_SYSLIB})
 target_include_directories(test_syslib PRIVATE runtime/include)
+# The tree is normally built per-target, so a target that stopped linking sat undetected while every
+# other target stayed green -- which is how test_plugin and test_syslib were both broken at once,
+# by one missing translation unit each. This entry builds everything, with no target, so "the
+# tree builds" is a gate rather than an observation.
+add_test(NAME build_tree COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR})
+set_tests_properties(build_tree PROPERTIES RUN_SERIAL TRUE)
 add_test(NAME syslib COMMAND test_syslib)
 
 add_test(NAME tools COMMAND ${Python3_EXECUTABLE} -m unittest discover -s ${PROJECT_SOURCE_DIR}/test -p "test_*.py" -v)

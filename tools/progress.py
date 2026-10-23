@@ -477,7 +477,7 @@ def extent_line() -> str:
     length both contain an address, so an ownership claim carries an undefined tail and must say so.
     """
     try:
-        cat = [(int(r["address"], 16), int(r["size"], 16))
+        cat = [(int(r["address"], 16), int(r["size"]))
                for r in csv.DictReader(open("symbols/ghidra_functions.csv"))]
         landed = {int(r["address"], 16) for r in csv.DictReader(open("symbols/functions.csv"))}
     except (OSError, KeyError, ValueError) as exc:
@@ -497,7 +497,9 @@ def extent_line() -> str:
     pct = 100.0 * tied / len(cat)
     return (f"extents: {len(cat)} catalogued \u00b7 <=13B {len(short)} (landed {short_landed}, "
             f"unlanded {len(short) - short_landed}) \u00b7 family_scan --min-size 14 excludes that whole band "
-            f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest")
+            f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest "
+            "(expected 0: sizes are decimal and this catalogue's extents are disjoint, so the tie branch is "
+            "a guard against a catalogue that does not exist here, not a live condition)")
 
 
 def reach_line() -> str:
