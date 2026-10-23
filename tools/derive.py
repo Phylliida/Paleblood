@@ -44,6 +44,21 @@ def head() -> str:
         return "unknown"
 
 
+def _chdir(path):
+    import contextlib
+    import os
+
+    @contextlib.contextmanager
+    def cm():
+        old = os.getcwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(old)
+    return cm()
+
+
 def build() -> dict:
     import progress as P
     import check_catalogue as K
@@ -68,7 +83,11 @@ def build() -> dict:
     import branch_census as BC
     import leaf_frontier as LF
     import thunk_census as TC
-    f, lf, th = BC.compute(), LF.compute(), TC.compute()
+    # CONTRACT: those three resolve their inputs relative to the working directory (`symbols/...`), unlike
+    # progress/check_catalogue which anchor at ROOT. The bare-invocation test runs from /tmp on purpose and
+    # caught exactly this: the new call path had lost the anchor the old one had. Owed: path constants.
+    with _chdir(ROOT):
+        f, lf, th = BC.compute(), LF.compute(), TC.compute()
     values.update({
         "branch.functions": f["branch"],
         "branch.landed": f["branch_landed"],
@@ -171,17 +190,32 @@ def compare(old_path, payload, prereg_path=None) -> int:
 
 
 def main(argv) -> int:
-    payload = build()
+    if "--help" in argv:      # before build(): usage must not cost three capstone censuses
+        print("derive.py [--check [--store P]] [--compare BEFORE [--prereg P]] [--payload P]")
+        print("  no flags: write symbols/derived.json.  --check: stored == derived.  "
+              "--compare: every move against a baseline, refused unless predicted.")
+        return 0
+    # --payload injects the current side: the comparison logic is what seven tests exercise, and it does
+    # not care what the numbers are. Without it, every test pays three capstone censuses (290 s measured).
+    if "--payload" in argv:
+        inj = Path(argv[argv.index("--payload") + 1])
+        if not inj.exists():
+            print(f"derive: injected payload {inj} is missing -- refusing")
+            return 3
+        payload = json.loads(inj.read_text())
+    else:
+        payload = build()
     if "--compare" in argv:
         prereg = argv[argv.index("--prereg") + 1] if "--prereg" in argv else None
         return compare(argv[argv.index("--compare") + 1], payload, prereg)
+    store = Path(argv[argv.index("--store") + 1]) if "--store" in argv else OUT
     if "--check" in argv:
-        if not OUT.exists():
-            print(f"derive: {OUT.relative_to(ROOT)} is missing -- run tools/derive.py")
+        if not store.exists():
+            print(f"derive: {store} is missing -- run tools/derive.py")
             return 3
-        old = json.loads(OUT.read_text())
+        old = json.loads(store.read_text())
         unlisted, stale = rosters.compare(old.get("pending_provisional", []),
-                                          payload["pending_provisional"])
+                                          payload.get("pending_provisional", []))
         if unlisted or stale:
             for k in unlisted:
                 print(f"derive: PENDING entry {k!r} is not pending in this derivation")
@@ -195,7 +229,7 @@ def main(argv) -> int:
                 if a != b:
                     print(f"derive: {k}: stored {a!r} != derived {b!r}")
             return 1
-        print(f"derive: ok ({len(payload['values'])} keys, head {payload['head']})")
+        print(f"derive: ok ({len(payload['values'])} keys, head {payload.get('head', 'unknown')})")
         return 0
     OUT.write_text(json.dumps(payload, indent=1, sort_keys=False) + "\n")
     print(f"derive: wrote {OUT.relative_to(ROOT)} ({len(payload['values'])} keys, head {payload['head']})")

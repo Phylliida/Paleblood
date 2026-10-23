@@ -30,8 +30,37 @@ class BareGates(unittest.TestCase):
                 p = self.run_bare(tool)
                 self.assertEqual(p.returncode, 0, f"{tool}: " + p.stdout + p.stderr)
 
+    def test_every_tool_that_prints_nothing_did_nothing(self):
+        # I deleted three `if __name__` guards and read rc=0 three times before I looked. A loader whose
+        # main was deleted still exits 0 and still prints nothing, so non-empty stdout is the assertion.
+        # --help is enough to catch a missing guard or a missing main: neither can print usage.
+        # the roster is DERIVED from the tree, never a list of names I remember: a check that hardcodes the
+        # population it enforces asserts a roster no artifact owns
+        tools = sorted(p.name for p in (ROOT / "tools").glob("*.py")
+                       if "__main__" in p.read_text())
+        self.assertGreaterEqual(len(tools), 8, f"roster looks wrong: {tools}")
+        for tool in tools:
+            with self.subTest(tool=tool):
+                # FIRE ON THE SIGNATURE, not on a refusal: many tools legitimately need an argument or a
+                # compile_commands.json and say so. The defect I shipped was rc=0 with BOTH streams empty --
+                # a tool that printed nothing because it did nothing. That is what this asserts against.
+                try:
+                    p = self.run_bare(tool, "--help")
+                except subprocess.TimeoutExpired:
+                    continue          # a tool that runs for 60s with --help is doing work, not nothing
+                said_something = bool((p.stdout + p.stderr).strip())
+                self.assertTrue(said_something or p.returncode != 0,
+                                f"{tool}: rc=0 and both streams empty -- a tool that did nothing")
+
     def test_the_store_check_starts_bare_too(self):
-        p = self.run_bare("derive.py", "--check")
+        # injected payload: import resolution is the subject here, not the figures -- and the real build is
+        # 290 s, which a bare-start guard must not cost.
+        import json, tempfile
+        st = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump({"values": {"a.b": 1}, "pending_provisional": []}, st); st.close()
+        pl = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump({"values": {"a.b": 1}, "pending_provisional": []}, pl); pl.close()
+        p = self.run_bare("derive.py", "--check", "--store", st.name, "--payload", pl.name)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.assertIn("derive: ok", p.stdout)
 

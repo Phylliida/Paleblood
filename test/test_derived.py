@@ -26,14 +26,17 @@ class Derived(unittest.TestCase):
         self.assertIn("derive: ok", p.stdout)
 
     def _doctored(self, mutate):
+        """SYNTHETIC + injected: no capstone, no 93 MB ELF, milliseconds."""
         import tempfile
-        store = ROOT / "symbols" / "derived.json"
-        payload = json.loads(store.read_text())
+        payload = {"values": {"catalogue.functions": 100, "landed.verified": 21, "parses.sites": 99}}
+        current = json.loads(json.dumps(payload))
         mutate(payload["values"])
         f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
         json.dump(payload, f); f.close()
-        return subprocess.run([PY, "-P", str(TOOL), "--compare", f.name], cwd=str(ROOT),
-                              capture_output=True, text=True, timeout=300)
+        g = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(current, g); g.close()
+        return subprocess.run([PY, "-P", str(TOOL), "--compare", f.name, "--payload", g.name], cwd=str(ROOT),
+                              capture_output=True, text=True, timeout=120)
 
     def test_compare_labels_an_absent_current_key_as_GONE_and_prints_both_values(self):
         # build() does not yet emit the provisional keys, so until the migration lands them the only
@@ -50,14 +53,17 @@ class Derived(unittest.TestCase):
         self.assertIn("moved against the pre-registration", p.stdout)
 
     def _prereg(self, mutate, prereg):
-        """Baseline = the real store, so the only disagreement is the one the test introduces."""
+        """SYNTHETIC on both sides: the comparison logic is the subject, not the figures. No capstone, no
+        93 MB ELF, milliseconds -- a fixture that touches no real data cannot go stale."""
         import tempfile
-        values = json.loads((ROOT / "symbols" / "derived.json").read_text())["values"]
-        mutate(values)
+        values = {"catalogue.functions": 100, "landed.verified": 21, "parses.sites": 99}
+        before = dict(values)          # baseline is a COPY; mutating the dict used for both sides made
+        mutate(before)                 # every test compare 99 -> 99 and report MISSED, which is the
         f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump(prereg, f); f.close()
-        g = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump({"values": values}, g); g.close()
-        return subprocess.run([PY, "-P", str(TOOL), "--compare", g.name, "--prereg", f.name], cwd=str(ROOT),
-                              capture_output=True, text=True, timeout=300)
+        g = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump({"values": before}, g); g.close()
+        h = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False); json.dump({"values": values}, h); h.close()
+        return subprocess.run([PY, "-P", str(TOOL), "--compare", g.name, "--prereg", f.name,
+                               "--payload", h.name], cwd=str(ROOT), capture_output=True, text=True, timeout=120)
 
     def test_an_empty_baseline_refuses_instead_of_comparing_nothing(self):
         import tempfile
@@ -85,21 +91,16 @@ class Derived(unittest.TestCase):
         self.assertIn("[mutable] catalogue.functions", p.stdout)
 
     def test_a_wrong_value_is_refused_and_named(self):
-        store = ROOT / "symbols" / "derived.json"
-        orig = store.read_text()          # restore the BYTES read, never a retyped digit
-        payload = json.loads(orig)
-        try:
-            payload["values"]["catalogue.functions"] = 1
-            store.write_text(json.dumps(payload, indent=1))
-            p = self.run_tool("--check")
-            self.assertEqual(p.returncode, 1)
-            self.assertIn("catalogue.functions", p.stdout)
-            self.assertIn("stored 1", p.stdout)
-        finally:
-            store.write_text(orig)
-            p = self.run_tool("--check")
-            self.assertEqual(p.returncode, 0, "store not restored: " + p.stdout)
-
+        import tempfile
+        st = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump({"values": {"catalogue.functions": 1}, "pending_provisional": []}, st); st.close()
+        pl = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump({"values": {"catalogue.functions": 100}}, pl); pl.close()
+        p = subprocess.run([PY, "-P", str(TOOL), "--check", "--store", st.name, "--payload", pl.name],
+                           cwd=str(ROOT), capture_output=True, text=True, timeout=120)
+        self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+        self.assertIn("catalogue.functions", p.stdout)
+        self.assertIn("stored 1", p.stdout)
 
 if __name__ == "__main__":
     unittest.main()
