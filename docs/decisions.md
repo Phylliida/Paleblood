@@ -1280,3 +1280,37 @@ it caused** — the insert point now comes from the AST's own import nodes, and 
 `--root` is not threaded to the catalogue read or absence is read as clean in `--check` mode. Both are
 violations of *absence refuses*; the hook is unaffected because it runs from the repo root, which is exactly
 why it has never been seen.
+
+### Two roots, one output: the gate read `--root` and the diagnostics beside it read the cwd
+
+`progress.py --root <abs> --check` from `/tmp` exited **0** while printing `cannot read the catalogue …` and
+`reach: unavailable …` (rc read directly, no pipe). The compare was honest — `compute(a.root)` reads what it
+was told — and the **lines printed beside it** were about a different tree: `extent_line()` and `reach_line()`
+took no root at all and rebuilt a relative `symbols/` themselves, while `_parses_clause()` beside them resolved
+an absolute one through its own module, so **one output line carried one honest reader and one cwd-dependent
+one**. Two instruments, two roots, one number.
+
+Fixed three ways, each measured: `--root` is threaded into both lines through one `_symbols_dir(root)` (and
+`landed.landed_addresses` already took a path, so the selector stays one implementation); **absence now
+refuses** — a `--root` whose `symbols/ghidra_functions.csv` or `functions.csv` cannot be read returns **rc=3**
+before anything is computed, instead of degrading every line to a sentence and exiting 0; and the three arms
+are run apart: repo root rc=0, **`/tmp` with an absolute `--root` rc=0 printing the same 157,757**, `/tmp/nocat`
+**rc=3** refusing.
+
+**Class check done, not assumed:** `grep -n "add_argument('--root'" tools/*.py` finds it in 13 tools and every
+one of them uses `args.root` afterwards; `progress.py` was the only file whose *helper* functions bypassed it.
+A flag that parses and goes nowhere is the `--lib` class, and the way it hides is that the tool prints a
+plausible number about the default.
+
+**And the repair that preceded this one was caught by a test I already had.** `test_gates_bare` runs every
+`__main__` tool bare and fails on a non-empty stderr with rc=1, so `sys.path.insert` above `import sys` — 16
+files, `NameError` — would have failed it. What missed it was **a bespoke sixteen-file loop run beside the test
+that already knew**: a hand verification next to a suite is how a suite's coverage gets spent on the thing you
+were going to check by hand anyway. From here the suite is the check, and anything still hand-checked gets the
+`NameError` arm added.
+
+**Scope statement, because two greens certified different trees:** the `tools` ctest target is registered but
+every "ctest 18/18" in this campaign was run as `ctest -E '^tools$'`, so **ctest has never covered
+`tools/`, and no `atomic_write`, `check_import_order`, roster or 40-site result is in any ctest green.** Those
+were covered by `test_gates_bare`, `test_atomicio`, `test_emit_leaf_family` and `test_progress_*`, run by name.
+Until the target is unified, "ctest green" is a claim about `runtime/` only.

@@ -484,7 +484,18 @@ def _parses_clause():
         return f" · parses: unavailable ({exc}) -- run tools/check_catalogue.py; unread is not zero"
 
 
-def extent_line() -> str:
+def _symbols_dir(root=".") -> str:
+    """One place the symbols directory is computed: --root, or the test seam, never a bare cwd path.
+
+    Every reader on this page used to build its own path, and two of them used a relative one, so a run
+    from any directory but the repo root printed "cannot read the catalogue" beside a `--check` that had
+    read it fine and returned 0. Two instruments, two roots, one output: the compare was honest and the
+    diagnostics beside it were about a different tree.
+    """
+    return os.environ.get("PB_SYMBOLS_DIR") or os.path.join(root, "symbols")
+
+
+def extent_line(root=".") -> str:
     """The catalogue's short-extent population, printed because a selector floor excludes it silently.
 
     family_scan.py:238 --min-size defaults to 14, so no family is ever proposed from a function shorter
@@ -494,15 +505,15 @@ def extent_line() -> str:
     """
     import os
     import landed as L
-    root = os.environ.get("PB_SYMBOLS_DIR", "symbols")   # override so a TEST can make a tie occur
+    sroot = _symbols_dir(root)   # PB_SYMBOLS_DIR still wins, so a TEST can make a tie occur
     try:
         import catalogue
-        cat = catalogue.load_extents(os.path.join(root, "ghidra_functions.csv"))
+        cat = catalogue.load_extents(os.path.join(sroot, "ghidra_functions.csv"))
         # Landed is ONE selector, and it is leaf_family_census's: a row at "original" is bookkeeping for a
         # body nobody has written, so counting it as landed understates the work by exactly those rows.
         # Here it was one row, 0x0111a600 (8 B), which is why this line said 5,804 while thunk_census said
         # 5,805 -- one element, and the element had an address.
-        landed = L.landed_addresses()
+        landed = L.landed_addresses(os.path.join(sroot, "functions.csv"))
     except (OSError, KeyError, ValueError) as exc:
         return f"extents: cannot read the catalogue ({exc}) -- unread is not zero"
     import bisect
@@ -535,7 +546,7 @@ def extent_line() -> str:
             + _parses_clause())
 
 
-def reach_line() -> str:
+def reach_line(root=".") -> str:
     """Both denominators, because two numbers have been doing one job.
 
     38,018 / 157,757 is SCOPE: a fraction of Ghidra's reach, every row a leaf selector could ever be
@@ -545,7 +556,7 @@ def reach_line() -> str:
     function campaign (generated C, no single-block constraint), so this line counts the boundary and
     never moves it: widening jump_free would let leaf machinery accept control flow it cannot express.
     """
-    path = pathlib.Path('symbols') / 'branch_band.csv.gz'
+    path = pathlib.Path(_symbols_dir(root)) / 'branch_band.csv.gz'
     try:
         with gzip.open(path, 'rt', newline='') as f:
             rows = list(csv.DictReader(f))
@@ -575,11 +586,19 @@ def main() -> int:
     ap.add_argument('--burndown', action='store_true')
     a = ap.parse_args()
 
+    # ABSENCE REFUSES, once, before anything is computed: every line downstream degrades to a sentence
+    # ("cannot read the catalogue", "reach: unavailable") and the rc would still have been 0, so a run
+    # against a directory with no catalogue exited clean having measured nothing.
+    for need in ('ghidra_functions.csv', 'functions.csv'):
+        p = os.path.join(_symbols_dir(a.root), need)
+        if not os.path.isfile(p):
+            print(f"progress: refusing -- cannot read {p}; unread is not zero", file=sys.stderr)
+            return 3
     data = compute(a.root)
     # Every run, not one branch: a line that prints only under a flag is a line that is
     # absent from the run that needed it. stderr, because the default output is JSON.
-    print(extent_line(), file=sys.stderr)
-    print(reach_line(), file=sys.stderr)
+    print(extent_line(a.root), file=sys.stderr)
+    print(reach_line(a.root), file=sys.stderr)
     if a.burndown:
         print(burndown_line(data))
         return 0
