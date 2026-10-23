@@ -77,6 +77,11 @@ add_test(NAME validate_functions COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_
 add_test(NAME check_agnostic COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/check_agnostic.py)
 add_test(NAME float_flags COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/check_float_flags.py ${CMAKE_BINARY_DIR})
 add_test(NAME progress_readme COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/progress.py --check)
+# symbols/retired.csv is the one table whose failure mode is silence: it decides which rows never
+# run. The check takes the library as well as the tables, because a retired member can be missing
+# from every family file and still be exported by a library that was not rebuilt.
+add_test(NAME check_retired COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/check_retired.py
+         --root ${PROJECT_SOURCE_DIR} --lib $<TARGET_FILE:bbgame>)
 # Every recorded row carries a source pin that nothing recomputed until check_pins.py existed, and
 # 3,012 of 21,129 were stale when it first ran. 2.2 s: three content caches in verification.py, not
 # the defining-file index alone, are what make auditing the whole ledger cheaper than one test run.
@@ -90,7 +95,7 @@ add_test(NAME check_pins COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/too
 set_tests_properties(
   hooks plugin host_hooks capture capture_poc_fail_closed capture_poc_replay
   capture_recorder_replay syslib verify_self_test validate_functions check_agnostic
-  float_flags progress_readme check_pins
+  float_flags progress_readme check_pins check_retired
   PROPERTIES TIMEOUT 120)
 set_tests_properties(tools PROPERTIES TIMEOUT 300)
 

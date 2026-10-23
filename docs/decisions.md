@@ -630,3 +630,16 @@ is done yet.
 7. **`### 1j` — ratified 2026-10-22** by the user's own edit to this file. The byte tier is
    authorised from this commit; the pre-registration in §1j (v) is unchanged, and
    **it is re-run, never adjusted.**
+
+8. **DEBT, recorded 2026-10-23 — `source_hash` is per defining FILE, not per function.**
+   Measured, not suspected: one comment line inside one of ten `rip_load_wide` bodies made all ten
+   ledger rows stale at once (`08d6e34a3ffc7eca` -> `a7410dce547c013a`), so the staleness guard is
+   conservative in the right direction and **cannot localise** -- it refuses a family, never a
+   member. Population beside the debt, because a debt without one reads as a nit:
+   `game/leaf/bytes_family.cpp` holds **4,034 bodies in one file**, so a one-member edit invalidates
+   4,034 evidence rows and re-runs the file -- the 7,051-second finish-condition calculation with a
+   different multiplier. Today the population is **10**, which is when this is a function and not a
+   cliff. The fix is the content-hash principle `symbols/capture_ok.csv` already uses: hash the
+   body's own bytes (the `bb_<name>` definition as emitted), not the file that happens to hold it.
+   Until then, `promote.py --to edge-verified` over-reports staleness at family granularity and
+   never under-reports it -- the direction that refuses work rather than crediting it.
