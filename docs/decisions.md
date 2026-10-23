@@ -1149,3 +1149,33 @@ as an open item with its predicate, to be decided deliberately — not re-derive
 **Batch, pre-registered:** 78 rows / 1,320 B, one **family** emitter, not one shape — parameters
 `(load K, store K2, immediate K3)` from the decode, because seven of the top fifteen shapes are this
 same chain and a template per shape is how `parse_size` became four call sites.
+
+### The rule's reason was a conclusion its check could not reach — and the population is now counted
+
+`_refuse_zerofill` measured **addresses against program headers** and stated **a fact about cases**:
+"a constant 0 no case can discriminate". The premise is true; the conclusion requires knowing what a
+case writes, which the check has no access to. **A refusal whose stated reason is not the thing its
+check measures is a comment, and a comment cannot be wrong loudly** — which is why it survived: I read
+it as a finding rather than as a docstring.
+
+Fixed at the source: the rule now splits into two conditions with **two strings that cannot be
+confused**, each printing the question it answers —
+
+* `address in NO PT_LOAD memsz` → the address is not backed by a segment; a read or write there faults.
+* `past p_filesz, inside p_memsz` → **SEEDING REQUIRED**; the slot is not file-backed, and the refusal
+  says explicitly what it is *not* answering.
+
+The store arm's old message contradicted itself in one sentence (`memsz` in the first clause, `filesz`
+in the second); both arms are now exercised — the load arm by `rip_load`'s real population, the store
+arm by a probe address in no segment.
+
+**Blast radius, counted rather than remembered.** The refusal history: `rip_load` **161 of 161** now
+read `SEEDING REQUIRED` (from the code, not from my notes), and `symbols/thunks.csv`'s `excluded_by`
+column — 16,815 rows, five distinct values (`family_scan:min-size=14` 5,805 · `family_scan:jump-free`
+5,205 · `bytes:address dependent` 5,556 · `bytes:control flow` 184 · `bytes:trap (1j v)` 65) — contains
+**no zerofill value at all**. A measured zero on a live column: the rule never gated any other table.
+The 78-row chain is the second batch; both are the same condition, not two.
+
+**Where the seeding lives:** in the case file. `evidence_hash()` already pins `cases_sha256` over every
+fixture input, so a seeded slot is covered by the column that covers every other case — no new tier
+value, no fourth status.

@@ -261,12 +261,28 @@ def key(name, m):
 def _refuse_zerofill(name, ms, store=False):
     """Refuse a family whose read/write targets land in a PT_LOAD's zero-fill tail.
 
-    The guest value at [filesz, memsz) is a constant zero the loader never writes from the file, so
-    no case can discriminate a body that reads there: every address shift returns the same 0 and a
-    differential over it is a comparison of zeros. `rip_load`'s 161 members all read 0x5820e88..
-    0x58b9d44 against RW filesz ending at 0x57e5b38 (vaddr 0x50dc000 + 0x400000 + 0x309b38) --
-    inside memsz, past filesz, unemittable. Checked against FILESZ, not MEMSZ: memsz is what the
-    loader reserves, filesz is what it fills, and only the second decides whether a byte exists.
+    WHAT THIS CHECK MEASURES: addresses against the program headers. That is all. It cannot see a
+    case file, so it cannot conclude anything about discrimination -- and for a long time this
+    docstring did exactly that, saying a target in the zero-fill tail is "a constant 0 no case can
+    discriminate". The premise is true (the loader fills nothing there) and the conclusion is not
+    reachable from the premise: `harness.py:458` admits a `fixture_setup` write anywhere inside a
+    segment's memsz, and `snapshot()` at :657 reads memsz, so a case that SEEDS the slot supplies
+    the discriminating value itself -- measured by mapping the image, writing a pointer into the
+    tail of RW, and reading it back through the image.
+
+    So there are two conditions and they are not the same refusal:
+
+      * address in no PT_LOAD memsz  -> a read or a write FAULTS. Nothing can be emitted.
+      * past p_filesz, inside p_memsz -> the slot holds zero until something writes it, so the
+        member needs a SEEDING CASE. Emitting it without one would produce a body and its mutant
+        both reading zero: 78 greens certifying the harness.
+
+    The seeding belongs in the case file, not in a new tier value or a fourth status -- a seeded
+    slot is covered by `cases_sha256`, the column that already pins every other fixture input.
+
+    `rip_load`'s 161 members all read 0x5820e88..0x58b9d44 against RW filesz ending at 0x57e5b38 --
+    inside memsz, past filesz. Under the corrected reading they are SEEDING-REQUIRED, not dead, and
+    are re-derived deliberately rather than in passing.
     """
     # No pyelftools in the venv: parse the program headers directly. eboot.elf has e_shoff = 0
     # (no section table), so PT_LOADs are the only authority on what the loader maps and fills.
@@ -277,30 +293,42 @@ def _refuse_zerofill(name, ms, store=False):
         phentsize, phnum = struct.unpack_from('<HH', blob, 0x36)
         fh.seek(phoff)
         ph = fh.read(phentsize * phnum)
-    segs = []
+    segs, reserves = [], []
     for k in range(phnum):
         p_type, = struct.unpack_from('<I', ph, k * phentsize)
         vaddr, = struct.unpack_from('<Q', ph, k * phentsize + 0x10)
         filesz, = struct.unpack_from('<Q', ph, k * phentsize + 0x20)
         memsz, = struct.unpack_from('<Q', ph, k * phentsize + 0x28)
         if p_type == 1:  # PT_LOAD
-            span = memsz if store else filesz
-            segs.append((vaddr + 0x400000, vaddr + 0x400000 + span))
-    bad = []
+            base = vaddr + 0x400000
+            segs.append((base, base + filesz))       # FILLED by the loader
+            reserves.append((base, base + memsz))    # RESERVED (filled with zeros first)
+    unmapped, seeded, past_by = [], [], None
     for m in ms:
         r = m.get('res')
         if r is None:
             continue
-        if not any(lo <= r < hi for lo, hi in segs):
-            past = min((r - hi) for lo, hi in segs if r >= hi) if any(r >= hi for lo, hi in segs) else None
-            bad.append((m['address'], r, past))
-    if bad:
-        a, r, past = bad[0]
+        inside = segs if not store else reserves
+        if any(lo <= r < hi for lo, hi in inside):
+            continue
+        if not store and any(lo <= r < hi for lo, hi in reserves):
+            seeded.append((m['address'], r))
+            continue
+        unmapped.append((m['address'], r))
+    if unmapped:
+        a, r = unmapped[0]
         raise SystemExit(
-            f'emit {name} refused: {'store outside every PT_LOAD memsz' if store else 'load'} : {len(bad)} of {len(ms)} members read a target outside every '
-            f'PT_LOAD filesz (zero-fill tail, a constant 0 no case can discriminate); '
-            f'first {a:#x} -> {r:#x}'
-            + (f', past filesz by {past:#x}' if past else ''))
+            f'emit {name} refused: {len(unmapped)} of {len(ms)} members name an address in NO PT_LOAD '
+            f'{"memsz (a store there faults)" if store else "memsz"}; first {a:#x} -> {r:#x}. '
+            f'Question this answers: is the address backed by a segment at all. Nothing else.')
+    if seeded:
+        a, r = seeded[0]
+        raise SystemExit(
+            f'emit {name} refused: {len(seeded)} of {len(ms)} members load past p_filesz but inside '
+            f'p_memsz -- SEEDING REQUIRED; first {a:#x} -> {r:#x}. Question this answers: is the '
+            f'slot file-backed. Not answered here: whether a case can discriminate -- a '
+            f'`fixture_setup` write inside memsz can, so these members are blocked on a seeding case '
+            f'and a gate that checks the case seeds the slot, not on the address.')
 
 
 def body_text(name, ms):
