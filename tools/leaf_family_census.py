@@ -91,3 +91,26 @@ def landed_addresses():
     return {int(r['address'], 16)
             for r in csv.DictReader(open('symbols/functions.csv'))
             if r['status'] != 'original'}
+
+
+def write_table(path, header, rows, key='address'):
+    """THE writer of an address-keyed table: sort -> adjacent-dup count -> write -> re-read.
+
+    The sort has now been omitted by three separate writers, each correct about everything except
+    the one rule that lives nowhere: sort the object you write, print the dups before writing, and
+    prove the write by re-reading it. Callers pass rows; nobody re-implements the order.
+    """
+    import csv
+    rows = sorted(rows, key=lambda r: int(r[key], 16))
+    dups = sum(1 for a, b in zip(rows, rows[1:]) if a[key] == b[key])
+    print(f'{path}: {len(rows)} rows, adjacent dup {dups}')
+    if dups:
+        raise SystemExit(f'refused: {path}: {dups} adjacent duplicate {key}(es) -- nothing written')
+    with open(path, 'w', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=header, lineterminator='\n')
+        w.writeheader()
+        w.writerows(rows)
+    back = list(csv.DictReader(open(path)))
+    if len(back) != len(rows) or [r[key] for r in back] != [r[key] for r in rows]:
+        raise SystemExit(f'refused: {path}: re-read does not match what was written')
+    return len(rows)
