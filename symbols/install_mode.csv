@@ -4030,6 +4030,7 @@ address,mode
 0x00df09d0,host
 0x00df0b50,host
 0x00df1270,host
+0x00dfb9e0,host
 0x00dfced0,host
 0x00dfcf10,host
 0x00dfd370,host
@@ -10368,6 +10369,7 @@ address,mode
 0x01838310,host
 0x01839420,host
 0x01839cf0,host
+0x01839d00,host
 0x01839d30,host
 0x01839d40,host
 0x01839d50,host
@@ -10563,6 +10565,10 @@ address,mode
 0x0186b170,host
 0x0186b1d0,host
 0x0186d3d0,host
+0x0186ea40,host
+0x0186ea50,host
+0x0186ea60,host
+0x0186ea70,host
 0x0186f2a0,host
 0x0186f370,host
 0x0186f590,host
@@ -18606,6 +18612,7 @@ address,mode
 0x01f95bd0,host
 0x01f95c10,host
 0x01f95c30,host
+0x01f98fa0,host
 0x01f9f400,host
 0x01f9f410,host
 0x01f9f720,host
@@ -23968,6 +23975,8 @@ address,mode
 0x023b68e0,host
 0x023b6a90,host
 0x023b6af0,host
+0x023b7110,host
+0x023b7120,host
 0x023b7bf0,host
 0x023b7c00,host
 0x023ba710,host
@@ -24492,6 +24501,7 @@ address,mode
 0x02425e80,host
 0x02425ee0,host
 0x024262e0,host
+0x024264d0,host
 0x024266e0,host
 0x02428b80,host
 0x02428b90,host
@@ -32502,6 +32512,7 @@ address,mode
 0x02c6cdc0,host
 0x02c6cdd0,host
 0x02c6cf20,host
+0x02c6d570,host
 0x02c79780,host
 0x02c79ba0,host
 0x02c79bc0,host

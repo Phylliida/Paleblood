@@ -44,7 +44,8 @@ INFRASTRUCTURE = {'load_base'}
 ACCESS = {  # family -> (kind, source)
     # kind: load | store | addr-only        source: static | argument
     # dereference a displacement computed from %rip -> static target in the body
-    'rip_load': ('load', 'static'), 'rip_store': ('store', 'static'),
+    'rip_load': ('load', 'static'), 'rip_load_wide': ('load', 'static'),
+    'rip_store': ('store', 'static'),
     'rip_add_store': ('store', 'static'),
     # dereference an argument-supplied address -> no static target to check here
     'vmovss_load': ('load', 'argument'), 'vmovss_store': ('store', 'argument'), 'mov_al_mem': ('load', 'argument'),
@@ -132,7 +133,13 @@ def main():
         if kind == 'addr-only':
             print(f'{fam:20s} {kind:10s} unconstrained by design (reads no target)')
             continue
-        targets = [int(x, 16) for x in re.findall(r'constexpr std::uint64_t v = (0x[0-9a-f]+)u', text)]
+        # `v` and `at` are the two spellings in the tree and both are constants the gate can parse:
+        # `v` is a stored value, `at` is a GUEST ADDRESS the body dereferences (rip_load_wide, where
+        # the constant IS the target and the body adds pbl_image_base - kGuestLoadBase to it). One
+        # regex, two names -- a gate that parses only the spelling its author wrote first reports a
+        # correct family as unparseable, which is the zero-by-predicate failure in a checker.
+        targets = [int(x, 16) for x in
+                   re.findall(r'constexpr std::uint64_t (?:v|at) = (0x[0-9a-f]+)u', text)]
         if not targets and source == 'argument':
             print(f'{fam:20s} {kind:10s} argument-supplied -- the bound lives in the case: '
                   'the buffer must be declared')
