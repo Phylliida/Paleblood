@@ -237,9 +237,16 @@ def main(argv):
     parser.add_argument('--min-members', type=int, default=4)
     # The floor excludes every catalogue row <= 13 bytes: 37,629 of 157,757, of which 3,826 are
     # unlanded and 64 are independent entries (owned, owners==1) -- the rest nest inside a
-    # larger extent and have no entry a guest can call. Whether the floor COSTS anything is
-    # unmeasured: this tree has no catalog artifact ("catalog has not been built") and the
-    # objdump fd path below fails here, so --min-size 0 has never been read against a control.
+    # larger extent and have no entry a guest can call.
+    # MEASURED, not assumed: this floor is necessary and NOT sufficient. Of those 64 independent
+    # rows, every one is also refused by a second selector -- 51 by this tool's own jump-free
+    # default, 7 by the byte tier's position-dependence rule, 6 by its trap rule. Lifting
+    # --min-size alone therefore proposes nothing, and lifting jump_free alone leaves them
+    # size-excluded: the two must move together. Table: symbols/thunks.csv, gate:
+    # test/test_thunk_census.py, census: tools/thunk_census.py.
+    # And jump_free is the FAR larger exclusion: 116,475 of 157,757 catalogue rows (73.8%)
+    # contain a branch or call, and only 1,919 of those are landed -- so this default, not this
+    # floor, is what binds family discovery, at every size rather than only the short band.
     parser.add_argument('--min-size', type=int, default=14)
     parser.add_argument('--max-size', type=int, default=256)
     parser.add_argument('--base', type=lambda v: int(v, 0), default=None,
