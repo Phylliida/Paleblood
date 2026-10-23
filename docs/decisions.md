@@ -1738,3 +1738,18 @@ So the horizon is **three labelled figures, not two**:
 `n = 1` is a bound and never a denominator. The next horizon revision waits for a second measured window, and
 the first thing that window must record is **whether repair was needed at all** — because a window with zero
 repair is the only observation that moves the middle figure down.
+
+**Where the second window's measurement lives, decided before that window starts (a pre-registration with no
+home is a thing remembered across a night, which is what this whole stretch was about).** Every frontier-batch
+commit message carries one line, first-class, greppable:
+
+```
+repair: none
+repair: <what broke, how long it cost>
+```
+
+**Commit messages are the one artifact a landing always produces, they are immutable once delivered, and
+`git log --grep='^repair:'` gives the horizon a denominator without anyone maintaining a table.** A
+pre-registration kept in `../scratch/` dies with the machine; one kept in the history cannot. This is the same
+rule as the ledger's: **derive from the artifact that exists, never from a note about it** — and it costs one
+line at the moment the batch lands, which is the only moment at which the answer is still known.
