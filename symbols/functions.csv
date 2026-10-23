@@ -13,7 +13,7 @@ address,size,name,system,status,notes
 0x00410100,5,leaf_mov_rax_00410100,leaf,edge-verified,
 0x00410290,1,leaf_ret_00410290,leaf,edge-verified,
 0x004102a0,1,leaf_ret_004102a0,leaf,edge-verified,
-0x00414040,1072,large_bracket_canon_00414040,large,original,"large: bracket/paren canonicaliser, 279 insns, 64 blocks, output written backwards; declared 1072 B stops inside a call rel32"
+0x00414040,1072,large_bracket_canon_00414040,large,original,known_wrong: v_rcx|v_r9 where the original uses eax/ebx; 0x29 where it wrote 0x28. See decisions 1m.
 0x00418d80,8,leaf_mov_rax_00418d80,leaf,edge-verified,
 0x0041aa30,13,leaf_bytes_0041aa30,leaf,edge-verified,
 0x0041cac0,1,leaf_ret_0041cac0,leaf,edge-verified,
@@ -24504,7 +24504,7 @@ address,size,name,system,status,notes
 0x02425e80,1,leaf_ret_02425e80,leaf,edge-verified,
 0x02425ee0,1,leaf_ret_02425ee0,leaf,edge-verified,
 0x024262e0,1,leaf_ret_024262e0,leaf,edge-verified,
-0x024264d0,34,leaf_rip_load_wide_024264d0,leaf,original,
+0x024264d0,34,leaf_rip_load_wide_024264d0,leaf,original,retired: no body in game/ (withdrawn at f511666); signed division eax%10. See decisions 1m.
 0x024266e0,3,leaf_ret_zero_024266e0,leaf,edge-verified,
 0x02428b80,8,leaf_bytes_02428b80,leaf,edge-verified,
 0x02428b90,4,leaf_mov_eax_mem_02428b90,leaf,edge-verified,
