@@ -1314,3 +1314,37 @@ every "ctest 18/18" in this campaign was run as `ctest -E '^tools$'`, so **ctest
 `tools/`, and no `atomic_write`, `check_import_order`, roster or 40-site result is in any ctest green.** Those
 were covered by `test_gates_bare`, `test_atomicio`, `test_emit_leaf_family` and `test_progress_*`, run by name.
 Until the target is unified, "ctest green" is a claim about `runtime/` only.
+
+### The chain family's case schema: two independent fields, three links, and 62 cases for 78 bodies
+
+**The schema already expresses the pair this family needs, and I read it rather than assuming it.**
+`harness.py:391–399` resolves the write address and the value from **two independent fields**: `addr` is either
+`buf:<name>` or a hex guest string routed through `guest()`; the value is `pointer` (`value("buf:…")`),
+`guest` (`guest(hexint(…))`) or `bytes`. **`IMAGE` never appears in a case file** — `guest()` at `:402–407` owns
+`IMAGE + ps4 − EBOOT_BASE` and its docstring says the `− EBOOT_BASE` belongs there and nowhere else. So the pair
+is expressible without a literal: `{"addr": "0x5956678", "guest": "0x5400000"}`.
+
+**But the right kind here is `guest`, not `pointer`, and observability cannot tell the difference.** The body
+stores through the loaded pointer, so in-game that pointer is a guest address. A `pointer` seed yields a
+**SANDBOX host address**; `snapshot()` at `:657` includes `self.buffers` as well as writable segments, so a
+sandbox store **is** observed, and a fixture writing into a space the game does not have would pass. **Link two
+therefore reads against the RW segment's `memsz`** (`0x50dc000 .. 0x56D30F4`), not against a buffer extent:
+`base ≤ value`, `value + store_k2 + store_width ≤ base + memsz`, PF_W on that segment.
+
+**A third link, forced by measurement, and it is the void-instrument class recurring.** Of the 78 rows,
+**31 store an immediate of `0x0`** into a destination that is zero-fill — already zero. Slot seeded or not, that
+store produces **no byte diff**, so the differential compares zero to zero and passes. The case must pre-set the
+destination to a sentinel the immediate cannot equal (`0xA5 × width`), and the gate must assert
+`imm != sentinel`. Uniformly, for all 78 — not just the 31 — because a rule that applies where it is needed and
+not where it is not is a rule the next author has to re-derive. The immediates: `0x0 ×31, 0x1 ×36, 0x2 ×4,
+0x3 ×1, 0x4 ×2, 0x8 ×1, 0xa ×1, 0xf ×1, 0xffffffff ×1`; widths `1 ×17, 4 ×61` (the `0xffffffff` at width 1
+writes `0xff`, so the expected bytes are `imm & (2^(8·width) − 1)` little-endian — an encode the differential
+would catch, and a place where an emitter can be quietly wrong).
+
+**62 cases for 78 bodies.** Distinct `(load_target, store_k2, imm, width)` is **62**, not 78: sixteen rows share
+a behavioural key with another row through all four fields, while distinct `(load_disp, …)` is 78. **The load
+displacement is a coordinate; the resolved slot is the identity** — the `(module, ordinal)` lesson arriving in a
+new place. So cases may be shared across those sixteen **and must be shown to be shared for the right reason**
+(same address, same offset, same immediate, same width — asserted), while bodies stay 78 because their bytes
+differ (sizes `{15: 28, 18: 50}`). One case file per *behaviour*, one body per *row*; a `--reemit` claim is
+still per row.
