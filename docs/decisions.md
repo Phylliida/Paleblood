@@ -1631,3 +1631,20 @@ failure to avoid.
 
 So `chain_deref` is `(('load','seeded'), ('store','argument'))`: both rows true, and "who supplies this
 value" is answerable in the table instead of in a comment.
+
+**Correction to (1), made before any code exists to inherit it — the names are DATA, not a convention.**
+Converging `kImm`/`kSlot`/`kStoreDisp` with `v`/`at` is not a refactor: it re-emits `chain_deref_family.cpp`,
+changes `source_hash` for that family's one defining translation unit, and **staleness-refuses all 78 recorded
+rows** — a full re-record plus differential re-run, i.e. the two-hour family cost paid for six reds and zero
+new rows. Rejected on price, not on principle.
+
+So the declaration carries its own constants: `ACCESS[fam]` grows from `(kind, source)` to
+`(kind, source, *names)` — `('load','seeded','kSlot')`, `('store','argument','kStoreDisp')` — and the extractor
+reads the names out of the declaration instead of matching a spelling it assumed. **A name in a table is not an
+assumption, it is an input**; the `647` lesson is that a scanner must not ASSUME a spelling, not that every
+emitter must spell alike. The table becomes the convention, no future scanner picks a name, and **no recorded
+byte moves**.
+
+Empty `targets` still REFUSES — now printing the declaration's names beside what the file actually declared, so
+the next reader sees `kSlot` next to `kStoreDisp` rather than a zero. Convergence becomes an optional tidy-up
+taken whenever a family is re-emitted for other reasons: **never a tax paid today for zero rows.**
