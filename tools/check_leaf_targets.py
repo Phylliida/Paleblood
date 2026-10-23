@@ -41,21 +41,28 @@ BASE = 0x400000
 # absence from both lists is a refusal (the gate is fail-closed for a reason).
 INFRASTRUCTURE = {'load_base'}
 
-ACCESS = {  # family -> (kind, source)
-    # kind: load | store | addr-only        source: static | argument
+ACCESS = {  # family -> SET of decls; a decl is (kind, source, *names)
+    # kind: load | store | addr-only   source: static | argument | seeded
+    # one family may declare SEVERAL obligations (chain_deref: a load and a store)
     # dereference a displacement computed from %rip -> static target in the body
-    'rip_load': ('load', 'static'), 'rip_load_wide': ('load', 'static'),
-    'rip_store': ('store', 'static'),
-    'rip_add_store': ('store', 'static'),
+    'rip_load': (('load', 'static',),), 'rip_load_wide': (('load', 'static',),),
+    'rip_store': (('store', 'static',),),
+    'rip_add_store': (('store', 'static',),),
     # dereference an argument-supplied address -> no static target to check here
-    'vmovss_load': ('load', 'argument'), 'vmovss_store': ('store', 'argument'), 'mov_al_mem': ('load', 'argument'),
-    'mov_eax_mem': ('load', 'argument'), 'st_byte_imm': ('store', 'argument'), 'st_dword_esi': ('store', 'argument'),
-    'st_imm32': ('store', 'argument'), 'st_qword_rsi': ('store', 'argument'), 'st_sil8': ('store', 'argument'),
+    'vmovss_load': (('load', 'argument',),), 'vmovss_store': (('store', 'argument',),), 'mov_al_mem': (('load', 'argument',),),
+    'mov_eax_mem': (('load', 'argument',),), 'st_byte_imm': (('store', 'argument',),), 'st_dword_esi': (('store', 'argument',),),
+    'st_imm32': (('store', 'argument',),), 'st_qword_rsi': (('store', 'argument',),), 'st_sil8': (('store', 'argument',),),
+    # TWO obligations, one family. The load reads a slot in the zero-fill tail -- bound at memsz AND the
+    # case must supply the value -- so it names its constant. The store writes through the pointer the load
+    # produced: its target is the CASE's buffer, not any constant in the body. Naming kStoreDisp here was
+    # measured and rejected: 0x1520 is a displacement, a coordinate, and the gate bounded it as an address
+    # and refused 78 of 78. A decl names exactly the constants that ARE addresses.
+    'chain_deref': (('load', 'seeded', 'kSlot'), ('store', 'argument')),
     # compute and return, never dereference
-    'lea_disp_rdi': ('addr-only', 'static'), 'lea_rdi': ('addr-only', 'static'), 'lea_rip': ('addr-only', 'static'),
-    'mov_eax_k': ('addr-only', 'static'), 'mov_al_imm': ('addr-only', 'static'), 'mov_rax': ('addr-only', 'static'),
-    'rax_rdi': ('addr-only', 'static'), 'ret': ('addr-only', 'static'), 'ret_zero': ('addr-only', 'static'),
-    'leaf_ret_zero': ('addr-only', 'static'), 'asm_pilot': ('addr-only', 'static'),
+    'lea_disp_rdi': (('addr-only', 'static',),), 'lea_rdi': (('addr-only', 'static',),), 'lea_rip': (('addr-only', 'static',),),
+    'mov_eax_k': (('addr-only', 'static',),), 'mov_al_imm': (('addr-only', 'static',),), 'mov_rax': (('addr-only', 'static',),),
+    'rax_rdi': (('addr-only', 'static',),), 'ret': (('addr-only', 'static',),), 'ret_zero': (('addr-only', 'static',),),
+    'leaf_ret_zero': (('addr-only', 'static',),), 'asm_pilot': (('addr-only', 'static',),),
 }
 
 
@@ -113,8 +120,8 @@ def main():
             # defect, not the missing declaration. Families that DO emit constants still need ACCESS.
             print(f'{fam:<20} bytes tier -- transcription, nothing to classify')
             continue
-        decl = ACCESS.get(fam)
-        if decl is None:
+        decls = ACCESS.get(fam)
+        if decls is None:
             errs.append(f'{fname}: family {fam!r} declares no access kind -- add it to ACCESS '
                         'with (load|store|addr-only, static|argument) rather than letting a guess '
                         'classify it')
@@ -122,79 +129,84 @@ def main():
         # `kind, source, *names` unpacks a 2-tuple and a 3-tuple alike: an entry that names its own
         # constants gets them here, and one that does not gets (). A family that forgets its name
         # therefore fails the empty-targets refusal below rather than passing on a default spelling.
-        kind, source, *names = decl
-        text = open(os.path.join(LEAF, fname)).read()
-        # The form the target takes is part of the family's contract. `rip_*` families dereference
-        # a constant they emit as `constexpr std::uint64_t v = 0x...u;`; a dereferencing family that
-        # does not expose its target in a parseable form is mis-emitted, not exempt. The first
-        # version of this gate printed "nothing to check" for 8,558 rows of lea_rip, rip_add_store
-        # and rip_store -- a green over an empty scan, which is the defect this gate exists to catch.
-        if tier == 'bytes':
-            print(f"{fam:20s} {kind:10s} byte tier: the body's bytes are the original's "
-                  '-- nothing owed')
-            continue
-        if kind == 'addr-only':
-            print(f'{fam:20s} {kind:10s} unconstrained by design (reads no target)')
-            continue
-        # `v` and `at` are the two spellings in the tree and both are constants the gate can parse:
-        # `v` is a stored value, `at` is a GUEST ADDRESS the body dereferences (rip_load_wide, where
-        # the constant IS the target and the body adds pbl_image_base - kGuestLoadBase to it). One
-        # regex, two names -- a gate that parses only the spelling its author wrote first reports a
-        # correct family as unparseable, which is the zero-by-predicate failure in a checker.
-        # A name in a table is not an assumption, it is an input. With no names declared the family must
-        # expose its target under one of the two spellings the tree already uses; with names declared the
-        # scanner reads the spelling the emitter actually emits (`kSlot`, `kStoreDisp`), so two conventions
-        # can coexist without either family being invisible to the gate -- 647's shape, closed by data.
-        spelling = '|'.join(names) if names else 'v|at'
-        targets = [int(x, 16) for x in
-                   re.findall(r'constexpr std::uint64_t (?:%s) = (0x[0-9a-f]+)u' % spelling, text)]
-        if names and not targets:
-            errs.append(f'{fname}: family {fam!r} declares constants {names} but the body declares none of '
-                        f'them -- empty targets is a REFUSAL for a kind that needs one, never a nothing-to-check')
-            continue
-        if not targets and source == 'argument':
-            print(f'{fam:20s} {kind:10s} argument-supplied -- the bound lives in the case: '
-                  'the buffer must be declared')
-            continue
-        if not targets:
-            errs.append(f'{fname}: family {fam!r} declares ({kind}, static) but exposes no dereferenced '
-                        'constant (expected `constexpr std::uint64_t v = 0x...u;`) -- a dereferencing '
-                        'family must name its target in a form the gate can parse; "nothing to check" '
-                        'is legal only for addr-only')
-            continue
-        # ONE decision, in ONE place. The bound is chosen once, and the name travels with it, so the
-        # comparison and the sentence cannot disagree -- extent_line's defect is two copies of one decision
-        # that agreed until one of them changed. The predicate is what the loop FOUND, never a parallel
-        # `any()`: `any()` cannot say which segment admitted a target, and two PT_LOADs can overlap here.
-        bound = 'memsz' if (kind != 'load' or source == 'seeded') else 'filesz'
-        inside, gap, outside = [], [], []
-        for t in targets:
-            hit = next(((hi if bound == 'filesz' else ms, bound)
-                        for lo, hi, ms in segs if lo <= t < (hi if bound == 'filesz' else ms)), None)
-            if hit:
-                inside.append(t)
+        for decl in decls:
+            kind, source, *names = decl
+            text = open(os.path.join(LEAF, fname)).read()
+            # The form the target takes is part of the family's contract. `rip_*` families dereference
+            # a constant they emit as `constexpr std::uint64_t|uintptr_t v = 0x...u?;` -- the TYPE spelling is
+        # part of what a scanner may not assume either: chain_deref emits std::uintptr_t with no `u` suffix,
+        # so a regex hardcoded to (std::uint64_t, u) found 0 of 78 and reported it as no targets. Naming the
+        # constants in ACCESS was necessary and not sufficient. A dereferencing family that
+            # does not expose its target in a parseable form is mis-emitted, not exempt. The first
+            # version of this gate printed "nothing to check" for 8,558 rows of lea_rip, rip_add_store
+            # and rip_store -- a green over an empty scan, which is the defect this gate exists to catch.
+            if tier == 'bytes':
+                print(f"{fam:20s} {kind:10s} byte tier: the body's bytes are the original's "
+                      '-- nothing owed')
                 continue
-            # Not admitted by its own bound. Distinguish "admitted by the OTHER bound" -- past filesz, inside
-            # memsz, the zero-fill tail where tonight's whole `seeded` distinction lives -- from "in no
-            # segment at all", which is a mis-emission. A two-way verdict over a three-way fact is a formatter.
-            other = next((True for lo, hi, ms in segs
-                          if (bound == 'filesz' and lo <= t < ms) or (bound == 'memsz' and lo <= t < hi)),
-                         False)
-            (gap if other else outside).append(t)
-        where = bound
-        if outside:
-            errs.append(f'{fam}: {len(outside)} of {len(targets)} {kind} targets outside every PT_LOAD '
-                        f'{where}; first {outside[0]:#x}'
-                        + (' (zero-fill: a constant 0 no case can discriminate)' if kind == 'load' else ''))
-        elif gap and source != 'seeded':
-            errs.append(f'{fam}: {len(gap)} of {len(targets)} {kind} targets past {where} but inside the '
-                        f'other bound; first {gap[0]:#x} -- a target in the zero-fill tail is neither inside '
-                        'filesz nor absent, and only `seeded` may claim it')
-        elif gap:
-            print(f'{fam:20s} {kind:10s} {len(targets)} targets inside memsz past filesz -- {source}: '
-                  'the case supplies the value (supply check owed separately)')
-        else:
-            print(f'{fam:20s} {kind:10s} {len(targets)} targets inside {where} -- ok')
+            if kind == 'addr-only':
+                print(f'{fam:20s} {kind:10s} unconstrained by design (reads no target)')
+                continue
+            # `v` and `at` are the two spellings in the tree and both are constants the gate can parse:
+            # `v` is a stored value, `at` is a GUEST ADDRESS the body dereferences (rip_load_wide, where
+            # the constant IS the target and the body adds pbl_image_base - kGuestLoadBase to it). One
+            # regex, two names -- a gate that parses only the spelling its author wrote first reports a
+            # correct family as unparseable, which is the zero-by-predicate failure in a checker.
+            # A name in a table is not an assumption, it is an input. With no names declared the family must
+            # expose its target under one of the two spellings the tree already uses; with names declared the
+            # scanner reads the spelling the emitter actually emits (`kSlot`, `kStoreDisp`), so two conventions
+            # can coexist without either family being invisible to the gate -- 647's shape, closed by data.
+            spelling = '|'.join(names) if names else 'v|at'
+            targets = [int(x, 16) for x in
+                       re.findall(r'constexpr std::u(?:int64|intptr)_t\s+(?:%s)\s*=\s*'
+                              r'(0x[0-9a-f]+)u?' % spelling, text)]
+            if names and not targets:
+                errs.append(f'{fname}: family {fam!r} declares constants {names} but the body declares none of '
+                            f'them -- empty targets is a REFUSAL for a kind that needs one, never a nothing-to-check')
+                continue
+            if not targets and source == 'argument':
+                print(f'{fam:20s} {kind:10s} argument-supplied -- the bound lives in the case: '
+                      'the buffer must be declared')
+                continue
+            if not targets:
+                errs.append(f'{fname}: family {fam!r} declares ({kind}, static) but exposes no dereferenced '
+                            'constant (expected `constexpr std::uint64_t v = 0x...u;`) -- a dereferencing '
+                            'family must name its target in a form the gate can parse; "nothing to check" '
+                            'is legal only for addr-only')
+                continue
+            # ONE decision, in ONE place. The bound is chosen once, and the name travels with it, so the
+            # comparison and the sentence cannot disagree -- extent_line's defect is two copies of one decision
+            # that agreed until one of them changed. The predicate is what the loop FOUND, never a parallel
+            # `any()`: `any()` cannot say which segment admitted a target, and two PT_LOADs can overlap here.
+            bound = 'memsz' if (kind != 'load' or source == 'seeded') else 'filesz'
+            inside, gap, outside = [], [], []
+            for t in targets:
+                hit = next(((hi if bound == 'filesz' else ms, bound)
+                            for lo, hi, ms in segs if lo <= t < (hi if bound == 'filesz' else ms)), None)
+                if hit:
+                    inside.append(t)
+                    continue
+                # Not admitted by its own bound. Distinguish "admitted by the OTHER bound" -- past filesz, inside
+                # memsz, the zero-fill tail where tonight's whole `seeded` distinction lives -- from "in no
+                # segment at all", which is a mis-emission. A two-way verdict over a three-way fact is a formatter.
+                other = next((True for lo, hi, ms in segs
+                              if (bound == 'filesz' and lo <= t < ms) or (bound == 'memsz' and lo <= t < hi)),
+                             False)
+                (gap if other else outside).append(t)
+            where = bound
+            if outside:
+                errs.append(f'{fam}: {len(outside)} of {len(targets)} {kind} targets outside every PT_LOAD '
+                            f'{where}; first {outside[0]:#x}'
+                            + (' (zero-fill: a constant 0 no case can discriminate)' if kind == 'load' else ''))
+            elif gap and source != 'seeded':
+                errs.append(f'{fam}: {len(gap)} of {len(targets)} {kind} targets past {where} but inside the '
+                            f'other bound; first {gap[0]:#x} -- a target in the zero-fill tail is neither inside '
+                            'filesz nor absent, and only `seeded` may claim it')
+            elif gap:
+                print(f'{fam:20s} {kind:10s} {len(targets)} targets inside memsz past filesz -- {source}: '
+                      'the case supplies the value (supply check owed separately)')
+            else:
+                print(f'{fam:20s} {kind:10s} {len(targets)} targets inside {where} -- ok')
     for e in errs:
         print(f'leaf-targets: {e}', file=sys.stderr)
     return 1 if errs else 0
