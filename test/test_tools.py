@@ -524,7 +524,7 @@ class Boot(unittest.TestCase):
         sys.path.insert(0, os.path.join(ROOT, 'test'))
         sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
-    def boot(self, code: bytes, imports=()):
+    def boot(self, code: bytes, imports=(), rc=0):
         import ps4elf
         page = bytearray(0x1000)
         page[:len(code)] = code
@@ -547,7 +547,11 @@ class Boot(unittest.TestCase):
                              else (e.stdout or '')[-2000:],
                              (e.stderr or b'').decode('utf-8', 'replace')[-2000:] if isinstance(e.stderr, bytes)
                              else (e.stderr or '')[-2000:]))
-            self.assertEqual(p.returncode, 0, p.stderr)
+            # boot.c reports its outcome in the exit code too (0 returned, 1 fault, 4 unbound
+            # import, 2 timeout). Pinning it here is the point: the report and the code are two
+            # statements of one fact and this suite had gone red on the second because the link
+            # failure meant nobody ran it.
+            self.assertEqual(p.returncode, rc, p.stderr)
             with open(os.path.join(d, 's.json')) as f:
                 return json.load(f)
         finally:
@@ -561,14 +565,14 @@ class Boot(unittest.TestCase):
         import harness
         name = harness.nid('sceKernelOpen')
         # call [rip + (0x1000 - 6)]: the first import's slot; then ret
-        s = self.boot(b'\xff\x15' + struct.pack('<i', 0x1000 - 6) + b'\xc3', [name + '#A#A'])
+        s = self.boot(b'\xff\x15' + struct.pack('<i', 0x1000 - 6) + b'\xc3', [name + '#A#A'], rc=4)
         self.assertEqual(s['outcome'], 'unimplemented')
         self.assertEqual(s['first_unimplemented']['nid'], name)
         self.assertEqual(s['first_unimplemented']['caller'], 'eboot')
         self.assertEqual((s['milestone'], s['imports_called'], s['imports_remaining']), ('files', 1, 1))
 
     def test_fault_is_reported_with_offset(self):
-        s = self.boot(b'\x90' * 4 + b'\x48\x8b\x04\x25\x00\x00\x00\x00')    # mov rax, [0]
+        s = self.boot(b'\x90' * 4 + b'\x48\x8b\x04\x25\x00\x00\x00\x00', rc=1)    # mov rax, [0]
         self.assertEqual(s['outcome'], 'fault')
         self.assertEqual(s['fault']['at'], 'eboot+0x4')
 

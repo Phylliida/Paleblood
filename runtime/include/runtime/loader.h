@@ -104,6 +104,8 @@ uint64_t rt_map_extent(void);
    A caller uses this as a refusal: guest memory the runtime cannot prove it may write is not
    written. */
 int rt_guest_writable(uint64_t guest_address, size_t length);
+/* Bytes readable from guest_address to the end of its containing load segment; 0 if unmapped. */
+size_t rt_guest_readable_span(uint64_t guest_address);
 
 #ifdef __cplusplus
 }

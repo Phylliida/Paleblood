@@ -32,7 +32,10 @@ add_subdirectory(game)
 add_executable(test_hooks test/test_hooks.c)
 target_link_libraries(test_hooks bbrt)
 add_test(NAME hooks COMMAND test_hooks)
-add_executable(test_plugin test/test_plugin.c runtime/plugin.c runtime/hooks.c runtime/process.c)
+# hooks.c calls rt_capture_begin/run_id/write, which live in capture.c -- the same translation unit
+# bbrt links. Omitting it made every "suite green" a claim about a tree that no longer existed.
+add_executable(test_plugin test/test_plugin.c runtime/plugin.c runtime/hooks.c runtime/process.c
+               runtime/capture.c)
 target_include_directories(test_plugin PRIVATE runtime/include)
 add_test(NAME plugin COMMAND test_plugin)
 
@@ -73,7 +76,11 @@ set_tests_properties(capture_recorder_replay PROPERTIES
     ENVIRONMENT "CC=${CMAKE_C_COMPILER};BB_LOADER=$<TARGET_FILE:pbloader>")
 # System library implementations, compiled in directly so the linker keeps every RT_SYSLIB entry
 file(GLOB PB_TEST_SYSLIB CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/runtime/syslib/*.c)
-add_executable(test_syslib test/test_syslib.c runtime/guest_mem.c runtime/process.c ${PB_TEST_SYSLIB})
+# test_syslib links libc.c, which reads guest memory through loader.c's segment table and the TLS
+# bases in tls.c. Those two units were never in this list, so the guard bodies silently made this
+# target unlinkable -- invisible because the tree is normally built per-target.
+add_executable(test_syslib test/test_syslib.c runtime/guest_mem.c runtime/process.c runtime/loader.c
+                              runtime/tls.c runtime/syslib_flight.c ${PB_TEST_SYSLIB})
 target_include_directories(test_syslib PRIVATE runtime/include)
 add_test(NAME syslib COMMAND test_syslib)
 
@@ -104,7 +111,10 @@ set_tests_properties(
   capture_recorder_replay syslib verify_self_test validate_functions check_agnostic
   float_flags progress_readme check_pins check_retired
   PROPERTIES TIMEOUT 120)
-set_tests_properties(tools PROPERTIES TIMEOUT 300)
+# The python suite carries three artifact gates that regenerate committed data: branch census
+# 120 s, leaf frontier 91 s, thunk census 50 s. Measured suite ~500 s, so the budget is 900 -- a
+# timeout that has to be raised twice means the cost belongs in a comment next to the number.
+set_tests_properties(tools PROPERTIES TIMEOUT 900)
 
 # The loader, proved before pbboot has a caller. A test-built .so is the endpoint; the wiring, the installer
 # identity and every failure mode are exercised in the test binary, so pbboot's change is one call and one entry.

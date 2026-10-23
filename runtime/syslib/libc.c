@@ -6,6 +6,7 @@
    supplies its own `environ` through the loader, so there is nothing for the host to do: this is
    a no-op by nature, not a stub returning zero, and the distinction matters because a permissive
    zero would hide an import that actually needed behaviour. */
+#include "runtime/inflight.h"
 #include "runtime/guest.h"
 #include "runtime/loader.h"
 #include "runtime/process.h"
@@ -13,6 +14,7 @@
 #include "runtime/tls.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -58,7 +60,9 @@ RT_SYSLIB_MODELLED("libc", atexit, libc_atexit);
    pointer" is: the space is measured (image space when the value lands inside the mapping, guest space
    when it is below it), and the test is a RANGE on both sides -- image <= v < image + extent -- since a
    threshold accepts infinity and a value past the end of the mapping is not in the mapping. */
-static unsigned char *guest_write_ptr(uint64_t raw, size_t length, const char *symbol)
+/* The space decision, extracted so a READER and a WRITER cannot disagree about what "a guest pointer"
+   is: strlen normalises exactly as memset and the guard triple do, and there is one implementation. */
+static uint64_t guest_address_of(uint64_t raw, const char *symbol)
 {
     const uint64_t image = rt_map_image();
     const uint64_t extent = rt_map_extent();
@@ -77,6 +81,13 @@ static unsigned char *guest_write_ptr(uint64_t raw, size_t length, const char *s
         space = "guest";
     }
     fprintf(stderr, "%s: 0x%llx (%s space)", symbol, (unsigned long long)raw, space);
+    return g;
+}
+
+static unsigned char *guest_write_ptr(uint64_t raw, size_t length, const char *symbol)
+{
+    const uint64_t image = rt_map_image();
+    const uint64_t g = guest_address_of(raw, symbol);
     if (!image || !rt_guest_writable(g, length)) {
         fprintf(stderr, "\n");
         rt_fatal(symbol, "the range is not inside a writable load segment");
@@ -94,7 +105,6 @@ static int cxa_guard_acquire(uint64_t *guard)
     /* WHOSE %fs IS THIS? The crossing stub is handed the right bases and switches before the call, so a body
        that opens on the GUEST TCB means the body was not entered through that stub -- and a body that opens on
        host and closes on guest means something inside switched back. One read at each end answers which. */
-    extern volatile int32_t rt_syslib_in_flight;
     if (getenv("BB_GUARD_TRACE")) {
         unsigned long long fs = 0, fs2 = 0;
         syscall(158, 0x1003UL, &fs);
@@ -142,6 +152,55 @@ static void *libc_memset(void *dst, int c, size_t n)
 }
 
 RT_SYSLIB("libc", memset, libc_memset);
+
+/* `strlen` (libc bind 53, NID j4ViWNHEgww -- the wall the boot named after the byte at offset 53 of
+   slot 40 was fixed). Two ways to get this wrong, both silent: scan until something faults and report
+   the fault as a length, or trust a NUL that is outside the mapping. So the readable SPAN comes from
+   the segment table first, the scan is bounded by it, and a string with no NUL inside it stops the
+   boot by name instead of returning a number the caller will believe. The return is a size_t from the
+   same conversion memset's destination uses. */
+static size_t libc_strlen(const char *s)
+{
+    const uint64_t image = rt_map_image();
+    const uint64_t g = guest_address_of((uint64_t)(uintptr_t)s, "strlen");
+    const size_t span = image ? rt_guest_readable_span(g) : 0;
+    fprintf(stderr, "\n");
+    if (!span) rt_fatal("strlen", "the pointer is not inside a readable load segment");
+    const unsigned char *p = (const unsigned char *)(uintptr_t)(image + (g - RT_EBOOT_BASE));
+    const unsigned char *nul = memchr(p, 0, span);
+    if (!nul) {
+        fprintf(stderr, "strlen: 0x%llx: no NUL in %zu readable bytes\n", (unsigned long long)g, span);
+        rt_fatal("strlen", "the string runs off the end of its mapping -- refusing to report a length");
+    }
+    fprintf(stderr, " strlen: %zu bytes\n", (size_t)(nul - p));
+    return (size_t)(nul - p);
+}
+
+RT_SYSLIB("libc", strlen, libc_strlen);
+
+/* `memcmp` (libc bind 56, NID DfivPArhucg, import_names.csv:138) -- the import the boot named once strlen
+   was served. Same rule as strlen twice over: BOTH ranges are proved readable for the full n BEFORE the
+   comparison touches either, because a memcmp that reads past a mapping reports an ordering for bytes that
+   were never there, and a positive result would be believed. The comparison itself is the host library's,
+   on host memory already proved readable -- re-implementing it would be a second definition of ordering. */
+static int libc_memcmp(const void *a, const void *b, size_t n)
+{
+    const uint64_t image = rt_map_image();
+    const uint64_t ga = guest_address_of((uint64_t)(uintptr_t)a, "memcmp");
+    const uint64_t gb = guest_address_of((uint64_t)(uintptr_t)b, "memcmp");
+    const size_t sa = image ? rt_guest_readable_span(ga) : 0;
+    const size_t sb = image ? rt_guest_readable_span(gb) : 0;
+    fprintf(stderr, "\n");
+    if (!sa || n > sa) rt_fatal("memcmp", "the first range is not readable for the requested length");
+    if (!sb || n > sb) rt_fatal("memcmp", "the second range is not readable for the requested length");
+    const unsigned char *pa = (const unsigned char *)(uintptr_t)(image + (ga - RT_EBOOT_BASE));
+    const unsigned char *pb = (const unsigned char *)(uintptr_t)(image + (gb - RT_EBOOT_BASE));
+    const int r = memcmp(pa, pb, n);
+    fprintf(stderr, " memcmp: %zu bytes -> %d\n", n, r);
+    return r;
+}
+
+RT_SYSLIB("libc", memcmp, libc_memcmp);
 
 /* The guard triple's fixture, run by the boot on request (--selftest-guard) against a real guard word
    inside the mapped image. It asserts the BYTE, not the return values: acquire->1, release, acquire->0

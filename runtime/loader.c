@@ -443,6 +443,24 @@ uint64_t rt_map_image(void) { return mapped_image; }
 
 uint64_t rt_map_extent(void) { return mapped_executable ? rt_elf_image_size(mapped_executable) : 0; }
 
+/* The readable counterpart, and the reason it returns a SPAN and not a bool: a string scan needs a
+   bound, and the bound is the end of the segment that contains the pointer. A bool would answer "the
+   first byte is readable", which is true of a pointer one byte before the end of the mapping. */
+size_t rt_guest_readable_span(uint64_t guest_address)
+{
+    const rt_elf *elf = mapped_executable;
+    if (!elf || guest_address < RT_EBOOT_BASE) return 0;
+    const uint64_t offset = guest_address - RT_EBOOT_BASE;
+    const rt_elf_load *loads = rt_elf_loads(elf);
+    const size_t count = rt_elf_load_count(elf);
+    for (size_t i = 0; i < count; i++) {
+        if (!(loads[i].flags & 4)) continue;                    /* PF_R only: the scan must be able to read */
+        if (offset >= loads[i].vaddr && offset < loads[i].vaddr + loads[i].memsz)
+            return (size_t)(loads[i].vaddr + loads[i].memsz - offset);
+    }
+    return 0;
+}
+
 int rt_guest_writable(uint64_t guest_address, size_t length)
 {
     const rt_elf *elf = mapped_executable;

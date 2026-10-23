@@ -5,16 +5,21 @@ then moved into a flag-gated branch (a line that must always print, living where
 test fails on either, so whoever moves it next sees red instead of noticing nothing.
 """
 import json
+import pathlib
 import subprocess
 import sys
 import unittest
 
 PY_ = sys.executable
+# ctest runs this from build-release/, so a relative "tools/progress.py" is a test about the directory
+# the author happened to launch it from -- it passed in the repo root and failed under ctest, which is
+# the only place it will ever run in CI.
+REPO = pathlib.Path(__file__).resolve().parents[1]
 
 
 def run(*args):
-    return subprocess.run([PY_, "-P", "tools/progress.py", *args],
-                          capture_output=True, text=True)
+    return subprocess.run([PY_, "-P", str(REPO / "tools/progress.py"), *args],
+                          cwd=REPO, capture_output=True, text=True)
 
 
 class ExtentLineTest(unittest.TestCase):

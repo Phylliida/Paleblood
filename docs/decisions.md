@@ -1015,17 +1015,29 @@ called 18. A stub that has never been disassembled is not known to be right beca
 
 ## Campaign frontier (a finding, not a decision -- this authorises nothing)
 
-Measured at this tree. The branch-free, unlanded, independently-owned catalogue population is **139
-rows** (`symbols/leaf_frontier.csv`): **117** pass every filter the leaf toolchain has (family_scan's
-`--min-size 14` and its jump-free default) and are simply not done, and **22** are shorter than 14
-bytes and need the floor and the byte tier's position-dependence rule to move together (ask 7).
-When those close, **no selector in this tree can address another catalogue row**: the remaining
+Measured at this tree. The branch-free, unlanded, independently-owned catalogue population is **6,888
+rows** (`symbols/leaf_frontier.csv`): **6,288** pass every filter the leaf toolchain has and are simply
+not done, and **600** are shorter than 14 bytes and need the floor and the byte tier's
+position-dependence rule to move together (ask 7). **Zero are nested** inside a larger extent: this
+catalogue's extents are disjoint, so the floor's "do not describe a tail as an entry" rationale has no
+population here, while its cost is the whole 600. The census that counts every unlanded row at or
+below 13 B independently gives **5,805 = 5,205 branch-bearing + 600 branch-free**, and the two counts
+agree exactly once the branch selector is named beside them.
+
+Correction, kept because it survived in prose for a slice: an earlier revision of this section
+reported **139 / 117 / 22** and **6,749 nested**. Those came from `join_import_pc.load_extents`
+parsing the size column as hex while `address` is hex and `size` is decimal -- every extent inflated,
+every `owners()` window widened, independence destroyed. One decode of one row settles the radix
+(`0x00400020`, size `102` decimal: 29 instructions ending in a `jmp`). Both consumers of `owners()`
+were wrong by the same factor and agreed with each other, which is what a shared premise looks like.
+
+When these close, **no selector in this tree can address another catalogue row**: the remaining
 114,023 branch-containing rows belong to the function campaign, whose generated-C path carries no
 single-block constraint. So PROGRESS reaches 100% of 43,734 -- 27.7% of the catalogue -- and SCOPE
 stays 24.10% of Ghidra's reach.
 
 `verified` does not move for any of them, and this is the reason the pivot is scheduled now rather
-than discovered after the 139 land: every leaf protocol lands at `edge-verified`, the byte tier lands
+than discovered after the frontier lands: every leaf protocol lands at `edge-verified`, the byte tier lands
 as `shape-approved, machine-verified` and never as "approved", and `verified` is gated on the user's
 30 approvals against 21,086 all-rows-clean. The leaf campaign's completion and the goal's criterion
 are different instruments. The same caveat stands on the other side: neither the function nor the

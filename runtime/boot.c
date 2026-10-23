@@ -20,6 +20,7 @@
    Names: an import is "NID#library#module"; library names come from the object, symbol names
    from a public NID database (--nids, default $BB_NID_DB), else the NID is shown. */
 #define _GNU_SOURCE
+#include "runtime/inflight.h"
 #include "runtime/boundary_stub.h"
 #include "runtime/plugin_load.h"
 #include "runtime/loader.h"
@@ -237,7 +238,6 @@ static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void
 /* Which syslib body is executing, and the three argument words it received. Set by the shared prologue and
    CLEARED before the stub returns, so "the fault happened inside #39" and "the fault happened after #39
    returned" are different readings rather than the same one -- a stale index is a claim, not a measurement. */
-volatile uint32_t rt_syslib_in_flight = 0xffffffffu;
 /* Slots 0..2 are the guest's rdi/rsi/rdx; slot 3 is [rsp] at trampoline entry, i.e. the guest return
    address. ONE global, overwritten per call, read at the reporting site -- so re-entrancy is a known limit:
    the last call wins, and a nested import would overwrite its caller's record. */

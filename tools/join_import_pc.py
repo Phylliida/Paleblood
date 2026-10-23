@@ -30,7 +30,11 @@ PC_ROW = re.compile(r"^\s+#(\d+) pc (0x[0-9a-fA-F]+) count (\d+)\s*$")
 
 
 def load_extents(path):
-    out = [(int(r["address"], 16), int(r["size"], 16)) for r in csv.DictReader(open(path))]
+    # The address column is hex and the size column is DECIMAL in ghidra_functions.csv. Parsing the
+    # size as hex inflates every extent by up to 156 bytes, which widens every owners() window and
+    # silently converts independent entries into "nested" ones -- the exact class of error that
+    # reported a leaf frontier of 139 rows. One decode of one known row settles the radix.
+    out = [(int(r["address"], 16), int(r["size"])) for r in csv.DictReader(open(path))]
     if not out:
         raise ValueError("extent table is empty")
     out.sort()
