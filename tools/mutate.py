@@ -32,6 +32,17 @@ def mutate_hex(hexstr, offset, new, what='bytes'):
     return mutate(raw, offset, new, what).hex()
 
 
+def mutate_text(text, old, new, what='source'):
+    """The fourth door: a mutant applied to SOURCE TEXT. Same two refusals as the others, plus the
+    uniqueness an anchor needs -- a constant that appears twice is two mutants, and silently editing
+    the first would be a mutation nobody described. Whole-line anchoring is the caller's job; this
+    door refuses only what it can see."""
+    assert old != new, f'mutant at {what} is already {new!r} -- nothing to test'
+    count = text.count(old)
+    assert count == 1, f'mutant at {what}: {old!r} occurs {count} times, not 1 -- ambiguous subject'
+    return text.replace(old, new, 1)
+
+
 def replace_field(row, field, value, what='row'):
     """The same rule for a structured fixture: a field already at `value` is not a mutation."""
     old = row[field]

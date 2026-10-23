@@ -222,8 +222,12 @@ def members(name, landed=False):
         # The family's population is symbols/chain_family.csv -- the table the pre-registration refuses
         # against -- so the emitter and the refusal cannot disagree about how many members exist.
         owned0 = set(landed_rows(name))
+        # `landed` IS HONOURED HERE, one predicate for both modes, the same shape as the wide path.
+        # The branch returned `for r in rows` filtered unconditionally -- so landed=True returned the
+        # UNLANDED set, and a post-record re-emit would regenerate all 78 members and invalidate the
+        # family's evidence by definition. Found because a test asserted 78 over the union and got 154.
         rows = [r for r in catalogue.read_rows(os.path.join(ROOT, 'symbols', 'chain_family.csv'))
-                if r['address'] not in owned0]
+                if (r['address'] in owned0) == bool(landed)]
         # read_rows parses `address` and `size` and leaves every other column as written; the hex columns
         # are hex text (`0x1520`), so they are converted at the boundary, once, not at each use site.
         return [{'address': r['address'], 'size': r['size'], 'k': int(str(r['load_disp']), 0),
@@ -388,17 +392,25 @@ def body_text(name, ms):
                  '// mov rax,[rip+K] ; mov [rax+K2],imm ; ret -- a pointer loaded from the RW slot and',
                  '// stored through. The slot is read in IMAGE space via pbl_image_base; the value it',
                  '// holds is a GUEST pointer, which is what the case seeds and what the game holds.',
-                 'extern "C" std::uintptr_t pbl_image_base;',
+                 '#include <cstdint>',
+                 '#include "load_base.h"',
                  '']
         for m in ms:
             k = key(name, m)
             w = m['width']
             cty = {1: 'std::uint8_t', 4: 'std::uint32_t'}[w]
+            # NAMED, because the readability gate refuses a bare literal in game/ and it is right to:
+            # `0xf0` is a coordinate, `kStoreDisp` is its meaning. Local constexpr, so 78 bodies in one
+            # translation unit cannot collide, and the names live where the numbers are used.
             lines += [f'extern "C" __attribute__((used)) std::uint64_t bb_{k}(void) {{',
+                      f'  constexpr std::uintptr_t kSlot = {m["slot"]:#x};',
+                      f'  constexpr std::uintptr_t kStoreDisp = {m["k2"]:#x};',
+                      f'  constexpr std::uint64_t kImm = {m["imm"]:#x};',
+                      '  (void)kImm;',
                       f'  auto *slot = reinterpret_cast<std::uintptr_t *>('
-                      f'reinterpret_cast<char *>(pbl_image_base) + {m["slot"]:#x} - 0x400000);',
-                      f'  std::uintptr_t p = *slot;',
-                      f'  *reinterpret_cast<{cty} *>(p + {m["k2"]:#x}) = {m["imm"]:#x};',
+                      'reinterpret_cast<char *>(pbl_image_base) + kSlot - kGuestLoadBase);',
+                      '  std::uintptr_t p = *slot;',
+                      f'  *reinterpret_cast<{cty} *>(p + kStoreDisp) = static_cast<{cty}>(kImm);',
                       '  return p;',
                       '}', '']
         return '\n'.join(lines)
@@ -589,7 +601,11 @@ def case_docs(name, m):
         # which resolves into the sandbox, where observability passes while the space is wrong. The
         # destination is pre-set to a sentinel so a store of `imm == 0` into zero-fill still discriminates:
         # 31 of 78 rows store 0, where seed and no-seed are otherwise indistinguishable.
+        # THE SENTINEL GOES WHERE THE BODY STORES, not where the pointer points. The body writes at
+        # `p + k2`; pre-setting `p` left the store target in zero-fill, so an imm==0 store changed no
+        # byte and the FIRST pilot run reported `writes: []` -- green, and blind, in the same run.
         dest = m['slot'] + 0x100
+        target = dest + m['k2']
         sentinel = f'{CHAIN_SENTINEL:02x}' * m['width']
         mask = (1 << (8 * m['width'])) - 1
         assert (m['imm'] & mask) != CHAIN_SENTINEL, \
@@ -597,8 +613,11 @@ def case_docs(name, m):
         yield f'{k}.json', {
             'schema': 1, 'address': f'{m["address"]:#010x}', 'returns': 'i64',
             'args': {},
-            'memory': [{'addr': f'guest:{m["slot"]:#x}', 'guest': f'{dest:#x}'},
-                       {'addr': f'guest:{dest:#x}', 'bytes': sentinel}],
+            # `addr` is `buf:NAME` or a BARE guest address (harness.py:395: hexint(target) -> guest()).
+            # 'guest:' is a VALUE form, not an address form -- emitting it here made the trace path fail
+            # with `invalid literal for int() with base 0`, on the first case of the family.
+            'memory': [{'addr': f'{m["slot"]:#x}', 'guest': f'{dest:#x}'},
+                       {'addr': f'{target:#x}', 'bytes': sentinel}],
         }
         return
     if TEMPLATES[name]['kind'] == 'imm8':

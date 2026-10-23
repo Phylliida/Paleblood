@@ -9087,6 +9087,7 @@ address,size,name,system,status,notes
 0x017350e0,3,leaf_ret_zero_017350e0,leaf,edge-verified,
 0x017350f0,3,leaf_ret_zero_017350f0,leaf,edge-verified,
 0x01735100,1,leaf_ret_01735100,leaf,edge-verified,
+0x01735230,18,leaf_chain_deref_01735230,leaf,original,
 0x01735250,1,leaf_ret_01735250,leaf,edge-verified,
 0x01735260,1,leaf_ret_01735260,leaf,edge-verified,
 0x017358e0,1,leaf_ret_017358e0,leaf,edge-verified,

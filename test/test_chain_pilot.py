@@ -10,11 +10,15 @@ import emit_leaf_family as E
 
 class ThePilotIsChosenByRule(unittest.TestCase):
     def setUp(self):
-        self.ms = E.members('chain_deref')
+        # DERIVE THE POPULATION WITH THE CODE'S OWN PREDICATE. members() returns the UNLANDED set, so a
+        # typed 78 was a count of the family on the day before the pilot landed; the family is the union.
+        self.ms = E.members('chain_deref') + E.members('chain_deref', landed=True)
 
     def test_the_family_is_seventy_eight_members(self):
         self.assertEqual(len(self.ms), 78)
         self.assertEqual(len({m['address'] for m in self.ms}), 78)
+        self.assertGreaterEqual(len(E.members('chain_deref', landed=True)), 1,
+                                'the pilot is landed, so the landed set is not empty')
 
     def test_the_pilot_is_the_widest_shared_key_not_the_first_address(self):
         chosen, key, n_shared = E.pilot_choice(self.ms)

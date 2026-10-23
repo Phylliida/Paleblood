@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 
-from mutate import mutate, mutate_hex, replace_field
+from mutate import mutate, mutate_hex, replace_field, mutate_text
 
 SEED = (0x5956678).to_bytes(8, 'little')
 
@@ -44,6 +44,21 @@ class AMutationMustMutate(unittest.TestCase):
         with self.assertRaises(AssertionError) as cm:
             replace_field({'status': 'unknown'}, 'status', 'unknown')
         self.assertIn('nothing to test', str(cm.exception))
+
+
+class AMutantOnSourceText(unittest.TestCase):
+    """The fourth door. Its subject is text, its ambiguity is a count, and both refusals are here."""
+
+    def test_a_text_mutant_that_changes_nothing_is_refused(self):
+        with self.assertRaisesRegex(AssertionError, 'nothing to test'):
+            mutate_text('x = 0xf0;', '0xf0', '0xf0', 'body')
+
+    def test_a_text_mutant_with_two_candidates_is_refused_as_ambiguous(self):
+        with self.assertRaisesRegex(AssertionError, 'occurs 2 times'):
+            mutate_text('a 0xf0 b 0xf0', '0xf0', '0xf4', 'body')
+
+    def test_a_unique_text_mutant_lands_once(self):
+        self.assertEqual(mutate_text('a 0xf0 b', '0xf0', '0xf4', 'body'), 'a 0xf4 b')
 
 
 if __name__ == '__main__':
