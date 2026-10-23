@@ -1540,7 +1540,7 @@ a shape is owed. `tools/mutate.py`: `mutate(data, offset, new)` and `replace_fie
 tested. The mistake is no longer observable; it is unrepresentable. Same shape as `atomic_write` refusing to
 leave its temp file behind, and it costs one line at each call site instead of a paragraph in a log.
 
-### 1m — IN FORCE (landed): a known-wrong body cannot be recorded, and a body-less row is not a body
+### 1o — IN FORCE (landed): a known-wrong body cannot be recorded, and a body-less row is not a body
 
 `0x00414040` (`large_bracket_canon_00414040`, 1,072 B) carries a body that was written wrong: it uses
 `v_rcx|v_r9` where the original consumes `eax`/`ebx`, and `0x29` where the original wrote `0x28`. A

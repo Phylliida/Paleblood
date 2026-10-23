@@ -583,6 +583,14 @@ def reach_line(root=".") -> str:
         bytes_line = (f' · bytes_landed {bt["landed"]:,} (bytes_transcribed {bt["transcribed"]:,})')
     except OSError as exc:
         bytes_line = f' · bytes: unavailable ({exc}) -- unread is not zero'
+    try:
+        from decisions import audit_decisions
+        drc, ddetail = audit_decisions(root)
+        if drc:
+            raise SystemExit(ddetail)   # section ids are load-bearing: refuse, don't annotate
+        bytes_line += ' · ' + ddetail
+    except OSError as exc:
+        bytes_line += f' · decisions: unread ({exc}) -- unread is not zero'
     return (f'reach: {landed} landed / {free} branch-free = {100 * free_landed / free:.2f}% PROGRESS '
             f'· {landed} / {total} catalogued = {100 * landed / total:.2f}% SCOPE '
             f'· branch {branch} (landed {landed - free_landed}) '
