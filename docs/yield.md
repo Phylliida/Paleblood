@@ -285,3 +285,29 @@ two excluded rows, the 101 bytes, and the reason they are excluded.
 bodiless rows, so "the number of bodies" is wrong by two rows and 101 bytes depending on which one the speaker
 meant.** That is the same repair owed for `store_k` and for `landed`, now on the word *body*.
 
+## CORRECTED OPENING COMMAND: there is no census header to read, and `store_k` is named wrong by its own two lines
+
+The next stretch's first command was recorded as "`head -1` on the census output, checked against the docstring that
+names `store_k`". **That command has no subject.** `tools/leaf_shape_census.py` prints; it writes no artifact --
+`ls symbols/*census*` returns nothing, and its only arguments are `--max-insns`, `--top`, `--elf`, `--targets-for`,
+`--targets-json`, `--frontier`. **`store_k` is a dict key in a printed top-N table, never a file column**, so no header
+can confirm or refute it. The finding was open against an artifact that does not exist: the second time this session
+the *opening move* was the defect rather than the measurement.
+
+**The two lines that compute it, read (`tools/leaf_shape_census.py:96-104`):**
+
+    load_disp = ... ins[0].operands ...           # first instruction's memory displacement
+    store     = ... ins[1].operands ... disp 0   # SECOND instruction's memory displacement, called `store`
+    out.append({... 'store_k': store, 'src': ...})
+
+**So `store_k` means "the memory displacement of the second instruction" -- whatever that instruction is.** In the
+rank-1 chain family `mov rax,[rip+K] ; mov al,[rax+K2] ; ret`, instruction 1 is a **load**, so `store_k` carries a
+**load displacement**. The name asserts a direction that two of the families it selects do not have: **a column name is
+not a direction, now with a line number**, and this is the same defect the rank-1 record already carried as prose
+without a source.
+
+**What replaces the opening command:** read `:96-104`, not a header -- done, above -- and then **select the 47 by field
+equality on `load_disp`/`load_target`, never on `store_k`**, because selecting on a misnamed column is selecting on a
+quantity whose sign of direction is unknown. **Renaming `store_k` -> `disp_insn1` is owed and is a rename, not a
+surface**; until it lands, every reader of that printed table must read the two lines first.
+
