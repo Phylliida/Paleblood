@@ -29,8 +29,9 @@ class LeafShapeCensus(unittest.TestCase):
     def test_every_frontier_row_is_accounted_for(self):
         rc, out, err = run()
         self.assertEqual(rc, 0, err)
-        m = re.search(r'frontier (\d+) addressable rows \| decoded (\d+) \| over \d+ '
-                      r'insns (\d+) \(counted, not dropped\) \| undecoded (\d+)', out)
+        # The equation form is the point: a number lifted out of an `=` must take its terms with it.
+        m = re.search(r'frontier (\d+) addressable rows = (\d+) decoded .*?\+ (\d+) over the bound '
+                      r'.*?\+ (\d+) undecoded', out)
         self.assertIsNotNone(m, out.splitlines()[0] if out else '<empty stdout>')
         total, decoded, over, undecoded = (int(x) for x in m.groups())
         self.assertEqual(decoded + over + undecoded, total,

@@ -278,9 +278,13 @@ def main(argv):
     covered = sum(shapes.values())
     print('population ' + ' | '.join(f'{n} {k}' for k, n in sorted(cols.items()))
           + f' | {sum(cols.values())} total (every row of the file, each in a named bucket)')
-    print(f'frontier {len(rows)} addressable rows | decoded {covered} | over {a.max_insns} '
-          f'insns {over} (counted, not dropped) | undecoded {undecoded} | '
-          f'max-insns {a.max_insns} (a choice, printed beside its consequence)')
+    # The decomposition lives IN THE SAME CLAUSE as the number, not later on the same line.
+    # It already shared a line for several slices and that was not enough: a reader quoting the
+    # first field of a correct line is indistinguishable from a reader quoting a false claim.
+    # A number lifted out of an `=` has to take its terms with it.
+    print(f'frontier {len(rows)} addressable rows = {covered} decoded (inside the {a.max_insns}'
+          f'-instruction vocabulary) + {over} over the bound (no template, no tool) + '
+          f'{undecoded} undecoded | max-insns {a.max_insns} (a choice, printed beside its consequence)')
     print(f'distinct shapes {len(shapes)} | covered bytes {sum(bytes_of.values())} | '
           f'{100.0 * covered / len(rows) if rows else 0:.1f}% of the frontier is expressible '
           f'within {a.max_insns} instruction(s)')

@@ -31,21 +31,89 @@ stay distinct because the load K is distinct (47/47), which is the field that de
 is `mov al,[rax+K]`, which **loads**. The column is the operand's displacement, and **the direction is not
 carried by the name** -- a two-way label over a three-way fact. Read the shape, never the column name.
 
+## The horizon this measurement reveals, and the correction it forces on the board
+
+The census decodes **206** rows within three instructions and counts **6,004** as over the bound. The
+emitter's vocabulary is single-shape templates; the census's 28 shapes are all two- and three-instruction
+**compositions**, and the two sets share **no member** — measured, not assumed. So:
+
+- the population any template library can reach is **206 rows**, of which the top five shapes are **132**
+  and all 28 are **206** (`--top 28` summed: 28 shapes, 206 rows — counted, not read off the top-five line);
+- **6,004 rows need an instrument that is not a template library** — a register machine over three-plus
+  instructions — or they need nothing, and no tool in this tree addresses them.
+
+`6,210 addressable` has been quoted as the campaign's remaining work for several slices. It is not. It is
+**206 rows of template-expressible work plus 6,004 rows of a different technology**, and the second number
+has never had a tool. The ladder's "nothing left to land" and the frontier's "6,210 remain" were both true
+and about disjoint sets; this paragraph is what makes that a measurement rather than an observation.
+
+### How each term of that equation is sourced — beside the number, not in a message
+
+| term | derivation | second route | consequence |
+|---|---|---|---|
+| `6210` | `frontier()` over `symbols/leaf_frontier.csv`, `class == addressable` | **yes** — `test_the_population_is_the_committed_frontier` recounts it from the file by `r.split(',')[2]` | the left side of the `=` is double-sourced |
+| `206` | the `shapes` counter in the decode loop | **no** — the `--top 28` table is the same counter rendered twice, so their agreement is a tautology of one derivation | one derivation, two formats |
+| `6004` | the same loop's `over` counter | **no available route** — the only per-row artifact is `--targets-json`, which is **shape-filtered**: `over` rows produced no shape, so such a stream cannot contain them and would answer `0` by construction | single-sourced, no route recorded |
+| `0` | the same loop's `undecoded` counter | **no**, same reason | single-sourced — **and an always-zero counter is indistinguishable from a bucket nothing can reach**; the detector is *what would have made this nonzero?* |
+
+A second decoder written in the test is **not** the missing route: `test_host_hooks.c:160-167` is the
+precedent, where a fixture that compiles its own copy of a property cannot notice it leaving the product,
+and a recount by the same author over the same library agrees on the day it is written. **The honest
+record is: the total is double-sourced, the terms are not, and why.** Closure catches omission, never
+error — `206 + 6004 + 0 = 6210` was already closed while the 521 floated, because that 521 was a
+difference between two named populations and not a missing term.
+
+**First template, decided before it is written: rank 15, `mov rax,[rip+K] ; movsx eax,[rax+K] ; ret`, 1 row,
+15 B.** Not rank 1's 47 rows. Its yield is 15 bytes; its product is **template #19 existing and being
+falsifiable**, which rank 1 also needs and which rank 15 needs at a third of the width — and it is the only
+member in the census where clause 2 (`>= 0x80` separating zero- from sign-extension) is **live rather than
+vacuous**, so the retired clause is re-armed by a member that can exercise it. A retired clause re-armed by a
+live member is the strongest form `retired, not deleted` can take.
+
 ## What the case must satisfy — the gate, ahead of any body
 
 1. **The slot is fixture-seeded, always.** 47/47 load targets are past `filesz`, so the shipped qword is zero
    and **no member of this family is testable from the shipped image.** Every expected value comes from the case.
-2. **The slot byte must have bit 7 set (`>= 0x80`).** With a byte below `0x80`, zero-extension and
-   sign-extension agree, and a body widened or sign-extended relative to `mov al` passes a differential that
-   cannot see the difference.
+2. **RETIRED, with reason: the slot byte's bit 7 (`>= 0x80`) separates zero- from sign-extension, and
+   this family has neither a sign-extending member nor a widened width to separate.** Ranks 1, 2 and 5 are
+   `mov al`, `mov eax` and `mov rax` -- byte, dword, qword, and **none sign-extends**: `al` is the same under
+   either convention and `rax`'s upper bytes come from the pointer, not from the loaded byte. Retained as a
+   clause it would have been a `movsx` requirement carried by a batch containing no `movsx` -- the same object
+   as `addr-only` on a family that dereferences: harmless until quoted as a reason. It is owed to the first
+   `movsx`/`movsxd` family, where a byte below `0x80` genuinely lets a widened body pass.
+2b. **Instead, the byte at `p_i + k2` must be NONZERO and per-member distinct, derived from that member's own
+   `k2`.** In a zero-fill tail the register cannot see the second load's displacement at all: `byte(p_i+k2)`,
+   `byte(p_i+k2+1)` and `byte(p_i)` are all `0`, so `rax`'s low byte is `0` whether the body added `k2`, `k2+1`
+   or nothing. Without a marker at exactly that offset, `rax` proves only WHICH SLOT was read and says nothing
+   about which displacement addressed it -- the clause-5 principle (a value derived per member, never inherited)
+   applied to the buffer rather than to the slot.
 3. **`rax[63:8]` must be nonzero before the load.** Rank 5 of the census is `mov rax,[rax+K]` -- 17 rows that
    differ from rank 1 **only** in whether `rax[63:8]` survives. A case with a small `rax` would make `al` and
    `rax` agree and the two shapes indistinguishable through the one channel this family has.
    **This is the `mov_al_imm` lesson pointed forward:** there, the case guaranteed `rsi == rax` and the alias form
-   passed 793/793 while being wrong; here a small `rax` would guarantee `al == rax`.
+   passed 793/793 while being wrong; here a small `rax` would guarantee `al == rax`. And it is measurable in
+   advance: with an `al` witness all 47 members read the same `0`, because the byte at `p_i+k2` is zero-fill for
+   every one of them -- a witness at the width of the write is constant across the whole population.
 4. **The witness is compared as the full 64-bit `rax`**, never `al` alone -- a comparison at the width of the
-   write cannot see a write at a narrower width. The only channel this family has is `rax`, so the comparison
-   width is the instrument's whole resolution.
+   write cannot see a write at a narrower width, and here that is arithmetic rather than caution: `rax` before
+   the second load is the planted pointer `p_i`, so the result is `(p_i & ~0xff) | byte_at(p_i+k2)`, and an `al`
+   witness is `0` for all 47. There is ONE channel, and the correction is the census's own vocabulary trap: the
+   column named `store_k` carries the SECOND LOAD's displacement -- this shape has no store, so `writes` watches
+   nothing and an empty list compared against an empty list across 47 rows is the zero-versus-zero failure in its
+   purest form. One channel, two byte-fields: a mistargeted SLOT moves `rax[63:8]`, a mistargeted OFFSET moves
+   `rax[7:0]`. That is why the comparison width is 64 bits and why an `al` witness hides the slot mistarget while
+   a `rax` witness exposes the offset mistarget.
+2c. **`p_i` points at a fixture buffer, never into the zero-fill tail, and every 4-byte window of that buffer is
+   distinct** (the marker repair of the 117/118 retraction, applied to the family it was invented for): a marker
+   byte at offset `k2`, with neighbours that differ, so a body reading `k2+1` or `k2-1` reads a different byte
+   and the low byte of `rax` names which offset it actually addressed. With no store in this shape, clause 2b is
+   not a strengthening of the observable -- it is the only thing that makes the displacement observable at all.
+2d. **The fixture asserts, before any case runs, that `{(p & ~0xff) | marker}` over the 47 pointers is 47-distinct**
+   (clause 7 + 2b composed). The property the witness relies on is checked once in the fixture rather than
+   trusted across 47 rows -- `derive_sentinel`'s move, one tier up.
+7. **No two planted pointers may differ only in their low byte.** `rax` after the second load is `p_i` with one
+   byte replaced, so pointers that agree above the low byte make the register witness collapse into the arithmetic
+   one -- at which point it is no longer a witness to which slot was read.
 5. **The slot's seeded value is PER MEMBER, derived from that member's `load_disp`** -- a pointer into that
    member's own buffer, distinct for all 47. The chain family's single derived sentinel (one `0x05` everywhere)
    was right THERE because its job was to prove **visibility**: that the store was observed at all. Here the

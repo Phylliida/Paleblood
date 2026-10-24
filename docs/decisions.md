@@ -1875,3 +1875,117 @@ the set it named had never been recorded anywhere and `git` could not supply it.
    failure in its general form -- there the case guaranteed `rsi == rax`, and the alias form passed 793/793 while
    being wrong. It belongs here, not in one family's pre-registration, because it is a rule about how a WITNESS
    is read: a width is a scope, and scope is the load-bearing half of an evidence claim.
+
+### 1t — IN FORCE (recorded): a zero from a predicate that cannot be satisfied, and the detector is one question
+
+Three members, one defect: `_refuse_zerofill`'s `res is None -> continue` (prints "0 refused" and "no
+target computed" identically), the census's first schema read (a headerless file yielding `keys: NONE`
+because the first *result* was empty, not the *schema*), and a shape-filtered record stream asked for its
+unshaped rows. Each prints `0` by construction, and no reader can tell that `0` from a measurement of zero.
+
+**The detector is one question: what would have made this nonzero?** If no input could have, the counter is
+not an instrument. This is `ret: 0` read as a failure and `writes: []` read as a green, one level down: an
+always-zero counter and an always-empty list are the same object, and neither is a measurement. The
+complementary rule from §1s: a sum whose terms share one derivation is a tautology of that derivation --
+closure catches omission, never error.
+
+### 1u — RECORDED: ask 7 was answered in the file, and the carry was stale
+
+`docs/decisions.md:243` reads `### 1j. shape-agnostic .byte bodies for the remaining leaf tier — RATIFIED
+2026-10-22`: a **period** after `1j`, no `PROPOSED`, satisfying `emit_byte_leaves.py::authorised()`, which
+returns **True** at this tree (measured, not read: `authorised(open('docs/decisions.md').read()) -> True`).
+
+The carry I repeated for many slices — "`### 1j — PROPOSED, NOT IN FORCE` behind an em dash, so either
+status is decided by file order or the guard has never fired; a yes arriving as prose is indistinguishable
+from no" — described a line that is not in this file. **The condition was satisfied and the tool that the
+condition gates was never run, because the open item was quoted instead of re-read.** A carry is a claim
+about a file and decays exactly as fast as the file changes; "re-read at every window" applies to the small
+carries hardest, because they are the ones cheap enough to feel safe.
+
+### 1v — RECORDED: the byte tier's 4,034 does not reproduce, and the residual is refused by name
+
+Ask 7 is answered (§1u): `authorised()` returns True. So the registered tier was re-measured before its
+first run, per §1s, at the same tree. Measured, rc from the process:
+
+    in-band (1..16 B) rows 44331 | landed bodies 36310 | unlanded 8021 (87893 B)
+    emit_byte_leaves.py --dry-run -> leaf_bytes: 0 transcribable leaves, 0 B;
+      refused 8021 ({'address dependent': 6657, 'control flow': 1298, 'trap (1j v)': 65, 'decode': 1})
+
+The pre-registered **4,034 rows / 39,040 B / 2,598 shapes** has no counterpart in this population. Two
+histories yield zero and the difference between them is unmeasured: **(a)** the tier landed — consistent
+with 36,310 in-band bodies, and the only reading under which the tool's tooth set is unchanged since it
+measured 4,034; **(b)** the tooth set moved after registration. One `git log` on
+`record_bytes_family.refusal` separates them, and it has not been run. What holds under either: **all 8,021
+unlanded in-band rows are refused by name, 6,657 of them address-dependent** — the §1h/647 class at twelve
+times the scale, refused by the gate that exists for it.
+
+Consequence for the board, in the sentence §1u forces: **the byte tier is not waiting on anyone.** Either
+it is landed, or what remains is outside what `.byte` transcription is authorised to do — a family-
+template problem (relocated `rip`-relative bodies), not a transcription problem. The batch does not run:
+transcribable is 0, and a batch over an empty population is a `repair:` line with nothing in it.
+
+### 1w — the tier landed; the residual's split depends on which gate you ask first, and `6,210` is not it
+
+**Branch (a) holds, measured against the artifact rather than the inference:** `symbols/functions.csv` holds
+**4,034 rows named `leaf_bytes_*`, status `edge-verified`, totalling 39,040 B** -- the registered tier, to the
+row and to the byte. The pre-registration is intact as a record and **empty as a queue**; it moved because
+rows landed, not because a tooth set moved, so the `git log` in the entry above is moot.
+
+**Two corrections to the residue, both mine, and the first was committed inside the measurement meant to
+settle the entry:**
+
+1. `address dependent 6,657` is the tool's **staged** count -- rows that survived the decode and control-flow
+   gates and then reached `record_bytes_family.refusal`. Over the **whole** band the same predicate returns
+   **7,956**. The 1,299-row difference is `control flow 1,298 + decode 1`, refused one stage earlier and
+   never offered to `refusal`. Both are true of different stages; **quoting the staged one as the population
+   was the near-match trap, in the act of resolving it.**
+2. The band therefore has two correct splits, and which one is quoted must name the gate it asked first:
+   - **decode/control-flow first:** `6,657 address-dependent + 1,298 control flow + 1 decode + 65 trap = 8,021`
+   - **position-independence first:** `7,956 address-dependent + 65 trap = 8,021`
+
+   A relocating mechanism's candidates are the **6,657** (they pass the earlier gates and fail only on
+   position). The other 1,364 are refused for causes no relocation touches.
+
+**And the reconcile the entry above owes: `6,657` vs the frontier's `6,210` is NOT a near-match, it is two
+different populations.** Measured by address sets, not counts: intersection **267**; frontier rows outside the
+band **5,943**; and the frontier's rows run to **10,779 B**, so it was never a 1..16 band at all. Of the 6,210
+addressable frontier rows only **267** are address-dependent in-band leaves. A near-match between two
+instruments on one number is the trap; here the numbers were close and the sets were 96.7% disjoint, which is
+the same trap with a worse disguise.
+
+**Standing sentence, from the byte path's own gate:** *a byte transcription of a `rip`-relative body is an
+encoding copied into a place where it does not mean the same thing.* That is the 647 retraction in one line,
+and it is why the 6,657 are a template problem and the 1,364 are a closed one.
+
+### 1x — the frontier offers one body the ledger holds and `retired.csv` has judged; and plausibility is not a detector
+
+Measured at this tree, by address sets rather than counts:
+
+    frontier(addressable) 6210 | ledger 38100 | retired 1
+    frontier n ledger   = 1  -> 0x24264d0
+    frontier n retired  = 1  -> 0x24264d0
+    frontier n (ledger u retired) = 1
+
+**One row is in all three artifacts.** The frontier advertises it, `functions.csv` holds it, and `symbols/retired.csv`
+carries a verdict about it with a revisit condition. So the frontier's missing filter must exclude **retired**
+as a class, not merely landed rows: *unrecordable is a debt against the instrument; retired is a verdict about
+the body*, and a retired row authored from the frontier would be a body the project has already decided not to
+write. Today the two exclusions happen to select the same single row, which is exactly why a filter written
+against one of them would pass every test that exists.
+
+**Test owed, in this form:** `frontier_intervening = frontier ∩ (ledger ∪ retired)` and it must be empty, as
+one assertion with the offending addresses named -- not two assertions, because two predicates that select
+the same row today stop selecting it the moment `retired.csv` grows.
+
+**How it was found, recorded because the mechanism is the point:** it was found because the count was **1** and
+that looked absurd. **Implausibility is not a detector that can be installed** -- a plausible wrong number is
+quoted for slices. The installable form is: **every published count gets intersected against its neighbours
+before it is quoted.** Here the near-match trap (6,657 vs 6,210, 0.9% apart, 96.7% disjoint) and this defect
+(1 row in three artifacts) are the same defect at two scales: a number never asked what set it counted.
+
+**Pre-registration, template #19 = rank 15, `mov rax,[rip+K] ; movsx eax,[rax+K] ; ret`, row 0x0196f030, 15 B:**
+`R.refusal -> address dependent`, unlanded, frontier-addressable, and confirmed inside the 267-row intersection
+(A ∩ frontier) **before** the template is written. Expected movement, both counts pre-registered:
+**+1 landed body, 15 B, `verified` unchanged at 21, frontier addressable 6210 -> 6209, address-dependent band
+7956 -> 7955.** If either count fails to move, that is a finding naming which instrument disagrees, not a
+success.
