@@ -152,6 +152,12 @@ def batch_problems(root='.'):
     return out
 
 
+# The family's shape, at module scope because it is a NAME and not a private spelling: a landed family
+# leaves the candidate frontier (6,288 -> 6,210 when its 78 members landed), so the only way to assert
+# "this shape is not a candidate any more" is to be able to name it from outside this function.
+WANT = 'mov rax,[rip+K] ; mov [rax+K],K ; ret'
+
+
 def scan(elf=None, max_insns=3):
     """One pass over the committed frontier. Returns rows, each carrying what its case must satisfy."""
     elf = elf or S.ELF
@@ -162,7 +168,7 @@ def scan(elf=None, max_insns=3):
     # preconditions -- the census builds its disassembler this way, so this one must too.
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = True
-    want = ('mov rax,[rip+K] ; mov [rax+K],K ; ret')
+    want = WANT
     out = []
     for addr, size in S.frontier():
         ins = list(cs.disasm(md[addr - S.BIAS:addr - S.BIAS + size], addr))

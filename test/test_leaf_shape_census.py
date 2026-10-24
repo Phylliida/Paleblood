@@ -44,8 +44,26 @@ class LeafShapeCensus(unittest.TestCase):
         self.assertIn(f'frontier {addressable} addressable rows', out,
                       'the tool and the artifact disagree about the population it names')
 
+    def _top_shape(self):
+        """The most frequent shape in the census's OWN table. Never a literal: the chain family's 78
+        rows left this frontier when they landed (6,288 -> 6,210) and the literal that named them
+        stopped being a predicate and became a coincidence about position."""
+        rc, out, err = run()
+        self.assertEqual(rc, 0, f'{out}\n{err}')
+        best = None
+        for line in out.splitlines():
+            m = re.match(r'\s*(\d+)\s+(\d+)\s+(\S+)\s+(\S.*?)\s*$', line)
+            if not m:
+                continue
+            n = int(m.group(1))
+            if best is None or n > best[0]:
+                best = (n, m.group(2), m.group(4))
+        self.assertIsNotNone(best, f'the census printed no shape table:\n{out}')
+        return best
+
     def test_the_three_way_split_is_an_identity(self):
-        rc, out, err = run('--targets-for', 'mov rax,[rip+K] ; mov [rax+K],K ; ret')
+        n, _bytes, shape = self._top_shape()
+        rc, out, err = run('--targets-for', shape)
         self.assertEqual(rc, 0, f'{out}\n{err}')
         m = re.search(r'rows (\d+) \| load target inside filesz (\d+) \| zero-fill tail (\d+) '
                       r'\| unmapped (\d+)', out)

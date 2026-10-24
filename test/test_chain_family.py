@@ -27,6 +27,22 @@ class ChainFamily(unittest.TestCase):
             return
         cls.rows = chain_family.scan()
 
+    def test_the_family_shape_has_left_the_candidate_frontier(self):
+        """A landed family is not a candidate, and the candidate instrument says so BY NAME.
+
+        This is the absence that cost five reds: after the 78 landed, `frontier()` dropped to 6,210
+        candidates and `--targets-for` the family's own shape refused -- correctly. The refusal was
+        read as a defect because the shape was a private literal no test could name.
+        """
+        tool = str(ROOT / 'tools' / 'leaf_shape_census.py')
+        env = {k: v for k, v in os.environ.items() if k != 'PYTHONPATH'}
+        p = subprocess.run([PY, '-P', tool, '--targets-for', self.C.WANT], capture_output=True,
+                           text=True, cwd='/tmp', env=env)
+        self.assertEqual(p.returncode, 1, p.stdout)
+        self.assertIn(f'no frontier row has shape {self.C.WANT!r}', p.stderr)
+        self.assertIn('is not a measurement of that shape', p.stderr)
+        self.assertEqual(self.rows, [], 'the family is landed: scan() must return no candidates')
+
     def test_the_population_is_the_pre_registration(self):
         got = self.C.summarise(self.rows)
         self.assertEqual(got, self.C.PREREG)
