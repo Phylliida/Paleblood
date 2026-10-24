@@ -1,7 +1,11 @@
-"""rc.sh: the process rc, and a refusal for the shape that got it wrong six times.
+"""rc.sh: the process rc, and a WHITELIST refusal rather than a list of remembered metacharacters.
 
-A function-style module here is INVISIBLE to `unittest discover` -- it prints `Ran 0 tests` and exits 0,
-which is a denominator collapsing to zero rather than a pass. Everything is a TestCase method on purpose.
+Two things learned while writing this file, both kept as tests rather than comments:
+  * a module of plain `test_*` FUNCTIONS is invisible to `unittest discover` -- it prints `Ran 0 tests` and
+    exits 0, a denominator collapsing to zero that looks exactly like a pass. Everything here is a TestCase.
+  * `run` prints only `rc=N`; the command's payload goes to RC_OUT. A payload printed beside the rc is a
+    second copy of the facts and will diverge silently. RC_OUT is per-test: a shared scratch path makes the
+    suite order-dependent.
 """
 import os
 import subprocess
@@ -17,23 +21,41 @@ class RcSh(unittest.TestCase):
                               env={'PATH': os.environ.get('PATH', '/usr/bin:/bin')})
 
     def test_the_rc_is_the_process_not_the_pipeline_member(self):
-        r = self.run_sh('run sh -c "echo visible; exit 7"')
+        r = self.run_sh("run sh -c 'exit 7'")
         self.assertEqual(r.returncode, 7, (r.returncode, r.stdout, r.stderr))
         self.assertIn('rc=7', r.stdout)
 
     def test_zero_is_printable_and_success_propagates(self):
-        r = self.run_sh('run sh -c "exit 0" && echo propagated')
+        r = self.run_sh('run true && echo propagated')
         self.assertEqual(r.returncode, 0)
         self.assertIn('rc=0', r.stdout)
         self.assertIn('propagated', r.stdout)
 
-    def test_a_pipeline_passed_as_words_is_refused(self):
-        r = self.run_sh('run "sh -c true | tail -1"')
-        self.assertEqual(r.returncode, 2, (r.returncode, r.stderr))
-        self.assertIn('refusing a shell string', r.stderr)
-
-    def test_the_output_is_kept_when_the_process_fails(self):
-        r = self.run_sh('RC_TAIL=1 run sh -c "echo last-line; exit 3"')
-        self.assertEqual(r.returncode, 3)
+    def test_output_survives_with_RC_TAIL(self):
+        r = self.run_sh('RC_OUT=/tmp/rc_sh_a.out RC_TAIL=1 run echo last-line')
+        self.assertEqual(r.returncode, 0)
         self.assertIn('last-line', r.stdout)
-        self.assertIn('rc=3', r.stdout)
+
+    def test_every_metacharacter_in_the_class_is_refused_not_three_remembered_ones(self):
+        for arg in ('a | tail -1', 'a;b', 'a&&b', 'a>b', 'a<b', 'a&b', 'a`id`b',
+                    'a$(id)b', 'a*b', 'a?b', 'a[b]', 'a(b)', 'a{b}', 'a\\b', 'a"b', "a'b"):
+            with self.subTest(arg=arg):
+                quoted = "'" + arg + "'" if "'" not in arg else '"' + arg + '"'
+                r = self.run_sh('run %s' % quoted)
+                self.assertEqual(r.returncode, 2, (arg, r.returncode, r.stdout, r.stderr))
+                self.assertIn('outside the allowed class', r.stderr)
+
+    def test_ordinary_argv_is_accepted(self):
+        r = self.run_sh('RC_OUT=/tmp/rc_sh_b.out run echo --flag=1 path/to/x.py a,b:c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('rc=0', r.stdout)
+        self.assertEqual(open('/tmp/rc_sh_b.out').read().strip(), '--flag=1 path/to/x.py a,b:c')
+
+    def test_the_command_output_is_not_on_stdout(self):
+        """A payload printed beside the rc is a second copy of the facts and will diverge silently."""
+        r = self.run_sh('RC_OUT=/tmp/rc_sh_c.out run echo payload')
+        self.assertNotIn('payload', r.stdout)
+
+
+if __name__ == '__main__':
+    unittest.main()
