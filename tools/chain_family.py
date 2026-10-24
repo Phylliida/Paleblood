@@ -94,7 +94,7 @@ def batch_problems(root='.'):
     # after-state to a global live count: that subtraction was an enumeration in disguise, right at 78
     # and wrong at 1. The byte names are the same partition as landed/transcribed -- a row can carry a
     # body without carrying evidence, and one `live_bytes` would have to pick which it means.
-    # NOT `E.landed_rows()`: that is a NAME filter over functions.csv, and it returns the pilot row
+    # NOT `E.owned_rows()`: that is a NAME filter over functions.csv, and it returns the pilot row
     # whose status is still 'original' -- a body that exists with no evidence behind it. Using it as
     # "the family's landed set" moved owed from 78 to 77 and the byte total by exactly one body's 18 B,
     # which is the 647 retraction (a name filter standing in for a set) one tier down. Landed means

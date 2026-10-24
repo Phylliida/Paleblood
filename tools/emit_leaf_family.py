@@ -189,7 +189,7 @@ TEMPLATES = {
 RAX_SEED = '0xdeadbeef00000000'
 
 
-def landed_rows(name):
+def owned_rows(name):
     """{address: ladder name} for the rows this emitter owns: `leaf_<name>_<address>`.
 
     Read here and in members(), from the same file, so the landing path and a re-emit cannot
@@ -222,7 +222,7 @@ def members(name, landed=False):
     if spec.get('chain_selector'):
         # The family's population is symbols/chain_family.csv -- the table the pre-registration refuses
         # against -- so the emitter and the refusal cannot disagree about how many members exist.
-        owned0 = set(landed_rows(name))
+        owned0 = set(owned_rows(name))
         # `landed` IS HONOURED HERE, one predicate for both modes, the same shape as the wide path.
         # The branch returned `for r in rows` filtered unconditionally -- so landed=True returned the
         # UNLANDED set, and a post-record re-emit would regenerate all 78 members and invalidate the
@@ -239,7 +239,7 @@ def members(name, landed=False):
         import census_rip_load as W
         taken0 = {int(r['address'], 16) for r in
                   csv.DictReader(open(os.path.join(ROOT, 'symbols', 'functions.csv')))}
-        owned0 = set(landed_rows(name))
+        owned0 = set(owned_rows(name))
         recs = W.scan(64, False)[3]
         # RETIRED members are excluded by a TABLE, not by a filter living in someone's head.
         # symbols/retired.csv: address,reason,date,revisit. An exclusion with no row is refused
@@ -267,7 +267,7 @@ def members(name, landed=False):
     cs.detail = False
     taken = {int(r['address'], 16) for r in
              csv.DictReader(open(os.path.join(ROOT, 'symbols', 'functions.csv')))}
-    owned = set(landed_rows(name))
+    owned = set(owned_rows(name))
 
     def want(addr):
         return addr in owned if landed else addr not in taken
@@ -695,7 +695,7 @@ def reemit(name, write=False):
     after which `git status` is what shows whether they differed.
     """
     path = os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp')
-    owned = landed_rows(name)
+    owned = owned_rows(name)
     if not owned:
         return 1, f're-emit {name}: no `leaf_{name}_*` rows -- nothing was emitted for this family'
     ms = members(name, landed=True)
@@ -756,7 +756,7 @@ def main(argv):
     # The translation unit is SHARED by every declared member, so it is written from ALL of them and never
     # from the selection: `--pilot` narrows which CASES get authored and which table rows get written, not
     # which bodies exist. The batch emission once narrowed `ms` and the write silently dropped the pilot.
-    # DECLARED, not selected: the family table is the authority, and `landed_rows` is a NAME filter over
+    # DECLARED, not selected: the family table is the authority, and `owned_rows` is a NAME filter over
     # functions.csv rather than a status predicate -- so once a member is named, `members(landed=False)`
     # stops returning it and a selection-driven TU loses it. The union is the declared set.
     _by = {m["address"]: m for m in list(members(name, landed=False)) + list(members(name, landed=True))}
@@ -777,7 +777,7 @@ def main(argv):
         print(f'{name}: PILOT -- limiting to {n} of {len(ms)} members; the family is not complete '
               f'until this runs without --limit')
         ms = ms[:n]
-    owned = landed_rows(name)
+    owned = owned_rows(name)
     if not ms:
         # Zero members is a refusal with a reason, never `min() iterable argument is empty`:
         # an emitter that cannot re-emit cannot repair either, so the message names the door.

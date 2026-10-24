@@ -21,6 +21,7 @@ counted, never dropped silently.
 import argparse
 import collections
 import csv
+import json
 import os
 import sys
 
@@ -108,6 +109,24 @@ def frontier():
     return [(int(r[0], 16), int(r[1])) for r in rows if r[2] == 'addressable']
 
 
+def frontier_population():
+    """Every row of the frontier FILE, counted by its own third column.
+
+    frontier() keeps `addressable` rows and drops the rest at the door, so their absence reads
+    exactly like a clean census -- a size floor that no bucket names. The counts come from the same
+    file the loader reads, so the dropped population is printed as its own bucket instead of being
+    left for a reader to obtain by subtracting two other numbers. That subtraction has already been
+    performed wrong here once (6,888 - 6,809 = 79, arithmetic looking for a home), and a population
+    that requires subtraction will be subtracted wrong again.
+    """
+    cols = collections.Counter()
+    for line in open(FRONTIER, newline='').read().splitlines():
+        if line:
+            parts = line.split(',')
+            cols[parts[2] if len(parts) > 2 else '<no third column>'] += 1
+    return cols
+
+
 def shape_of(ins, max_insns):
     """A template-shaped name: mnemonics plus operand forms with every number replaced by K."""
     parts = []
@@ -142,6 +161,12 @@ def main(argv):
     # be discriminated by any case, so authoring it first and refusing it after is 78 bodies of
     # evidence for nothing.
     ap.add_argument('--targets-for', default=None, metavar='SHAPE')
+    # --targets-json prints EVERY member of that shape as one JSON object per line. Without it the
+    # population's distribution had to be inferred from five printed rows, which produced a pre-
+    # registration whose histogram was a derivation (47 x 14 = 658 divided equally). A tool that
+    # renders five rows of a population whose distribution IS the question leaves its totals to be
+    # guessed, and the guess is indistinguishable from a measurement once it is in a document.
+    ap.add_argument('--targets-json', action='store_true')
     a = ap.parse_args(argv)
     if a.max_insns < 1 or a.top < 1:
         print('leaf_shape_census: --max-insns and --top must be positive', file=sys.stderr)
@@ -155,6 +180,7 @@ def main(argv):
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = True
     rows = frontier()
+    cols = frontier_population()
     shapes = collections.Counter()
     bytes_of = collections.Counter()
     ks = collections.defaultdict(set)
@@ -190,12 +216,21 @@ def main(argv):
             return 1
         import collections as _c
         where = _c.Counter(x['where'] for x in t)
-        print(f'shape {a.targets_for}')
+        # The summary follows the stream, not the habit: with --targets-json stdout is a record
+        # stream and nothing else, so a consumer can pipe it without a filter that guesses which
+        # lines are data. A stageable shape needs no --out flag and no line filter.
+        out = sys.stderr if a.targets_json else sys.stdout
+        print(f'shape {a.targets_for}', file=out)
         print(f'rows {len(t)} | load target inside filesz {where["filesz"]} | '
-              f'zero-fill tail {where["zerofill"]} | unmapped {where["unmapped"]}')
+              f'zero-fill tail {where["zerofill"]} | unmapped {where["unmapped"]}', file=out)
+        print('population ' + ' | '.join(f'{n} {k}' for k, n in sorted(cols.items())), file=out)
         print(f'store src {_c.Counter(x["src"] for x in t)} | '
               f'distinct store K {len({x["store_k"] for x in t})} | '
-              f'distinct load K {len({x["load_target"] - x["address"] for x in t})}')
+              f'distinct load K {len({x["load_target"] - x["address"] for x in t})}', file=out)
+        if a.targets_json:
+            for x in t:
+                print(json.dumps(x, sort_keys=True))
+            return 0
         for x in t[:5]:
             print(f'  {x["address"]:#010x} size {x["size"]:>3} load->{x["load_target"]:#x} '
                   f'{x["where"]:>8} store +{x["store_k"]:#x} src {x["src"]}')
@@ -216,6 +251,8 @@ def main(argv):
         return 0 if good else 1
 
     covered = sum(shapes.values())
+    print('population ' + ' | '.join(f'{n} {k}' for k, n in sorted(cols.items()))
+          + f' | {sum(cols.values())} total (every row of the file, each in a named bucket)')
     print(f'frontier {len(rows)} addressable rows | decoded {covered} | over {a.max_insns} '
           f'insns {over} (counted, not dropped) | undecoded {undecoded} | '
           f'max-insns {a.max_insns} (a choice, printed beside its consequence)')

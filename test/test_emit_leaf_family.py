@@ -25,7 +25,7 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
     """
 
     def test_every_landed_family_reproduces_the_committed_body(self):
-        landed = [n for n in E.TEMPLATES if E.landed_rows(n)]
+        landed = [n for n in E.TEMPLATES if E.owned_rows(n)]
         self.assertTrue(landed, 'no family is landed: the re-emit property is untested, not true')
         for name in landed:
             with self.subTest(family=name):
@@ -37,7 +37,7 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
                 # subtracts. Pinning 11 here went red the hour the population gained a verdict --
                 # a count in a fixture is a claim about the population that produced it.
                 ret = E.retired_addresses()
-                expect = len([a for a in E.landed_rows(name) if a not in ret])
+                expect = len([a for a in E.owned_rows(name) if a not in ret])
                 self.assertIn(f'{expect} members', message)
 
     def test_a_member_the_census_cannot_reproduce_is_refused_and_named(self):
@@ -68,7 +68,7 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
 
     def test_zero_members_at_all_is_a_message_not_a_crash(self):
         with mock.patch.object(E, 'members', lambda *a, **k: []), \
-                mock.patch.object(E, 'landed_rows', lambda *a, **k: {}):
+                mock.patch.object(E, 'owned_rows', lambda *a, **k: {}):
             buf = io.StringIO()
             with redirect_stdout(buf):
                 rc = E.main(['mov_eax_mem'])
@@ -105,7 +105,7 @@ class TheComparisonNamesItsDifference(unittest.TestCase):
 class TheKeyIsParsedNotPrefixed(unittest.TestCase):
     def test_a_landed_row_belongs_to_exactly_one_family(self):
         # `leaf_ret_zero_*` sits under `leaf_ret_` as a string prefix and is a different family.
-        # The first version of landed_rows() used startswith and reported ret as 7,761 of 12,482;
+        # The first version of owned_rows() used startswith and reported ret as 7,761 of 12,482;
         # the refusal is what caught it, so the parse is pinned here directly.
         # Synthetic tail on purpose: a real address here would be a tracked game value, and a
         # test that pins one is a fixture of the present (check_agnostic flagged the first
@@ -115,6 +115,15 @@ class TheKeyIsParsedNotPrefixed(unittest.TestCase):
         self.assertNotEqual(head, 'leaf_ret')
         self.assertEqual(len(tail), 8)
 
+
+
+class SelectorName(unittest.TestCase):
+    def test_the_selector_is_named_for_what_it_returns(self):
+        """`landed_rows` returned rows this emitter OWNS, whatever their status -- the pilot at
+        `original` was in it. A function named landed that does not mean landed is a name standing
+        where a set belongs, and `tools/landed.py` owns the status predicate."""
+        self.assertFalse(hasattr(E, 'landed_rows'), 'the misleading name is back')
+        self.assertTrue(hasattr(E, 'owned_rows'))
 
 if __name__ == '__main__':
     unittest.main()

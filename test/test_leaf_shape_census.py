@@ -6,6 +6,7 @@ accounted for as decoded, over the instruction bound, or undecoded, and none is 
 That is the defect this census exists to avoid, and the same one that made a 16508 histogram of a
 fallback literal look like a measurement.
 """
+import json
 import os
 import re
 import subprocess
@@ -95,6 +96,56 @@ class LeafShapeCensus(unittest.TestCase):
         self.assertIn('nothing can be decoded and nothing is claimed', err)
         self.assertEqual(out, '', 'a refusal that prints a table anyway is not a refusal')
 
+
+
+    def test_every_row_of_the_file_is_in_a_named_bucket(self):
+        """The population the loader DROPS is printed, not left to subtraction.
+
+        frontier() keeps `addressable` rows only; whatever it drops must appear as a counted bucket,
+        because a population that requires the reader to subtract two other numbers will be
+        subtracted wrong -- 6,888 - 6,809 = 79 was that reflex, and it landed nowhere.
+        """
+        rc, out, err = run()
+        self.assertEqual(rc, 0, err)
+        line = next((l for l in out.splitlines() if l.startswith('population ')), None)
+        self.assertIsNotNone(line, 'the census does not print its whole population:\n' + out[:400])
+        buckets = {k: int(v) for v, k in re.findall(r'(\d+) (\w[\w-]*)', line)}
+        self.assertIn('total', buckets, line)
+        named = sum(v for k, v in buckets.items() if k != 'total')
+        self.assertEqual(named, buckets['total'],
+                         f'{buckets}: a row is in no bucket, so a reader must subtract to find it')
+        rows = [r for r in open(os.path.join(ROOT, 'symbols', 'leaf_frontier.csv'), newline='')
+                .read().splitlines() if r]
+        self.assertEqual(buckets['addressable'],
+                         sum(1 for r in rows if r.split(',')[2] == 'addressable'),
+                         'the bucket and the artifact disagree about one population')
+        self.assertGreater(buckets['total'], buckets['addressable'],
+                           'nothing was dropped: either the file changed or the drop is unnamed again')
+
+    def test_targets_json_is_records_only(self):
+        """stdout is a record stream and nothing else: no summary, no header, no line filter needed."""
+        rc, out, err = run()
+        self.assertEqual(rc, 0, err)
+        shapes = [m.group(2) for m in (re.match(r'\s*\d+\s+\d+\s+(\S+)\s+(\S.*?)\s*$', l)
+                                       for l in out.splitlines()) if m]
+        self.assertTrue(shapes, f'the census printed no shape table:\n{out[:400]}')
+        last = None
+        for shape in shapes[:6]:                      # single-instruction shapes refuse by design
+            rc, out2, err2 = run('--targets-for', shape, '--targets-json')
+            last = (shape, rc, out2, err2)
+            if rc == 0:
+                break
+        shape, rc, out2, err2 = last
+        self.assertEqual(rc, 0, f'no shape produced targets; last {shape!r}:\n{err2}')
+        recs = [json.loads(l) for l in out2.splitlines() if l]
+        m = re.search(r'rows (\d+) \|', err2)
+        self.assertIsNotNone(m, 'the summary must still be printed -- on stderr:\n' + err2)
+        self.assertEqual(len(recs), int(m.group(1)),
+                         'the stream and the summary disagree about how many members were printed')
+        self.assertNotIn('shape ', out2, 'a summary line leaked into the record stream')
+        for r in recs:
+            self.assertEqual(sorted(r), ['address', 'load_target', 'size', 'src', 'store_k', 'where'])
+        self.assertIn('population ', err2, 'the dumped population must carry its own buckets')
 
 if __name__ == '__main__':
     unittest.main()
