@@ -370,6 +370,13 @@ in the same call:
   `23,304 + 78 + 1 = 23,383`, closed by enumeration rather than by assumption. It is **kept, not deleted**:
   `../data/cases` is untracked by requirement, so a deletion there is irreversible and would move a number this
   document has just recorded — an orphan case is the owner's to retire, not a correction's to tidy.
+  **The membership is committed, because a count about an untracked subject is not:** `symbols/corpus_manifest.csv.gz`
+  (23,383 rows, `sha256 2956db3e7b3c2d25c5280826bad4161cc29ac7bcde841dc4d79c7b3d618643e2`) records
+  `(sha256, bytes, predicates, relpath)` per member, so `tools/corpus_manifest.py --check` prints what was added,
+  removed or changed — the next `+1` is a name, not a timestamp hunt — and `--count memory` / `--count pointer`
+  re-derive both figures **from the manifest alone, with the corpus absent.** Measured while writing it:
+  **`pointer` is a subset of `memory`** — all 4,169 `pointer` cases carry `memory` — so one manifest covers both
+  numbers. Rule: `docs/decisions.md` `1s`.
 
 **How it happened is the part worth keeping:** I wrote the sentence into the heredoc *before* executing the
 command that produces its number, so the number in the document was an expectation formatted as a measurement.

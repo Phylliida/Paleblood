@@ -1759,6 +1759,9 @@ pre-registration kept in `../scratch/` dies with the machine; one kept in the hi
 rule as the ledger's: **derive from the artifact that exists, never from a note about it** — and it costs one
 line at the moment the batch lands, which is the only moment at which the answer is still known.
 
+**Narrowed by `1s.2` (below):** the line belongs on commits that **move data**, not on commits that describe the
+convention. As first written, "every commit carries one" made the denominator countable by writing a paragraph.
+
 **The convention's first data point predates the convention, and it is a repair.** The gate could not read
 `chain_deref`'s constants (`kSlot`/`kStoreDisp` against a scanner keyed on `v|at`), it reported that as
 nothing-to-check, and closing it cost **one full window and zero rows**. So the window that lands family #2
@@ -1831,3 +1834,27 @@ suffix. Read all three from data; assume none.
 **one static target (`kSlot`) and one derived one (`store`)** — the store's address is computed from the load's
 result, so it is argument-supplied and its bound lives in the case. The `0x1520` refusal is the evidence: the
 gate refused a **coordinate** handed to it as an address, 78 of 78, which is what a check should do.
+
+### 1s — IN FORCE: a figure about an untracked subject carries its membership, and `repair:` counts data commits
+
+**IN FORCE.** Written after `9292ca9`, where `23,304` had to be reconciled against `23,383` **by mtime**, because
+the set it named had never been recorded anywhere and `git` could not supply it.
+
+1. **`git` preserves the count and not the membership.** `../data/cases` is untracked by requirement, so a
+   documented corpus figure becomes an unverifiable claim the moment any file changes: the number survives, the
+   set does not. Therefore **any figure a document quotes about an untracked corpus is accompanied by a committed
+   manifest of the population** — one row per member `(sha256, bytes, predicates, relpath)`, sorted by path,
+   gzipped `mtime=0`, byte-reproducible — and the document quotes the manifest's own sha256 beside the count.
+   `tools/corpus_manifest.py --check` names every added, removed or changed member; `--count` re-derives a
+   predicate's figure **from the manifest alone, with the corpus absent**.
+   **A hash is not sufficient and a count is not sufficient; the membership is the artifact.** A hash tells you
+   the population moved and never what entered or left, which is the whole of what a correction needs.
+2. **The `repair:` line belongs on commits that move data.** `functions.csv`, `verification.csv`, a body, a case:
+   a data commit either moves rows/bytes or repairs something. A commit that only documents or instruments the
+   convention does neither and carries **neither** line — **a ratio whose numerator can be incremented by writing
+   a paragraph is not a measurement.** The line that taught this is `26287e6`, a documentation commit that
+   `^repair:` counted as the convention's first data point.
+3. **Scope, stated so it is not assumed away.** The manifest covers the populations a document quotes, not every
+   untracked artifact. A figure with no manifest is out of scope **until someone writes one, and saying which
+   figures are out of scope is part of quoting the figure.** This is `unknown (no runtime witness)` applied to a
+   corpus: absent evidence prints as absent, never as a zero.
