@@ -90,7 +90,14 @@ def byte_totals(path="symbols/functions.csv"):
     """The same partition as `landed` vs `transcribed`, in BYTES.
 
     `landed` counts rows with status != 'original': evidence exists. `transcribed` counts every row
-    that carries a body, which is every row in the file: transcription exists, evidence may not.
+    that carries a BODY ON DISK -- which is 38,099 of the 38,101 rows, NOT every row in the file, as
+    this docstring asserted until the measurement refuted it. Two rows carry no emitted body and are
+    excluded from BOTH totals: 0x004632d0 (67 B) and 0x024264d0 (34 B), the retired rip_load row. That
+    is why bytes_transcribed is 101 short of the file's size sum (325,262) -- and 67 + 34 = 101.
+
+    Two predicates, one word: the band column `has_body` (symbols/branch_band.csv) means "an address in
+    functions.csv" (38,101); `body_exists` here means "a body was emitted" (38,099). They differ by
+    exactly those two rows, so quoting either as "the number of bodies" is wrong by two rows and 101 bytes.
     Writing 78 bodies moves byte_totals['transcribed'] by 1,320 and byte_totals['landed'] by ZERO until
     the differentials record -- and one `live_bytes` would have to pick which it means, then be quoted
     as if it meant the other.

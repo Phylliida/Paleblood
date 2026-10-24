@@ -262,3 +262,26 @@ file's total" and means "rows carrying a transcribed body", which is the *fourth
 its name wrong. **A count named after the artifact it is computed over would have made this unwritable** -- the same
 repair owed for `store_k`, one axis over.
 
+## The byte 101, RESOLVED FROM SOURCE: the predicate is `body_exists`, and the docstring was false by 101 bytes
+
+Measured with the code's own helper (`landed.byte_totals`, `landed.body_exists`, `landed._body_index` over `game/`):
+
+    rows 38,101 · bodied on disk 38,099 · bodiless 2
+    byte_totals -> {'landed': 324066, 'transcribed': 325161}   <-- the board's two figures, from the code
+
+The five `original` rows, checked individually: `0x00414040` 1072 Yes · `0x0111a600` 8 Yes · `0x0196f030` 15 Yes ·
+**`0x004632d0` 67 No** · **`0x024264d0` 34 No**. So the excluded rows are the two bodiless ones, and `67 + 34 = 101`.
+
+**Both board figures are therefore confirmed by the instrument that computes them** -- not by my arithmetic, and not
+by a subset scan. The subset scan named the right rows; only reading the source named the right *reason*.
+
+**And the docstring at `tools/landed.py:89` asserted the opposite:** *"`transcribed` counts every row that carries a
+body, **which is every row in the file**"*. It is false: 38,099 of 38,101 carry a body. **The code was right, its
+comment was wrong, and the comment is what a reader trusts** -- so the docstring now states the measured counts, the
+two excluded rows, the 101 bytes, and the reason they are excluded.
+
+**Fifth name collision, recorded: `has_body` vs `body_exists`.** The band column means "an address in
+`functions.csv`" (38,101); the disk predicate means "a body was emitted" (38,099). **They differ by exactly the two
+bodiless rows, so "the number of bodies" is wrong by two rows and 101 bytes depending on which one the speaker
+meant.** That is the same repair owed for `store_k` and for `landed`, now on the word *body*.
+
