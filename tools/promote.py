@@ -26,6 +26,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -191,7 +192,11 @@ def promote_edge(root, family, dry_run):
         if row[st] != 'original':
             continue
         name = row[nm]
-        if not name.startswith(family):
+        # ANCHORED, not prefixed: `startswith('leaf_ret')` also matches `leaf_ret_zero` -- 12,482 rows
+        # where the family is 7,761, a name filter wearing a selector's name (third arrival of this class,
+        # first in the promotion path). A family name selects its own bodies and nothing that merely
+        # begins with it: the remainder must be an address suffix or empty.
+        if not re.fullmatch(re.escape(family) + r'(?:_[0-9a-f]{8})?', name):
             continue
         if int(row[ad], 16) in retired:
             # A VERDICT IS A SKIP, NOT A REFUSAL. `024264d0` is finished by verdict, so it is not
