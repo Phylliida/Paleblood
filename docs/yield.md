@@ -179,3 +179,33 @@ more than its positive.
 and it is 21 because **eight of the last nine things built were not rows.** Every one of them is a reason the next row
 can be defended; **none of them is the row.** The next stretch's job is to make it the ninth.
 
+## OPEN FINDING, measured: the board's two byte counts are NOT the five `original` rows, and the gap is 101
+
+Prediction put to the tree: `bytes_transcribed - bytes_landed = 325,161 - 324,066 = 1,095` should equal the byte total
+of the five `original` rows, since `has_body 38,101` exceeds `landed 38,096` by exactly those five.
+
+**Measured (awk over `symbols/functions.csv`, `$5=="original"`): COUNT = 5 -- correct -- BYTES = 1,196.**
+
+    0x00414040   1072
+    0x004632d0     67
+    0x0111a600      8
+    0x0196f030     15
+    0x024264d0     34
+                  ----
+                  1196
+
+**1,196 != 1,095. The discrepancy is exactly 101.**
+
+So the word (`landed` / `transcribed`) **does** differ from the row-count pair that agrees: the two byte counts are
+**not** double-sourced, and one of them counts rows by a predicate that is not "status is not original". **This is a
+byte-level instance of the class this session spent its length repairing, found by the cross-check the row counts
+got free this morning.**
+
+**And 101 is already a carried number in this campaign: the ledger surplus, `38,197 - 38,096 = 101`.** Two appearances
+of the same delta now require **one** explanation, not two -- and the candidate that would explain both is a row set
+counted in the ledger and in `functions.csv` with different membership rules. **Stated as a hypothesis, not a
+conclusion: this has not been measured.**
+
+**Unresolved, and the next stretch's FIRST command rather than its canon check** -- a board quoting a byte gap whose
+predicate is unknown is a number with a broken name, and the canon check would be built on top of it.
+
