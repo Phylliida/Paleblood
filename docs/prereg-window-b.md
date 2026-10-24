@@ -187,3 +187,36 @@ pass on any of the 47 certifies the byte, the displacement and the fault behavio
 of the 47's. A pass there is worth more than a pass on a member whose upper 56 bits are unasserted, and it is
 the only member where the retired clause (`slot byte >= 0x80`) is live -- sign extension is exactly the
 mechanism that made it vacuous for `mov al/eax/rax`.
+
+### Amendment: why #19's witness is exact -- one clause, and the cases it dictates
+
+**The one clause:** `movsx eax` erases the pointer term **and** is the only census instruction whose result
+depends on the top bit of the byte -- **both because the destination is 32 bits.** `mov al` merges into `rax`
+(so `p & ~0xff` survives and the case cannot know it); `movsx eax` writes `eax` (so the pointer term is gone
+and the upper 32 bits are zero by construction). The exactness of the witness and the liveness of the retired
+`>= 0x80` clause are the same fact seen from two sides, **and neither is a coincidence of this row.** A reader
+who asks "why is this witness exact when the 47's is not" gets that clause, not a paragraph of context.
+
+**The cases, pre-registered as exact 64-bit equalities:**
+
+| case | planted byte at `p+K` | pre-registered `rax` |
+|---|---|---|
+| A  | `0x7f` | `0x000000000000007f` |
+| A' | `0x80` | `0x00000000ffffff80` |
+
+**A and A' differ in exactly one planted value**, as the A/A' rule requires, and the pair **straddles the sign
+boundary** -- `0x7f` and `0x80` are adjacent in the encoding and maximally apart in the result. That is the
+tightest available test of the sign extension: a `movzx` body passes A and **must** fail A' by
+`0xffffff00`, which is the smallest difference available at this width and is not a difference any rounding,
+truncation or displacement error can produce accidentally. `0x80` is chosen as the boundary rather than
+`0xff` for exactly this reason: `0xff` is also separated by a `movzx` body, but it sits 128 away from the
+boundary, so it cannot distinguish "sign-extends the top bit" from "extends with a different constant for
+large values" -- the boundary value can.
+
+**Mutants, pre-registered with what each must move:**
+
+1. `movsx` -> `movzx` at the same operands: **A green, A' red by exactly `0xffffff00`.** A red in both would
+   mean the mutant changed more than the extension; a red in neither would mean the differential cannot see
+   the sign bit at all.
+2. `load_disp + 4` (reads the neighbouring planted byte): **A and A' both red**, because clause 2d makes every
+   4-byte window distinct, and the red must name a *value* mismatch, not a fault.
