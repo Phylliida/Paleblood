@@ -7,6 +7,7 @@ move, the family is a different family and the batch must be re-registered, not 
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -23,9 +24,13 @@ class ChainFamily(unittest.TestCase):
         cls.C = chain_family
         if not os.path.isfile(chain_family.S.ELF):
             print(f"NOTE: {chain_family.S.ELF} absent -- this test measured nothing", file=sys.stderr)
-            cls.rows = []
+            cls.rows = chain_family.table()
+            cls.cand = []
             return
-        cls.rows = chain_family.scan()
+        # THE FAMILY is the committed table. The frontier is CANDIDATES -- and for a landed family it
+        # returns none, which is a fact to assert, never a zero to feed the pre-registration.
+        cls.rows = chain_family.table()
+        cls.cand = chain_family.candidates()
 
     def test_the_family_shape_has_left_the_candidate_frontier(self):
         """A landed family is not a candidate, and the candidate instrument says so BY NAME.
@@ -41,7 +46,7 @@ class ChainFamily(unittest.TestCase):
         self.assertEqual(p.returncode, 1, p.stdout)
         self.assertIn(f'no frontier row has shape {self.C.WANT!r}', p.stderr)
         self.assertIn('is not a measurement of that shape', p.stderr)
-        self.assertEqual(self.rows, [], 'the family is landed: scan() must return no candidates')
+        self.assertEqual(self.cand, [], 'the family is landed: candidates() must return none')
 
     def test_the_population_is_the_pre_registration(self):
         got = self.C.summarise(self.rows)
@@ -66,6 +71,20 @@ class ChainFamily(unittest.TestCase):
         for r in self.rows:
             self.assertGreater(r['store_width'], 0)
             self.assertGreaterEqual(r['store_k2'], 0)
+
+    def test_rescan_refuses_to_empty_a_landed_family(self):
+        """The truncation guard, observed firing. A family of zero members against a table of 78 is a
+        truncation wearing a regeneration's name -- the `emit_leaf_family.py:681` class, one tier up:
+        there a refusal truncated the artifact; here a successful rescan would have.
+        """
+        out = Path(tempfile.mkdtemp()) / 'empty.csv'
+        p = subprocess.run([PY, '-P', str(ROOT / 'tools' / 'chain_family.py'), '--rescan', '--write',
+                            '--out', str(out)], capture_output=True, text=True,
+                           env={**os.environ, 'PYTHONPATH': ''}, cwd='/tmp')
+        self.assertEqual(p.returncode, 1, p.stdout)
+        self.assertIn('REFUSED rescan: the frontier yields 0 candidates', p.stderr)
+        self.assertIn('a truncation, not a regeneration', p.stderr)
+        self.assertFalse(out.exists(), 'a refused rescan wrote the file it refused to write')
 
     def test_the_committed_table_reproduces(self):
         out = ROOT / "symbols" / "chain_family.csv"
