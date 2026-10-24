@@ -16,6 +16,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalogue  # noqa: E402  -- typed reader: address/size are ints, one radix law
+import progress  # noqa: E402  -- the hook's own clause; the board QUOTES it and never recomputes
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SYM = os.path.join(ROOT, 'symbols')
@@ -69,9 +70,14 @@ def render():
         '',
         f'rows **{n}** (`edge-verified` {by["edge-verified"]} + `verified` {by["verified"]})'
         f' | `original` (transcription only) {by["original"]} [symbols/functions.csv]',
-        f'bytes **{sum(r["size"] for r in bodied)}** [symbols/functions.csv, sized by the ledger]',
-        f'scope **{n}/{reach} = {pct(n, reach)}** -- of Ghidra\'s reach, never the code'
-        f' [symbols/ghidra_functions.csv]',
+        '',
+        '**The reach clause below is quoted from `progress.reach_line`, the same function the pre-commit',
+        'hook prints. It is not recomputed here: one fact printed twice is two that can drift, and',
+        '`84.43%` PROGRESS (`branch-free`) and `87.11%` (`all rows`) are two different denominators**',
+        'that a hand-written burndown confused once already.',
+        '',
+        '    ' + progress.reach_line(ROOT),
+        '',
         f'`verified` **{by["verified"]}** [symbols/functions.csv]',
         f'approvals **{n_rev}** [symbols/reviews.csv, rows]'
         f' | differential records **{n_ver}** [symbols/verification.csv, rows]'

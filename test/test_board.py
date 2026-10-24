@@ -29,8 +29,12 @@ class Board(unittest.TestCase):
                 self.fail(f'line {i + 1} differs\n  committed: {x}\n  artifacts: {y}')
 
     def test_the_board_tool_runs_bare(self):
+        # Bare means bare: an inherited relative PYTHONPATH resolves against cwd, which puts /tmp on
+        # sys.path, where a stray bisect.py shadowed the stdlib and broke `import progress`. A test
+        # that claims to run without environment help must not quietly supply some.
+        env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'BB_PBBOOT', 'BB_LOADER')}
         r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'board.py')],
-                           cwd='/tmp', capture_output=True, text=True)
+                           cwd='/tmp', capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('not sourced', r.stdout)
 
