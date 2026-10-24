@@ -516,7 +516,7 @@ def extent_line(root=".") -> str:
         cat = catalogue.load_extents(os.path.join(sroot, "ghidra_functions.csv"))
         # Landed is ONE selector, and it is leaf_family_census's: a row at "original" is bookkeeping for a
         # body nobody has written, so counting it as landed understates the work by exactly those rows.
-        # Here it was one row, 0x0111a600 (8 B), which is why this line said 5,804 while thunk_census said
+        # Here it was one row, 8 B -- the extent 1p closes -- which is why this line said 5,804 while thunk_census said
         # 5,805 -- one element, and the element had an address.
         landed = L.landed_addresses(os.path.join(sroot, "functions.csv"))
     except (OSError, KeyError, ValueError) as exc:

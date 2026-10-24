@@ -1,0 +1,2 @@
+address,name,why
+0x00414040,large_bracket_canon_00414040,"body uses v_rcx|v_r9 where the original consumes eax/ebx, and 0x29 where it wrote 0x28. A differential cannot distinguish this body from a trampoline, so recording it would make every number after it retroactively meaningless. Ordering is a plan; this is a refusal."

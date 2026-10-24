@@ -3,7 +3,7 @@
 A row at status `original` is bookkeeping for a body nobody has written, so it is not landed. This
 selector was duplicated: leaf_family_census.py had it (and drifted from an emitter by exactly one row
 once), progress.py did not have it and counted every address in functions.csv, and the two disagreed by
-one row -- 0x0111a600, 8 bytes, status `original`, the extent this campaign spent two stretches
+one row -- 8 bytes, status `original`, the extent this campaign spent two stretches
 overturning. One function, imported by both.
 
 It lives here rather than in leaf_family_census.py because that module imports capstone, and progress.py
@@ -14,14 +14,18 @@ fail with ModuleNotFoundError.
 import csv
 import os
 import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import catalogue   # the ONE typed reader: the commit hook refuses a second one, and the radix lives there
 
 
 def _body_index(root=None):
     """Every `bb_<name>` symbol the tree actually defines. One walk, cached by the caller.
 
-    `transcribed` must mean "a body exists", and the ledger's `size` column is bookkeeping: 0x024264d0
+    `transcribed` must mean "a body exists", and the ledger's `size` column is bookkeeping: one row
     sat at 'original' with 34 B after its body was withdrawn with rip_load_family.cpp at f511666, and
-    0x004632d0 sat at 'original' with 67 B and no body at all. Deriving from the tree makes the number
+    another sat at 'original' with 67 B and no body at all. Deriving from the tree makes the number
     right by construction instead of by everyone remembering to delete a row.
     """
     base = root or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'game')
@@ -41,12 +45,21 @@ def body_exists(row, index=None):
     return ('bb_' + row['name']) in (index if index is not None else _body_index())
 
 
-KNOWN_WRONG = {
-    0x00414040: ("large_bracket_canon_00414040: body uses v_rcx|v_r9 where the original consumes "
-                 "eax/ebx, and 0x29 where it wrote 0x28. A differential cannot distinguish this body "
-                 "from a trampoline, so recording it would make every number after it retroactively "
-                 "meaningless. Ordering is a plan; this is a refusal."),
-}
+def _load_known_wrong(root=None):
+    """The refusal table, as DATA: `symbols/known_wrong.csv`, columns `address,name,why`.
+
+    It was a dict literal carrying a tracked address and a tracked function name -- both values the
+    agnostic gate refuses in tools/, correctly -- and data is also the only shape in which the entry can
+    be made to REFUSE in a test: a literal is reachable only by editing the file it guards. Absence of
+    the file is not survivable and must not be: an import that quietly loaded an empty table would leave
+    `_refuse_known_wrong` with nothing to refuse and every number looking fine.
+    """
+    base = root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return {r['address']: r['why']
+            for r in catalogue.read_rows(os.path.join(base, 'symbols', 'known_wrong.csv'))}
+
+
+KNOWN_WRONG = _load_known_wrong()
 
 
 def _refuse_known_wrong(rows):

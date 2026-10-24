@@ -24,7 +24,11 @@ class ThePilotIsChosenByRule(unittest.TestCase):
         chosen, key, n_shared = E.pilot_choice(self.ms)
         self.assertEqual(key[3], 4, 'the pilot must exercise the widest store')
         self.assertGreater(n_shared, 1, 'the pilot must share its case with another member')
-        self.assertEqual(chosen['address'], 0x01735230)
+        # No address literal: the PINNED value here was a tracked address (check_agnostic refused it), and
+        # a pin on WHICH member the rule chose is not the property the test names -- the properties are the
+        # key width, the sharing, and non-minimality, all asserted above and below. Checked, 2026-10-23:
+        # the pin's only real job was to keep pilot_mutants' hardcoded target in step, and that tool now
+        # derives its target from this same rule instead of from a copy of the rule's answer.
         self.assertNotEqual(chosen['address'], min(m['address'] for m in self.ms),
                             '--limit 1 takes the first address; that is exactly the choice this rule rejects')
 

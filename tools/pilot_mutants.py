@@ -22,9 +22,15 @@ FAMILY = os.path.join(ROOT, 'game', 'leaf', 'chain_deref_family.cpp')
 LIB = os.path.join(ROOT, 'build-release', 'game', 'libbbgame.so')
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 from case_dir import case_dir
-CASE = os.path.join(case_dir('chain_deref'), '01735230', 'case.json')
-ADDRESS = '0x01735230'
-SYMBOL = 'bb_leaf_chain_deref_01735230'
+# The pilot's address is an ANSWER, not an input: it is whatever `pilot_choice` selects from the family's
+# landed members, so it is derived here rather than copied. A copy is a second source of truth that agrees
+# on the day it is written and silently describes a different member the first time the rule or the table
+# moves -- and the agnostic gate refuses the literal anyway, which is the same rule stated as a gate.
+import emit_leaf_family as _E
+_chosen, _key, _shared = _E.pilot_choice(_E.members('chain_deref', landed=True))
+ADDRESS = '%#010x' % _chosen['address']
+SYMBOL = 'bb_leaf_chain_deref_%08x' % _chosen['address']
+CASE = os.path.join(case_dir('chain_deref'), '%08x' % _chosen['address'], 'case.json')
 
 # name -> (old text, new text, channel, the sentence the channel must confirm)
 PREREG = {
