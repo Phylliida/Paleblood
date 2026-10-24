@@ -2004,9 +2004,20 @@ Three numerals recurred in one stretch and each was resolved only by asking for 
   per the ledger**, with `36,924 + 1,172 = 38,096` and `114,023 + 43,734 = 157,757`. **The numeral matched;
   the set leaves no set behind.** Arithmetic coincidence, recorded as one.
 
-**Rule, now with three citations: every published count is intersected against its neighbours before it is
+**Rule, now with four citations: every published count is intersected against its neighbours before it is
 quoted.** Implausibility is not a detector that can be installed -- the 447 was plausible and wrong, and the
 `1` in `frontier n ledger` was checked only because it looked absurd.
+
+**The fourth is the one where the near-match was between a population named and a population measured**, and
+it arrived in prose rather than in a number: *"1,117 of 1,172 is 95%, so `branch` is a size label wearing a
+semantic name"*. `1,117 of 1,172` is `branch == '1' AND landed`; `branch` is 114,023 rows and 2.2% of them are
+41 B. **A right number attributed to the wrong population**, read off the mode of a conditioned subset as if
+it were the mode of the variable.
+
+**Which gives the rule its cheaper half, and it belongs in the rule rather than beside it: a claim is measured
+BEFORE IT IS WRITTEN, not only after it is quoted.** `1y` therefore has two halves -- *measure the claim, then
+write it* (pre-publication: one command falsifies a sentence before it lands) and *intersect the number*
+(post-publication: the number is already in someone's notes and only a set will retire it).
 
 #### and the distribution trap this decision walked into before it was written
 
