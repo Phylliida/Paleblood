@@ -33,7 +33,9 @@ class CaptureRefusesVolatileXmm(unittest.TestCase):
         fresh = write_table()
         committed = TABLE.read_text()
         self.assertEqual(committed, fresh,
-                         "symbols/capture_ok.csv is stale: regenerate with `capture_precheck.py --table`")
+                         "symbols/capture_ok.csv is stale: regenerate with "
+                         "`capture_precheck.py --table > symbols/capture_ok.csv` "
+                         "(the tool prints; the shell writes -- the bare command leaves this file alone)")
         rows = [r for r in committed.splitlines()[1:] if r]
         self.assertGreater(len(rows), 0, "the table must carry at least one candidate row")
         for row in rows:                                  # a row must be a verdict plus a key, never one alone
