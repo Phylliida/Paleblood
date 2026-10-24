@@ -43,6 +43,19 @@ not evidence about the post-instrument tree.
 rather than read against the ratio afterwards. The direction that matters is falsifiable: a stretch that adds a
 refusal surface and no row is **a miss against a written target**, not an interpretation of a number.
 
+What **"row"** means here, so the numerator cannot be graded generously either -- and the unit matters because
+`39 : 1` above was measured in COMMITS while this target is stated in ROWS:
+
+> **a row is an address in `symbols/functions.csv` with a body AND its evidence trace** -- `1ab` terms 1-3
+> satisfied: a first-run witness equal to the original's, at least two mutants dead at named disjoint magnitudes,
+> and cases reconstructible from the row's own fields.
+
+**A batch landing at `original` with no evidence trace does not count as a row for this target**, even though it
+adds lines to the same file. It would satisfy the letter and produce exactly the transcription the campaign exists
+to stop accumulating, and it would then read as the inflection. `0x0196f030` is the only row on this branch that
+counts by this definition -- six pre-registered verdicts, three dead mutants, cases landed and the witnesses re-run
+from them.
+
 What "refusal surface" means here, so the target cannot be graded generously later: a new place where the tree says
 no and did not before -- a new `SystemExit`/`refuse` path, a new required flag, a new guard with a failing input, or
 a new column whose absence is refused. Tests *of* an existing surface are not a new surface; docstrings are not a
