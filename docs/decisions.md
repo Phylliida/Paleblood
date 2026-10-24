@@ -1989,3 +1989,37 @@ before it is quoted.** Here the near-match trap (6,657 vs 6,210, 0.9% apart, 96.
 **+1 landed body, 15 B, `verified` unchanged at 21, frontier addressable 6210 -> 6209, address-dependent band
 7956 -> 7955.** If either count fails to move, that is a finding naming which instrument disagrees, not a
 success.
+
+### 1y — numerals are cheap and sets are expensive: three near-matches, and a distribution of a selection
+
+Three numerals recurred in one stretch and each was resolved only by asking for the SET:
+
+- **447** -- `6,657` (address-dependent, in-band) against `6,210` (frontier addressable). Counts 6.7% apart;
+  **intersection 267**, i.e. **96.7% disjoint**. The small difference was the reassuring number and it was
+  the lie: a near-match is evidence *against* two counts being one number, because it is exactly what stops
+  the next check.
+- **267** -- the only route that produced that answer. A count comparison cannot; set membership can.
+- **1,172** -- `landed - free_landed` in `progress.reach_line`, i.e. bodied rows with `branch == '1'`. The
+  numeral recurs in my own earlier note as "1,172 shapes". Measured: **1,172 distinct addresses, all bodied
+  per the ledger**, with `36,924 + 1,172 = 38,096` and `114,023 + 43,734 = 157,757`. **The numeral matched;
+  the set leaves no set behind.** Arithmetic coincidence, recorded as one.
+
+**Rule, now with three citations: every published count is intersected against its neighbours before it is
+quoted.** Implausibility is not a detector that can be installed -- the 447 was plausible and wrong, and the
+`1` in `frontier n ledger` was checked only because it looked absurd.
+
+#### and the distribution trap this decision walked into before it was written
+
+`landed` rows with `branch == '1'` are **1,117 of 1,172 exactly 41 bytes (95%)**, which reads as *"`branch`
+is a size label wearing a semantic name"*. **It is not, and the tail says so:**
+
+    band, branch=1: 114,023 rows, 2,455 of size 41 (2.2%), size range 3 .. 78,317
+    band, branch=0:  43,734 rows,    45 of size 41
+    landed, branch=0: 36,924 rows,    0 of size 41
+
+The 95% is a property of **the landed selection**, not of the flag: what it actually records is that the
+branch-containing rows landed so far are dominated by one 41-byte shape. Size does not imply branch (45
+counterexamples) and branch does not imply size (111,568 counterexamples). **A distribution of a selection is
+not a distribution of the property** -- the `+0x58` histogram lesson in its general form: a distribution that
+looks like one thing is a distribution whose tail is the finding. The 55 non-41-byte landed branch rows are
+the only landed rows on which the flag carries information a size would not.
