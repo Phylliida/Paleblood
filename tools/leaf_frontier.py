@@ -42,7 +42,12 @@ def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
     # original", so a row an emitter landed as `original` -- transcription, all an emitter CAN land -- reads
     # False here and is re-offered as work already done. The cache is NOT stale: its 38,096 landed rows equal
     # functions.csv's 38,096 non-original rows exactly. One word, two meanings. Excluded and COUNTED.
-    bodies = {r['address'] for r in C.read_rows('symbols/functions.csv')}
+    # ONE SOURCE: the band's own `has_body` column. Reading functions.csv here was a second copy of the
+    # same truth in a different artifact -- the shape this file just stopped committing one layer down.
+    if 'has_body' not in (rows[0] if rows else {}):
+        raise SystemExit('frontier: branch_band.csv.gz has no has_body column -- regenerate it with '
+                         'tools/branch_census.py; a band without it cannot tell a body from a status')
+    bodies = {int(r['address'], 16) for r in rows if str(r['has_body']) == 'True'}
     bodied = [(a, s) for a, s in free_unlanded if a in bodies]
     free_unlanded = [(a, s) for a, s in free_unlanded if a not in bodies]
     indep = [(a, s) for a, s in free_unlanded if len(J.owners(ext, a)) == 1]

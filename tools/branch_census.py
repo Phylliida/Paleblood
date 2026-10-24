@@ -33,6 +33,9 @@ def compute(out=None):
     md = open(C.ELF, 'rb').read()
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     landed = C.landed_addresses()
+    # Read through the typed reader: a fresh csv.DictReader over a catalogue is what check_catalogue refuses.
+    import catalogue as _CAT
+    bodies = {r['address'] for r in _CAT.read_rows('symbols/functions.csv')}
     extents = J.load_extents('symbols/ghidra_functions.csv')
     cat = [(int(r['address'], 16), int(r['size'])) for r in
            csv.DictReader(open('symbols/ghidra_functions.csv'))]
@@ -50,8 +53,12 @@ def compute(out=None):
     if out:
         buf = io.StringIO()
         w = csv.writer(buf)
-        w.writerow(['address', 'size', 'branch', 'landed'])
-        w.writerows([(f'{a:#010x}', s, b, l) for a, s, b, l in rows])
+        # TWO COLUMNS, TWO MEANINGS, each named for what it is. `landed` means "status is not original" --
+        # what an emitter can move. `has_body` means present in symbols/functions.csv at ANY status, which
+        # is what a candidate test needs. The pair exists because a reader given only `landed` read it as
+        # `has_body` and re-offered a landed body as work already done.
+        w.writerow(['address', 'size', 'branch', 'landed', 'has_body'])
+        w.writerows([(f'{a:#010x}', s, b, l, a in bodies) for a, s, b, l in rows])
         # 3.6 MB of repetitive rows is over the repo's 2 MB artifact limit, and it is regenerable from
         # the committed tool, so it ships gzipped with mtime=0: byte-reproducible, not merely small.
         if out.endswith('.gz'):
