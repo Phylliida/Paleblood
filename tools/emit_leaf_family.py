@@ -636,6 +636,50 @@ def case_docs(name, m):
         yield f'{k}.json', {'schema': 1, 'address': f'{m["address"]:#010x}',
                             'returns': 'i64', 'args': {}}
         return
+    if TEMPLATES[name]['kind'] == 'c_addr_sext8':
+        # NO args and NO buffers: the chain-shaped fallback emitted ONE 67,008,081-BYTE BUFFER for a body
+        # that reads a single byte -- the 503 MB lesson at a hundred times the scale. The plants are
+        # literals and the pointer is a `guest:` VALUE, so there is nothing to size.
+        #
+        # The pointer P is a FIXTURE CHOICE, not a derivation, and it sits on the first 16-byte boundary
+        # above everything the body touches. That is why this branch cannot reproduce a hand-authored
+        # case byte for byte: the base is arbitrary, and a rule that "derived" it would be a
+        # transcription wearing a formula's clothes. The plants are what carry the evidence.
+        #
+        # The slot is above filesz end 0x57e5b38 and below memsz end 0x5AD30F4, so it is zero-fill and has
+        # NO image bytes: a naive read at slot - BIAS returns ELF metadata, which is how a fabricated
+        # pointer arrives with a file offset for provenance. Planting the pointer is the only route.
+        p = (m['slot'] + m['k2'] + 8 + 0xF) & ~0xF
+        assert p > 0x57e5b38 and p + m['k2'] + 8 < 0x5AD30F4, \
+            f'{name}: pointer {p:#x} does not leave the plants inside the tail'
+        # 0x7f / 0x80 straddle the sign boundary at the SMALLEST distance; 0xff sits 128 away and cannot
+        # distinguish "sign-extends the top bit" from "extends with some constant". The byte at +4 is the
+        # RULER: a body reading a neighbouring displacement returns 0x01 and names itself.
+        for fn, byte in (('a.json', '7f'), ('a_prime.json', '80')):
+            yield fn, {
+                'schema': 1, 'address': f'{m["address"]:#010x}', 'returns': 'i64', 'args': {},
+                'memory': [{'addr': f'{m["slot"]:#x}', 'guest': f'{p:#x}'},
+                           {'addr': f'{p + m["k2"]:#x}', 'bytes': byte},
+                           {'addr': f'{p + m["k2"] + 4:#x}', 'bytes': '01'}],
+            }
+        yield 'abi.json', {
+            'calling_convention': 'sysv_amd64', 'confidence': 'supported',
+            'evidence': [
+                f'guest {m["address"]:#010x}, {m["size"]} B: `mov rax,[rip+{m["k"]:#x}]; '
+                f'movsx eax,byte [rax+{m["k2"]:#x}]; ret`',
+                f'the RIP-relative target is the slot {m["slot"]:#x}, above filesz end 0x57e5b38 and below '
+                'memsz end 0x5AD30F4, so it is zero-fill with no file bytes; a naive image read there '
+                'returns ELF metadata and would fabricate a pointer',
+                'the second instruction writes eax, so rax = sext32(byte at pointer+K2) with the upper 32 '
+                'bits zero by construction -- the exact 64-bit witness',
+                'no register arguments: the body derives its own pointer from the slot, so the case plants '
+                'the pointer and the two bytes',
+            ],
+            'stack_alignment': 16, 'arguments': [], 'returns': {'type': 'int64_t'},
+            'input_regions': [], 'writable_regions': [],
+            'execution_limits': {'timeout_seconds': 30},
+        }
+        return
     if TEMPLATES[name]['kind'] == 'c_chain_store':
         # One case per BEHAVIOURAL key (slot, k2, imm, width): the identity is the resolved slot, not the
         # load displacement, so 78 rows share 62 cases. The slot holds a GUEST pointer -- never `pointer`,

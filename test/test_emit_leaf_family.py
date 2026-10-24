@@ -94,6 +94,32 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
             self.assertIn('nothing written', out.getvalue())
         self.assertEqual(open(tu, 'rb').read(), before, 'neither invocation may touch the TU')
 
+    def test_the_sext8_branch_plants_what_the_mutants_were_proved_against(self):
+        """case_docs for a table family must plant the pointer, the byte and the ruler.
+
+        The chain-shaped fallback emitted ONE 67,008,081-byte buffer and no plants for a body that reads
+        one byte -- three case files that agree on zero, beneath a body they cannot certify. The plants,
+        not the pointer's address, carry the evidence: P is a fixture choice, so the comparator is
+        relational. (The first version of this comparator keyed the SLOT entry by its offset from P and
+        failed -- an absolute address compared by its distance from a value it does not derive from.)
+        """
+        m = {'address': 0x0196f030, 'size': 15, 'k': 0x3fe7641, 'slot': 0x05956678, 'k2': 0x175c}
+        docs = dict(E.case_docs('movsx_deref', m))
+        self.assertEqual(sorted(docs), ['a.json', 'a_prime.json', 'abi.json'])
+        for fn, byte in (('a.json', '7f'), ('a_prime.json', '80')):
+            d = docs[fn]
+            self.assertNotIn('buffers', d, 'a buffer here is the 503 MB lesson at a hundred times the scale')
+            self.assertEqual(d['args'], {})
+            p = int(d['memory'][0]['guest'], 16)
+            self.assertEqual(int(d['memory'][0]['addr'], 16), m['slot'])
+            self.assertGreater(p, 0x57e5b38, 'the pointer must live in the tail, not in filesz')
+            self.assertEqual((int(d['memory'][1]['addr'], 16), d['memory'][1]['bytes']),
+                             (p + m['k2'], byte))
+            self.assertEqual((int(d['memory'][2]['addr'], 16), d['memory'][2]['bytes']),
+                             (p + m['k2'] + 4, '01'), 'the ruler byte that names a wandered displacement')
+        self.assertEqual(docs['abi.json']['arguments'], [])
+        self.assertEqual(docs['abi.json']['writable_regions'], [])
+
     def test_zero_members_at_all_is_a_message_not_a_crash(self):
         with mock.patch.object(E, 'members', lambda *a, **k: []), \
                 mock.patch.object(E, 'owned_rows', lambda *a, **k: {}):
