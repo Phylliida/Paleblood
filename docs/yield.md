@@ -237,3 +237,28 @@ to the byte is evidence to test, not a conclusion -- five sizes admit 31 subsets
 **First command of the next stretch:** test that membership directly -- read the predicate `bytes_landed` uses and
 name the rows it counts. **Not this arithmetic again.**
 
+## The byte 101 LOCALISED, measured: `bytes_landed` is exact, and `bytes_transcribed` omits two named rows
+
+Two derivations from one artifact, compared (`awk` over `symbols/functions.csv`, `NR>1`):
+
+    all rows        38,101 rows   325,262 bytes
+    not original    38,096 rows   324,066 bytes   <-- equals the board's bytes_landed, to the byte
+    original             5 rows     1,196 bytes
+    closure: 324,066 + 1,196 = 325,262  (exact)
+
+**`bytes_landed = 324,066` is confirmed exact** against `status != original`. **`bytes_transcribed = 325,161` is 101
+short of the file total 325,262** -- so it is not "sum of all sizes", and the 101 is not arithmetic drift: it is
+**101 bytes of rows that `bytes_transcribed` does not count.**
+
+**The subset is unique, and it was checked rather than guessed:** of the 31 subsets of the five `original` sizes,
+**exactly one sums to 1,095** -- `{1072, 8, 15}` = `0x00414040`, `0x0111a600`, `0x0196f030`. So the rows
+`bytes_transcribed` omits are **`0x004632d0` (67) and `0x024264d0` (34)**, and `67 + 34 = 101`. The earlier
+`34 + 67 = 101` hypothesis was right about the rows and **wrong about the mechanism**: they are **excluded, not
+double-counted** -- the gap is `1,196 - 101`, not `1,196 - 101` by inclusion.
+
+**`0x024264d0` is the retired row that was never landed**, so its exclusion from a *transcribed* count is correct by
+the word. **The defect is therefore not in either number but in the label pair**: `bytes_transcribed` reads as "the
+file's total" and means "rows carrying a transcribed body", which is the *fourth* time tonight a number was right and
+its name wrong. **A count named after the artifact it is computed over would have made this unwritable** -- the same
+repair owed for `store_k`, one axis over.
+
