@@ -394,3 +394,22 @@ existing invariant over a wider population is not, and a test added to a surface
 about one. A linter written and green in the same hour as its first run has been tested by nothing but itself, which is
 the failure `1ab` exists to make unwritable for bodies and this clause exists to make unwritable for documents.
 
+## LAST CLAUSE, so it is read on a night nobody remembers writing it: STUBBING is a surface, NARROWING is a scope claim
+
+The fifth clause exempts re-asserting an existing property "over a wider population" and says nothing about the two
+ways a green gets **manufactured** instead of widened. Both are now named, and they split:
+
+  * **Substituting a stub for the artifact under test is a SURFACE.** The property being asserted may be old; the thing
+    it is asserted against is new, so the test stops being evidence about the product. This is the
+    `test_host_hooks.c:160-167` defect generalised: **a fixture that compiles its own library cannot notice the property
+    leaving the product.** A stub is the same move at a smaller scale, and it arrives looking like a fixture.
+  * **Narrowing a test's population is NOT a surface -- it is a SCOPE claim, and it must be printed with the test.** A
+    test narrowed to the nineteen rows that pass is not a defect of the gate; it is a defect of the sentence that later
+    quotes it as 47. **The rule is the one already in force for counts: never quote a number without its population**,
+    now applied to tests, where the population is the fixture.
+
+**Why the split is not cosmetic:** a stubbed test is a lie about the subject, and no population beside it can repair
+that; a narrowed test is a true statement about a small subject, and a printed population repairs it completely. **One
+is a surface and the other is a caption** -- and the campaign's own history says the caption is where the damage lands,
+because `6,657` and `6,210` were both true and it was the sentence joining them that was false.
+
