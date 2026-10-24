@@ -263,3 +263,26 @@ stated in words, because a 64-bit unsigned subtraction has no sign to carry it.*
 The three magnitudes remain disjoint, so a red on A' still names the body. What changed is that the claim can
 now be checked: **a delta quoted without its order is a number that agrees with whichever subtraction flatters
 it**, which is the store/load direction defect one tier down.
+
+### Amendment: the third mutant gets a computable magnitude, and the number in the proposal was not one
+
+Plant `0x01` at `p+K+4` in both cases, so the wrong-displacement body reads a **known** byte instead of an
+unknown one. The row then has a magnitude and a direction like the others:
+
+| mutant | case | expected | observed | magnitude | direction |
+|---|---|---|---|---|---|
+| `load_disp + 4` | A  (`0x7f` at `p+K`) | `0x0000007f` | `0x00000001` | `0x7e` | BELOW |
+| `load_disp + 4` | A' (`0x80` at `p+K`) | `0xffffff80` | `0x00000001` | `0xffffff7f` | BELOW |
+| `movzx eax` | A' | `0xffffff80` | `0x00000080` | `0xffffff00` | BELOW |
+| `movsx rax` | A' | `0xffffff80` | `0xffffffffffffff80` | `0xffffffff00000000` | ABOVE |
+
+**The proposed figure `0xffffffff0000007f` reproduces under neither order:** `expected - actual (mod 2^64)` is
+`0xffffff7f` and `actual - expected (mod 2^64)` is `0xffffffff00000081`; the magnitude is `0xffffff7f`. Recorded
+rather than silently replaced, because a delta that reproduces under no stated subtraction is the exact object
+the third column was rebuilt to prevent -- **and this is the second time in two amendments that a quoted delta
+belonged to a subtraction nobody had named.**
+
+**What the planted neighbour buys beyond a number:** the displacement mutant's red is now attributable with no
+reasoning -- its magnitude differs from the extension mutants' and its direction is BELOW where the width
+mutant's is ABOVE. **The weakest row became the strongest for one planted byte**, and the fixture already knows
+`K`; clause 2d still holds because a planted `0x01` four bytes on keeps every 4-byte window distinct.
