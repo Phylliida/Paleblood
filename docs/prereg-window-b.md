@@ -155,3 +155,35 @@ fix went first and alone, and #19 now proves the same thing against 6,209.
 
 The numbers above that this amendment supersedes stay as they were measured, with their provenance beside
 them: a pre-registration that rewrites its own history cannot be checked against anything.
+
+### Amendment: the witness width, decided per family before either runs
+
+`pointer` buys legality at the cost of bits: with a runner-chosen buffer address the case cannot know `rax`
+above bit 7, and the only directly assertable claim is `rax & 0xff == <byte at buf+K>`. That is exactly the
+form that let `mov al,K` pass 793/793 while asserting nothing about `rax`'s upper bytes. The two families
+carry this cost differently, so they are decided differently.
+
+**Template #19 (`movsx eax,[rax+K]`) -- EXACT 64-BIT WITNESS, no pointer term.** `movsx eax` writes `eax`, so
+the result is `rax = sext32(byte_at(p+K))` and **the upper 32 bits are zero by construction**, not by
+assumption. The pointer term is *absent from the result*: the body replaces `rax` rather than merging into it.
+So the assert is `rax == 0x00000000FFFFFF80`-style exact equality, 32 significant bits plus 32 provably zero,
+and any wrong displacement reads a different planted byte and goes red. **Discriminating power: full.**
+
+**The 47 (`mov al,[rax+K]`) -- 8-BIT WITNESS, DECLARED.** The result is `rax = (p & ~0xff) | byte`, so
+`rax & ~0xff` is the runner's choice and the case cannot assert it. Pre-registered in these words: **the 47's
+discriminating power is 8 bits; the upper 56 are unasserted and are named as unasserted, not as checked.** A
+pass on any of the 47 certifies the byte, the displacement and the fault behaviour -- never the survivor half.
+
+**Two recovery routes, both recorded with why they are not in force yet:**
+* A declared fixed guest buffer address. **Unavailable:** `guest` in a `memory` entry asserts content at an
+  address, it does not place a buffer, and rule 6 forbids deriving the expected value from what the runner
+  chose. The buffer's address is the runner's, and that is the price of the buffer existing at all.
+* Asserting the RELATION `rax & ~0xff == p & ~0xff` with `p` read at assert time. **Legitimate in principle
+  and not yet expressible:** the case schema has no expectation expression that can reference the resolved
+  address. `differential.py:767-776` already does combinatorial pointer-alias exploration, which is the place
+  a relation-aware assertion would live. **Named as the follow-on, not silently dropped.**
+
+**Consequence for ordering, and it is the reason #19 goes first:** #19's witness is strictly stronger than any
+of the 47's. A pass there is worth more than a pass on a member whose upper 56 bits are unasserted, and it is
+the only member where the retired clause (`slot byte >= 0x80`) is live -- sign extension is exactly the
+mechanism that made it vacuous for `mov al/eax/rax`.
