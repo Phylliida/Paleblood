@@ -49,6 +49,13 @@ class LeafFrontierTest(unittest.TestCase):
             self.assertEqual(bandname, "short" if int(size) < 14 else "addressable")
 
 
+
+    # THE TWO TESTS BELOW TAKE ~1.1 s; `test_committed_frontier_reproduces` above takes ~87 s, and the 80x is
+    # not redundancy to be tidied. They answer different questions: these ask "do the two artifacts agree?"
+    # (consistency), that one asks "does the deriver produce what the artifact should contain?" (correctness).
+    # A stale band and a wrong frontier both make the cheap tests red; a broken deriver whose artifact was
+    # regenerated to match makes them GREEN and only the slow one red. Keep both -- a suite shortened by
+    # deleting the expensive half deletes the only check on the predicate that produced the frontier.
     def test_band_has_body_count_matches_the_catalogue(self):
         """THE ONE FRESHNESS CHECK THAT CAN WORK, and `landed` could not have been it.
 
