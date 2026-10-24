@@ -50,3 +50,30 @@ class Board(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class PlantedControl(unittest.TestCase):
+    """A branch that has stopped firing and a branch that cannot fire look identical from outside."""
+
+    def test_a_retired_address_advertised_as_a_candidate_reads_open_defect(self):
+        import tempfile
+        import board
+        with tempfile.TemporaryDirectory() as d:
+            sym = os.path.join(d, 'symbols')
+            os.makedirs(sym)
+            def put(name, text):
+                with open(os.path.join(sym, name), 'w') as fh:
+                    fh.write(text)
+            put('functions.csv', 'address,size,name,system,status,notes\n'
+                                 '0x024264d0,34,x,game,original,\n')
+            put('retired.csv', 'address,reason,date,revisit\n0x024264d0,why,2026-10-23,never\n')
+            put('leaf_frontier.csv', 'address,size,class\n0x024264d0,34,addressable\n')
+            put('ghidra_functions.csv', 'address,size\n0x024264d0,34\n')
+            for name, head in (('verification.csv', 'function,cases\n'),
+                               ('reviews.csv', 'address,name\n'),
+                               ('quarantine.csv', 'function,cases\n')):
+                put(name, head)
+            text = board.render(d)
+        self.assertIn('OPEN DEFECT', text)
+        self.assertIn('0x24264d0', text)
+        # and the override is restored: the real tree still renders its real board
+        self.assertNotIn('OPEN DEFECT', board.render())

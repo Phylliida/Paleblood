@@ -598,7 +598,8 @@ def reach_line(root=".") -> str:
     return (f'reach: {landed} landed / {free} branch-free = {100 * free_landed / free:.2f}% PROGRESS '
             f'· {landed} / {total} catalogued = {100 * landed / total:.2f}% SCOPE '
             f'· branch {branch} (landed {landed - free_landed}) '
-            f'· unlanded branch-free {free - free_landed}' + bytes_line)
+            f'· unlanded branch-free {free - free_landed} [branch_band: includes retired rows;'
+            f' symbols/leaf_frontier.csv excludes them]' + bytes_line)
 
 
 def main() -> int:

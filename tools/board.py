@@ -19,7 +19,8 @@ import catalogue  # noqa: E402  -- typed reader: address/size are ints, one radi
 import progress  # noqa: E402  -- the hook's own clause; the board QUOTES it and never recomputes
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SYM = os.path.join(ROOT, 'symbols')
+DEFAULT_SYM = os.path.join(ROOT, 'symbols')
+SYM = DEFAULT_SYM
 OUT = os.path.join(ROOT, 'docs', 'board.md')
 LANDED = ('edge-verified', 'verified')
 
@@ -43,7 +44,7 @@ def addrs(name, key='address'):
     return {r[key] for r in rows(name)}
 
 
-def render():
+def _render():
     fn = rows('functions.csv')
     by = collections.Counter(r['status'] for r in fn)
     bodied = [r for r in fn if r['status'] in LANDED]
@@ -107,6 +108,21 @@ def render():
         '',
     ]
     return '\n'.join(lines)
+
+
+def render(root=None):
+    """Render against ROOT, or against a synthetic tree so the defect branches can be exercised.
+
+    A branch that has stopped firing and a branch that cannot fire look identical from outside, so the
+    OPEN DEFECT line gets a planted control against a directory that advertises a retired address.
+    The override is restored in `finally`: a synthetic render must not leak into the next one.
+    """
+    global SYM
+    old, SYM = SYM, (os.path.join(root, 'symbols') if root else DEFAULT_SYM)
+    try:
+        return _render()
+    finally:
+        SYM = old
 
 
 def main(argv):
