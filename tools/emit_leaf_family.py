@@ -869,7 +869,14 @@ def main(argv):
               f"members (missing {len(miss)}{chr(58) + hex(miss[0]) if miss else chr(0)*0}, extra {len(extra)}). "
               f"A shared TU is written complete or not at all; no file was opened.", file=sys.stderr)
         return 1
-    dry_run = '--dry-run' in argv
+    # WRITING REQUIRES --write. The polarity here used to be inverted: a BARE invocation wrote the
+    # body, the cases and three tracked catalogs, and `--dry-run` was the only way to not write. The
+    # failure that produced is the worst kind -- the check meant to precede a landing performed it,
+    # and the landing then reported "0 unlanded members (1 already landed). Nothing to land here", a
+    # refusal that reads as a completion. Eleven other tools here require a flag to write; this one
+    # required its absence. The refusal is placed where the counts exist, after every check.
+    write = '--write' in argv
+    dry_run = not write
     # Everything is assembled first and written second, so a dry run does all of it but the write:
     # the refusal above, the cases, the tables and the clash assertions are the parts that can fail.
     rows, pending = [], []
@@ -908,6 +915,13 @@ def main(argv):
         assert not clash, f'{table}: {len(clash)} addresses already present'
         all_rows, fields = build(existing)
         resolved.append((path, fields, all_rows))
+    if not write and '--dry-run' not in argv:
+        print(f'{name}: REFUSED -- this invocation would write game/leaf/{name}_family.cpp, '
+              f'{len(pending)} case file(s) and {len(resolved)} tracked table(s). Writing requires '
+              '--write; --dry-run performs every check and writes nothing. A bare invocation used to '
+              'write, which is how a dry run landed three catalog rows and its own landing then said '
+              '"nothing to land".', file=sys.stderr)
+        return 2
     if dry_run:
         print(f'  dry run: would have written {len(generated)} bytes to game/leaf/{name}_family.cpp, '
               f'{len(pending)} case file(s), {len(resolved)} table(s); nothing written, no file opened')

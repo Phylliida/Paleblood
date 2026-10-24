@@ -3,7 +3,7 @@ import os
 import sys
 import time
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
@@ -65,6 +65,34 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn('0 unlanded members', out)
         self.assertIn('--reemit rip_store', out)
+
+    def test_a_bare_invocation_refuses_by_name_and_writes_nothing(self):
+        """Writing requires --write; the control runs in the same method.
+
+        The polarity here used to be inverted -- a BARE invocation wrote the body, the cases and
+        three tracked catalogs, and `--dry-run` was the only way not to write. The failure that
+        produced is the worst kind: the check meant to precede a landing performed it, and the
+        landing then reported "0 unlanded members (1 already landed). Nothing to land here" -- a
+        refusal that reads as a completion. The member is mocked so the guard is the subject, not
+        today's family state.
+        """
+        member = {'address': 0x0196f030, 'size': 15, 'k': 0x3fe7641, 'slot': 0x05956678, 'k2': 0x175c}
+        tu = os.path.join(E.ROOT, 'game', 'leaf', 'movsx_deref_family.cpp')
+        before = open(tu, 'rb').read()
+        with mock.patch.object(E, 'members', lambda *a, **k: [member]):
+            err = io.StringIO()
+            with redirect_stderr(err):
+                rc = E.main(['movsx_deref'])
+            self.assertEqual(rc, 2, err.getvalue())
+            self.assertIn('--write', err.getvalue())
+            self.assertIn('REFUSED', err.getvalue())
+            # control: everything but the write happens, and the file is the same file afterwards
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = E.main(['movsx_deref', '--dry-run'])
+            self.assertEqual(rc, 0, out.getvalue())
+            self.assertIn('nothing written', out.getvalue())
+        self.assertEqual(open(tu, 'rb').read(), before, 'neither invocation may touch the TU')
 
     def test_zero_members_at_all_is_a_message_not_a_crash(self):
         with mock.patch.object(E, 'members', lambda *a, **k: []), \
