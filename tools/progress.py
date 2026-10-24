@@ -542,10 +542,14 @@ def extent_line(root=".") -> str:
             tied += 1
     short = [a for a, s in cat if s <= 13]
     short_landed = sum(1 for a in short if a in landed)
-    pct = 100.0 * tied / len(cat)
+    # A ZERO-LENGTH CATALOGUE IS AN ABSENCE, NOT A ZERO, and it used to be a ZeroDivisionError: an empty
+    # ghidra export crashed this line and the caller saw no stdout at all. The percentage is not applicable,
+    # and printing 0.0% would be worse than crashing -- a zero that means "not applicable" must never share a
+    # value with a zero that means "none of them". So it prints `n/a (empty catalogue)`.
+    pct = f"{100.0 * tied / len(cat):.1f}%" if cat else "n/a (empty catalogue)"
     return (f"extents: {len(cat)} catalogued \u00b7 <=13B {len(short)} (landed {short_landed}, "
             f"unlanded {len(short) - short_landed}) \u00b7 family_scan --min-size 14 excludes that whole band "
-            f"by default \u00b7 same-length overlapping extents {tied} ({pct:.1f}%) have no unique smallest "
+            f"by default \u00b7 same-length overlapping extents {tied} ({pct}) have no unique smallest "
             "(expected 0: sizes are decimal and this catalogue's extents are disjoint, so the tie branch is "
             "a guard against a catalogue that does not exist here, not a live condition)"
             + _parses_clause(root))

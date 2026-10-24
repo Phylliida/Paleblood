@@ -1617,6 +1617,11 @@ price that produced it.** (`1j`'s lesson applies to decisions too: a history row
    file actually declared. Never a nothing-to-check.
 5. **A refactor of a gate is proven by invariance on the real tree at its real rc.** Identity including the
    failure path; a proof taken only on a passing gate has not been taken.
+6. **An expected value derived from the actual value is a TAUTOLOGY, not a check.** `assertEqual(b1, b0 -
+   (b0 - b1))` passes for every possible input while reading as arithmetic; so does `139 + 6,749 = 6,888`, and so
+   does a pre-registration that dumps one mutated value as both baseline and payload. **Write the number the
+   artifact measured, not the expression that recomputes it** — and where a fixture borrows its bytes from the
+   real tree, derive its expectation from the fixture's own files, or the expectation expires with the tree.
 
 Convergence of spelling conventions across emitters is **NOT in force** — it was rejected on price (a re-emit
 invalidates `source_hash` and staleness-refuses all 78 recorded rows), and it survives only as an optional

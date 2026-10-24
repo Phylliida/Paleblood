@@ -361,6 +361,16 @@ in the same call:
 - cases using a `pointer` preset: **4,169**
 - cases using `memory` at all: **23,304**
 
+  **Correction, re-derived from `../data/cases` after the chain batch: 23,383.** The paragraph above is the
+  recorded figure and is superseded; `pointer` is unchanged at 4,169. **The +79 closes by name:** 78 are the chain family's
+  cases (`../data/cases/chain/<addr>/case.json`, each carrying a `memory` seed and no `pointer`), and the 79th is
+  `../data/cases/leaf/leaf_chain_deref_01fc69c0/leaf_chain_deref_01fc69c0.json` — a **fossil of the withdrawn
+  pre-registration's selection**, and the only non-`chain/` case mentioning `memory` whose mtime
+  (`2026-10-23 12:33`) is later than the commit that first wrote this figure (`2026-10-22 17:09`, `639f489`).
+  `23,304 + 78 + 1 = 23,383`, closed by enumeration rather than by assumption. It is **kept, not deleted**:
+  `../data/cases` is untracked by requirement, so a deletion there is irreversible and would move a number this
+  document has just recorded — an orphan case is the owner's to retire, not a correction's to tidy.
+
 **How it happened is the part worth keeping:** I wrote the sentence into the heredoc *before* executing the
 command that produces its number, so the number in the document was an expectation formatted as a measurement.
 **A claim typed before its instrument runs is a hypothesis wearing a result's clothes** — and it survived my own
