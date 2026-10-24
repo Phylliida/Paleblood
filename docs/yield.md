@@ -209,3 +209,31 @@ conclusion: this has not been measured.**
 **Unresolved, and the next stretch's FIRST command rather than its canon check** -- a board quoting a byte gap whose
 predicate is unknown is a number with a broken name, and the canon check would be built on top of it.
 
+## The ROW 101 is explained: multiplicity, measured. The BYTE 101 is a different question and stays open.
+
+Measured over `symbols/verification.csv` (header `function,cases,option,total,passed,failed,quarantined,source,cases_sha256,date`):
+
+    records                              38,197
+    distinct addresses                   38,096
+    addresses with > 1 record                30
+    surplus == sum(n_i - 1)                 101
+
+So **`38,197 - 38,096 = 101` is multiplicity, not membership**: 30 addresses carry 131 records. The prediction was
+right about the mechanism and **wrong about the number** -- 101 is not the count of duplicated addresses, it is the
+*excess* they carry, and the two would have been confused by anyone who stopped at the predicted figure.
+
+**Free cross-check nobody asked for: 30.** The number of addresses with more than one verification record is **exactly
+the 30 approvals the board reports against 21,086 all-rows-clean.** The approval count was always a *record* count; it
+now has a second derivation from the ledger itself.
+
+### The byte 101 is NOT the same 101, and one cause for both is arithmetically impossible
+
+A row is at least five bytes, so a row mechanism cannot produce a byte delta. **Tested separately, never in one
+sentence** -- and there is a candidate that is NOT a coincidence: **34 + 67 = 101**, and those are two of the five
+`original` rows' sizes (`0x024264d0` 34, `0x004632d0` 67). Hypothesis, **not measured**: `bytes_landed` includes those
+two rows as well as `bytes_transcribed`, which would make the gap `1,196 - 101 = 1,095` exactly. A subset sum matching
+to the byte is evidence to test, not a conclusion -- five sizes admit 31 subsets and one of them had to be small.
+
+**First command of the next stretch:** test that membership directly -- read the predicate `bytes_landed` uses and
+name the rows it counts. **Not this arithmetic again.**
+
