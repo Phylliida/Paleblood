@@ -57,6 +57,16 @@ def compute(out=None):
         # what an emitter can move. `has_body` means present in symbols/functions.csv at ANY status, which
         # is what a candidate test needs. The pair exists because a reader given only `landed` read it as
         # `has_body` and re-offered a landed body as work already done.
+        # THREE numbers, measured, and the tree has a word for only one of them:
+        #   has_body    38,101  present in symbols/functions.csv at ANY status (this column)
+        #   body_exists 38,099  a body was actually EMITTED on disk (tools/landed.body_exists)
+        #   not_original 38,096 status != 'original': evidence exists (tools/landed.byte_totals)
+        # 38,101 - 38,099 = 2 = the bodiless rows 0x004632d0 (67 B) and 0x024264d0 (34 B).
+        # 38,099 - 38,096 = 3 = the bodied originals 0x00414040 (1072), 0x0111a600 (8), 0x0196f030 (15).
+        # So a reader who computes "bodies" from this column is two rows wrong, and one who computes
+        # "not original" from it is five rows wrong. `has_body` is a MEMBERSHIP predicate, not a body
+        # predicate; the name is the defect (sixth of its kind: landed/has_body, store_k/store_k2,
+        # census_band/branch_census, the ratio's unit, the deferral's reason, and this one).
         w.writerow(['address', 'size', 'branch', 'landed', 'has_body'])
         w.writerows([(f'{a:#010x}', s, b, l, a in bodies) for a, s, b, l in rows])
         # 3.6 MB of repetitive rows is over the repo's 2 MB artifact limit, and it is regenerable from
