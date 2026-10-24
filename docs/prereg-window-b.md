@@ -335,3 +335,13 @@ are disjoint and two directions are represented. The displacement mutant's A mag
 is the ruler working -- a body that had wandered to P+K2+8 would have returned zero and been reported as a
 different body rather than rounded to the expected red. Cases live under `../data/cases/leaf19/`, untracked by
 requirement and cited here; the ledger cites bytes git does not track, and this is that note.
+
+### Amendment: where #19's cases actually live
+
+They are at `../data/cases/leaf/0x0196f030/` (`a.json`, `a_prime.json`, `abi.json`), not `leaf19/`: that is
+`case_dir('movsx_deref')`, and it matches the 21,138 existing `0x<addr>` directories in `cases/leaf`. They were
+authored at `leaf19/` and moved, and both witnesses reproduced unchanged from the new path -- a moved case that
+changes its answer was never self-contained. **Open, and before any record:** the emitter's non-chain layout is
+`cases/leaf/<key>/<key>.json`, which is a third convention beside `chain/<addr8>/case.json` and
+`leaf/0x<addr>/`; the record path must be pointed at the tree the cases are actually in, or the record will cite
+case hashes for files no tool reads.
