@@ -2057,3 +2057,28 @@ accident. Four tests in `test/test_rc_sh.py`, including the refusal and the fail
 `unittest discover` -- it prints **`Ran 0 tests` and exits 0**. A denominator collapsing to zero looks exactly
 like a pass, one tier below the code, in the harness that reports the code. Everything in that file is a
 `TestCase` method on purpose, and the count printed by the runner is part of the evidence.
+
+### 1aa — a count published before a run is a prediction only if it was not derived from the run's own parts
+
+`524 = 515 + 1 + 6 + 2` was published in `d0a07a7`, **before** the suite ran, and `Ran 524` held exactly. That
+is a **derivation confirmed, not an independent prediction**: every addend is a test I had just authored and
+could count on disk, so the only way 524 could have failed was if the suite ran something other than what the
+tree contains -- which is worth catching and is not the same as predicting.
+
+Two labels, and the difference is the whole value:
+
+* **Published before the run, from parts the run would exercise**: a prediction. A miss names an instrument.
+* **Published before the run, as the sum of its own addends**: a derivation. A miss names an instrument too,
+  but a hit confirms only that the suite ran the tree.
+* **Published or amended after the run**: a permission, not a prediction. It has permitted movement and
+  predicted nothing, and it must be labelled as an amendment rather than quoted as a hit.
+
+The rule: **a count is labelled *predicted*, *derived* or *amended*, and the label travels with the number.**
+`522 = 515 + 1 + 6` was **derived**; its amendment to **524** was **derived and published before the run**;
+`Ran 524` is **a derivation confirmed**. Nothing here was predicted, and the earlier sentence "*exactly as
+pre-registered*" overstated it -- a derivation pre-registered is still a derivation.
+
+Corollary, earned twice in one window: **an append to `decisions.md` stales `docs/board.md`,** because the board
+cites `reach_line`, which counts the ids. The append and the regeneration belong in one commit -- the second
+occurrence is 27-against-28 in `646313c`, caught by the regenerate-and-diff test on the first commit that could
+produce it.

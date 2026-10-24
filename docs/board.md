@@ -7,7 +7,7 @@ hook prints. It is not recomputed here: one fact printed twice is two that can d
 `84.43%` PROGRESS (`branch-free`) and `87.11%` (`all rows`) are two different denominators**
 that a hand-written burndown confused once already.
 
-    reach: 38096 landed / 43734 branch-free = 84.43% PROGRESS · 38096 / 157757 catalogued = 24.15% SCOPE · branch 114023 (landed 1172) · unlanded branch-free 6810 [branch_band: includes retired rows; symbols/leaf_frontier.csv excludes them] · bytes_landed 324,066 (bytes_transcribed 325,146) · decisions: ok (28 id(s), 3 frozen duplicate id(s), 4 citation(s) resolve)
+    reach: 38096 landed / 43734 branch-free = 84.43% PROGRESS · 38096 / 157757 catalogued = 24.15% SCOPE · branch 114023 (landed 1172) · unlanded branch-free 6810 [branch_band: includes retired rows; symbols/leaf_frontier.csv excludes them] · bytes_landed 324,066 (bytes_transcribed 325,146) · decisions: ok (29 id(s), 3 frozen duplicate id(s), 4 citation(s) resolve)
 
 `verified` **21** [symbols/functions.csv]
 approvals **30** [symbols/reviews.csv, rows] | differential records **38197** [symbols/verification.csv, rows] | quarantined **22** [symbols/quarantine.csv, rows]
