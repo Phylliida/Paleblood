@@ -1,3 +1,4 @@
+address,size,class
 0x004000f0,119,addressable
 0x00402020,17,addressable
 0x00403530,41,addressable

@@ -34,8 +34,11 @@ class LeafFrontierTest(unittest.TestCase):
     def test_frontier_rows_are_unlanded_and_branch_free(self):
         with gzip.open(REPO / "symbols" / "branch_band.csv.gz", "rt", newline="") as f:
             band = {int(r["address"], 16): (r["branch"], r["landed"]) for r in csv.DictReader(f)}
-        rows = [line.split(",") for line in
-                (REPO / "symbols" / "leaf_frontier.csv").read_text().splitlines()]
+        lines = [l for l in (REPO / "symbols" / "leaf_frontier.csv").read_text().splitlines() if l]
+        self.assertEqual(lines[0], "address,size,class",
+                         "the frontier must declare its columns: without a header every DictReader "
+                         "over it eats the first data row and reports a population short by one")
+        rows = [line.split(",") for line in lines[1:]]
         self.assertTrue(rows, "an empty worklist with a nonempty branch-free unlanded population "
                               "would read as success")
         for addr, size, bandname in rows:

@@ -104,12 +104,32 @@ def targets_for(md, cs, rows, want, segs):
     return out
 
 
-def frontier():
-    rows = [r for r in (l.split(',') for l in open(FRONTIER, newline='').read().splitlines()) if r]
-    return [(int(r[0], 16), int(r[1])) for r in rows if r[2] == 'addressable']
+COLUMNS = ('address', 'size', 'class')
 
 
-def frontier_population():
+def frontier_lines(path=None):
+    """The frontier's records, header checked and removed.
+
+    A reader that requires a header refuses a first record that is data. csv.DictReader swallows
+    such a record silently -- that cost one population here (6,809 rows counted from a file holding
+    6,810) and the shortage read as a finding -- so the columns are declared here and anything else
+    is a refusal with a sentence in it.
+    """
+    lines = [l for l in open(path or FRONTIER, newline='').read().splitlines() if l]
+    if not lines:
+        raise ValueError('the frontier is empty: an absent worklist is not an empty one')
+    head = tuple(lines[0].split(','))
+    if head != COLUMNS:
+        raise ValueError(f'first record is {head!r}, not {COLUMNS!r} -- a file whose first record '
+                         f'is data is a population short by one row in every DictReader')
+    return [l.split(',') for l in lines[1:]]
+
+
+def frontier(path=None):
+    return [(int(r[0], 16), int(r[1])) for r in frontier_lines(path) if r[2] == 'addressable']
+
+
+def frontier_population(path=None):
     """Every row of the frontier FILE, counted by its own third column.
 
     frontier() keeps `addressable` rows and drops the rest at the door, so their absence reads
@@ -120,10 +140,8 @@ def frontier_population():
     that requires subtraction will be subtracted wrong again.
     """
     cols = collections.Counter()
-    for line in open(FRONTIER, newline='').read().splitlines():
-        if line:
-            parts = line.split(',')
-            cols[parts[2] if len(parts) > 2 else '<no third column>'] += 1
+    for parts in frontier_lines(path):
+        cols[parts[2] if len(parts) > 2 else '<no third column>'] += 1
     return cols
 
 
@@ -167,6 +185,9 @@ def main(argv):
     # renders five rows of a population whose distribution IS the question leaves its totals to be
     # guessed, and the guess is indistinguishable from a measurement once it is in a document.
     ap.add_argument('--targets-json', action='store_true')
+    # --frontier exists so the header refusal is reachable by a test. A refusal no argument can
+    # vary is a paragraph, not a guard.
+    ap.add_argument('--frontier', default=FRONTIER)
     a = ap.parse_args(argv)
     if a.max_insns < 1 or a.top < 1:
         print('leaf_shape_census: --max-insns and --top must be positive', file=sys.stderr)
@@ -179,8 +200,12 @@ def main(argv):
     md = open(a.elf, 'rb').read()
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = True
-    rows = frontier()
-    cols = frontier_population()
+    try:
+        rows = frontier(a.frontier)
+        cols = frontier_population(a.frontier)
+    except ValueError as e:
+        print(f'leaf_shape_census: {a.frontier}: {e}', file=sys.stderr)
+        return 2
     shapes = collections.Counter()
     bytes_of = collections.Counter()
     ks = collections.defaultdict(set)

@@ -44,7 +44,10 @@ def main(argv):
     ap.add_argument('--out', default='symbols/leaf_frontier.csv')
     o = ap.parse_args(argv)
     fig = compute()
-    pathlib.Path(o.out).write_text(''.join(
+    # The header is part of the artifact. Without it every csv.DictReader over this file eats
+    # its first data row silently, and the resulting count is short by one in a way that reads
+    # like a finding (6,809 against a file holding 6,810 was exactly that).
+    pathlib.Path(o.out).write_text('address,size,class\n' + ''.join(
         f'{a:#010x},{s},{b}\n' for a, s, b in fig['rows']))
     print(f'branch-free unlanded {fig["branch_free_unlanded"]} · independent {fig["independent"]} '
           f'· nested {fig["nested"]}')

@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -146,6 +147,26 @@ class LeafShapeCensus(unittest.TestCase):
         for r in recs:
             self.assertEqual(sorted(r), ['address', 'load_target', 'size', 'src', 'store_k', 'where'])
         self.assertIn('population ', err2, 'the dumped population must carry its own buckets')
+
+
+    def test_a_headerless_frontier_is_refused_and_the_real_one_is_its_control(self):
+        """A reader that requires a header refuses a first record that is data.
+
+        csv.DictReader eats such a record silently, which cost one population here and made the
+        shortfall read as a finding. The control is in the same method: same reader, real file.
+        """
+        src = os.path.join(ROOT, 'symbols', 'leaf_frontier.csv')
+        lines = [l for l in open(src, newline='').read().splitlines() if l]
+        self.assertEqual(lines[0], 'address,size,class')
+        with tempfile.TemporaryDirectory() as td:
+            bare = os.path.join(td, 'bare.csv')
+            open(bare, 'w').write('\n'.join(lines[1:]) + '\n')
+            rc, out, err = run('--frontier', bare)
+            self.assertEqual(rc, 2, f'{out}\n{err}')
+            self.assertIn('first record is', err)
+            self.assertIn('short by one row', err)
+        rc, out, err = run('--frontier', src)
+        self.assertEqual(rc, 0, f'{out}\n{err}')
 
 if __name__ == '__main__':
     unittest.main()
