@@ -49,5 +49,33 @@ class LeafFrontierTest(unittest.TestCase):
             self.assertEqual(bandname, "short" if int(size) < 14 else "addressable")
 
 
+    def test_band_has_body_count_matches_the_catalogue(self):
+        """THE ONE FRESHNESS CHECK THAT CAN WORK, and `landed` could not have been it.
+
+        `landed` means "status is not original", so a landing to `original` moves the catalogue and not the
+        column -- which is why a stale band looked fresh for a whole slice. `has_body` must move on EVERY
+        landing, so a band built before one disagrees with functions.csv by exactly the rows since. The two
+        counts also agree with the trio total by a different route, which makes 38,101 double-sourced.
+        """
+        import csv as _csv, gzip as _gzip, pathlib as _p, catalogue as C
+        ROOT = _p.Path(__file__).resolve().parent.parent
+        with _gzip.open(ROOT / 'symbols/branch_band.csv.gz', 'rt', newline='') as f:
+            has_body = sum(1 for r in _csv.DictReader(f) if r['has_body'] == 'True')
+        bodies = len({r['address'] for r in C.read_rows(str(ROOT / 'symbols/functions.csv'))})
+        self.assertEqual(has_body, bodies, f'band says {has_body} bodies, the catalogue has {bodies} -- '
+                         'regenerate symbols/branch_band.csv.gz with tools/branch_census.py')
+
+    def test_no_advertised_row_has_a_body(self):
+        import csv as _csv, gzip as _gzip, pathlib as _p, catalogue as C
+        ROOT = _p.Path(__file__).resolve().parent.parent
+        with _gzip.open(ROOT / 'symbols/branch_band.csv.gz', 'rt', newline='') as f:
+            marks = {int(r['address'], 16): r['has_body'] for r in _csv.DictReader(f)}
+        with open(ROOT / 'symbols/leaf_frontier.csv', newline='') as f:
+            adv = {int(r['address'], 16) for r in _csv.DictReader(f)}
+        bodies = {r['address'] for r in C.read_rows(str(ROOT / 'symbols/functions.csv'))}
+        self.assertEqual(adv & bodies, set(), 'the frontier advertises rows that already have a body')
+        self.assertFalse([hex(a) for a in adv if marks.get(a) == 'True'])
+
+
 if __name__ == "__main__":
     unittest.main()
