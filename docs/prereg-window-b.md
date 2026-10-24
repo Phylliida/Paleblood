@@ -241,3 +241,25 @@ is what a pre-registration buys at its best: not "it will fail" but "the failure
 And the pair is doing double duty from one changed planted value: **the byte boundary and the destination
 width.** `0x80` is the value that exposes a width error, not only a sign error -- which is the same argument,
 one step further, for choosing the boundary rather than `0xff`.
+
+### Correction to the mutant table, one commit after it: two opposite subtraction orders, both looking right
+
+The table above states `movzx`'s delta as `0xffffff00` and `movsx rax`'s as `0xffffffff00000000`. **Those two
+numbers were computed with opposite orders.** `0xffffff00` is `expected - actual`; `0xffffffff00000000` is
+`actual - expected`. Computed consistently, `expected - actual (mod 2^64)` gives **`0x100000000`** for the
+`movsx rax` row -- which is what my own check printed, disagreeing with the sentence I had already written --
+and `actual - expected (mod 2^64)` gives **`0xffffffff00000100`** for the `movzx` row. **Neither row was a
+magnitude; both were an unsigned wrap read in whichever direction produced a recognisable pattern.**
+
+**The convention, fixed here: the table's third column is the MAGNITUDE of the difference, and the direction is
+stated in words, because a 64-bit unsigned subtraction has no sign to carry it.**
+
+| mutant | A | A' | magnitude | direction |
+|---|---|---|---|---|
+| `movsx eax` -> `movzx eax` | green | red | `0xffffff00` | observed is BELOW expected |
+| `movsx eax` -> `movsx rax` | green | red | `0xffffffff00000000` | observed is ABOVE expected |
+| `load_disp + 4` | red | red | by VALUE, not by fault | n/a |
+
+The three magnitudes remain disjoint, so a red on A' still names the body. What changed is that the claim can
+now be checked: **a delta quoted without its order is a number that agrees with whichever subtraction flatters
+it**, which is the store/load direction defect one tier down.
