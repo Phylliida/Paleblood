@@ -28,21 +28,31 @@ static uint64_t *counters;
 static unsigned probe_count;
 static const char *out_path;
 
+/* One dump, callable from the timer and from atexit. The timer alone loses every run shorter than
+   its period, and the file it fails to write is indistinguishable from a run where nothing was
+   called: a boot that walls at the threads milestone exits in well under two seconds. */
+static void dump_now(void)
+{
+    if (!out_path || !counters)
+        return;
+    char tmp[4096];
+    snprintf(tmp, sizeof tmp, "%s.tmp", out_path);
+    FILE *f = fopen(tmp, "w");
+    if (!f)
+        return;
+    for (unsigned i = 0; i < probe_count; i++)
+        fprintf(f, "0x%08x %llu\n", probes[i].address,
+                (unsigned long long)__atomic_load_n(&counters[i], __ATOMIC_RELAXED));
+    fclose(f);
+    rename(tmp, out_path);
+}
+
 static void *dump_loop(void *unused)
 {
     (void)unused;
-    char tmp[4096];
-    snprintf(tmp, sizeof tmp, "%s.tmp", out_path);
     for (;;) {
         sleep(2);
-        FILE *f = fopen(tmp, "w");
-        if (!f)
-            continue;
-        for (unsigned i = 0; i < probe_count; i++)
-            fprintf(f, "0x%08x %llu\n", probes[i].address,
-                    (unsigned long long)__atomic_load_n(&counters[i], __ATOMIC_RELAXED));
-        fclose(f);
-        rename(tmp, out_path);
+        dump_now();
     }
     return NULL;
 }
@@ -143,6 +153,7 @@ int rt_probes_install(unsigned char *image, uint64_t image_size)
     pthread_t t;
     pthread_create(&t, NULL, dump_loop, NULL);
     pthread_detach(t);
+    atexit(dump_now);   /* a run shorter than the timer still leaves its counts on disk */
     fprintf(stderr, "probes: %u installed, %u skipped, counts in %s\n", probe_count, skipped, out_path);
     return 0;
 }
