@@ -244,8 +244,14 @@ def main(argv: list[str] | None = None, root: str = ROOT) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--captures', default=os.environ.get('BB_CAPTURES') or os.path.join(root, '..', 'captures'))
     ap.add_argument('--dry-run', action='store_true')
-    ap.add_argument('--to', choices=sorted(TIERS), default='verified',
-                    help='the tier to move to; --to verified is the original behaviour')
+    # The default is the tier that requires nothing but the record. --to verified requires a
+    # review, which this tool cannot issue and has never been given: a default that selects it
+    # turns a bare `promote --family X` into an attempt at a step whose precondition is absent, and
+    # a default must fail toward the semantics it can actually satisfy. (pbl_image_base defaults to
+    # 0 and never IMAGE for the same reason.)
+    ap.add_argument('--to', choices=sorted(TIERS), default='edge-verified',
+                    help='the tier to move to. Default edge-verified: the tier that requires '
+                         'nothing but the record. --to verified additionally requires a review.')
     ap.add_argument('--family', help='name prefix; REQUIRED for --to edge-verified')
     a = ap.parse_args(argv)
     if a.to == 'edge-verified':

@@ -1305,7 +1305,11 @@ class Promotion(unittest.TestCase):
             stderr = io.StringIO()
             with mock.patch.object(promote.subprocess, 'run', side_effect=verify), \
                     contextlib.redirect_stderr(stderr):
-                rc = promote.main(['--captures', os.path.join(root, 'captures')], root=root)
+                # The tier is named here because a default is not a premise: this test is about
+                # the copied-case-set refusal, and inheriting the default made it a test of
+                # whichever tier happened to be default that week.
+                rc = promote.main(['--to', 'verified', '--captures', os.path.join(root, 'captures')],
+                                  root=root)
             # rc alone would also be 1 if the review gate refused it, which is a different reason;
             # the message is what makes this a test of the copy.
             self.assertIn('copy of the recorded set', stderr.getvalue())
