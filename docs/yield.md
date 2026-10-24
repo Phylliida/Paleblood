@@ -340,3 +340,33 @@ which is the second of those tonight.
 table**, never on `store_k` from a printed census, and never on `load_disp`, which is row-unique here and would select
 exactly one member.
 
+## INVENTORY: the class that is not gated -- prose claims about artifacts
+
+Every instrument in this tree reads code or an artifact and compares it to something: `check_agnostic` over values,
+`tier_authority` over a heading, the frontier guard over the ledger union, `has_body` over a catalogue. **Not one of
+them can catch a sentence that names the wrong table, the wrong operand index, or an artifact that does not exist.**
+
+**Three of tonight's last four findings were of exactly that kind**, and none of them was found by an instrument:
+
+    "head -1 on the census output"        -- the census writes no artifact; no header exists
+    "store_k is instruction 1's displacement" -- ins[1] is the SECOND instruction; zero-indexed
+    "the 0x1590 pair shares both displacements" -- load_disp is 78-distinct, so it cannot, and the
+                                                  sentence names no table in which it could
+
+**The seven collisions tonight were not seven instrument failures. They were seven sentences**, and the instruments
+caught only the ones that had already become numbers. **A claim that reads like a measurement and names no artifact
+survives indefinitely** -- the `0x1590` pair did, for weeks, and was quoted in at least one pre-registration.
+
+**But "no gate" overstates the inventory, and the distinction is the useful part:**
+
+  * NOT gated, and probably not gatable: whether a sentence's *subject* is the artifact its parser reads. Deciding
+    that "instruction 1" means `ins[0]` requires understanding the English.
+  * GATED IF BUILT, and cheap: **artifact-existence and column-existence.** Every backticked `symbols/*.csv` in
+    `docs/` and `tools/` docstrings can be checked for presence, and every `file:column` claim for membership in that
+    file's header. That check would have caught **two of the three** above -- the census header that does not exist and
+    the `store_k` column that is not a column -- **without understanding a word of the prose.**
+
+**So the honest inventory is: prose claims are ungated on *meaning* and ungated on *reference*.** The reference half
+is writable and is **owed, not built** -- and it is deliberately **not** the canon check's single surface, because
+spending the stretch's one refusal on a doc linter would leave the row without its rendering rule.
+
