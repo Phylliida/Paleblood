@@ -2034,3 +2034,26 @@ counterexamples) and branch does not imply size (111,568 counterexamples). **A d
 not a distribution of the property** -- the `+0x58` histogram lesson in its general form: a distribution that
 looks like one thing is a distribution whose tail is the finding. The 55 non-41-byte landed branch rows are
 the only landed rows on which the flag carries information a size would not.
+
+### 1z — two conventions that were disciplines, now shapes: address spelling, and the rc of a pipeline
+
+**1. An address in prose matches the artifact's own spelling, zero-padded to eight hex digits.** The
+frontier writes `0x024264d0`; I searched `^0x24264d0` and got nothing, then reported "the row is not in the
+file" as if it were a fact about the file. It is the same defect as `1y`'s -- a numeral I typed where a set was
+needed -- and it will recur on every address below `0x10000000`, of which the frontier holds many. The carries
+that are spelled correctly (`0x00414040`, `0x0111a600`, `0x004632d0`) are the ones that made the wrong one
+look right. **Where the spelling cannot be trusted, normalise the grep (`grep -iE '^0x0*24264d0,'`); where it
+can, state the convention, because it costs nothing to hold.**
+
+**2. The rc of a command is the process's, never a pipeline member's -- so the pattern is replaced by a
+function.** Six `1s.4` violations, every one a `cmd | tail/head/grep; echo rc=$?`, every one correct-looking at
+the moment it was typed, and the sixth bought a commit that shipped a `TypeError`. **An invariant broken six
+times is a wish, not a rule.** `tools/rc.sh` provides `run <argv...>`, which redirects internally, prints the
+process rc, propagates it to `&&`, keeps the output for `RC_TAIL`, and **refuses a shell string containing
+`|`/`;`/`&&` rather than mis-measuring it** -- the failure this exists to prevent must not be reproducible by
+accident. Four tests in `test/test_rc_sh.py`, including the refusal and the failed-process case.
+
+**And the discovery that produced the tests:** a module of plain `test_*` FUNCTIONS is invisible to
+`unittest discover` -- it prints **`Ran 0 tests` and exits 0**. A denominator collapsing to zero looks exactly
+like a pass, one tier below the code, in the harness that reports the code. Everything in that file is a
+`TestCase` method on purpose, and the count printed by the runner is part of the evidence.
