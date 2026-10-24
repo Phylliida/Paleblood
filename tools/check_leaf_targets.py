@@ -26,6 +26,7 @@ A classifier that buckets an immediate as an address cannot tell a violation fro
 mov_eax_k's 132 "outside" constants are immediates -- so the family declares, and an undeclared
 family file is a refusal rather than a guess.
 """
+import json
 import os
 import re
 import struct
@@ -202,9 +203,45 @@ def main():
                 errs.append(f'{fam}: {len(gap)} of {len(targets)} {kind} targets past {where} but inside the '
                             f'other bound; first {gap[0]:#x} -- a target in the zero-fill tail is neither inside '
                             'filesz nor absent, and only `seeded` may claim it')
-            elif gap:
-                print(f'{fam:20s} {kind:10s} {len(targets)} targets inside memsz past filesz -- {source}: '
-                      'the case supplies the value (supply check owed separately)')
+            elif source == 'seeded':
+                # BOUNDED is not SUPPLIED. The case must reach the number the body NAMES, and the two
+                # artifacts compared here read nothing in common: the body is the TU, the seed is the case
+                # JSON. Absence REFUSES -- a missing case is not a family with nothing to check, it is a
+                # family whose differential has no subject.
+                body_slot = {}
+                parts = re.split(r'(bb_leaf_%s_[0-9a-f]{8})' % fam, text)
+                for i in range(1, len(parts) - 1, 2):
+                    a = int(parts[i].rsplit('_', 1)[1], 16)
+                    m = re.search(r'constexpr std::uintptr_t\s+(?:%s)\s*=\s*(0x[0-9a-f]+)' % spelling,
+                                  parts[i + 1])
+                    if m:
+                        body_slot[a] = int(m.group(1), 16)
+                if not body_slot:
+                    errs.append(f'{fam}: {source} declared but no body could be associated with an address '
+                                '-- the association is part of the check, not a convenience')
+                missing, mism, supplied = [], [], 0
+                for a, slot in sorted(body_slot.items()):
+                    cj = os.path.join(ROOT, '..', 'data', 'cases', 'chain', '%08x' % a, 'case.json')
+                    if not os.path.exists(cj):
+                        missing.append(a)
+                        continue
+                    seeds = [int(e['addr'], 16) for e in json.load(open(cj)).get('memory', [])
+                             if 'guest' in e]
+                    if slot in seeds:
+                        supplied += 1
+                    else:
+                        mism.append((a, slot, seeds[:2]))
+                if missing:
+                    errs.append(f'{fam}: {len(missing)} of {len(body_slot)} bodies have NO case file '
+                                f'(first {missing[0]:#010x}) -- absence refuses: a family whose differential '
+                                'has no subject is not a family with nothing to check')
+                if mism:
+                    a, slot, seeds = mism[0]
+                    errs.append(f'{fam}: body {a:#010x} names {slot:#x} but its case seeds '
+                                f'{[hex(x) for x in seeds]} -- bounded correctly, NOT supplied')
+                if not missing and not mism:
+                    print(f'{fam:20s} {kind:10s} {supplied} of {len(body_slot)} bodies: the named slot '
+                          'EQUALS the case seed address (two artifacts, neither reading the other)')
             else:
                 print(f'{fam:20s} {kind:10s} {len(targets)} targets inside {where} -- ok')
     for e in errs:
