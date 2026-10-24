@@ -286,3 +286,20 @@ belonged to a subtraction nobody had named.**
 reasoning -- its magnitude differs from the extension mutants' and its direction is BELOW where the width
 mutant's is ABOVE. **The weakest row became the strongest for one planted byte**, and the fixture already knows
 `K`; clause 2d still holds because a planted `0x01` four bytes on keeps every 4-byte window distinct.
+
+### Amendment: the displacement mutant's magnitude is a ruler, and it names the offset
+
+A's row was already exact in both columns (magnitude `0x7e` = 126 BELOW); what the `0x01` at `P+K2+4` adds is
+that **the magnitude identifies the displacement**, because `P+K2+8` is unwritten and the zero-fill tail reads
+zero:
+
+| body reads | A expected | A observed | A magnitude |
+|---|---|---|---|
+| `P+K2+4` (the mutant) | `127` | `1` | **`126`** (`0x7e`) |
+| `P+K2+8` (wandered further) | `127` | `0` | **`127`** (`0x7f`) |
+| `P+K2` (correct) | `127` | `127` | green |
+
+**One byte of difference separates "the mutant I built" from "a mutant that wandered further"** -- the same
+class as the 47's mistarget test, and it costs nothing because the fixture already knows `K2`. A red of 127 is
+therefore **not** the pre-registered mutant and must be reported as a different body, never rounded to the
+expected red.
