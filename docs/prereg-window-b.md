@@ -220,3 +220,24 @@ large values" -- the boundary value can.
    the sign bit at all.
 2. `load_disp + 4` (reads the neighbouring planted byte): **A and A' both red**, because clause 2d makes every
    4-byte window distinct, and the red must name a *value* mismatch, not a fault.
+
+### Amendment: the mutant table is three, and the deltas are disjoint by construction
+
+The A/A' pair buys a third mutant for free, and it is the body this campaign would most plausibly ship:
+**`movsx eax` mistyped as `movsx rax`.** A 64-bit destination sign-extends into all 64 bits, so **A stays green**
+(`sext64(0x7f) = 0x7f`) and **A' fails in the upper half by exactly `0xffffffff00000000`.**
+
+| mutant | A | A' | delta on A' |
+|---|---|---|---|
+| `movsx eax` -> `movzx eax` | green | red | `0xffffff00` |
+| `movsx eax` -> `movsx rax` | green | red | `0xffffffff00000000` |
+| `load_disp + 4` | red | red | by VALUE, not by fault |
+
+The arithmetic is checked before the run, not after: `movzx(0x80) = 0x80`, so the gap to
+`0x00000000ffffff80` is `0xffffff00`; `sext64(0x80) = 0xffffffffffffff80`, so the gap is
+`0xffffffff00000000`. **The three deltas are disjoint, so a red on A' NAMES which body was emitted** -- which
+is what a pre-registration buys at its best: not "it will fail" but "the failure will identify the mistake."
+
+And the pair is doing double duty from one changed planted value: **the byte boundary and the destination
+width.** `0x80` is the value that exposes a width error, not only a sign error -- which is the same argument,
+one step further, for choosing the boundary rather than `0xff`.
