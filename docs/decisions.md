@@ -2082,3 +2082,28 @@ Corollary, earned twice in one window: **an append to `decisions.md` stales `doc
 cites `reach_line`, which counts the ids. The append and the regeneration belong in one commit -- the second
 occurrence is 27-against-28 in `646313c`, caught by the regenerate-and-diff test on the first commit that could
 produce it.
+
+### 1ab. PROPOSED, NOT IN FORCE — what makes a row `edge-verified`
+
+`original` means an emitter landed transcription. `edge-verified` is a claim about a BODY, and until this line is
+ratified the tree has no published criterion for it, so 4,721 `edge-verified` rows and every future family rest on
+something unstated. A row is `edge-verified` when all four hold, each already produced by an existing instrument:
+
+1. **The body runs, and its witness equals the original's.** The replacement is addressed by its exported symbol
+   (`nm -D` names the tier: the emitter prefixes `bb_`, the ledger key drops it), and the differential compares
+   the replacement against the original on cases that were authored BEFORE either ran. `0x0196f030`: `0x7f` and
+   `0xffffff80`, first run, no adjustment.
+2. **At least two mutants die with named, disjoint magnitudes.** The magnitudes are what identify the body that
+   ran, so a red is attributable rather than merely present. `0x0196f030`: `0xffffff00` BELOW (movzx),
+   `0xffffffff00000000` ABOVE (movsx rax), `126` and `0xffffff7f` BELOW (load_disp+4) — three mutants, six verdicts,
+   and a ruler byte that separates a wandered displacement (`127`) from the expected one.
+3. **The cases are reconstructible from the ledger row**, not from a function body: every address in them is
+   derived from the row's own fields, and a fixture coordinate lives in a table column (`guest_ptr`), never in a
+   function. A case a reader cannot rebuild is evidence only to the person who typed it.
+4. **The case bytes are cited by hash**, and the files are canonically rendered (`0x` + exactly eight hex digits),
+   because the ledger cites `cases_sha256` and `0x5956a00` and `0x05956a00` are one address and two hashes.
+
+**NOT IN FORCE, and `promote --to edge-verified` continues to exist as a tool that bookkeeps nothing until it is
+ratified.** 0x0196f030 is the worked example this criterion is tested against: it satisfies all four terms except
+the canonical rendering, which is owed. It remains `original` in the ledger, which is the honest status of a body
+whose evidence exists and whose criterion does not.
