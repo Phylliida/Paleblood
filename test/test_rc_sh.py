@@ -56,6 +56,20 @@ class RcSh(unittest.TestCase):
         r = self.run_sh('RC_OUT=/tmp/rc_sh_c.out run echo payload')
         self.assertNotIn('payload', r.stdout)
 
+    def test_a_missing_command_is_a_precondition_not_a_failure(self):
+        """rc 127 says the instrument was absent, which is not a verdict about the subject."""
+        r = self.run_sh('run definitely-not-a-command-xyz')
+        self.assertEqual(r.returncode, 3, (r.returncode, r.stdout, r.stderr))
+        self.assertIn('precondition failure', r.stderr)
+        # The SENTENCE is the evidence: 3 alone is also what a genuine refusal returns, and a bare number
+        # cannot distinguish a transport answer from a subject verdict.
+        self.assertIn('rc=3', r.stdout)
+
+    def test_a_non_executable_file_is_also_a_precondition(self):
+        r = self.run_sh("printf 'exit 0\\n' > /tmp/rc_sh_ne.sh\nrun /tmp/rc_sh_ne.sh")
+        self.assertEqual(r.returncode, 3, (r.returncode, r.stdout, r.stderr))
+        self.assertIn('not executable', r.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()

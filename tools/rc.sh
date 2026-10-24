@@ -29,6 +29,16 @@ run() {
     _rc_out="${RC_OUT:-/tmp/rc.out}"
     "$@" >"$_rc_out" 2>&1
     _rc=$?
+    # 126 (not executable) and 127 (not found) are TRANSPORT answers: they say the instrument was absent, not
+    # that the subject failed. rc 127 from a missing /bin/true said nothing about the test being run, the same
+    # read as BB_PBBOOT defaulting to a stale binary. A precondition is rc 3 everywhere else in this tree, so
+    # "not found" can never be quoted as "failed".
+    if [ "$_rc" -eq 126 ] || [ "$_rc" -eq 127 ]; then
+        echo "rc.sh: $_rc is a precondition failure (command absent or not executable) -- this says nothing about the subject; reporting 3" >&2
+        _rc=3
+    elif [ "$_rc" -gt 128 ]; then
+        echo "rc.sh: note: $_rc = signal $((_rc - 128)); the subject was killed, not merely unsuccessful" >&2
+    fi
     [ -n "${RC_TAIL:-}" ] && tail -n "$RC_TAIL" "$_rc_out"
     echo "rc=$_rc"
     return $_rc
