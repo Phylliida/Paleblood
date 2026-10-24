@@ -38,10 +38,20 @@ def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
     free_unlanded_all = [(int(r['address'], 16), int(r['size'])) for r in rows
                          if r['branch'] == '0' and r['landed'] == 'False']
     free_unlanded = [(a, s) for a, s in free_unlanded_all if a not in retired]
+    # A BODY IS NOT A CANDIDATE, whatever its status. The band's `landed` column means "status is not
+    # original", so a row an emitter landed as `original` -- transcription, all an emitter CAN land -- reads
+    # False here and is re-offered as work already done. The cache is NOT stale: its 38,096 landed rows equal
+    # functions.csv's 38,096 non-original rows exactly. One word, two meanings. Excluded and COUNTED.
+    bodies = {r['address'] for r in C.read_rows('symbols/functions.csv')}
+    bodied = [(a, s) for a, s in free_unlanded if a in bodies]
+    free_unlanded = [(a, s) for a, s in free_unlanded if a not in bodies]
     indep = [(a, s) for a, s in free_unlanded if len(J.owners(ext, a)) == 1]
     out = [(a, s, 'short' if s < 14 else 'addressable') for a, s in indep]
+    assert not ({a for a, _, _ in out} & bodies), \
+        'a frontier that advertises a body is a menu of work already done'
     short = sum(1 for _, _, b in out if b == 'short')
-    return {'retired_excluded': len(free_unlanded_all) - len(free_unlanded),
+    return {'retired_excluded': len(free_unlanded_all) - len(free_unlanded) - len(bodied),
+            'bodied_excluded': len(bodied),
             'branch_free_unlanded': len(free_unlanded), 'independent': len(indep),
             'nested': len(free_unlanded) - len(indep), 'addressable': len(out) - short,
             'short': short, 'rows': out}
@@ -57,7 +67,7 @@ def main(argv):
     # like a finding (6,809 against a file holding 6,810 was exactly that).
     pathlib.Path(o.out).write_text('address,size,class\n' + ''.join(
         f'{a:#010x},{s},{b}\n' for a, s, b in fig['rows']))
-    print(f'retired excluded {fig["retired_excluded"]} · '
+    print(f'retired excluded {fig["retired_excluded"]} · bodied excluded {fig["bodied_excluded"]} · '
           f'branch-free unlanded {fig["branch_free_unlanded"]} · independent {fig["independent"]} '
           f'· nested {fig["nested"]}')
     print(f'  frontier by band: addressable (family_scan can propose them today) {fig["addressable"]} '

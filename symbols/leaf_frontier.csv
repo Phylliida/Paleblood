@@ -4111,7 +4111,6 @@ address,size,class
 0x0196f000,15,addressable
 0x0196f010,15,addressable
 0x0196f020,15,addressable
-0x0196f030,15,addressable
 0x0196f0b0,14,addressable
 0x0196f140,14,addressable
 0x0196f150,15,addressable
