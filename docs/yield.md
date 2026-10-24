@@ -370,3 +370,27 @@ survives indefinitely** -- the `0x1590` pair did, for weeks, and was quoted in a
 is writable and is **owed, not built** -- and it is deliberately **not** the canon check's single surface, because
 spending the stretch's one refusal on a doc linter would leave the row without its rendering rule.
 
+## AMENDMENT to the surface definition, made before the next diff: tests of NEW invariants are surfaces
+
+The four clauses -- a new refuse path, a new required flag, a new guard with a failing input, a new column whose
+absence is refused -- exempt "tests of an existing one". **That exemption has a loophole: a NEW test asserting a NEW
+invariant is a guard with a failing input, yet reading the exemption literally a stretch could add five new invariant
+tests and truthfully report zero surfaces.** That is the target graded generously at the level where it is cheapest to
+be generous, so it is closed now, while no diff exists.
+
+**Fifth clause: a new test that asserts a property no test asserted before is a surface.** A test that re-asserts an
+existing invariant over a wider population is not, and a test added to a surface already counted is not counted twice.
+
+**Consequences stated, so the clause cannot be read two ways:**
+
+  * the **canon check** is the target's single surface: it is a new refuse path AND a new invariant. It is one surface,
+    not two -- the clause counts the check, not the artifacts of writing it.
+  * the **doc reference check** (artifact exists, `file:column` in the header) is therefore **a second surface** and
+    **cannot be built in the same stretch as the canon check.** It waits. Said now, not discovered in review.
+  * re-asserting the frontier union, the `has_body` arithmetic or the tier authority over a new fixture is **not** a
+    surface: those properties already have tests and the clause exempts wider populations of an existing assertion.
+
+**And the doc linter's first real test is a PLANTED doc that names a table which does not exist** -- not a hypothesis
+about one. A linter written and green in the same hour as its first run has been tested by nothing but itself, which is
+the failure `1ab` exists to make unwritable for bodies and this clause exists to make unwritable for documents.
+
