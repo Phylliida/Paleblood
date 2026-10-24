@@ -76,7 +76,7 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
         refusal that reads as a completion. The member is mocked so the guard is the subject, not
         today's family state.
         """
-        member = {'address': 0x0196f030, 'size': 15, 'k': 0x3fe7641, 'slot': 0x05956678, 'k2': 0x175c}
+        member = {'address': 0x0196f030, 'size': 15, 'k': 0x3fe7641, 'slot': 0x05956678, 'k2': 0x175c, 'ptr': 0x05956a00}
         tu = os.path.join(E.ROOT, 'game', 'leaf', 'movsx_deref_family.cpp')
         before = open(tu, 'rb').read()
         with mock.patch.object(E, 'members', lambda *a, **k: [member]):
@@ -103,7 +103,7 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
         relational. (The first version of this comparator keyed the SLOT entry by its offset from P and
         failed -- an absolute address compared by its distance from a value it does not derive from.)
         """
-        m = {'address': 0x0196f030, 'size': 15, 'k': 0x3fe7641, 'slot': 0x05956678, 'k2': 0x175c}
+        m = {'address': 0x0196f030, 'size': 15, 'k': 0x3fe7641, 'slot': 0x05956678, 'k2': 0x175c, 'ptr': 0x05956a00}
         docs = dict(E.case_docs('movsx_deref', m))
         self.assertEqual(sorted(docs), ['a.json', 'a_prime.json', 'abi.json'])
         for fn, byte in (('a.json', '7f'), ('a_prime.json', '80')):

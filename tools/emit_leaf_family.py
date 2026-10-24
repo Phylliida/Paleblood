@@ -252,9 +252,16 @@ def members(name, landed=False):
         owned0 = set(owned_rows(name))
         rows = [r for r in catalogue.read_rows(os.path.join(ROOT, 'symbols', spec['table']))
                 if (r['address'] in owned0) == bool(landed)]
-        return [{'address': r['address'], 'size': r['size'], 'k': int(str(r['load_disp']), 0),
-                 'slot': int(str(r['load_target']), 0), 'k2': int(str(r['load_k2']), 0)}
-                for r in rows]
+        out = [{'address': r['address'], 'size': r['size'], 'k': int(str(r['load_disp']), 0),
+                'slot': int(str(r['load_target']), 0), 'k2': int(str(r['load_k2']), 0)}
+               for r in rows]
+        # A COLUMN, not a formula: the pointer is the one number a case must plant that the decode cannot
+        # supply, so it is recorded where the row is and emitted from there. That is the chain family's
+        # `dest = m['slot'] + 0x100` precedent, made visible instead of hidden in a tool.
+        for rec, r in zip(out, rows):
+            if r.get('guest_ptr'):
+                rec['ptr'] = int(str(r['guest_ptr']), 0)
+        return out
     if spec.get('wide_selector'):
         import census_rip_load as W
         taken0 = {int(r['address'], 16) for r in
@@ -641,15 +648,18 @@ def case_docs(name, m):
         # that reads a single byte -- the 503 MB lesson at a hundred times the scale. The plants are
         # literals and the pointer is a `guest:` VALUE, so there is nothing to size.
         #
-        # The pointer P is a FIXTURE CHOICE, not a derivation, and it sits on the first 16-byte boundary
-        # above everything the body touches. That is why this branch cannot reproduce a hand-authored
-        # case byte for byte: the base is arbitrary, and a rule that "derived" it would be a
-        # transcription wearing a formula's clothes. The plants are what carry the evidence.
+        # The pointer comes FROM THE ROW (`guest_ptr`), so it is emitted rather than chosen here and the
+        # case is reconstructible from its own row. That is what retires the relational comparator: with
+        # one source for the value, generated and hand-authored cases must agree in CONTENT, not merely
+        # in relation. The plants carry the evidence; the base carries a recorded choice.
         #
         # The slot is above filesz end 0x57e5b38 and below memsz end 0x5AD30F4, so it is zero-fill and has
         # NO image bytes: a naive read at slot - BIAS returns ELF metadata, which is how a fabricated
         # pointer arrives with a file offset for provenance. Planting the pointer is the only route.
-        p = (m['slot'] + m['k2'] + 8 + 0xF) & ~0xF
+        p = m.get('ptr')
+        assert p is not None, (
+            f'{name}: the table must carry guest_ptr -- a pointer chosen in this function is a fixture '
+            'choice no reader of the row can see, and a case must be reconstructible from its row')
         assert p > 0x57e5b38 and p + m['k2'] + 8 < 0x5AD30F4, \
             f'{name}: pointer {p:#x} does not leave the plants inside the tail'
         # 0x7f / 0x80 straddle the sign boundary at the SMALLEST distance; 0xff sits 128 away and cannot
@@ -658,9 +668,12 @@ def case_docs(name, m):
         for fn, byte in (('a.json', '7f'), ('a_prime.json', '80')):
             yield fn, {
                 'schema': 1, 'address': f'{m["address"]:#010x}', 'returns': 'i64', 'args': {},
-                'memory': [{'addr': f'{m["slot"]:#x}', 'guest': f'{p:#x}'},
-                           {'addr': f'{p + m["k2"]:#x}', 'bytes': byte},
-                           {'addr': f'{p + m["k2"] + 4:#x}', 'bytes': '01'}],
+                # EIGHT-DIGIT hex, the tree's address convention: a case rendered '0x5956a00' is
+                # the same address as '0x05956a00' to every reader that parses it and a different
+                # DOCUMENT to every reader that hashes it, and the ledger cites hashes.
+                'memory': [{'addr': f'{m["slot"]:#010x}', 'guest': f'{p:#010x}'},
+                           {'addr': f'{p + m["k2"]:#010x}', 'bytes': byte},
+                           {'addr': f'{p + m["k2"] + 4:#010x}', 'bytes': '01'}],
             }
         yield 'abi.json', {
             'calling_convention': 'sysv_amd64', 'confidence': 'supported',
