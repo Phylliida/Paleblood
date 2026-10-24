@@ -303,3 +303,35 @@ zero:
 class as the 47's mistarget test, and it costs nothing because the fixture already knows `K2`. A red of 127 is
 therefore **not** the pre-registered mutant and must be reported as a different body, never rounded to the
 expected red.
+
+### Template #19, measured: both witnesses held, and all three mutants killed with the pre-registered magnitudes
+
+Body emitted by the generator (`tools/emit_leaf_family.py`, family `movsx_deref`, table
+`symbols/movsx_family.csv`):
+
+    std::int8_t v = *reinterpret_cast<std::int8_t *>(p + kLoadDisp);
+    return static_cast<std::uint32_t>(static_cast<std::int32_t>(v));
+
+The double cast is the semantics: the destination is EAX, so the result is sext32(byte) zero-extended to rax.
+`return v;` sign-extends to 64 and is mutant 2, i.e. the body this family would most plausibly ship wrong.
+
+Original vs replacement, both cases, first run:
+
+| case | planted at P+K2 | original rax | replacement rax | expected |
+|---|---|---|---|---|
+| A | `0x7f` | `0x7f` | `0x7f` | `0x000000000000007f` |
+| A' | `0x80` | `0xffffff80` | `0xffffff80` | `0x00000000ffffff80` |
+
+Mutants, each run against both cases with its magnitude published above before it ran:
+
+| mutant | A | A' | magnitude | predicted | held |
+|---|---|---|---|---|---|
+| `movzx eax` | `0x7f` green | `0x80` | `0xffffff00` BELOW | yes | yes |
+| `movsx rax` | `0x7f` green | `0xffffffffffffff80` | `0xffffffff00000000` ABOVE | yes | yes |
+| `load_disp+4` | `0x1` | `0x1` | A `126` BELOW / A' `0xffffff7f` BELOW | yes | yes |
+
+**3 ran, 3 declared, 0 silent.** A red on A' names which body was emitted with no reasoning: the six magnitudes
+are disjoint and two directions are represented. The displacement mutant's A magnitude is 126 and not 127, which
+is the ruler working -- a body that had wandered to P+K2+8 would have returned zero and been reported as a
+different body rather than rounded to the expected red. Cases live under `../data/cases/leaf19/`, untracked by
+requirement and cited here; the ledger cites bytes git does not track, and this is that note.
