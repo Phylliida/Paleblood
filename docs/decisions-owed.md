@@ -129,3 +129,40 @@ Measured in one call, none of the three agreeing:
 The residual `747 - 686 = 61` is **not** libc.elf's import count: `imports.csv` gives libc.elf 76.
 So the span hypothesis is unconfirmed and the three figures must be reconciled to one partition
 before any of them is quoted, exactly as `21,130` and the 652 were.
+
+## Captures: the verifier works and there is no reachable subject (measured 2026-10-24)
+
+Asked for a capture, I built the cheapest route and it returned a measured zero, not a
+failed attempt. Counts are from one boot run (`pbboot sha256 49bed5b7…`, plugin
+`735225e5…`) with `BB_PROBES` over **613 of 1,737** hook-mode sites that can carry a
+5-byte jump (`1,120` refused for RIP-relative displacement, `4` for a branch in the
+prologue), plus one hand-placed control at the guest entry `0x004000a0`:
+
+* control fired **1** — bytes `554889e54157` read by vaddr from `e_entry`, so the
+  address space is confirmed by a count and not by a row;
+* every catalogued body counted **0**, including all **19** hook sites within 1 MB of a
+  PC the guest is known to have executed;
+* hook sites inside the boot/panic band `0x02080000–0x020c0000`: **zero**. The nearest
+  is `0x02113c30`.
+
+So `functions.csv` lists none of the code a boot run executes: the guest walls at
+`scePthreadCreate` (its own `DL_PANIC`, EAGAIN on threads) before any catalogued body
+runs. The ladder to a `verified` row therefore runs **through threads**, not through
+the capture machinery — which, having been repaired this session, now records.
+
+Two consequences, neither of which is a decision I can take:
+
+1. `../data/catalog.sqlite3` already holds `verification_state` for exactly the **528**
+   `zero_init` rows — `fixture loaded`, `original passed`, `differential passed`,
+   `coverage available`, `mismatch none`, 8 cases each. That is differential evidence,
+   and by the engine's own contract it moves no tier. Whether it may count as a witness
+   is the user's call, and it is the only path to a row that does not require the
+   threads wall to fall first.
+2. The engine's own metadata says `functions_with_capture_provenance 0` and `edges 0`,
+   so no capture provenance exists anywhere in this project yet — the first one will
+   also be the first test of `promote.py`'s in-game path.
+
+Suite state at `cf92f2d`, both binaries set and `BB_LOADER` = `build-release/runtime/libpbloader.so`:
+`Ran 535 / 497.174 s / 8F 2E 1S`, and all ten are pre-existing — the same modules are red
+at `60fd524` in a worktree. (`BB_LOADER` pointed at `pbboot`, a PIE the harness cannot
+`dlopen`, manufactures 45 failures and 8 errors in the same suite.)
