@@ -64,3 +64,27 @@ own defect).
 
 If the stretch misses, the honest reading is the one this doc was written to permit: the tree is being made
 unmakeable faster than it is being used, and that is worth knowing at the next boundary rather than at commit 140.
+
+## PRE-REGISTERED (subject): which single row the next stretch takes, and why not the easy one
+
+**One member of the 47-member `mov al,[rax+K] ; ret` family -- not the batch.** The batch would be 47 rows in one
+commit with barely one row's evidence: a row-bearing commit by the old count, failing the definition above exactly
+as the bare landing did.
+
+**Which member: the half of the `0x1590` pair.** That pair shares BOTH displacements with a sibling and differs only
+by address, so its case must distinguish itself from a sibling that differs by a constant -- **the sharpest instance
+of the family, which is what makes the standard reproducible rather than lucky.** An easy member would prove only
+that an easy member can be landed.
+
+**The address is read from `symbols/chain_family.csv` when the work starts, never from memory here.** A remembered
+address is a numeral, and a numeral typed from notes is not the set it names (fourth sighting of that defect).
+
+Its trail is `0x0196f030`'s shape: first-run witness equal to the original's, two mutants dead at named disjoint
+magnitudes, cases reconstructible from the row's own fields. **The other 46 stay unlanded until this trail proves the
+first one's shape was a shape and not a one-off.**
+
+**Contingency, stated before the work so it is a finding and not an excuse:** if one member turns out to be
+unlandable without the other 46 (shared TU, shared seed derivation, a family-level case directory), that is the
+result -- and it is recorded here in advance as the expected shape of a legitimate miss, not discovered afterwards
+as a reason the target moved.
+
