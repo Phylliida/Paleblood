@@ -105,6 +105,18 @@ def batch_problems(root='.'):
     owed_b = PREREG['bytes'] - sum(int(r['size']) for r in rows if r['address'] in fam)
     from landed import byte_totals
     bt = byte_totals(f'{root}/symbols/functions.csv')
+    # TWO STATES, NO THIRD. The pre-registration names a before-state and an after-state, so the live
+    # (rows, bytes_landed) pair must BE one of them. Without this, a delta on a row that is NOT in the
+    # family leaves `owed == 0`, and every owed-keyed check below becomes unfirable -- which is exactly
+    # how a planted row delta of -1 and a planted byte delta of +1 both printed "pre-registered exactly".
+    # `owed` asks how much of the batch remains; this asks whether the tree is the tree the constants
+    # describe. Different questions, and the second is the one a reader believes.
+    _before = (BATCH['landed_after'] - PREREG['rows'], BATCH['bytes_before'])
+    _after = (BATCH['landed_after'], BATCH['bytes_after'])
+    if (live_landed, bt['landed']) not in (_before, _after):
+        out.append(f'batch: live {live_landed} rows / {bt["landed"]:,} bytes_landed is neither the '
+                   f'pre-registered before-state ({_before[0]} / {_before[1]:,}) nor its after-state '
+                   f'({_after[0]} / {_after[1]:,})')
     # `owed` is what the batch still owes, so the predicate only holds while the batch is UNLANDED: adding it to
     # a live count that already includes the batch double-counts, and the sentence then reports a disagreement
     # on a correct post-record tree. A check whose applicability has an precondition must state it, not assume

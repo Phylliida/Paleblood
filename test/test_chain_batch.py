@@ -25,6 +25,11 @@ def tree_with(**edit):
     os.makedirs(os.path.join(d, 'symbols'))
     for f in ('functions.csv', 'branch_band.csv.gz'):
         shutil.copy(os.path.join(ROOT, 'symbols', f), os.path.join(d, 'symbols', f))
+    # A FIXTURE THAT CANNOT REPRESENT THE QUANTITY ITS TEST IS ABOUT IS A FORMATTER. Without `game/` the
+    # fixture's byte total is 0, so the two-state refusal fired on BOTH delta tests *and on the un-edited
+    # tree*, identically -- the edits were decoration. Symlinked, not copied: the bytes are read from the
+    # real bodies, so the fixture differs from the real tree in exactly the field the test edits.
+    os.symlink(os.path.join(ROOT, 'game'), os.path.join(d, 'game'))
     if edit:
         path = os.path.join(d, 'symbols', 'functions.csv')
         rows = list(catalogue.read_rows(path))
@@ -49,6 +54,13 @@ class TheBatchIsPreRegistered(unittest.TestCase):
         # owed == 0 ==> no refusal: the property, at every point in the record's life. (unittest's diff shows
         # the FIRST argument with '-', so a '-' refusal and a '+' [] means the tool refused, not the test.)
         self.assertEqual(C.batch_problems(ROOT), [])
+
+    def test_the_fixture_itself_is_clean(self):
+        # THE CONTROL, AND IT MUST EXIST BEFORE THE TWO TESTS BELOW MEAN ANYTHING: an un-edited fixture must
+        # produce no problem. It refused before this line existed -- for a reason (game/ absent, bytes 0)
+        # that had nothing to do with either edit, which made both delta tests pass while discriminating
+        # nothing.
+        self.assertEqual(C.batch_problems(tree_with()), [])
 
     def test_a_byte_delta_the_batch_cannot_explain_is_refused(self):
         problems = C.batch_problems(tree_with(field='size', delta=1))
