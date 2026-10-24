@@ -129,3 +129,24 @@ carries `store_k`, print the candidates by field equality, and only then choose 
 cannot be found is the horizon-as-phrase one tier up -- and it was caught for the price of one grep, before the
 stretch was spent.
 
+## ORDER, and one collision in the target that had to be resolved rather than graded around
+
+**Term 4 of `1ab` first (canonical rendering of generated cases), then the chain member.** Term 4 is the only term
+the worked example fails, it is a check over artifacts that already exist, and it converts **the moment a yes
+arrives**: `0x0196f030` becomes eligible for `edge-verified` on the next run instead of on a promise about a future
+one. The chain member is a trail from nothing and is a stretch, not an hour. **Not to be compressed into one.**
+
+**The collision, stated before the work:** a canonical-rendering check makes the tree say no in a place it did not
+before -- which is clause one of this doc's own definition of a refusal surface. So **term 4 is a NEW SURFACE**, and
+the pre-registered target (`one row, zero new surfaces`) **forbids the very work that unblocks the row's promotion.**
+Both readings cannot hold.
+
+**Resolution, by amending the target now rather than grading it later:**
+
+> **One row, and at most ONE new refusal surface -- and that surface must be the canon check, carrying its subject
+> in the same commit** (the generated cases it refuses are the cases the row cites, not a fixture).
+
+That keeps the target falsifiable in both directions: a second surface is a miss, a row without its cases cited is a
+miss, and the surface arriving without its subject is a miss. **A target that forbids the work that makes the row
+promotable was mis-specified, and the fix is to say so in advance rather than to discover it when the diff is open.**
+
