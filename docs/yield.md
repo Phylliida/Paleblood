@@ -97,7 +97,13 @@ Measured at `a128c2b`, one command: `5520` -> **0 matches**, `0x1590` -> **0 mat
 * **Prediction 2 (my rendering):** same hypothesis, different author. **Refuted by the same measurement.**
 * **What the header shows:** `chain_family.csv` has **`store_k2`** and no `store_k` column. A scan of every CSV
   under `symbols/` found **none carrying `store_k`** (scope: `symbols/*.csv` and `*.csv.gz` only -- the artifact
-  that does carry it is **still unidentified**).
+  that does carry it is **carries it is identified only by a DOCSTRING, not by a header read** -- the census tool documents that its
+  `store_k` column holds the second load's displacement. **That is a documentation claim, and a documentation claim
+  is a hypothesis; a `head -1` is a measurement** (the `1y` distinction). So the opening move of the next stretch is
+  **not a search but a confirmation**: read the census output's header and check it against the docstring that names
+  it. If they agree, the column is **double-sourced** -- the same free cross-check that `has_body = 38,101` gave the
+  catalogue counts. If they disagree, the docstring is wrong about its own artifact, which is **worse than an
+  unlocated column and cheaper to learn now than mid-batch.**).
 
 So the numeral failed on **provenance, not radix**: it named a column of a different artifact. **A prior about which
 defect is common is not a measurement of which defect is present** -- and the radix hypothesis was ranked first
