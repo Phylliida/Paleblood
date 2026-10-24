@@ -135,3 +135,23 @@ record protocol, which was the hour and not the coffee. The four widths (`47 / 2
 width-parameterised emitter is an emitter question, never a licence to inherit 132 rows into one batch.
 
 No `repair:` line accompanies this file: `1s.2`, it moves no rows.
+
+### Amendment to template #19 (2026-10-23, before it runs): the base moved for a reason that is not the row
+
+`2bbcff1` excluded the retired body `0x024264d0` from `symbols/leaf_frontier.csv`, against `retired.csv`.
+Measured after the regeneration: **addressable `6,210 -> 6,209`**, total `6,810 -> 6,809`, and the census
+absorbed it exactly -- **`6,209 = 206 decoded + 6,003 over + 0 undecoded`** -- so the row left `over`, which
+is what a 34-byte body outside the three-instruction vocabulary should do.
+
+Template #19 therefore runs against a base of **6,209**, not 6,210: its pre-registration is amended to
+**`6,209 -> 6,208`** frontier addressable, with `+1 body, 15 B, verified 21 -> 21` unchanged. The band figure
+is **unchanged at 7,956**: `0x024264d0` is 34 B and the band is `1 <= size <= 16`, so the retired row was never
+in it. Two counts, one moved -- and the reason is the row, which is the distinction that matters.
+
+**The ordering was the hazard, not the numbers.** Template #19 was pre-registered `6,210 -> 6,209`; the
+frontier fix was also `6,210 -> 6,209`. Landed in one window, the two `-1`s would have been indistinguishable,
+and the pre-registration's whole value is that **one commit moved two independent counts by exactly one**. The
+fix went first and alone, and #19 now proves the same thing against 6,209.
+
+The numbers above that this amendment supersedes stay as they were measured, with their provenance beside
+them: a pre-registration that rewrites its own history cannot be checked against anything.
