@@ -110,8 +110,13 @@ because it had five prior sightings, while the header was one command away the w
 **Not a radix problem and not provenance in general: short names across artifacts that a reader can substitute
 without noticing.** The shape that makes the substitution unwritable is **column constants qualified by their
 artifact** -- `CHAIN.STORE_K2`, `CENSUS.STORE_K` -- so choosing wrong requires writing the wrong module name rather
-than recalling the wrong string. **Owed, not built:** it touches every reader of every family table and would be a
-new refusal surface, which the pre-registered target for the next stretch forbids.
+than recalling the wrong string. **Owed, not built -- and deferred on BLAST RADIUS, not on the surface rule.** Checked against this doc's own four
+clauses: a qualified-name rename adds **no** refuse path, no required flag, no guard and no column, so it is a
+**refactor, not a refusal surface**, and citing the target against it was the same unit-upgrade this doc spent the
+stretch fixing -- one level up, a label standing in for the reason. **A fix deferred on a wrong reason is a
+preference wearing a ruling's clothes.** The reason that holds is the honest one: it touches **every reader of every
+family table**, so its diff is large, is not reviewable in one window, and would sit astride the stretch meant to
+produce a row -- consuming the budget it exists to protect.
 
 **The selection rule is therefore unresolved and is restated as its own first task:** locate the artifact that
 carries `store_k`, print the candidates by field equality, and only then choose a member. A target whose subject
