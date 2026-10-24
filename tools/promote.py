@@ -187,17 +187,25 @@ def promote_edge(root, family, dry_run):
     rp = os.path.join(root, 'symbols', 'retired.csv')
     if os.path.exists(rp):
         retired = {int(r['address'], 16) for r in csv.DictReader(open(rp)) if r.get('reason', '').strip()}
+    # THE SELECTOR SHOWS ITS WORK, AND IT SHOWS IT OVER ALL ROWS, NOT OVER THE SURVIVORS OF A STATUS
+    # FILTER. Tonight the tree was saved by the ORDER of two predicates -- a name filter that over-selected
+    # sat upstream of a status filter (`original` only) that emptied the result. An ordering is not a
+    # safeguard; it is a coincidence that survives until someone moves a line. So the family's population is
+    # resolved and PRINTED before anything acts, whatever the statuses are, and a nested family landing
+    # with `original` rows is visible at the count instead of discovered after a promotion.
+    sel = [row for row in rows[1:]
+           if re.fullmatch(re.escape(family) + r'(?:_[0-9a-f]{8})?', row[nm])]
+    by_status = {}
+    for row in sel:
+        by_status[row[st]] = by_status.get(row[st], 0) + 1
+    shown = ', '.join(f'{k} {v}' for k, v in sorted(by_status.items())) or 'none'
+    print(f'promote: family {family} -> {len(sel)} row(s) ({shown}); '
+          f'{by_status.get("original", 0)} promotable')
     moved, refusals, skipped = [], [], []
-    for row in rows[1:]:
+    for row in sel:
         if row[st] != 'original':
             continue
         name = row[nm]
-        # ANCHORED, not prefixed: `startswith('leaf_ret')` also matches `leaf_ret_zero` -- 12,482 rows
-        # where the family is 7,761, a name filter wearing a selector's name (third arrival of this class,
-        # first in the promotion path). A family name selects its own bodies and nothing that merely
-        # begins with it: the remainder must be an address suffix or empty.
-        if not re.fullmatch(re.escape(family) + r'(?:_[0-9a-f]{8})?', name):
-            continue
         if int(row[ad], 16) in retired:
             # A VERDICT IS A SKIP, NOT A REFUSAL. `024264d0` is finished by verdict, so it is not
             # a candidate and must not make this tool exit 1 forever -- an rc that is always 1 is
