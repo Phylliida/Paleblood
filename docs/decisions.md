@@ -1858,3 +1858,20 @@ the set it named had never been recorded anywhere and `git` could not supply it.
    untracked artifact. A figure with no manifest is out of scope **until someone writes one, and saying which
    figures are out of scope is part of quoting the figure.** This is `unknown (no runtime witness)` applied to a
    corpus: absent evidence prints as absent, never as a zero.
+
+4. **A measured rc comes from the process, never from the last member of a pipeline.** `${PIPESTATUS[0]}` is
+   the subject's status; `$?` after a pipe is the formatter's. This rule was mine for six violations and had no
+   cost until the sixth: `env -u PYTHONPATH $P -P tools/chain_family.py --check 2>&1 | tail -2; echo "rc=$?"`
+   printed `rc=0` while the tool was raising `TypeError`, so a broken tool was committed and had to be amended
+   (`7b8f903`). Installed here because this clause is where measurement hygiene lives: **an rc that is not the
+   subject's rc is a formatter, and a formatter that reports success is the most expensive instrument in the
+   tree.** Note the shape of the failure precisely -- the tool DID print its traceback, on the stream I
+   redirected into the pipe; the rc was the only falsehood, and rc is the one value I use to decide whether to
+   commit.
+
+5. **A witness is read at the width of the RESULT, never at the width of the write.** *A comparison at the width
+   of the write cannot see a write at a narrower width* -- and the complementary hazard is as cheap: a witness
+   compared at 8 bits against a body returning 64 certifies the low byte and nothing else. This is `mov_al_imm`'s
+   failure in its general form -- there the case guaranteed `rsi == rax`, and the alias form passed 793/793 while
+   being wrong. It belongs here, not in one family's pre-registration, because it is a rule about how a WITNESS
+   is read: a width is a scope, and scope is the load-bearing half of an evidence claim.
