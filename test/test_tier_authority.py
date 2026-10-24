@@ -12,6 +12,17 @@ class TierAuthorityTest(unittest.TestCase):
         self.assertFalse(T.grants("1ab"))
         self.assertIn("NOT IN FORCE", T.why("1ab"))
 
+
+    def test_the_pair_one_false_one_true_in_the_same_run(self):
+        """THE CONTROL THAT NEEDS NO FIXTURE: the tree already contains both states.
+
+        A change that makes every door answer True fails on the negative half; one that makes every door answer
+        False fails on the positive. Asserting them together is what stops the two halves being tested apart and
+        drifting apart, and it is the strongest evidence available today that the door discriminates at all.
+        """
+        self.assertEqual((T.grants("1ab"), T.grants("1j")), (False, True),
+                         f'1ab={T.why("1ab")} | 1j={T.why("1j")}')
+
     def test_a_ratified_heading_is_granted(self):
         self.assertTrue(T.grants("1j"))
         self.assertIn("granted", T.why("1j"))

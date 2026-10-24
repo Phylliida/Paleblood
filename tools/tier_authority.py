@@ -10,6 +10,12 @@ carrying the word in its body, so this module is written to the repair rather th
     condition cannot grant it;
   * an unknown id, a missing file, or an unreadable heading returns False -- absence refuses.
 
+WHO CALLS THIS, AND HOW: a caller names the authority for its invocation (`--under 1ab`) and consults that
+one id. A caller that asks every id and proceeds if any returns True has built a union, and a union of
+gated populations read as a sum is a defect this campaign has already paid for once (12,482 = 7,761 +
+4,721, two gated sets quoted as one number). Naming the authority turns a wrong pairing into a refusal
+instead of a silent grant, and prints `why()` on the failure path, where it is worth the most.
+
 A door with no status set is a complete thing: it answers False for every id, including 1ab, and a
 ratification is then a one-line edit whose effect is observable on the next run.
 """
