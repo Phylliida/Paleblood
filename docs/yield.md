@@ -311,3 +311,32 @@ equality on `load_disp`/`load_target`, never on `store_k`**, because selecting o
 quantity whose sign of direction is unknown. **Renaming `store_k` -> `disp_insn1` is owed and is a rename, not a
 surface**; until it lands, every reader of that printed table must read the two lines first.
 
+## The contradiction was MY ZERO-INDEX, and measuring both columns retracts a claim as well
+
+I wrote that `store_k` is "instruction 1's displacement". In the source it is `ins[1]` -- **the SECOND instruction,
+zero-indexed.** `load_disp` is `ins[0]`, the first. So **the two columns are different quantities**, not one quantity
+under two names, and the "two counts over the same rows must be equal" contradiction was manufactured by my own
+English, not found in the data.
+
+**Measured over `symbols/chain_family.csv` (header: `address,size,load_disp,load_target,where,store_k2,store_width,imm`):**
+
+    rows                                          78
+    distinct load_disp                            78    <-- every row has its own K
+    distinct store_k2                             47    <-- 47 values over 78 rows
+    rows where load_disp == store_k2               0
+
+**So the census's `store_k` is the quantity chain_family already calls `store_k2`** -- the second instruction's
+displacement -- and the rename is **clarity, not a hidden distinction.** `store_k -> store_k2` in the census is the
+repair, one table over.
+
+**And a claim this campaign has carried since the chain pilot is refuted by the same measurement.** The `0x1590` pair
+was recorded as *"shares both displacements, differs only by address."* **`load_disp` is 78-distinct across 78 rows, so
+no two rows in this table can share a `load_disp`, and therefore none can share both.** Either that pair lives in a
+different table -- the 47-member `mov al,[rax+K] ; ret` family, not this one -- or the claim was wrong when it was
+written. **Either way it must name its table, and until it does, "the 0x1590 pair" is a sentence without an artifact**,
+which is the second of those tonight.
+
+**Selection rule, corrected a second time:** the 47-member family is selected on **`store_k2` equality in its own
+table**, never on `store_k` from a printed census, and never on `load_disp`, which is row-unique here and would select
+exactly one member.
+
