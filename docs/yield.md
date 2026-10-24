@@ -150,3 +150,32 @@ That keeps the target falsifiable in both directions: a second surface is a miss
 miss, and the surface arriving without its subject is a miss. **A target that forbids the work that makes the row
 promotable was mis-specified, and the fix is to say so in advance rather than to discover it when the diff is open.**
 
+## SPEC (not a surface): the canonical-rendering check, written before the diff exists
+
+This is the document the check will be built to. It is prose in the same file that holds the target, and **a
+specification is not a refusal surface** -- the surface is the diff, and the surface is bounded by the target above.
+
+**Subject:** generated case files only -- the output of `case_docs` -- **never hand-authored cases.** Refusing an
+unpadded hand-authored case gates the wrong population (the cases that already exist and already ran).
+
+**Rule:** every address is rendered `0x` + **eight** digits (`#010x`). `0x5956a00` and `0x05956a00` are one address
+and two hashes; only one of them is canonical.
+
+**Planted negative, and it is the best kind available: `0x5956a00`.** That string came out of my own run -- it is the
+**unpadded rendering of a real address in this tree**, produced by the defect this check exists to catch. A check that
+renders `0x05956a00` **must reject it**. A synthetic fixture would prove the regex works; this one proves **the check
+would have caught the defect that motivated it**, which is the property that makes `tier_authority`'s negative worth
+more than its positive.
+
+**Falsification, three directions -- one more than any prior pre-registration here:**
+
+1. **a row** lands and is counted by the definition above (body + `1ab` terms 1-3);
+2. **at most one new refusal surface**, and it is this check;
+3. **the check arrives carrying its subject in the same commit** -- the generated cases it refuses are the cases the
+   row cites, not a fixture. **A green check with nothing under it is a miss, not a pass** -- this is the direction
+   that would otherwise be discovered as a green on an empty population.
+
+**The honest sentence about where the count stands, recorded so the next stretch inherits it:** the count is **21**,
+and it is 21 because **eight of the last nine things built were not rows.** Every one of them is a reason the next row
+can be defended; **none of them is the row.** The next stretch's job is to make it the ninth.
+
