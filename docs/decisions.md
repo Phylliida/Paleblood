@@ -2086,7 +2086,7 @@ produce it.
 ### 1ab. PROPOSED, NOT IN FORCE — what makes a row `edge-verified`
 
 `original` means an emitter landed transcription. `edge-verified` is a claim about a BODY, and until this line is
-ratified the tree has no published criterion for it, so 4,721 `edge-verified` rows and every future family rest on
+in force the tree has no published criterion for it, so 4,721 `edge-verified` rows and every future family rest on
 something unstated. A row is `edge-verified` when all four hold, each already produced by an existing instrument:
 
 1. **The body runs, and its witness equals the original's.** The replacement is addressed by its exported symbol
@@ -2104,6 +2104,6 @@ something unstated. A row is `edge-verified` when all four hold, each already pr
    because the ledger cites `cases_sha256` and `0x5956a00` and `0x05956a00` are one address and two hashes.
 
 **NOT IN FORCE, and `promote --to edge-verified` continues to exist as a tool that bookkeeps nothing until it is
-ratified.** 0x0196f030 is the worked example this criterion is tested against: it satisfies all four terms except
+in force.** 0x0196f030 is the worked example this criterion is tested against: it satisfies all four terms except
 the canonical rendering, which is owed. It remains `original` in the ledger, which is the honest status of a body
 whose evidence exists and whose criterion does not.
