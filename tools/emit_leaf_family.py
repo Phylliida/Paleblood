@@ -949,6 +949,12 @@ def main(argv):
         # the decision that predates the artifact is the spec, and the artifact moved.
         if TEMPLATES[name].get('chain_selector'):
             d = os.path.join(case_dir(name), f'{m["address"]:08x}')
+        elif TEMPLATES[name].get('table'):
+            # A TABLE FAMILY IS ALSO ONE DIRECTORY PER ROW, and in the `0x<addr8>` form the 21,138
+            # existing directories under cases/leaf already use. `<key>/<key>.json` was inherited from
+            # the families whose population is a matcher; here the population is a row, and a row's
+            # directory is its address. Writing elsewhere would put the record's cases beside a copy.
+            d = os.path.join(case_dir(name), f'0x{m["address"]:08x}')
         else:
             d = os.path.join(case_dir(name), k)
         docs = case_docs(name, m)

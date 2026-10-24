@@ -11235,6 +11235,7 @@ address,mode
 0x0196e800,host
 0x0196e8a0,host
 0x0196ef70,host
+0x0196f030,host
 0x0196f450,host
 0x0196f520,host
 0x0196f6c0,host

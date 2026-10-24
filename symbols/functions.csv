@@ -11237,6 +11237,7 @@ address,size,name,system,status,notes
 0x0196e800,15,leaf_chain_deref_0196e800,leaf,edge-verified,
 0x0196e8a0,18,leaf_chain_deref_0196e8a0,leaf,edge-verified,
 0x0196ef70,15,leaf_chain_deref_0196ef70,leaf,edge-verified,
+0x0196f030,15,leaf_movsx_deref_0196f030,leaf,original,
 0x0196f450,1,leaf_ret_0196f450,leaf,edge-verified,
 0x0196f520,1,leaf_ret_0196f520,leaf,edge-verified,
 0x0196f6c0,11,leaf_rip_store_0196f6c0,leaf,edge-verified,
