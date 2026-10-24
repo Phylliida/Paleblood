@@ -5112,7 +5112,6 @@ address,size,class
 0x02417700,75,addressable
 0x024262f0,7,short
 0x02426300,8,short
-0x024264d0,34,addressable
 0x02426500,53,addressable
 0x0242a6b0,19,addressable
 0x0242c4c0,60,addressable

@@ -7,15 +7,15 @@ hook prints. It is not recomputed here: one fact printed twice is two that can d
 `84.43%` PROGRESS (`branch-free`) and `87.11%` (`all rows`) are two different denominators**
 that a hand-written burndown confused once already.
 
-    reach: 38096 landed / 43734 branch-free = 84.43% PROGRESS · 38096 / 157757 catalogued = 24.15% SCOPE · branch 114023 (landed 1172) · unlanded branch-free 6810 · bytes_landed 324,066 (bytes_transcribed 325,146) · decisions: ok (26 id(s), 3 frozen duplicate id(s), 4 citation(s) resolve)
+    reach: 38096 landed / 43734 branch-free = 84.43% PROGRESS · 38096 / 157757 catalogued = 24.15% SCOPE · branch 114023 (landed 1172) · unlanded branch-free 6810 · bytes_landed 324,066 (bytes_transcribed 325,146) · decisions: ok (27 id(s), 3 frozen duplicate id(s), 4 citation(s) resolve)
 
 `verified` **21** [symbols/functions.csv]
 approvals **30** [symbols/reviews.csv, rows] | differential records **38197** [symbols/verification.csv, rows] | quarantined **22** [symbols/quarantine.csv, rows]
 verification surplus **101** = 38197 verification rows - 38096 bodied rows (computed here, so it cannot go stale as a carry)
-frontier **6210 addressable | 600 short | 6810 total** [symbols/leaf_frontier.csv]
+frontier **6209 addressable | 600 short | 6809 total** [symbols/leaf_frontier.csv]
 frontier n bodied **0** (must be 0 -- a frontier row that has a body is not a candidate)
-frontier n transcription-only **1** -- 0x24264d0
-frontier n retired **1** -- OPEN DEFECT 0x24264d0: retired, yet advertised as a candidate
+frontier n transcription-only **0**
+frontier n retired **0** -- clean
 retired **1** [symbols/retired.csv]
 in-band (1..16 B) **44331** | landed bodies **36310** | unlanded **8021** [symbols/ghidra_functions.csv x symbols/functions.csv]
 

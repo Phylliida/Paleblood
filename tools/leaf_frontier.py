@@ -19,6 +19,7 @@ import pathlib
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir; no PYTHONPATH help
 
+import catalogue as C
 import join_import_pc as J
 
 BAND = pathlib.Path('symbols') / 'branch_band.csv.gz'
@@ -29,12 +30,19 @@ def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
     with gzip.open(band, 'rt', newline='') as f:
         rows = list(csv.DictReader(f))
     ext = J.load_extents(extents_path)
-    free_unlanded = [(int(r['address'], 16), int(r['size'])) for r in rows
-                     if r['branch'] == '0' and r['landed'] == 'False']
+    # RETIRED ROWS ARE NOT CANDIDATES. A retired body is a verdict about the body, not a debt against
+    # this instrument: advertising one as a candidate re-offers work already judged done-and-wrong.
+    # The exclusion is counted and printed -- a filter that removes rows silently is the same defect as
+    # one that removes none.
+    retired = {r['address'] for r in C.read_rows(str(pathlib.Path(band).parent / 'retired.csv'))}
+    free_unlanded_all = [(int(r['address'], 16), int(r['size'])) for r in rows
+                         if r['branch'] == '0' and r['landed'] == 'False']
+    free_unlanded = [(a, s) for a, s in free_unlanded_all if a not in retired]
     indep = [(a, s) for a, s in free_unlanded if len(J.owners(ext, a)) == 1]
     out = [(a, s, 'short' if s < 14 else 'addressable') for a, s in indep]
     short = sum(1 for _, _, b in out if b == 'short')
-    return {'branch_free_unlanded': len(free_unlanded), 'independent': len(indep),
+    return {'retired_excluded': len(free_unlanded_all) - len(free_unlanded),
+            'branch_free_unlanded': len(free_unlanded), 'independent': len(indep),
             'nested': len(free_unlanded) - len(indep), 'addressable': len(out) - short,
             'short': short, 'rows': out}
 
@@ -49,7 +57,8 @@ def main(argv):
     # like a finding (6,809 against a file holding 6,810 was exactly that).
     pathlib.Path(o.out).write_text('address,size,class\n' + ''.join(
         f'{a:#010x},{s},{b}\n' for a, s, b in fig['rows']))
-    print(f'branch-free unlanded {fig["branch_free_unlanded"]} · independent {fig["independent"]} '
+    print(f'retired excluded {fig["retired_excluded"]} · '
+          f'branch-free unlanded {fig["branch_free_unlanded"]} · independent {fig["independent"]} '
           f'· nested {fig["nested"]}')
     print(f'  frontier by band: addressable (family_scan can propose them today) {fig["addressable"]} '
           f'· short, size < 14 (floor + byte tier must move together) {fig["short"]}')
