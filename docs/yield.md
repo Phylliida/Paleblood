@@ -88,3 +88,33 @@ unlandable without the other 46 (shared TU, shared seed derivation, a family-lev
 result -- and it is recorded here in advance as the expected shape of a legitimate miss, not discovered afterwards
 as a reason the target moved.
 
+## The selection rule above failed its first grep, and both predictions about why were wrong
+
+Measured at `a128c2b`, one command: `5520` -> **0 matches**, `0x1590` -> **0 matches**, header
+`address,size,load_disp,load_target,where,store_k2,store_width,imm`.
+
+* **Prediction 1 (radix):** the file stores decimal `5520` and `0x1590` is a hex rendering. **Refuted.**
+* **Prediction 2 (my rendering):** same hypothesis, different author. **Refuted by the same measurement.**
+* **What the header shows:** `chain_family.csv` has **`store_k2`** and no `store_k` column. A scan of every CSV
+  under `symbols/` found **none carrying `store_k`** (scope: `symbols/*.csv` and `*.csv.gz` only -- the artifact
+  that does carry it is **still unidentified**).
+
+So the numeral failed on **provenance, not radix**: it named a column of a different artifact. **A prior about which
+defect is common is not a measurement of which defect is present** -- and the radix hypothesis was ranked first
+because it had five prior sightings, while the header was one command away the whole time.
+
+### The class, now with three sightings in one stretch
+
+`store_k` / `store_k2`  ·  `landed` / `has_body`  ·  `census_band.py` / `branch_census.py`
+
+**Not a radix problem and not provenance in general: short names across artifacts that a reader can substitute
+without noticing.** The shape that makes the substitution unwritable is **column constants qualified by their
+artifact** -- `CHAIN.STORE_K2`, `CENSUS.STORE_K` -- so choosing wrong requires writing the wrong module name rather
+than recalling the wrong string. **Owed, not built:** it touches every reader of every family table and would be a
+new refusal surface, which the pre-registered target for the next stretch forbids.
+
+**The selection rule is therefore unresolved and is restated as its own first task:** locate the artifact that
+carries `store_k`, print the candidates by field equality, and only then choose a member. A target whose subject
+cannot be found is the horizon-as-phrase one tier up -- and it was caught for the price of one grep, before the
+stretch was spent.
+
