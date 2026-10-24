@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Write a BB_PROBES list: count calls of original functions in a game run (runtime/probe.c).
 
-usage: probe_list.py --elf ELF [--drafts DIR] [--base 0x400000] ADDRESS [ADDRESS ...] > probes.txt
+usage: probe_list.py --elf ELF [--drafts DIR | --no-drafts] [--base 0x400000] ADDRESS ... > probes.txt
 
 For each function, takes the whole instructions at its entry until at least 5 bytes (instruction
 boundaries from the draft's disassembly, tools/draft.sh) and their bytes from the ELF. Prologues
@@ -59,9 +59,35 @@ def prologue(draft: str):
     return None, 'function too short'
 
 
+def prologue_bytes(code: bytes, addr: int):
+    """(length, None) for the entry instructions to move, or (None, reason).
+
+    The same rule as prologue(), applied to the bytes themselves: from a known function entry the
+    instruction boundaries are a property of the bytes, not of a Ghidra draft. Only 15 drafts exist
+    tree-wide, which caps the draft route at 15 functions; this one covers every catalogued entry."""
+    import capstone
+    from capstone import x86_const
+    md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+    md.detail = True          # operands and groups are what this rule reads
+    total = 0
+    for ins in md.disasm(code, addr):
+        if (ins.group(capstone.CS_GRP_JUMP) or ins.group(capstone.CS_GRP_CALL)
+                or ins.group(capstone.CS_GRP_RET) or ins.group(capstone.CS_GRP_INT)):
+            return None, f'instruction cannot move: {ins.mnemonic} {ins.op_str}'
+        for op in ins.operands:
+            if op.type == x86_const.X86_OP_MEM and op.mem.base == x86_const.X86_REG_RIP:
+                return None, f'RIP-relative: {ins.mnemonic} {ins.op_str}'
+        total += ins.size
+        if total >= 5:
+            return (total, None) if total <= MOVABLE_MAX else (None, 'prologue too long')
+    return None, 'function too short'
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--elf', required=True)
+    ap.add_argument('--no-drafts', action='store_true',
+                    help='instruction boundaries from the bytes (capstone), not a Ghidra draft')
     ap.add_argument('--drafts', default=os.environ.get('BB_DRAFTS', os.path.join(os.environ.get('BB_DATA_ROOT', os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', 'data')), 'drafts')))
     ap.add_argument('--base', default='0x400000')
     ap.add_argument('addresses', nargs='+')
@@ -72,6 +98,19 @@ def main() -> int:
     print('# BB_PROBES list (tools/probe_list.py): address, bytes to move, expected bytes')
     for text in a.addresses:
         addr = int(text, 16)
+        if a.no_drafts:
+            try:
+                code = read(d, segs, addr - base, MOVABLE_MAX)
+            except ValueError:
+                print(f'probe_list: 0x{addr:08x}: refused, not in a loaded segment', file=sys.stderr)
+                continue
+            length, why = prologue_bytes(code, addr - base)
+            if length is None:
+                print(f'probe_list: 0x{addr:08x}: refused, {why}', file=sys.stderr)
+                continue
+            print(f'0x{addr:08x} {length} {code[:length].hex()}')
+            ok += 1
+            continue
         draft = os.path.join(a.drafts, f'0x{addr:08x}.txt')
         if not os.path.isfile(draft):
             print(f'probe_list: 0x{addr:08x}: no draft (tools/draft.sh first)', file=sys.stderr)
