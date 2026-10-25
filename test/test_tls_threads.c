@@ -55,13 +55,28 @@ static void *worker(void *arg)
 
     uint64_t self = 0;
     __asm__ volatile("movq %%fs:0, %0" : "=r"(self));
-    if (self != guest) fail(i, "fs:[0] self-pointer", self, guest);
+
+    rt_tls_view view;
+    rt_tls_view_read(&view);       /* capture while %fs is the guest block, without any libc call */
 
     volatile unsigned char *slot = (volatile unsigned char *)(uintptr_t)(guest - 0x690u);
     *slot = (unsigned char)(0xa0 + i);
 
-    rt_tls_enter_host();
+    rt_tls_enter_host();           /* from here on printf and fail() are safe */
     if (read_fsbase() != host) fail(i, "host fs restored", read_fsbase(), host);
+    if (self != guest) fail(i, "fs:[0] self-pointer", self, guest);
+
+    rt_tls_trace_view("worker-after-guest", &view);
+    if (view.gs != view.state) fail(i, "gs == tls_state", view.gs, view.state);
+    if (view.state_self != view.state) fail(i, "state.self == state", view.state_self, view.state);
+    if (view.fsbase != guest) fail(i, "fsbase == guest", view.fsbase, guest);
+    if (view.fs0 != guest) fail(i, "fs[0] == guest", view.fs0, guest);
+    if (view.installer != guest) fail(i, "installer == guest", view.installer, guest);
+    if (view.enter_guest != guest) fail(i, "enter_guest == guest", view.enter_guest, guest);
+    /* A child must not overwrite the main thread's published globals. This asserts the record, not the
+       selector: rt_boot_call still reads rt_tls_guest_base_v, which is todo/047. The trace prints both
+       values side by side so that defect is visible rather than silently absorbed. */
+    if (view.published != main_guest) fail(i, "published is main's global", view.published, main_guest);
 
     guest_bases[i] = guest;
     host_bases[i] = host;

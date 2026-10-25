@@ -164,6 +164,7 @@ void rt_tls_init(void)
     if (fs0_reads_self((uint64_t)(uintptr_t)main_state.guest_block) == 1)
         rt_fatal("TLS", "%%fs:[0] does not read back as the TCB base, so every guest fs:[0] read would find "
                         "something else; the boot cannot be interpreted past this point");
+    if (getenv("BB_TLS_TRACE")) rt_tls_trace("init");
 }
 
 /* Called once on a host thread that will execute guest code. Captures that thread's own host FS and GS
@@ -238,6 +239,56 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
         rt_tls_guest_base_v = (uint64_t)fs;
         rt_tls_host_base_v = (uint64_t)st->host_fsbase;
     }
+}
+
+static unsigned long get_fs_base(void)
+{
+    unsigned long v = 0;
+    __asm__ volatile("rdfsbase %0" : "=r"(v));
+    return v;
+}
+
+void rt_tls_view_read(rt_tls_view *out)
+{
+    /* No libc here. This is called while %fs may still be the guest block, and a C library call
+       (even memset or fprintf) reaches its own thread state through %fs. Every value below is a
+       register read or a field of state reached through %gs, so the capture itself is safe; the
+       printing is not, and lives in rt_tls_trace_view. */
+    const rt_tls_thread *st = tls_state();
+    out->gs = out->state = out->state_self = out->fsbase = out->fs0 = 0;
+    out->installer = out->published = out->enter_guest = 0;
+    out->memsz = 0;
+    out->gs = (uint64_t)get_gs_base();
+    out->state = (uint64_t)(uintptr_t)st;
+    out->state_self = st ? (uint64_t)(uintptr_t)st->self : 0;
+    if (have_wrfsbase) {
+        out->fsbase = (uint64_t)get_fs_base();
+        if (out->fsbase)
+            __asm__ volatile("movq %%fs:0, %0" : "=r"(out->fs0));
+    }
+    out->installer = st ? (uint64_t)(uintptr_t)st->guest_block : 0;
+    out->published = rt_tls_guest_base_v;
+    out->enter_guest = st ? (uint64_t)(uintptr_t)st->guest_block : 0;
+    out->memsz = st ? st->guest_memsz : 0;
+}
+
+void rt_tls_trace_view(const char *where, const rt_tls_view *view)
+{
+    const rt_tls_view v = *view;
+    fprintf(stderr,
+            "pbboot: tls trace %s: gs=%#llx state=%#llx state.self=%#llx fsbase=%#llx fs[0]=%#llx "
+            "installer=%#llx published=%#llx enter_guest=%#llx memsz=%#x\n",
+            where, (unsigned long long)v.gs, (unsigned long long)v.state,
+            (unsigned long long)v.state_self, (unsigned long long)v.fsbase, (unsigned long long)v.fs0,
+            (unsigned long long)v.installer, (unsigned long long)v.published,
+            (unsigned long long)v.enter_guest, v.memsz);
+}
+
+void rt_tls_trace(const char *where)
+{
+    rt_tls_view v;
+    rt_tls_view_read(&v);
+    rt_tls_trace_view(where, &v);
 }
 
 int rt_tls_have_wrfsbase(void) { return have_wrfsbase; }
