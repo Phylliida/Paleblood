@@ -392,7 +392,10 @@ static void rt_import_pc_report(void)
        number that looks right and is half the population. If the loader data is unreachable, print n/a -- an
        unreachable subject must not print as a number. */
     unsigned long long boot_called = 0;
-    int boot_known = 1;
+    /* No subject is not "a subject with zero imports": with object_count == 0 the loop never ran, boot_known
+       stayed 1, and the reporter printed boot called=0 for a run that had nothing to count. Same rule as the
+       NULL-elf guard below, one branch over -- an unreachable subject must not print as a number. */
+    int boot_known = object_count > 0;
     for (size_t k = 0; k < object_count; k++) {
         /* An ELF that never opened is NULL, not "zero imports": this reporter runs from atexit, so a failed
            load reached here with objects[0].elf == NULL and dereferenced it -- the refusal printed and then
@@ -702,12 +705,13 @@ int main(int argc, char **argv)
         else if (argv[i][0] != '-' && !object_count) objects[object_count++].path = argv[i];
         else {
             fputs(usage, stderr);
-            return 2;
+            return 3;   /* 3 = precondition (usage), never 2: 2 is the timeout word and a bad invocation is not
+                           a run that ran out of time. The wrapper vocabulary and this binary now agree. */
         }
     }
     if (!object_count) {
         fputs(usage, stderr);
-        return 2;
+        return 3;
     }
     /* The subject, from the binary: a direct pbboot invocation attributed only the runtime before this, while
        tools/boot.sh hashed the ELF. Printed for every object, before any of them is opened, so a refusal still
