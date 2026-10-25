@@ -557,6 +557,20 @@ class Boot(unittest.TestCase):
         finally:
             shutil.rmtree(d)
 
+    def test_a_refusal_prints_the_loader_reason_not_only_the_missing_hash(self):
+        """The swallow this pins is in boot.c's branch AFTER rt_elf_open_stream, so test_loader's
+        green is not evidence about it: the loader can return the right sentence and the product
+        still drop it. /sys reports a length it will not supply, which is the truncated: arm."""
+        path = '/sys/kernel/uevent_seqnum'
+        if not os.path.exists(path):
+            self.skipTest('no /sys/kernel/uevent_seqnum on this host')
+        p = subprocess.run([self.pbboot, path], capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 3, p.stdout + p.stderr)
+        self.assertIn('no hash computed; the loader refused before hashing', p.stderr)
+        self.assertNotIn('no bytes read', p.stderr)   # the refusal did read 6 bytes; a zero-read claim refutes the next line
+        self.assertIn('truncated: read ', p.stderr)
+        self.assertIn('(nothing failed', p.stderr)
+
     def test_entry_returns(self):
         s = self.boot(b'\xc3')
         self.assertEqual((s['outcome'], s['milestone'], s['imports_total']), ('returned', 'loaded', 0))

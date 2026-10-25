@@ -785,7 +785,7 @@ int main(int argc, char **argv)
         if (gh[0])
             fprintf(stderr, "guest sha256 %s  (%s)\n", gh, o->path);
         else
-            fprintf(stderr, "pbboot: guest sha256 unreadable for %s (no bytes read)\n", o->path);
+            fprintf(stderr, "pbboot: guest sha256 unreadable for %s (no hash computed; the loader refused before hashing)\n", o->path);
         if (!o->elf) {
             fprintf(stderr, "pbboot: %s\n", error);
             return 3;
