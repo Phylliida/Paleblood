@@ -6,6 +6,7 @@
    supplies its own `environ` through the loader, so there is nothing for the host to do: this is
    a no-op by nature, not a stub returning zero, and the distinction matters because a permissive
    zero would hide an import that actually needed behaviour. */
+#include "runtime/guest_mem.h"
 #include "runtime/inflight.h"
 #include "runtime/guest.h"
 #include "runtime/loader.h"
@@ -429,6 +430,23 @@ static long libc_wcstol(const unsigned short *s, unsigned short **endptr, int ba
     }
 }
 RT_SYSLIB("libc", wcstol, libc_wcstol);
+/* strncpy, libc 98 (6sJWiWSRuqk). Narrow bytes, so no unit question -- but the guest hands us a destination
+   in ITS space (first call: dst 0x804869f90, n 0x1f), and a host write into an unmapped guest range is the
+   defect the memset duplicate already paid for. Both ranges are checked before the first store. */
+static char *libc_strncpy(char *d, const char *s, size_t n)
+{
+    size_t i = 0;
+    if (!d || !s) rt_fatal("strncpy", "a NULL pointer was passed");
+    if (n && (!rt_guest_ptr_ok((uintptr_t)d, n, "strncpy dest") ||
+              !rt_guest_ptr_ok((uintptr_t)s, 1, "strncpy source")))
+        rt_fatal("strncpy", "a pointer the guest passed is not inside a mapped region; refusing rather than "
+                            "writing into an address this runtime would have to guess the size of");
+    for (; i < n && s[i]; i++) d[i] = s[i];
+    for (; i < n; i++) d[i] = 0;
+    return d;
+}
+RT_SYSLIB("libc", strncpy, libc_strncpy);
+
 
 /* _FSin, libc ordinal 38 -- the first wall whose right answer is not fixed by a standard but by an
    IMPLEMENTATION's rounding. Two things are NOT established here and are not pretended to be:

@@ -473,6 +473,31 @@ int main(void)
         }
     }
 
+    /* wcstol's semantics, at the MEASURED 2-byte unit. Until this block existed the wide family had four
+       registered bodies and zero tests, so the boots proved the guest's values and never the contract. */
+    {
+        long (*wcstol_fn)(const unsigned short *, unsigned short **, int) =
+            (long (*)(const unsigned short *, unsigned short **, int))fn("libc", "wcstol");
+        CHECK(wcstol_fn != NULL);
+        if (wcstol_fn) {
+            unsigned short s1[] = {'4', '0', '9', '6', 0}, *e = NULL;
+            CHECK(wcstol_fn(s1, &e, 10) == 4096);
+            CHECK(e == s1 + 4);
+            unsigned short s2[] = {'-', '0', 'x', '1', 'f', 0};
+            e = NULL;
+            CHECK(wcstol_fn(s2, &e, 0) == -31);       /* sign, prefix detection, base 16 by 0x */
+            CHECK(e == s2 + 5);
+            unsigned short s3[] = {'x', 0};
+            e = NULL;
+            CHECK(wcstol_fn(s3, &e, 10) == 0);        /* defined no-conversion: 0 and endptr = nptr */
+            CHECK(e == s3);
+            unsigned short s4[] = {'0', '1', '9', 0};
+            e = NULL;
+            CHECK(wcstol_fn(s4, &e, 0) == 1);         /* base 0 sees a leading 0: octal, stops at 9 */
+            CHECK(e == s4 + 2);
+        }
+    }
+
     pctype_entry = fn("libc", "_Getpctype");
     CHECK(pctype_entry != NULL);
     if (pctype_entry) {
