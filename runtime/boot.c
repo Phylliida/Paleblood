@@ -1200,6 +1200,9 @@ int main(int argc, char **argv)
         printf("pbboot: atexit: %u handler(s) registered, 0 run -- the runtime leaves through the "
                "guest's exit import and does not re-enter guest code (modelled)\n",
                rt_libc_atexit_registered());
+    if (rt_libc_atexit_refused())
+        printf("pbboot: atexit: %u registration(s) REFUSED (table full at %u) -- a refused handler is not "
+               "a registered one\n", rt_libc_atexit_refused(), rt_libc_atexit_capacity());
 
     switch (outcome) {
     case UNIMPLEMENTED: return 4;   /* the guest reached an import this runtime cannot serve */

@@ -83,6 +83,7 @@ unsigned rt_syslib_check_unique(const rt_syslib_entry *begin, const rt_syslib_en
    exit report can print the gap as a COUNT rather than leave it inside a registration line. */
 unsigned rt_libc_atexit_registered(void);
 unsigned rt_libc_atexit_capacity(void);
+unsigned rt_libc_atexit_refused(void);
 
 /* Section bounds provided by the linker. Weak: a build with no entries still links. */
 extern const rt_syslib_entry __start_rt_syslib[] __attribute__((weak));

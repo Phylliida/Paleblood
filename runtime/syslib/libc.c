@@ -32,23 +32,29 @@ RT_SYSLIB("libc", _init_env, libc_init_env);
    forgotten is the "success while doing nothing" class. What is honest here is the record and the
    refusal: the table is real, a full table returns -1 by name, and the exit report says how many
    were registered and that none ran. */
-#define ATEXIT_CAPACITY 64u
+/* 64 was a policy nobody measured, and the guest wanted more: the 64-cap boot refused an unknown number of
+   registrations. Raised to 512 so the guest's DEMAND is measured rather than truncated, and every refusal is
+   counted instead of merely printed -- a refusal that is not in the exit total is a refusal nobody can audit. */
+#define ATEXIT_CAPACITY 512u
 static struct {
     void (*fn)(void *);
     void *arg;
     void *dso;
 } atexit_handlers[ATEXIT_CAPACITY];
 static unsigned atexit_registered;
+static unsigned atexit_refused;
 
 unsigned rt_libc_atexit_registered(void) { return atexit_registered; }
+unsigned rt_libc_atexit_refused(void) { return atexit_refused; }
 unsigned rt_libc_atexit_capacity(void) { return ATEXIT_CAPACITY; }
 
 static int atexit_record(void (*fn)(void *), void *arg, void *dso)
 {
     if (!fn) return -1;
     if (atexit_registered >= ATEXIT_CAPACITY) {
-        fprintf(stderr, "libc atexit: table full (%u registered), registration refused by name\n",
-                atexit_registered);
+        atexit_refused++;
+        fprintf(stderr, "libc atexit: table full (%u registered, %u refused), registration refused by name\n",
+                atexit_registered, atexit_refused);
         return -1;
     }
     atexit_handlers[atexit_registered].fn = fn;
@@ -62,16 +68,20 @@ static int libc_atexit(void (*fn)(void))
 {
     /* ISO C atexit: no argument, no dso. Same table, so the exit count is one number. */
     int rc = atexit_record((void (*)(void *))(uintptr_t)fn, NULL, NULL);
-    fprintf(stderr, "libc atexit: handler registered (%u total), not run -- the runtime does not "
-                    "re-enter guest code after exit (modelled)\n", atexit_registered);
+    /* Only on success: the refusal line above already names the refusal, and printing "registered" beside a
+       refused registration is a refusal that reads as a completion. */
+    if (rc == 0 && getenv("BB_ATEXIT_TRACE"))
+        fprintf(stderr, "libc atexit: handler registered (%u total), not run -- the runtime does not "
+                        "re-enter guest code after exit (modelled)\n", atexit_registered);
     return rc;
 }
 
 static int libc_cxa_atexit(void (*fn)(void *), void *arg, void *dso)
 {
     int rc = atexit_record(fn, arg, dso);
-    fprintf(stderr, "libc __cxa_atexit: handler registered (%u total, dso %p), not run -- the runtime "
-                    "does not re-enter guest code after exit (modelled)\n", atexit_registered, dso);
+    if (rc == 0 && getenv("BB_ATEXIT_TRACE"))
+        fprintf(stderr, "libc __cxa_atexit: handler registered (%u total, dso %p), not run -- the runtime "
+                        "does not re-enter guest code after exit (modelled)\n", atexit_registered, dso);
     return rc;
 }
 
