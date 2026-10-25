@@ -34,6 +34,7 @@
 
 #include <asm/prctl.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <setjmp.h>
 #include <execinfo.h>
 #include <signal.h>
@@ -430,21 +431,43 @@ typedef struct {
 
 static int by_nid(const void *a, const void *b) { return strcmp(((const nid_name *)a)->nid, ((const nid_name *)b)->nid); }
 
-/* The NID database: <Entry obf="NID" sym="name"/> lines. Returns the count; *out sorted by NID. */
-static size_t read_nid_db(const char *path, nid_name **out, char **text)
+/* The NID database: <Entry obf="NID" sym="name"/> lines. *out sorted by NID.
+   Three states, signed because they must be: 0 = no path was supplied (absent is legitimate; the boot runs
+   with unresolved imports as usual and says nothing), -1 = a path WAS supplied and could not be read whole,
+   >0 = that many names. -1 cannot be stored in size_t: SIZE_MAX is truthy, so the caller would bsearch() a
+   NULL table. Allocation failure is -1 for the same family of reason -- a partial table returned as a count
+   is a table the boot believes is complete. */
+static ssize_t read_nid_db(const char *path, nid_name **out, char **text)
 {
     *out = NULL;
     *text = NULL;
-    FILE *f = path ? fopen(path, "rb") : NULL;
-    if (!f) return 0;
-    fseek(f, 0, SEEK_END);
+    if (!path) return 0;
+    FILE *f = fopen(path, "rb");
+    if (!f) return -1;
+    struct stat st;
+    if (fstat(fileno(f), &st) == 0 && S_ISDIR(st.st_mode)) {
+        /* A directory opens and fseek/ftell may then report a nonsensical length, which surfaces as ENOMEM
+           from the malloc -- the wrong name for the refusal. Name the state directly. */
+        fclose(f);
+        errno = EISDIR;
+        return -1;
+    }
+    int saved;
+    if (fseek(f, 0, SEEK_END) != 0) { saved = errno ? errno : EIO; fclose(f); errno = saved; return -1; }
     const long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    if (size < 0) { saved = errno ? errno : EIO; fclose(f); errno = saved; return -1; }
+    if (fseek(f, 0, SEEK_SET) != 0) { saved = errno ? errno : EIO; fclose(f); errno = saved; return -1; }
     char *t = malloc((size_t)size + 1);
-    if (!t || fread(t, 1, (size_t)size, f) != (size_t)size) {
+    if (!t) { fclose(f); errno = ENOMEM; return -1; }
+    if (fread(t, 1, (size_t)size, f) != (size_t)size) {
+        /* A short read is not a count of the names that happened to parse: an I/O error and a file shorter
+           than its own length both leave an incomplete table, and a partial table quoted as complete is the
+           defect this function exists to stop. */
+        saved = ferror(f) ? (errno ? errno : EIO) : EIO;
         fclose(f);
         free(t);
-        return 0;
+        errno = saved;
+        return -1;
     }
     fclose(f);
     t[size] = 0;
@@ -460,7 +483,7 @@ static size_t read_nid_db(const char *path, nid_name **out, char **text)
         if (n == cap) {
             cap = cap ? 2 * cap : 4096;
             nid_name *grown = realloc(names, cap * sizeof *names);
-            if (!grown) break;
+            if (!grown) { free(names); free(t); errno = ENOMEM; return -1; }
             names = grown;
         }
         memcpy(names[n].nid, nid, RT_NID_SIZE - 1);
@@ -469,20 +492,20 @@ static size_t read_nid_db(const char *path, nid_name **out, char **text)
         names[n].symbol = sym + 5;
         n++;
     }
-    qsort(names, n, sizeof *names, by_nid);
+    if (n) qsort(names, n, sizeof *names, by_nid);
     *out = names;
     *text = t;
-    return n;
+    return (ssize_t)n;
 }
 
 static nid_name *db;
-static size_t db_count;
+static ssize_t db_count;   /* signed: -1 unreadable, 0 absent, >0 names; SIZE_MAX would be truthy */
 
 static const char *symbol_of(const char *import)
 {
     nid_name key = {{0}, NULL};
     memcpy(key.nid, import, RT_NID_SIZE - 1);
-    const nid_name *hit = db_count ? bsearch(&key, db, db_count, sizeof *db, by_nid) : NULL;
+    const nid_name *hit = (db && db_count > 0) ? bsearch(&key, db, (size_t)db_count, sizeof *db, by_nid) : NULL;
     return hit ? hit->symbol : NULL;
 }
 
@@ -781,7 +804,13 @@ int main(int argc, char **argv)
     }
     rt_tls_init();
     char *db_text;
-    db_count = read_nid_db(nid_path, &db, &db_text);
+    const ssize_t names = read_nid_db(nid_path, &db, &db_text);
+    if (names < 0) {
+        fprintf(stderr, "pbboot: --nids %s: unreadable: %s\n", nid_path, strerror(errno));
+        return 3;
+    }
+    db_count = names;
+    if (nid_path) fprintf(stderr, "pbboot: nids %s: %zd name(s)\n", nid_path, names);
     for (size_t k = 0; k < object_count; k++) resolve(&objects[k]);
 
     if (list) {
