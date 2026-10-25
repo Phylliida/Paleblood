@@ -91,6 +91,14 @@ static int netctl_callbacks_run;
 
 static void netctl_must_not_run(void) { netctl_callbacks_run++; }
 
+/* _Getpctype hands back a page the original keeps in RX. Two directions, both required: the table must be
+   READABLE (so the read-only page is not PROT_NONE), and a WRITE must fault (so a guest cannot silently
+   mutate classification data the original would refuse to let it change). */
+static void *pctype_entry;
+static const unsigned short *pctype_table(void) { return ((const unsigned short *(*)(void))pctype_entry)(); }
+static void pctype_read(void) { volatile unsigned short v = pctype_table()[0x41]; (void)v; }
+static void pctype_write(void) { ((volatile unsigned short *)pctype_table())[0x41] = 0; }
+
 static int netctl_state(int *state) { return ((f_state)netctl_get_state_entry)(state); }
 static int netctl_check(void) { return ((f_check)netctl_check_entry)(); }
 static int netctl_register(void *callback, void *arg, int *id)
@@ -101,6 +109,28 @@ static int netctl_unregister(int id) { return ((f_unregister)netctl_unregister_e
 static int netctl_info(int module, void *info) { return ((f_info)netctl_get_info_entry)(module, info); }
 static int netctl_nat(void *nat_info) { return ((f_nat)netctl_get_nat_info_entry)(nat_info); }
 
+/* Generic form: the child must die OF A NAMED SIGNAL. died_in_fatal is the SIGABRT instance, kept as its own
+   name because every existing call site means "the fatal", not "some signal". */
+static int died_of_signal(int want, void (*call)(void))
+{
+    const pid_t child = fork();
+    if (child == 0) { call(); _exit(1); }
+    int status = 0;
+    if (waitpid(child, &status, 0) < 0) return 0;
+    return WIFSIGNALED(status) && WTERMSIG(status) == want;
+}
+
+/* The complement, and without it the write test is satisfied by a page that faults on EVERY access:
+   the same page must be READABLE in a child that exits 0. */
+static int ran_cleanly(void (*call)(void))
+{
+    const pid_t child = fork();
+    if (child == 0) { call(); _exit(0); }
+    int status = 0;
+    if (waitpid(child, &status, 0) < 0) return 0;
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+
 static int died_in_fatal(void (*call)(void))
 {
     const pid_t child = fork();
@@ -110,7 +140,7 @@ static int died_in_fatal(void (*call)(void))
     }
     int status = 0;
     if (waitpid(child, &status, 0) < 0) return 0;
-    return WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT;
+    return died_of_signal(SIGABRT, call);
 }
 
 /* The paths whose PS4 answer is not established. The ids are file-scope so a child can unregister
@@ -441,6 +471,13 @@ int main(void)
             CHECK(cxa(atexit_handler_arg, NULL, NULL) == -1);   /* full: refused, not lost */
             CHECK(rt_libc_atexit_registered() == capacity);
         }
+    }
+
+    pctype_entry = fn("libc", "_Getpctype");
+    CHECK(pctype_entry != NULL);
+    if (pctype_entry) {
+        CHECK(ran_cleanly(pctype_read));            /* control: readable, or the next line proves nothing */
+        CHECK(died_of_signal(SIGSEGV, pctype_write)); /* the original is RX; a write faults here too */
     }
 
     if (!failures) puts("syslib: ok");

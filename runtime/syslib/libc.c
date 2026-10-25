@@ -11,6 +11,8 @@
 #include "runtime/loader.h"
 #include "runtime/process.h"
 #include "runtime/syslib.h"
+#include <sys/mman.h>
+#include <unistd.h>
 #include "runtime/tls.h"
 
 #include <stdio.h>
@@ -488,7 +490,12 @@ static const unsigned short pctype_source[PCTYPE_ENTRIES] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 };
-static unsigned short pctype_copy[PCTYPE_ENTRIES];
+/* The original table lives in the image's RX segment, so a guest WRITE to it faults. A writable copy would
+   accept the write silently and answer a question the original never asks — a model that behaves differently
+   in exactly the operation the original forbids. The copy is therefore placed on its own page and made
+   PROT_READ before any guest can see it; if that protection cannot be applied the body REFUSES rather than
+   handing back a writable table, because a fidelity claim that silently does not hold is worse than a stop. */
+static unsigned short *pctype_page;
 static int pctype_ready;
 static unsigned short *libc_Getpctype(void)
 {
@@ -502,10 +509,21 @@ static unsigned short *libc_Getpctype(void)
         if (h != 0xd0bafaafcf18b805ull)
             rt_fatal("_Getpctype", "the embedded ctype table does not match the measured bytes "
                               "(FNV-1a mismatch); the table is evidence and a source edit may not alter it");
-        memcpy(pctype_copy, pctype_source, sizeof pctype_copy);
+        long pg = sysconf(_SC_PAGESIZE);
+        if (pg <= 0 || (size_t)pg < sizeof pctype_source)
+            rt_fatal("_Getpctype", "page size unusable for the table page");
+        pctype_page = mmap(NULL, (size_t)pg, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (pctype_page == MAP_FAILED)
+            rt_fatal("_Getpctype", "the table page could not be mapped");
+        memcpy(pctype_page, pctype_source, sizeof pctype_source);
+        if (mprotect(pctype_page, (size_t)pg, PROT_READ) != 0)
+            rt_fatal("_Getpctype", "the table page could not be made read-only; refusing to hand back a "
+                                   "writable table the original keeps in RX");
         pctype_ready = 1;
+        fprintf(stderr, "pbboot: libc _Getpctype: 256 entries at width 2, page read-only (the original is "
+                        "RX; a guest write faults here too)\n");
     }
-    return pctype_copy;
+    return pctype_page;
 }
 RT_SYSLIB("libc", _Getpctype, libc_Getpctype);
 
