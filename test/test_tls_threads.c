@@ -87,9 +87,26 @@ static void *worker(void *arg)
     return NULL;
 }
 
+/* The first worker supplies 0x750 explicitly. That override is necessary for the slot test, but it
+   vendors the value the product's default gets wrong: rt_tls_thread_begin() must inherit the main
+   thread's 0x750, not install a 0x4a0 block that cannot hold eboot's fs-0x690 slot. This worker omits
+   the override so the default itself is measured. */
+static void *default_worker(void *arg)
+{
+    (void)arg;
+    rt_tls_thread_begin();
+    rt_tls_view view;
+    rt_tls_view_read(&view);
+    rt_tls_trace_view("default-after-begin", &view);
+    if (view.memsz != 0x750u) fail(THREADS, "default child memsz", view.memsz, 0x750u);
+    rt_tls_thread_end();
+    return NULL;
+}
+
 int main(void)
 {
     rt_tls_init();
+    rt_tls_layout(NULL, 0, 0x750u); /* model eboot on the main thread: children inherit this */
     main_guest = rt_tls_guest_base();
     if (!rt_tls_have_wrfsbase()) {
         fprintf(stderr, "tls_threads: SKIP: host has no user-mode wrfsbase\n");
@@ -118,6 +135,13 @@ int main(void)
             if (guest_bases[i] == guest_bases[j])
                 fail(i, "guest base distinct from peer", guest_bases[i], guest_bases[j]);
     }
+
+    pthread_t default_thread;
+    if (pthread_create(&default_thread, NULL, default_worker, NULL) != 0) {
+        fprintf(stderr, "tls_threads: pthread_create default failed\n");
+        return 1;
+    }
+    pthread_join(default_thread, NULL);
 
     if (atomic_load(&failures) != 0) {
         fprintf(stderr, "tls_threads: FAIL (%d)\n", atomic_load(&failures));

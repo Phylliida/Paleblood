@@ -174,7 +174,10 @@ void rt_tls_thread_begin(void)
     rt_tls_thread *st = calloc(1, sizeof *st);
     if (!st) rt_fatal("TLS", "cannot allocate per-thread TLS state");
     st->self = st;
-    st->guest_memsz = 0x4a0u;
+    /* A child inherits the main thread's measured block, not libc.elf's 0x4a0. The boot lays out
+       eboot's 0x750 before rt_tls_init; a child that omits rt_tls_layout used to get a 0x4a0 block
+       and write past its own TLS segment. 0x4a0 remains only the pre-init fallback. */
+    st->guest_memsz = main_state.guest_memsz ? main_state.guest_memsz : 0x4a0u;
     __asm__ volatile("rdfsbase %0" : "=r"(st->host_fsbase));
     st->host_gsbase = get_gs_base();
     set_gs_base(st);
