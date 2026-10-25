@@ -421,14 +421,21 @@ rounded to zero (card `057`).
 
 ## The 13 are named: `PB_ATTR_NOOP` is a registration macro a `RT_SYSLIB*` grep cannot see (2026-10-25)
 
-`pthread_sema.c` registers **15** attr handlers through `PB_ATTR_NOOP(lib, sym)`, which expands to
+`pthread_sema.c` registers **14** attr handlers through `PB_ATTR_NOOP(lib, sym)` -- 15 textual matches,
 `RT_SYSLIB_MODELLED` around a generated `attr_noop_<sym>`. Six of them duplicate keys that
 `kernel_thread.c` registers with **real** bodies, and `kernel_thread.c` sits earlier in the section, so all
 six have never run. They are removed; the nine unique ones stay.
 
-That is the whole discrepancy, and it was never mysterious: **95** `RT_SYSLIB*` invocations + **15**
-`PB_ATTR_NOOP` = 110 source rows, against **108** entries linked. The parser that reported 94 used one
-macro's spelling as the definition of the table -- the same defect as `store_k`, one level up.
+That is the whole discrepancy, and it was never mysterious. One textual match is the `#define` line itself,
+so the derivation is `94 - 1 + 14 = 107` registrations: the grep counts the macro **body** once and the
+preprocessor expands it 14 times (kimisupport's derivation, confirmed per object: `pthread_sema.c.o` holds 22
+entry symbols, 8 direct + 14 generated). The parser that reported 94 used one macro's spelling as the
+definition of the table -- the same defect as `store_k`, one level up.
+
+**Correction of my own count**: the "108" was an unanchored `grep -cE "rt_syslib_(unresolved_)?entry"` and
+counted one extra symbol. Anchored to `entry_<digits>$`, the binary holds exactly 100 at this commit, which is
+`107 - 7` (1 scePthreadCreate row, 6 dead attribute no-ops). An unanchored pattern is not a count of a set --
+the same defect as `startswith` against `fullmatch`, now three times in this campaign.
 
 **Entry count now closes by subtraction**: 108 at the start of the slice, **100** measured after it --
 `-1` (`libc`/memset key collapsed to one body), `-1` (`libkernel`/scePthreadCreate collapsed), `-6` (the

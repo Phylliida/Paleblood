@@ -153,7 +153,8 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
     static char wall[512];
     snprintf(wall, sizeof wall,
              "the guest asked for a thread (entry %p, arg %p) and this runtime cannot give it one: guest "
-             "TLS is unmodelled (PT_TLS filesz 0x220, memsz 0x4a0), the arena is one unlocked bump "
+             "TLS layout is NOT established (two artifacts disagree: PT_TLS read as 0x0/0x750 against the 0x220/0x4a0 "
+             "this text used to quote), the arena is one unlocked bump "
              "pointer, and every host call assumes one guest thread in flight",
              (void *)(uintptr_t)entry, (void *)(uintptr_t)arg);
     rt_fatal("scePthreadCreate", wall);
