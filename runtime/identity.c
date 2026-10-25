@@ -59,6 +59,9 @@ static int sha256_file(const char *path, unsigned char out[32])
         block(h, buf);
         total += 64;
     }
+    /* fread returning short is EOF only if the stream did not error; without this a read error (EISDIR,
+       EIO) hashes an empty file and prints a confident wrong identity. */
+    if (ferror(f)) { fclose(f); return -1; }
     uint64_t bits = (total + n) * 8;
     buf[n++] = 0x80;
     if (n > 56) {
@@ -93,6 +96,14 @@ const char *rt_identity_sha(void)
     }
     for (int i = 0; i < 6; i++) snprintf(identity_hex + i * 2, 3, "%02x", d[i]);
     return identity_hex;
+}
+
+int rt_identity_file_sha(const char *path, char out[13])
+{
+    unsigned char d[32];
+    if (sha256_file(path, d) != 0) { out[0] = '\0'; return -1; }
+    for (int i = 0; i < 6; i++) snprintf(out + i * 2, 3, "%02x", d[i]);
+    return 0;
 }
 
 void rt_announce_identity(void)

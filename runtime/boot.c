@@ -914,6 +914,15 @@ int main(int argc, char **argv)
                 return 3;
             }
             fprintf(stderr, "plugin: path=%s resolved=%s\n", plugin, resolved);
+            /* The refusal is deliberate: a plugin whose identity cannot be printed makes the run
+               unattributable, and an unattributable run is a number without a subject. */
+            char phex[13];
+            if (rt_identity_file_sha(resolved, phex) != 0) {
+                fprintf(stderr, "pbboot: plugin sha256 unreadable for %s -- refusing to run with an "
+                                "unattributable plugin\n", resolved);
+                return 3;
+            }
+            fprintf(stderr, "plugin sha256 %s\n", phex);
             if (rt_boot_load_plugin(objects[0].image, objects[0].size, resolved, &plugin_hooks) != 0) {
                 fprintf(stderr, "pbboot: the plugin refused: hooks_installed=%u\n", plugin_hooks);
                 return 3;
