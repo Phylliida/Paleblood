@@ -679,6 +679,23 @@ int main(int argc, char **argv)
         o->tramp = mmap(NULL, (o->imports + 1) * TRAMPOLINE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         o->data = mmap(NULL, (o->imports + 1) * 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        /* BB_DATA_GUARD turns the private pages that back UNBOUND data imports into guard pages, so a
+           guest that dereferences one faults AT THE OBJECT'S OWN ADDRESS instead of reading zeroes and
+           failing later at 0. It is an experiment, not a default: the pages exist to give an unbound
+           object import a unique address, and this asks the harder question of whether anything reads it. */
+        if (getenv("BB_DATA_GUARD") && mprotect(o->data, (o->imports + 1) * 4096, PROT_NONE))
+            rt_fatal("imports", "BB_DATA_GUARD: could not protect the unbound-data pages");
+        else if (getenv("BB_DATA_GUARD")) {
+            fprintf(stderr, "pbboot: %s: %zu unbound-data page(s) guarded -- a dereference of an unbound "
+                            "object import faults at its own address\n", o->label, o->imports + 1);
+            /* Every data import gets slot `data + 4096*index`; a bound one is pointed elsewhere, so the
+               table below is the whole candidate set and the fault address selects one row of it. Printing
+               it is what turns "fault at 0x...000" into a name. */
+            for (size_t i = 0; i < o->imports; i++)
+                if (rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_DATA)
+                    fprintf(stderr, "pbboot: guard slot %p %s %s\n", (void *)(o->data + 4096 * i),
+                            rt_elf_import_library(o->elf, i), rt_elf_import_name(o->elf, i));
+        }
         if (o->image != want || o->tramp == MAP_FAILED || o->data == MAP_FAILED) {
             fprintf(stderr, "pbboot: cannot map memory for %s: %s\n", o->path, strerror(errno));
             return 3;

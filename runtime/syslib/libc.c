@@ -77,6 +77,36 @@ static int libc_cxa_atexit(void (*fn)(void *), void *arg, void *dso)
 RT_SYSLIB_MODELLED("libc", atexit, libc_atexit);
 RT_SYSLIB_MODELLED("libc", __cxa_atexit, libc_cxa_atexit);
 
+/* `std::ios_base::Init::Init` (NID sqWytnhYdEg, libc import 259) and `std::_Winit::_Winit` (import 260).
+
+   Measured before writing this: of this target's 34 mangled libc imports, SIX are the standard stream
+   OBJECTS -- cin, cerr, wcerr, wcin, cout, wcout (libc ordinals 26-31) -- and NOT ONE stream operation
+   is imported: no operator<<, no __ostream_insert, no basic_ios method. So this constructor's entire
+   observable effect is the existence of those six objects. It does not touch the object it is handed
+   (an ios_base::Init has no state under the Itanium ABI); it raises a process-wide counter and makes
+   the streams exist.
+
+   The streams are data imports with no provider, and boot.c binds each unbound data import to its own
+   page of private zeroed `data` (4096 B per import), so a guest that READS one gets zeroes and a guest
+   that CALLS through one faults at 0 with the call site naming itself. This entry therefore does no
+   work, and says so with a reason rather than returning a permissive zero. The reason is falsifiable:
+   build with BB_DATA_GUARD=1 and those pages are PROT_NONE, so any dereference faults at the object's
+   own address -- which is the witness that decides whether "noop by unobservability" is true for this
+   guest. Working the constructor's declared effect means constructing the six objects, and that ABI
+   (basic_ostream/basic_ios layout and vtables) is not in this tree. */
+static unsigned ios_init_calls;
+static void libc_ios_init(void *self)
+{
+    ios_init_calls++;
+    if (ios_init_calls == 1)
+        fprintf(stderr, "libc ios_base::Init: constructed at %p; the six standard stream objects are "
+                        "unbound data imports on private zero pages, so no stream operand is initialised "
+                        "(noop, with a reason: BB_DATA_GUARD=1 tests whether this guest touches them)\n",
+                self);
+}
+RT_SYSLIB_NOOP("libc", _ZNSt8ios_base4InitC1Ev, libc_ios_init);
+RT_SYSLIB_NOOP("libc", _ZNSt6_WinitC1Ev, libc_ios_init);
+
 /* The Itanium C++ ABI's one-time static initialisation guard: `__cxa_guard_acquire` (libc import 40,
    NID 3GPpjQdAMTw), `release` and `abort`. The guard is an 8-byte word in guest memory whose low byte
    means "initialised". acquire answers 1 when the initialiser must run and 0 when it already has;

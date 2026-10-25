@@ -209,3 +209,41 @@ Reached with `BB_PLUGIN=build-release/game/libbbgame.so`, rc=4:
    Not decided between (a) and (b).
 
 The import census moved by exactly one and closes: 97 = 60 real + 26 modelled + 5 noop + 6 refused.
+
+## The unbound-data pages are readable zeroes, and the first thing the guest reads is its canary (measured 2026-10-24)
+
+`boot.c` gives every unbound DATA import its own page of private zeroed `data`
+(`o->data + 4096*index`, `(imports + 1) * 4096` anonymous RW). That is enough to give an unbound object
+import a unique address, and it is exactly what makes its use INVISIBLE: a read returns zeroes and the
+boot proceeds. `BB_DATA_GUARD=1` now `mprotect`s those pages `PROT_NONE` and prints the whole slot table,
+so a dereference faults at the object's own address and the address selects one printed row.
+
+Two arms, same build, `BB_PLUGIN=build-release/game/libbbgame.so`:
+
+  plain:              rc=4, next wall `libc WkkeywLJcgU` -- no fault, nothing to see
+  BB_DATA_GUARD=1:    rc=1, signal 11 at `eboot+0x2083ff7`, address = a guarded slot
+
+And the slot is named, by address, against the printed table:
+
+  guard slot <addr>       libkernel f7uOxY9mM1U = `__stack_chk_guard`   <- faulted here
+  guard slot <addr+4096>  libc      P330P3dFF68 = `Need_sceLibc`        <- its neighbour
+
+Three facts, each with a witness:
+
+1. **The guest reads `__stack_chk_guard` at `eboot+0x2083ff7` before it reaches the next import wall.**
+   Today that read returns zero, so the canary loaded from the slot and the canary compared at function
+   exit are both zero, and **every stack-protector check in this guest silently passes**. That is the
+   permissive-zero class, measured rather than suspected, and it is `noop`-by-accident: the behaviour is
+   the zeroing of anonymous memory, not a decision anyone made.
+2. **It is not a wall.** The plain arm walks past it to `WkkeywLJcgU`, which is why it was never seen:
+   the defect produces no output, no fault and no missing call until something depends on the value.
+3. **`Need_sceLibc` (libc ordinal 0) is the literal next slot** and is still unbound — the same NID this
+   campaign has carried for sessions as "no guessed implementation, ever". It is a data import, and the
+   syslib table can only supply CODE (`bind_import` returns `s->fn`), so no current mechanism can serve it.
+
+Pre-registered fix, not yet written: a **data-provider table** -- (library, nid, address, size) consulted
+in the import loop for DATA imports -- with two entries that are not guesses:
+`__stack_chk_guard` -> 8 bytes of runtime-owned storage holding a random nonzero value (low byte 0, as the
+ABI's terminator convention requires), so a real smash is caught; and `Need_sceLibc` -> bound only once
+its semantics are known, still refused until then. The canary's value must be ONE value per process and
+printed once at startup, because two copies of a canary are two different claims.
