@@ -520,3 +520,14 @@ a control; an earlier, independently derived number is.**
 the stub-search assigned nothing and compared an int against an unset variable -- a zero about the scanner,
 printed as a zero about the population. `73` was already known from the previous pass, which is the only
 reason the zero was caught: **a second run of the same scanner is not a control; the earlier number was.**
+
+## Coordinate spaces and the tables that disagree about being "the catalogue"
+
+- **`functions.csv` is the LANDED subset (38,101 rows); `ghidra_functions.csv` is the total (157,757).** A
+  PC→owner join that reads the first reports "outside every extent" for bytes that are inside one. Checked
+  across `tools/`: `join_import_pc.py` reads the total via `catalogue.load_extents("symbols/ghidra_functions.csv")`
+  and is correct; the false zero this slice hit was a **hand** lookup in `functions.csv`, not a tool. The rule is
+  the general one: **the join against extents must name the table that IS the extent set, and a landed table is
+  a status view.**
+- **`where()` prints vaddr space; the catalogue is PS4 space (+0x400000); file offset is vaddr + 0x4000.** All
+  four are named in `runtime/address_spaces.h`, with the byte round-trip that proved them.

@@ -171,7 +171,10 @@ static void __attribute__((noreturn)) fault_outside_the_window(uint64_t pc)
     buf[n++] = '\n';
     /* write(2) directly: stdio is one of the locks this path must not take. */
     extern long write(int, const void *, unsigned long);
-    write(2, buf, n);
+    /* -Wunused-result: the return is checked, and its value cannot change what we do next -- this path
+       writes its last bytes and exits. Ignoring it silently was a build error hiding a stale binary. */
+    const long written = write(2, buf, n);
+    if (written != (long)n) { _exit(134); }
     _exit(134);
 }
 
