@@ -102,11 +102,16 @@ static volatile uint64_t fault_regs[16];
 static volatile int fault_signal;
 static volatile int exit_code;
 
+/* Defined below, after rt_import_pc and the loader's accessors: this file's unimplemented() is above them. */
+static uint64_t import_guest_pc(uint32_t which);
+static int guest_rx_contains(uint64_t guest);
+
 /* Entered from an unimplemented import's trampoline (edi = object << 20 | import). Never returns. */
 static __attribute__((noinline)) void unimplemented(uint32_t which)
 {
-    /* the trampoline jumped here, so the return address is the guest's call site */
-    stopped_from = (uint64_t)(uintptr_t)__builtin_return_address(0);
+    /* The trampoline captured the guest's [rsp] before the crossing; this function was jumped to, so its
+       own return address is a host address inside the stub. */
+    stopped_from = import_guest_pc(which);
     stopped_at = which;
     outcome = UNIMPLEMENTED;
     siglongjmp(back_to_host, 1);
@@ -251,6 +256,40 @@ volatile uint64_t rt_syslib_args[4];
    which is the `called` half of the called/served split this runtime has owed for many slices. */
 #define RT_IMPORT_PC_MAX 4096
 volatile uint64_t rt_import_pc[RT_IMPORT_PC_MAX][2];
+
+/* The guest PC that entered this import, as captured by the trampoline from the guest's own [rsp] BEFORE the
+   crossing. `__builtin_return_address(0)` here would be a host address inside the stub: a value reported in a
+   space it does not live in, which is exactly the defect this replaces. The capture is keyed by
+   (object << 20 | index) and is only stored when that key is < RT_IMPORT_PC_MAX, so an import of any object
+   but eboot reports ABSENCE rather than a plausible neighbour. */
+static uint64_t import_guest_pc(uint32_t which)
+{
+    if (which >= RT_IMPORT_PC_MAX) return 0;
+    return (uint64_t)rt_import_pc[which][0];
+}
+
+/* Nonzero only if `guest` lands inside one of eboot's PF_X segments, read from the executable's own program
+   headers -- not a constant. A captured address that fails this is printed as an error, never silently
+   formatted as if it were a guest site. */
+static int guest_rx_contains(uint64_t guest)
+{
+    if (!objects[0].elf) return 0;
+    /* The RUNTIME base of object 0, not EBOOT_BASE: eboot executes at GUEST_BASE (0x800000000) and the
+       captured return address lives in that space. Comparing it against EBOOT_BASE (0x400000) rejected a
+       true guest address -- a value compared in a space other than the one it lived in, which is the same
+       defect this field exists to remove, so the base is read from the object rather than typed. */
+    const uint64_t base = (uint64_t)(uintptr_t)objects[0].image;
+    const size_t n = rt_elf_load_count(objects[0].elf);
+    const rt_elf_load *ls = rt_elf_loads(objects[0].elf);
+    for (size_t i = 0; i < n; i++) {
+        if (!(ls[i].flags & 1u)) continue;
+        const uint64_t lo = base + ls[i].vaddr;
+        const uint64_t hi = lo + rt_elf_load_filesz(objects[0].elf, i);
+        if (guest >= lo && guest < hi) return 1;
+    }
+    return 0;
+}
+
 /* Read back inside the stub, immediately after the host swap: a wrfsbase that does not take is otherwise
    indistinguishable from one that does. */
 /* The guest stack's alignment at the call site is the guest's business; our C bodies need the ABI's. */
@@ -972,12 +1011,21 @@ int main(int argc, char **argv)
     }
     char at[128] = "", from[128] = "";
     if (outcome == FAULT || outcome == TIMEOUT) where(fault_rip, at, sizeof at);
-    if (outcome == UNIMPLEMENTED) where(stopped_from, from, sizeof from);
+    if (outcome == UNIMPLEMENTED) {
+        if (stopped_from && guest_rx_contains(stopped_from)) where(stopped_from, from, sizeof from);
+        else if (stopped_from)
+            snprintf(from, sizeof from, "n/a (0x%llx is not inside the guest's PF_X segments)",
+                     (unsigned long long)stopped_from);
+        else
+            snprintf(from, sizeof from, "n/a (guest return address not captured for this object)");
+    }
 
     printf("pbboot: %s: %s", phase, outcome_names[outcome]);
     if (outcome == UNIMPLEMENTED)
-        printf(": %s calls %s %s (NID %s), returning to %s", stop_caller, stop_library ? stop_library : "?",
-               stop_name ? stop_name : stop_nid, stop_nid, from);
+        printf(": %s calls %s %s (NID %s), returning to %s (args rdi %#llx rsi %#llx rdx %#llx)", stop_caller,
+               stop_library ? stop_library : "?", stop_name ? stop_name : stop_nid, stop_nid, from,
+               (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
+               (unsigned long long)rt_syslib_args[2]);
     if (outcome == FAULT) printf(": signal %d at %s, address 0x%llx", fault_signal, at, (unsigned long long)fault_address);
     if (outcome == FAULT) {
         /* A raw host pointer is unreadable to every reader, including me. Every artifact names its own
@@ -1029,7 +1077,8 @@ int main(int argc, char **argv)
         else
             printf("pbboot: in flight: #%u args %#llx %#llx %#llx guest_pc %#llx\n", rt_syslib_in_flight,
                    (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
-                   (unsigned long long)rt_syslib_args[2], (unsigned long long)rt_syslib_args[3]);
+                   (unsigned long long)rt_syslib_args[2],
+                   (unsigned long long)import_guest_pc(rt_syslib_in_flight));
         /* Which TLS the fault happened on. A host body running with %fs on the guest TCB reads zeros
            for every glibc TLS slot -- errno, the stack protector's fs:0x28 -- and the first dereference
            of anything those zeros point at faults at exactly 0x0 with a host pc and guest arguments,
@@ -1086,10 +1135,18 @@ int main(int argc, char **argv)
             }
             printf("pbboot: fault import in flight #%u %s:%s (object %u import %u)\n", v, lib ? lib : "?",
                    sym ? sym : "?", k, i);
-            printf("pbboot: fault import args rdi %llx rsi %llx rdx %llx rcx %llx r8 %llx r9 %llx\n",
-                   (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
-                   (unsigned long long)rt_syslib_args[2], (unsigned long long)rt_syslib_args[3],
-                   (unsigned long long)rt_syslib_args[4], (unsigned long long)rt_syslib_args[5]);
+            /* THREE captured words, because rt_syslib_args is [4] and the trampoline stores exactly rdi,
+               rsi, rdx. The old line printed indices 4 and 5 -- out of bounds -- under the labels r8/r9, and
+               index 3 (never written) under rcx: three "registers" that were not registers. */
+            {
+                const uint64_t gpc = import_guest_pc(v);
+                char g[128];
+                if (gpc && guest_rx_contains(gpc)) where(gpc, g, sizeof g);
+                else snprintf(g, sizeof g, "n/a (not captured for this object)");
+                printf("pbboot: fault import args rdi %llx rsi %llx rdx %llx guest_pc %s\n",
+                       (unsigned long long)rt_syslib_args[0], (unsigned long long)rt_syslib_args[1],
+                       (unsigned long long)rt_syslib_args[2], g);
+            }
         }
         printf("pbboot: fault regs rax %llx rbx %llx rcx %llx rdx %llx\n"
                "pbboot: fault regs rsi %llx rdi %llx rbp %llx rsp %llx\n"

@@ -500,6 +500,15 @@ appears nowhere in the file as an 8-byte value, so there is no second copy to di
 - **Open, scoped:** whether some *other* code path (beyond 12 instructions) tests a mask made only of unset
   bits. Answering it is a search over the 61 classified windows plus the 12 remainders, not over the table.
 
+**A completion with an expiry:** a refusal printed on the line *after* its own success line is worse than no
+refusal at all — every reader takes the first line and stops, so the log records a success and buries the
+refusal one line down. Measured twice in this tree (`__cxa_atexit` printing `handler registered` before
+`table full ... refused`), and the repair is the general one: **print success only on success, and print the
+count unconditionally** so a log cannot mean three different things. Companion class of the same defect:
+**a capped table's count is a count of the cap, not of the demand** — `64 registered` stood in for `282`
+until the capacity was raised, which is *a count cannot be subtracted from a set* with the cap as the
+subtraction.
+
 **A fourth mechanism for a tidy zero, and the worst of the four:** the comparison itself was sound and the
 population was real, but one operand was a variable the previous statement never assigned, so the loop
 compared an int against `None` and matched nothing. **An unset variable in a comparison is indistinguishable

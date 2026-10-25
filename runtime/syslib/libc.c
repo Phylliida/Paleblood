@@ -11,6 +11,7 @@
 #include "runtime/loader.h"
 #include "runtime/process.h"
 #include "runtime/syslib.h"
+#include <limits.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include "runtime/tls.h"
@@ -355,6 +356,80 @@ static unsigned short *libc_wmemchr(const unsigned short *s, unsigned short c, s
 }
 
 RT_SYSLIB("libc", wmemchr, libc_wmemchr);
+/* wcstol, libc 504 (d3dMyWORw8A): the first wide import the guest reaches that is not a wmem* copy or scan.
+   Unit: 2 bytes, MEASURED (wcslen), never sizeof(wchar_t); the host's wcstol expects 4 and is not called.
+
+   Measured call site, before this body existed: eboot+0x20ebb0f, `mov $0xa,%edx` / `lea -0x70(%rbp),%rsi` /
+   rdi = a stack wchar_t buffer -- base 10, non-NULL endptr, corroborated at runtime (rdx 0xa) and by the
+   raw bytes (file offset = vaddr + 0x4000, since this image has no section table for objdump to read).
+
+   Modelled: the ISO C success path, and the defined no-conversion result (0, *endptr = nptr).
+   NOT modelled: guest errno. There is no errno model in this runtime, so an overflow REFUSES by name rather
+   than returning a clamped value that would never fault and never agree. */
+static long libc_wcstol(const unsigned short *s, unsigned short **endptr, int base)
+{
+    static int announced;
+    const unsigned short *p = s;
+    const unsigned short *digits;
+    int neg = 0, any = 0;
+    unsigned long long acc = 0, limit;
+
+    if (!s) rt_fatal("wcstol", "the string pointer is NULL");
+    if (base != 0 && (base < 2 || base > 36)) {
+        char why[128];
+        snprintf(why, sizeof why, "base %d is outside 0 and 2..36; the original sets EINVAL and this runtime "
+                                  "has no guest errno to set", base);
+        rt_fatal("wcstol", why);
+    }
+    for (;; p++) {
+        const unsigned short c = *p;
+        if (c == 0x20 || (c >= 0x09 && c <= 0x0d)) continue;
+        break;
+    }
+    if (*p == 0x2b || *p == 0x2d) { neg = (*p == 0x2d); p++; }
+    if ((base == 0 || base == 16) && p[0] == 0x30 && (p[1] == 0x78 || p[1] == 0x58)) {
+        base = 16;
+        p += 2;
+    } else if (base == 0) {
+        base = (p[0] == 0x30) ? 8 : 10;
+    }
+    digits = p;
+    limit = neg ? (unsigned long long)LONG_MAX + 1ull : (unsigned long long)LONG_MAX;
+    for (;; p++) {
+        const unsigned short c = *p;
+        int d;
+        if (c >= 0x30 && c <= 0x39) d = c - 0x30;
+        else if (c >= 0x61 && c <= 0x7a) d = c - 0x61 + 10;
+        else if (c >= 0x41 && c <= 0x5a) d = c - 0x41 + 10;
+        else break;
+        if (d >= base) break;
+        if (acc > (limit - (unsigned)d) / (unsigned)base)
+            rt_fatal("wcstol", "value overflows long; the original sets ERANGE and this runtime has no guest "
+                               "errno, so no clamped value is returned");
+        acc = acc * (unsigned)base + (unsigned)d;
+        any = 1;
+    }
+    if (endptr) *endptr = (unsigned short *)(any ? p : s);
+    if (!any) {
+        if (!announced)
+            fprintf(stderr, "pbboot: libc wcstol: no digits converted at %p -- ISO C defines the result "
+                            "(0, endptr = nptr), so it is returned; errno is NOT modelled here\n", (const void *)s);
+        announced = 1;
+        return 0;
+    }
+    {
+        const long v = (neg && acc == (unsigned long long)LONG_MAX + 1ull) ? LONG_MIN
+                                                                          : (neg ? -(long)acc : (long)acc);
+        if (!announced) {
+            fprintf(stderr, "pbboot: libc wcstol: %llu unit(s) parsed, base %d, value %ld (unit 2 bytes, "
+                            "measured)\n", (unsigned long long)(p - digits), base, v);
+            announced = 1;
+        }
+        return v;
+    }
+}
+RT_SYSLIB("libc", wcstol, libc_wcstol);
+
 /* _FSin, libc ordinal 38 -- the first wall whose right answer is not fixed by a standard but by an
    IMPLEMENTATION's rounding. Two things are NOT established here and are not pretended to be:
      - that `_FSin` takes and returns a float (the `_F` prefix is a hypothesis, not a citation in this tree);
@@ -520,8 +595,12 @@ static unsigned short *libc_Getpctype(void)
             rt_fatal("_Getpctype", "the table page could not be made read-only; refusing to hand back a "
                                    "writable table the original keeps in RX");
         pctype_ready = 1;
-        fprintf(stderr, "pbboot: libc _Getpctype: 256 entries at width 2, page read-only (the original is "
-                        "RX; a guest write faults here too)\n");
+        /* The page's address is printed because a fault at it is reported as a HOST address (it is not in
+           guest space); without this line that fault cannot be attributed to the model table. Printed once,
+           at init, which is also the only moment the mapping is new. */
+        fprintf(stderr, "pbboot: libc _Getpctype: 256 entries at width 2, page %p read-only (the original is "
+                        "RX; a guest write faults here too; this address is host space, match it here)\n",
+                (void *)pctype_page);
     }
     return pctype_page;
 }
