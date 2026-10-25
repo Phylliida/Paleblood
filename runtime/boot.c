@@ -236,8 +236,13 @@ __asm__(".text\n"
 
 /* Runs fn until it returns, exits, faults, times out or reaches an unimplemented import. Kept
    apart from main so that no caller state is live across the jump back. */
+/* Set only when run_guest() is actually reached; the atexit reporter reads it. Declared here because the
+   reporter lives below and a refusal before the guest starts must not print a count of zero. */
+static int guest_entered;
+
 static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void *c, void *stack_top, int timeout)
 {
+    guest_entered = 1;
     outcome = RUNNING;
     fault_in_handler = 0;
     fault_jmp_live = 1;
@@ -396,7 +401,8 @@ static void rt_import_pc_report(void)
     /* No subject is not "a subject with zero imports": with object_count == 0 the loop never ran, boot_known
        stayed 1, and the reporter printed boot called=0 for a run that had nothing to count. Same rule as the
        NULL-elf guard below, one branch over -- an unreachable subject must not print as a number. */
-    int boot_known = object_count > 0;
+    int boot_known = guest_entered && object_count > 0;
+    int not_entered = !guest_entered;
     for (size_t k = 0; k < object_count; k++) {
         /* An ELF that never opened is NULL, not "zero imports": this reporter runs from atexit, so a failed
            load reached here with objects[0].elf == NULL and dereferenced it -- the refusal printed and then
@@ -408,6 +414,8 @@ static void rt_import_pc_report(void)
     }
     if (boot_known)
         fprintf(stderr, "imports called: %llu rows, %llu calls total, boot called=%llu\n", nz, total, boot_called);
+    else if (not_entered)
+        fprintf(stderr, "imports called: %llu rows, %llu calls total, boot called=n/a (guest not entered)\n", nz, total);
     else
         fprintf(stderr, "imports called: %llu rows, %llu calls total, boot called=n/a\n", nz, total);
     for (unsigned pass = 0; pass < 20; pass++) {
@@ -437,8 +445,9 @@ static int by_nid(const void *a, const void *b) { return strcmp(((const nid_name
    >0 = that many names. -1 cannot be stored in size_t: SIZE_MAX is truthy, so the caller would bsearch() a
    NULL table. Allocation failure is -1 for the same family of reason -- a partial table returned as a count
    is a table the boot believes is complete. */
-static ssize_t read_nid_db(const char *path, nid_name **out, char **text)
+static ssize_t read_nid_db(const char *path, nid_name **out, char **text, size_t *skipped_out)
 {
+    *skipped_out = 0;
     *out = NULL;
     *text = NULL;
     if (!path) return 0;
@@ -471,15 +480,24 @@ static ssize_t read_nid_db(const char *path, nid_name **out, char **text)
     }
     fclose(f);
     t[size] = 0;
-    size_t n = 0, cap = 0;
+    size_t n = 0, cap = 0, skipped = 0;
     nid_name *names = NULL;
     for (char *p = strstr(t, "obf=\""); p; p = strstr(p, "obf=\"")) {
         char *nid = p + 5, *end = strchr(nid, '"');
         char *sym = end ? strstr(end, "sym=\"") : NULL;
         char *send = sym ? strchr(sym + 5, '"') : NULL;
-        if (!send) break;
+        if (!send) {
+            /* A malformed entry must not truncate the table: skip it, keep every valid entry after it, and
+               COUNT it, so the caller cannot quote the result as complete. `!end` means the file ends inside
+               the attribute, after which nothing can parse. A `break` here was the realloc/short-read class
+               one branch over: a partial table returned as the whole one. */
+            skipped++;
+            if (!end) break;
+            p = end + 1;
+            continue;
+        }
         p = send + 1;
-        if (end - nid != RT_NID_SIZE - 1) continue;
+        if (end - nid != RT_NID_SIZE - 1) { skipped++; continue; }
         if (n == cap) {
             cap = cap ? 2 * cap : 4096;
             nid_name *grown = realloc(names, cap * sizeof *names);
@@ -495,6 +513,7 @@ static ssize_t read_nid_db(const char *path, nid_name **out, char **text)
     if (n) qsort(names, n, sizeof *names, by_nid);
     *out = names;
     *text = t;
+    *skipped_out = skipped;
     return (ssize_t)n;
 }
 
@@ -715,9 +734,10 @@ int main(int argc, char **argv)
     atexit(rt_import_pc_report);
     fault_backtrace_enabled = getenv("BB_FAULT_BACKTRACE") != NULL;
     const char *nid_path = getenv("BB_NID_DB"), *status_path = NULL;
+    const char *nid_source = nid_path ? "BB_NID_DB" : NULL;
     int timeout = 30, trace = 0, list = 0, selftest_guard = 0;
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "--nids") && i + 1 < argc) nid_path = argv[++i];
+        if (!strcmp(argv[i], "--nids") && i + 1 < argc) { nid_path = argv[++i]; nid_source = "--nids"; }
         else if (!strcmp(argv[i], "--status") && i + 1 < argc) status_path = argv[++i];
         else if (!strcmp(argv[i], "--timeout") && i + 1 < argc) timeout = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--module") && i + 1 < argc && object_count && object_count < MAX_OBJECTS)
@@ -804,13 +824,20 @@ int main(int argc, char **argv)
     }
     rt_tls_init();
     char *db_text;
-    const ssize_t names = read_nid_db(nid_path, &db, &db_text);
+    size_t nid_skipped = 0;
+    const ssize_t names = read_nid_db(nid_path, &db, &db_text, &nid_skipped);
     if (names < 0) {
-        fprintf(stderr, "pbboot: --nids %s: unreadable: %s\n", nid_path, strerror(errno));
+        /* Name the source, not a flag the caller may not have passed: BB_NID_DB and --nids are different
+           doors and a refusal that reports the wrong one sends the reader to the wrong place. */
+        fprintf(stderr, "pbboot: %s %s: unreadable: %s\n", nid_source, nid_path, strerror(errno));
         return 3;
     }
     db_count = names;
-    if (nid_path) fprintf(stderr, "pbboot: nids %s: %zd name(s)\n", nid_path, names);
+    if (nid_path && nid_skipped)
+        fprintf(stderr, "pbboot: %s %s: %zd name(s), %zu malformed entr%s skipped\n", nid_source, nid_path,
+                names, nid_skipped, nid_skipped == 1 ? "y" : "ies");
+    else if (nid_path)
+        fprintf(stderr, "pbboot: %s %s: %zd name(s)\n", nid_source, nid_path, names);
     for (size_t k = 0; k < object_count; k++) resolve(&objects[k]);
 
     if (list) {
