@@ -147,6 +147,6 @@ int main(void)
         fprintf(stderr, "tls_threads: FAIL (%d)\n", atomic_load(&failures));
         return 1;
     }
-    printf("tls_threads: OK: %d host threads, %d distinct guest TCBs, host FS restored\n", THREADS, THREADS);
+    printf("tls_threads: OK: %d worker threads + 1 default worker, %d distinct guest TCBs, host FS restored\n", THREADS, THREADS);
     return 0;
 }
