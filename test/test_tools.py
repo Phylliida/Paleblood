@@ -528,6 +528,10 @@ class Boot(unittest.TestCase):
         sys.path.insert(0, os.path.join(ROOT, 'tools'))
 
     def boot(self, code: bytes, imports=(), rc=0):
+        status, _ = self.boot_with_proc(code, imports, rc)
+        return status
+
+    def boot_with_proc(self, code: bytes, imports=(), rc=0, env=None):
         import ps4elf
         page = bytearray(0x1000)
         page[:len(code)] = code
@@ -541,7 +545,7 @@ class Boot(unittest.TestCase):
                 f.write(data)
             try:
                 p = subprocess.run([self.pbboot, os.path.join(d, 'e.elf'), '--status', os.path.join(d, 's.json'),
-                                    '--timeout', '5'], capture_output=True, text=True, timeout=60)
+                                    '--timeout', '5'], capture_output=True, text=True, timeout=60, env=env)
             except subprocess.TimeoutExpired as e:
                 # A deadlock and a slow machine are indistinguishable unless the partial output is shown,
                 # and the difference decides whether this is a product defect or a runner one.
@@ -556,7 +560,7 @@ class Boot(unittest.TestCase):
             # failure meant nobody ran it.
             self.assertEqual(p.returncode, rc, p.stderr)
             with open(os.path.join(d, 's.json')) as f:
-                return json.load(f)
+                return json.load(f), p
         finally:
             shutil.rmtree(d)
 
@@ -577,6 +581,14 @@ class Boot(unittest.TestCase):
     def test_entry_returns(self):
         s = self.boot(b'\xc3')
         self.assertEqual((s['outcome'], s['milestone'], s['imports_total']), ('returned', 'loaded', 0))
+
+    def test_unbound_trampoline_size_is_pinned(self):
+        """666 = 578 + 88 is structural; the 70 is not. This is the distance from the unbound
+        form's 150 bytes to TRAMPOLINE_SIZE 220, and it shrinks whenever the emitter grows. Pin
+        the size, not the count, and let the fatal's new operands explain the failure."""
+        env = dict(os.environ, BB_TRAMPOLINE_VERBOSE='1')
+        _, p = self.boot_with_proc(b'\xc3', ['f'], env=env)
+        self.assertIn('trampoline 0: 150 of 220 bytes, 70 left', p.stderr)
 
     def test_first_unimplemented_import_is_named(self):
         import harness
