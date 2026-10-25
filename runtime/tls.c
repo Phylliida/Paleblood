@@ -343,7 +343,9 @@ void rt_tls_view_read(rt_tls_view *out)
     }
     out->installer = st ? (uint64_t)(uintptr_t)st->guest_block : 0;
     out->published = rt_tls_guest_base_v;
-    out->enter_guest = st ? (uint64_t)(uintptr_t)st->guest_block : 0;
+    /* Ask the accessor, not a second copy of the field it reads: a test that recomputes the value the
+       product would install cannot fail when that accessor is wrong. */
+    out->enter_guest = rt_tls_guest_base();
     out->memsz = st ? st->guest_memsz : 0;
 }
 

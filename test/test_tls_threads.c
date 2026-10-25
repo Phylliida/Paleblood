@@ -82,9 +82,10 @@ static void *worker(void *arg)
        so `published` is a report of main's word rather than the value a child would install. The trace
        prints both side by side so the difference stays visible. */
     if (view.published != main_guest) fail(i, "published is main's global", view.published, main_guest);
-    /* The point of 047: the reported global and the value this thread would install are different
-       subjects on a child, so the selector cannot be the global without failing here. */
-    if (view.published == view.enter_guest) fail(i, "published differs from this thread's base", view.published, view.enter_guest);
+    /* `published != enter_guest` used to be asserted here. It is a consequence of the three checks above
+       (enter_guest == guest, published == main_guest, guest != main), so no product mutant could make it
+       fail without failing an earlier one: a red would have meant the assertions above it were skipped.
+       The trace still prints both sides; the measurement is the distinctness, not its restatement. */
 
     guest_bases[i] = guest;
     host_bases[i] = host;
