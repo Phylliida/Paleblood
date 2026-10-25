@@ -158,6 +158,22 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
          eboot.elf  filesz 0x0    memsz 0x750   -- zero-init, no TLS image
          libc.elf   filesz 0x220  memsz 0x4a0   -- an init image that would have to be copied per thread
        What is actually missing is machinery, not agreement. */
+    /* Read what the guest wrote before refusing: a setter whose value nothing reads is a decorative write,
+       and this is the only path that can read one today. The detach reader names a state the guest never
+       set rather than assuming the system's default; stack and policy are printed as asked / not asked. */
+    {
+        void *const *av = attr ? (void *const *)(uintptr_t)attr : NULL;
+        uint64_t size = 0;
+        int policy = 0;
+        const int has_size = rt_thread_attr_stack_size(av, &size);
+        const int has_policy = rt_thread_attr_sched_policy(av, &policy);
+        fprintf(stderr, "pbboot: scePthreadCreate: attr stack %s0x%llx, policy %s%d\n",
+                has_size < 0 ? "absent " : has_size ? "asked " : "not asked ",
+                has_size > 0 ? (unsigned long long)size : 0ull,
+                has_policy < 0 ? "absent " : has_policy ? "asked " : "not asked ",
+                has_policy > 0 ? policy : 0);
+        (void)rt_thread_attr_detach_state(av, "scePthreadCreate");
+    }
     const uint64_t call = rt_guest_call_pc();
     if (call)
         snprintf(wall, sizeof wall,
@@ -203,20 +219,6 @@ static int cond_init(int64_t cond, int64_t attr)
 
 RT_SYSLIB_MODELLED("libScePosix", pthread_cond_init, cond_init);
 
-/* scePthreadAttrSetstacksize(attr, size): the first argument is a POINTER to a guest attr object, the
-   second a scalar. Modelled, and modelled as a no-op that says so: this runtime refuses to create threads
-   (see thread_create_refused), so a stack size is a value nobody will ever read. Recording it in the attr
-   object would be writing state that no code path can observe -- the definition of a decorative write. */
-static int attr_set_stacksize(int64_t attr, int64_t size)
-{
-    if (attr == 0) return (int)0x80020016u;
-    fprintf(stderr, "pbboot: posix: AttrSetstacksize(%llx, %lld) -> 0 (modelled: no-op, threads are refused)\n",
-            (unsigned long long)attr, (long long)size);
-    return 0;
-}
-
-RT_SYSLIB_MODELLED("libkernel", scePthreadAttrSetstacksize, attr_set_stacksize);
-
 /* The pthread attribute family, landed as one declaration instead of eight turns.
 
    Every one of these sets a field of a guest attr object that no code path will ever read, because this
@@ -246,7 +248,8 @@ RT_SYSLIB_MODELLED("libkernel", scePthreadAttrSetstacksize, attr_set_stacksize);
    section order, so this row has never run. The startup duplicate check now refuses such rows. */
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetinheritsched);
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedparam);
-PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedpolicy);
+/* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedpolicy); -- kernel_thread.c registers the real body
+   (stores has_policy/policy; the create path reads and prints it) and wins on section order. */
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetaffinity);
 /* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrGet); -- kernel_thread.c registers the real body for this key and wins on
    section order, so this row has never run. The startup duplicate check now refuses such rows. */

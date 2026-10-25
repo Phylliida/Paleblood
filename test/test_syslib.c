@@ -47,6 +47,7 @@ static int is_implemented(const char *library, const char *symbol)
 
 typedef int (*f1)(void **);
 typedef int (*f2i)(void **, int);
+typedef int (*f2u64)(void **, uint64_t);
 typedef int (*f_state)(int *);
 typedef int (*f_check)(void);
 typedef int (*f_register)(void *, void *, int *);
@@ -164,6 +165,39 @@ static int detach_state_of(void **attr) { return rt_thread_attr_detach_state(att
 static void *detach_reader_attr;
 static void read_detach_state(void) { (void)detach_state_of(&detach_reader_attr); }
 static void read_detach_state_without_variable(void) { (void)detach_state_of(NULL); }
+
+/* The create path reads what the guest wrote before it refuses. Proving that needs the child's MESSAGE,
+   not only its signal: a refusal that ignores the attribute and one that reads it abort identically. */
+static int (*create_refused_call)(int64_t, int64_t, int64_t, int64_t, int64_t);
+static void *create_attr_var;
+static void create_with_attributes(void)
+{
+    create_refused_call(0, (int64_t)(uintptr_t)&create_attr_var, 0x1000, 0, 0);
+}
+
+static int fatal_says(void (*call)(void), const char *want)
+{
+    int fds[2];
+    if (pipe(fds)) return 0;
+    const pid_t child = fork();
+    if (child == 0) {
+        close(fds[0]);
+        if (dup2(fds[1], 2) < 0) _exit(1);
+        close(fds[1]);
+        call();
+        _exit(1);
+    }
+    close(fds[1]);
+    char buf[4096];
+    size_t n = 0;
+    ssize_t r;
+    while (n < sizeof buf - 1 && (r = read(fds[0], buf + n, sizeof buf - 1 - n)) > 0) n += (size_t)r;
+    buf[n] = 0;
+    close(fds[0]);
+    int status = 0;
+    if (waitpid(child, &status, 0) < 0) return 0;
+    return WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT && strstr(buf, want) != NULL;
+}
 
 int main(void)
 {
@@ -295,6 +329,45 @@ int main(void)
     CHECK(posix_set_detach(&thread_attr, 2) == 22 && posix_set_detach(&thread_attr, -1) == 22);
     CHECK(detach_state_of(&thread_attr) == 0);
     CHECK(set_detach(NULL, 0) == (int)0x80020016 && posix_set_detach(NULL, 0) == 22);
+
+    /* The stack size and scheduling policy the guest asks for are stored on the attribute object, and the
+       reader distinguishes "not asked" from "asked for 0" -- the two states a create path must tell apart.
+       A variable holding no attribute object is EINVAL, and a null variable is -1 to the reader, never a
+       default wearing the reader's name. */
+    const f2u64 set_stack = (f2u64)fn("libkernel", "scePthreadAttrSetstacksize");
+    const f2i set_policy = (f2i)fn("libkernel", "scePthreadAttrSetschedpolicy");
+    uint64_t size = 0;
+    int policy = 0;
+    CHECK(rt_thread_attr_stack_size(&thread_attr, &size) == 0);
+    CHECK(rt_thread_attr_sched_policy(&thread_attr, &policy) == 0);
+    CHECK(set_stack(&thread_attr, 0x10000) == 0);
+    CHECK(rt_thread_attr_stack_size(&thread_attr, &size) == 1 && size == 0x10000);
+    CHECK(set_stack(&thread_attr, 0) == 0);
+    CHECK(rt_thread_attr_stack_size(&thread_attr, &size) == 1 && size == 0);
+    CHECK(set_stack(&thread_attr, 0x4000) == 0);
+    CHECK(rt_thread_attr_stack_size(&thread_attr, &size) == 1 && size == 0x4000);
+    CHECK(set_policy(&thread_attr, 1) == 0);
+    CHECK(rt_thread_attr_sched_policy(&thread_attr, &policy) == 1 && policy == 1);
+    CHECK(set_stack(NULL, 0x1000) == (int)0x80020016);
+    CHECK(set_policy(NULL, 0) == (int)0x80020016);
+    CHECK(rt_thread_attr_stack_size(NULL, &size) == -1);
+    CHECK(rt_thread_attr_sched_policy(NULL, &policy) == -1);
+    /* The refusal reads the attribute before it refuses: asked stack and policy appear in its message,
+       and an attribute whose detach state was never set stops naming that state rather than assuming it. */
+    create_refused_call = (int (*)(int64_t, int64_t, int64_t, int64_t, int64_t))fn("libkernel", "scePthreadCreate");
+    create_attr_var = thread_attr;
+    CHECK(fatal_says(create_with_attributes, "attr stack asked 0x4000, policy asked 1"));
+    create_attr_var = NULL;
+    void *fresh = NULL;
+    CHECK(thread_attr_init(&fresh) == 0 && fresh);
+    create_attr_var = fresh;
+    CHECK(fatal_says(create_with_attributes, "no detach state set"));
+    create_attr_var = NULL;
+    CHECK(fatal_says(create_with_attributes, "no attribute object"));
+
+    /* The readers see the same object the setters wrote: no second copy, no per-call default. */
+    CHECK(rt_thread_attr_stack_size(&thread_attr, &size) == 1 && size == 0x4000 &&
+          rt_thread_attr_sched_policy(&thread_attr, &policy) == 1 && policy == 1);
 
     /* scePthreadAttrGet replaces the attribute with the running thread's, whose detach state the
        system supplies: the state set before is gone, and a state set afterwards is kept again. */

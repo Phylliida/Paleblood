@@ -38,6 +38,8 @@ typedef struct {
     int detach_state;
     int has_affinity;
     uint64_t affinity;
+    int has_policy;
+    int policy;
 } guest_attr;
 
 /* The CPU affinity mask the system supplies when an attribute carries none: the PS4 leaves six of
@@ -151,6 +153,37 @@ static int sce_attr_set_detach_state(guest_attr **attr, int state)
     return sce(attr_set_detach_state(attr, state));
 }
 
+/* scePthreadAttrSetstacksize(attr, size): stores what the guest asked for. The `has_stack` flag is what
+   separates "did not ask" from "asked for 0" -- the system's default is not established, and a zero
+   stack_size with has_stack set is a request this runtime must not silently replace with a default. */
+static int attr_set_stack_size(guest_attr **attr, uint64_t size)
+{
+    if (!attr || !*attr) return BSD_EINVAL;
+    (*attr)->has_stack = 1;
+    (*attr)->stack_size = size;
+    return 0;
+}
+
+static int sce_attr_set_stack_size(guest_attr **attr, uint64_t size)
+{
+    return sce(attr_set_stack_size(attr, size));
+}
+
+/* scePthreadAttrSetschedpolicy(attr, policy): same shape. Policy numbers are the guest's; this runtime
+   does not map them to host policies, it records them so a create path can either honour or name them. */
+static int attr_set_sched_policy(guest_attr **attr, int policy)
+{
+    if (!attr || !*attr) return BSD_EINVAL;
+    (*attr)->has_policy = 1;
+    (*attr)->policy = policy;
+    return 0;
+}
+
+static int sce_attr_set_sched_policy(guest_attr **attr, int policy)
+{
+    return sce(attr_set_sched_policy(attr, policy));
+}
+
 /* Read the state through this, never from the field: a fresh attribute's detach_state is zero,
    which is the joinable value, so reading the field would assume joinable silently. The two
    messages tell a boot log which unknown the guest reached. */
@@ -162,6 +195,26 @@ int rt_thread_attr_detach_state(void *const *attr, const char *caller)
     if (!a->has_detach_state)
         rt_fatal(caller, "no detach state set: the one the system supplies is not established");
     return a->detach_state;
+}
+
+/* 1 = the guest asked, 0 = it did not, -1 = no attribute variable. Never a default substituted for an
+   unasked value: the create path prints which of the two it has, and refuses rather than assume. */
+int rt_thread_attr_stack_size(void *const *attr, uint64_t *size)
+{
+    const guest_attr *a = attr ? *attr : NULL;
+    if (!a || !size) return -1;
+    if (!a->has_stack) return 0;
+    *size = a->stack_size;
+    return 1;
+}
+
+int rt_thread_attr_sched_policy(void *const *attr, int *policy)
+{
+    const guest_attr *a = attr ? *attr : NULL;
+    if (!a || !policy) return -1;
+    if (!a->has_policy) return 0;
+    *policy = a->policy;
+    return 1;
 }
 
 /* EXPERIMENT A. scePthreadCreate reports a generic failure and creates nothing, so the guest's own
@@ -193,6 +246,8 @@ RT_SYSLIB("libkernel", scePthreadAttrDestroy, attr_destroy);
 RT_SYSLIB("libkernel", scePthreadAttrGet, attr_get);
 RT_SYSLIB("libkernel", scePthreadAttrGetaffinity, attr_get_affinity);
 RT_SYSLIB("libkernel", scePthreadAttrSetdetachstate, sce_attr_set_detach_state);
+RT_SYSLIB("libkernel", scePthreadAttrSetstacksize, sce_attr_set_stack_size);
+RT_SYSLIB("libkernel", scePthreadAttrSetschedpolicy, sce_attr_set_sched_policy);
 
 /* libScePosix: errno values. pthread_attr_init and pthread_attr_destroy are not registered yet, so
    eboot's own POSIX path stops at those first. */

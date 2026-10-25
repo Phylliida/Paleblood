@@ -30,6 +30,13 @@ void rt_thread_register_main(void *stack, uint64_t stack_size);
    does a null or empty variable, for which thread creation would use the system's defaults. */
 int rt_thread_attr_detach_state(void *const *attr, const char *caller);
 
+/* The stack size and scheduling policy recorded on a guest thread attribute variable: 1 = the guest asked
+   (value written through `size`/`policy`), 0 = it did not, -1 = no attribute variable. The distinction is
+   the point: a default substituted for an unasked value is indistinguishable from a request this runtime
+   ignored. */
+int rt_thread_attr_stack_size(void *const *attr, uint64_t *size);
+int rt_thread_attr_sched_policy(void *const *attr, int *policy);
+
 /* Stops the process with a message naming the system function: behaviour the runtime does not
    know is never guessed. */
 _Noreturn void rt_fatal(const char *function, const char *message);
