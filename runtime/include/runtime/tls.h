@@ -20,6 +20,10 @@ extern uint64_t rt_tls_host_base_v;
 int rt_tls_uses_wrfsbase(void);
 uint64_t rt_tls_host_base(void);
 uint64_t rt_tls_guest_base(void);
+/* 1 only when %gs names this runtime's own state. A fixture that defines neither this nor
+   runtime/tls.c leaves it unresolved (0), and emitters must then bake the bases instead of reading %gs:
+   glibc's TCB also points at itself at offset 0, so a self-pointer check cannot tell the two apart. */
+int rt_tls_thread_ready(void);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four
    numbers that agree proves nothing; `gs` and `state.self` are the runtime's state, `fs[0]` is what the

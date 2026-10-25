@@ -43,14 +43,18 @@ typedef struct rt_tls_thread {
     unsigned long host_fsbase;   /* this thread's own host FS, never the main thread's */
     unsigned long host_gsbase;   /* the GS base to restore when this thread ends */
     int is_main;
+    uint64_t magic;              /* RT_TLS_MAGIC; the only field glibc's TCB cannot counterfeit */
 } rt_tls_thread;
+
+#define RT_TLS_MAGIC 0x544c532d73746174ull /* "TLS-stat" */
 
 _Static_assert(offsetof(rt_tls_thread, guest_block) == RT_TLS_GS_GUEST_BLOCK_OFF,
                "the emitted %gs selector reads guest_block at this displacement");
 _Static_assert(offsetof(rt_tls_thread, host_fsbase) == RT_TLS_GS_HOST_FSBASE_OFF,
                "the emitted %gs selector reads host_fsbase at this displacement");
 
-static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0x4a0u, .is_main = 1};
+static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0x4a0u, .is_main = 1,
+                                   .magic = RT_TLS_MAGIC};
 
 /* Off unless the environment asks: a mirror is an experiment, not a design. */
 static int rt_mirror_host_tls;
@@ -186,6 +190,7 @@ void rt_tls_init(void)
     probe_fsgsbase();
     main_state.self = &main_state;
     main_state.is_main = 1;
+    main_state.magic = RT_TLS_MAGIC;
     /* boot.c lays out the real PT_TLS before rt_tls_init. Do not overwrite that memsz with the default:
        the block is already sized and fs is already derived from 0x750, and printing 0x4a0 here was a
        false statement about the block it just accepted. The trampolines no longer bake the base; they
@@ -216,11 +221,21 @@ void rt_tls_init(void)
 
 /* Called once on a host thread that will execute guest code. Captures that thread's own host FS and GS
    before any guest block is installed; inheriting the main thread's values is the defect this removes. */
+int rt_tls_thread_ready(void)
+{
+    if (!have_wrgsbase) return 0;
+    const unsigned long gs = get_gs_base();
+    if (!gs) return 0;
+    const rt_tls_thread *st = (const rt_tls_thread *)(uintptr_t)gs;
+    return st->self == st && st->magic == RT_TLS_MAGIC;
+}
+
 void rt_tls_thread_begin(void)
 {
     rt_tls_thread *st = calloc(1, sizeof *st);
     if (!st) rt_fatal("TLS", "cannot allocate per-thread TLS state");
     st->self = st;
+    st->magic = RT_TLS_MAGIC;
     /* A child inherits the main thread's measured block, not libc.elf's 0x4a0. The boot lays out
        eboot's 0x750 before rt_tls_init; a child that omits rt_tls_layout used to get a 0x4a0 block
        and write past its own TLS segment. 0x4a0 remains only the pre-init fallback. */

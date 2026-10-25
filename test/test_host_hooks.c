@@ -39,6 +39,8 @@ static int boundary_body(int left, int right)
 static uint64_t fake_guest_fs;
 static uint64_t fake_host_fs;
 uint64_t rt_tls_guest_base(void) { return fake_guest_fs; }
+/* This fixture installs a real %gs TCB, so the emitter may read it. */
+int rt_tls_thread_ready(void) { return 1; }
 uint64_t rt_tls_host_base(void) { return fake_host_fs; }
 
 static uint64_t read_fs(void)

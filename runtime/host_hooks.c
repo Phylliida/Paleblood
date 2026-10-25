@@ -113,6 +113,7 @@ static uint64_t guest_image_size;
    no TLS, has no guest block, and passes an installer that installs nothing. */
 extern uint64_t rt_tls_guest_base(void) __attribute__((weak));
 extern uint64_t rt_tls_host_base(void) __attribute__((weak));
+extern int rt_tls_thread_ready(void) __attribute__((weak));
 
 static int guest_tls_is_live(void)
 {
@@ -369,7 +370,12 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         g_site_entered[capture_slot] = 0;
         entered_addr = (uint64_t)(uintptr_t)&g_site_entered[capture_slot];
     }
-    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing, 1);
+    /* Capacity is the larger of the two forms: the selector is chosen at execution time, and a wrapper
+       sized for 86 bytes cannot hold the 88-byte baked form. Sizing by form 1 alone was the same class as
+       a capacity check that does not cover the thing it bounds. */
+    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing, 1) > rt_snapshot_stub_size(capturing, 0)
+                                        ? rt_snapshot_stub_size(capturing, 1)
+                                        : rt_snapshot_stub_size(capturing, 0);
     if (wrapper_capacity == SIZE_MAX) {
         fprintf(stderr, "hook: refusing to install at 0x%llx: the capture form is unsatisfiable "
                         "(rt_snapshot_stub_size(%d, 1) == SIZE_MAX); nothing is written\n",
@@ -406,6 +412,9 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
        rsp in rbx, align, call, restore both. Without TLS (the harness) there is nothing to swap and
        the jump goes straight to the target, which is what every existing caller sees. */
     uintptr_t destination = (uintptr_t)target;
+    /* A live guest base is not enough: the emitted selector reads %gs, and a fixture or a harness whose
+       %gs is glibc's TCB has a valid-looking base with a dtv at +8.  Only runtime/tls.c can answer. */
+    const int per_thread = rt_tls_thread_ready && rt_tls_thread_ready();
     if (guest_tls_is_live()) {
         unsigned char *stub = stub_alloc(RT_BOUNDARY_STUB_MAX);
         if (!stub) {
@@ -414,7 +423,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
             return RT_INSTALL_NO_ROOM;
         }
         size_t n = rt_write_boundary_stub(stub, RT_BOUNDARY_STUB_MAX, (uint64_t)(uintptr_t)target,
-                                          rt_tls_host_base(), rt_tls_guest_base(), 0, 1);
+                                          rt_tls_host_base(), rt_tls_guest_base(), 0, per_thread);
         if (n == 0 || n > RT_BOUNDARY_STUB_MAX) {
             fprintf(stderr, "hook: boundary stub refused to emit into %d bytes at offset 0x%llx\n",
                     RT_BOUNDARY_STUB_MAX, (unsigned long long)offset);
@@ -442,7 +451,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         }
         size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
                                           (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(),
-                                          entered_addr, capturing, 1);
+                                          entered_addr, capturing, per_thread);
         if (w == 0) {
             fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
                     (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
