@@ -265,14 +265,22 @@ static int capture_allowed(uint64_t offset)
 
 /* Four distinct findings, four counters. A total called "refused" merges them, and the two that matter most --
    the site was already patched (two hooks on one site) and the site does not match the catalog (the image is not
-   the catalog) -- are opposite diagnoses with the same symptom. */
+   the catalog) -- are opposite diagnoses with the same symptom. They are read as one snapshot by
+   plugin_load.c after bbgame_init returns; the startup line below necessarily prints the zero-initialised values
+   before any install, and must not be read as the final count. */
 static unsigned sites_checked, sites_already_patched, sites_mismatched, sites_unlisted;
 
 unsigned rt_host_hooks_installed_count(void) { return installed_count; }
-/* Read after the install loop, by whoever finishes installing: sites_checked is zero on the startup line because
-   it does not exist yet at that point, which is a count printed one step too early. */
-unsigned rt_host_hooks_sites_checked(void) { return sites_checked; }
-unsigned rt_host_hooks_sites_refused(void) { return sites_already_patched + sites_mismatched + sites_unlisted; }
+
+/* One function, four outputs: the caller cannot print one counter and silently omit its neighbours. */
+void rt_host_hooks_sites_snapshot(unsigned *checked, unsigned *already_patched,
+                                  unsigned *mismatched, unsigned *unlisted)
+{
+    if (checked) *checked = sites_checked;
+    if (already_patched) *already_patched = sites_already_patched;
+    if (mismatched) *mismatched = sites_mismatched;
+    if (unlisted) *unlisted = sites_unlisted;
+}
 
 static int install_hook(uint64_t offset, uint64_t size, const void *target)
 {
@@ -520,7 +528,8 @@ int rt_host_hooks_initialize(rt_host *host)
     host->install_hook = install_hook;
 
     /* One line, always, before any hook can install. Without it "nothing was printed" is indistinguishable
-       between off, refused, no row, and not on the path -- three different findings and one silence. */
+       between off, refused, no row, and not on the path -- three different findings and one silence. The four
+       counters here are pre-install zeros by construction; the post-install snapshot is plugin_load.c's line. */
     {
         const char *path = getenv("BB_CAPTURE_OK");
         const int on = capture_mode();
