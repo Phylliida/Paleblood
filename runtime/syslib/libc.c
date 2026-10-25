@@ -314,6 +314,45 @@ static void *libc_wmemcpy(void *d, const void *s, size_t n)
 }
 
 RT_SYSLIB("libc", wmemcpy, libc_wmemcpy);
+/* wmemset, libc ordinal 242 (NID Al8MZJh-4hM) -- the wall wmemset became when the guest got past
+   _Getpctype. It inherits the unit wcslen MEASURED (2 bytes), never the host's sizeof(wchar_t): at width 4
+   this body would fill half the units the guest asked for, leave the other half untouched, and return a
+   pointer that looks right -- the same silent-wrong-number shape as the original wcslen defect, one
+   function over. n counts UNITS; the multiply is explicit and an overflow is refused rather than wrapped.
+   The first call prints n, the byte count and the fill value, so a guest passing a byte count where a unit
+   count is expected shows up in the log rather than in a later fault. */
+static unsigned wmemset_reported;
+
+static unsigned short *libc_wmemset(unsigned short *s, unsigned short c, size_t n)
+{
+    if (n > SIZE_MAX / 2)
+        rt_fatal("libc", "wmemset: unit count overflows a byte count; refusing to fill a wrapped size");
+    if (!wmemset_reported++)
+        fprintf(stderr, "pbboot: libc wmemset: n=%zu units (%zu bytes at width 2), c=0x%04x\n", n, n * 2, c);
+    for (size_t i = 0; i < n; i++)
+        s[i] = c;
+    return s;
+}
+
+RT_SYSLIB("libc", wmemset, libc_wmemset);
+/* wmemchr, libc ordinal 246 (NID fnUEjBCNRVU) -- fourth in the wide-character family, same 2-byte unit,
+   same reason the width is inherited rather than re-derived. Returns a pointer to the first matching unit
+   or NULL; the guest's count is units, and a byte count passed where a unit count is expected would show in
+   the first-call print as an impossibly large n rather than as a later fault. */
+static unsigned wmemchr_reported;
+
+static unsigned short *libc_wmemchr(const unsigned short *s, unsigned short c, size_t n)
+{
+    if (n > SIZE_MAX / 2)
+        rt_fatal("libc", "wmemchr: unit count overflows a byte count; refusing to scan a wrapped size");
+    if (!wmemchr_reported++)
+        fprintf(stderr, "pbboot: libc wmemchr: n=%zu units (%zu bytes at width 2), c=0x%04x\n", n, n * 2, c);
+    for (size_t i = 0; i < n; i++)
+        if (s[i] == c) return (unsigned short *)(s + i);
+    return NULL;
+}
+
+RT_SYSLIB("libc", wmemchr, libc_wmemchr);
 /* _FSin, libc ordinal 38 -- the first wall whose right answer is not fixed by a standard but by an
    IMPLEMENTATION's rounding. Two things are NOT established here and are not pretended to be:
      - that `_FSin` takes and returns a float (the `_F` prefix is a hypothesis, not a citation in this tree);
