@@ -180,6 +180,9 @@ Reached with `BB_PLUGIN=build-release/game/libbbgame.so`, rc=4:
 1. `bbgame: installed 40 of 1737 selected, 1697 not instrumented for page room` — the stub
    allocator is ONE 4 KiB page and 40 hooks is its whole capacity (~101 B/site). This is the
    hook population's ceiling, printed, and it is the reason a capture can host at most 40 sites.
+   (The run predates `6800bbb`; the same line now says `placement room`, because `install_hook`
+   can exhaust the stub page, a boundary stub, or the capture table. The 40 and the ~101 B/site
+   are unchanged and remain the measurement of page composition, not of stub size.)
 2. `eboot calls libc tsvEmnenz48` = `__cxa_atexit` (libc ordinal 41) — now MODELLED with a real
    64-entry table shared with `atexit`; a full table refuses with -1; the exit report prints
    `atexit: N handler(s) registered, 0 run` because the runtime does not re-enter guest code
