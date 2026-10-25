@@ -114,6 +114,10 @@ static uint64_t guest_image_size;
 extern uint64_t rt_tls_guest_base(void) __attribute__((weak));
 extern uint64_t rt_tls_host_base(void) __attribute__((weak));
 extern int rt_tls_thread_ready(void) __attribute__((weak));
+/* bbrt does not link tls.c, so this is weak for the same reason the accessors are: a harness that
+   cannot supply a refusal body must not silently emit a checker that calls address 0. When the symbol
+   is absent the emitter refuses the per-thread form instead. */
+extern void rt_tls_check_fail(int reason, uint64_t observed) __attribute__((weak));
 
 static int guest_tls_is_live(void)
 {
@@ -133,6 +137,7 @@ static int guest_tls_is_live(void)
 enum { STUB_PAGE = RT_STUB_PAGE };
 static unsigned char *stub_area;
 static size_t stub_used;
+static unsigned char *tls_check;
 
 static unsigned char *stub_alloc(size_t n)
 {
@@ -146,6 +151,24 @@ static unsigned char *stub_alloc(size_t n)
     unsigned char *p = stub_area + stub_used;
     stub_used += n;
     return p;
+}
+
+/* One checker per executable region, not per site: every emitted per-thread stub calls it with e8
+   rel32. Emitted before the first boundary stub, so a site that installs can never point at a checker
+   that was not written. If tls.c is not linked (the differential harness) there is no refusal body, and
+   the per-thread form is refused rather than emitted with a call to 0. */
+static uint64_t tls_check_addr(void)
+{
+    if (tls_check) return (uint64_t)(uintptr_t)tls_check;
+    if (!rt_tls_check_fail) return 0;
+    const size_t need = rt_tls_check_size();
+    unsigned char *p = stub_alloc(need);
+    if (!p) return 0;
+    const size_t n = rt_write_tls_check(p, need, (uint64_t)(uintptr_t)rt_tls_check_fail);
+    if (n == 0) return 0;
+    __builtin___clear_cache((char *)p, (char *)p + n);
+    tls_check = p;
+    return (uint64_t)(uintptr_t)p;
 }
 
 /* A hook written into a page the process cannot execute reads back perfectly and never fires: the
@@ -373,9 +396,10 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
     /* Capacity is the larger of the two forms: the selector is chosen at execution time, and a wrapper
        sized for 86 bytes cannot hold the 88-byte baked form. Sizing by form 1 alone was the same class as
        a capacity check that does not cover the thing it bounds. */
-    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing, 1) > rt_snapshot_stub_size(capturing, 0)
-                                        ? rt_snapshot_stub_size(capturing, 1)
-                                        : rt_snapshot_stub_size(capturing, 0);
+    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing, 1, tls_check_addr()) >
+                                            rt_snapshot_stub_size(capturing, 0, 0)
+                                        ? rt_snapshot_stub_size(capturing, 1, tls_check_addr())
+                                        : rt_snapshot_stub_size(capturing, 0, 0);
     if (wrapper_capacity == SIZE_MAX) {
         fprintf(stderr, "hook: refusing to install at 0x%llx: the capture form is unsatisfiable "
                         "(rt_snapshot_stub_size(%d, 1) == SIZE_MAX); nothing is written\n",
@@ -415,6 +439,16 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
     /* A live guest base is not enough: the emitted selector reads %gs, and a fixture or a harness whose
        %gs is glibc's TCB has a valid-looking base with a dtv at +8.  Only runtime/tls.c can answer. */
     const int per_thread = rt_tls_thread_ready && rt_tls_thread_ready();
+    uint64_t check_addr = 0;
+    if (per_thread) {
+        check_addr = tls_check_addr();
+        if (!check_addr) {
+            fprintf(stderr, "hook: refusing to install at 0x%llx: the per-thread form needs a %%gs "
+                            "checker and no refusal body is linked (bbrt does not link tls.c)\n",
+                    (unsigned long long)offset);
+            return -1;
+        }
+    }
     if (guest_tls_is_live()) {
         unsigned char *stub = stub_alloc(RT_BOUNDARY_STUB_MAX);
         if (!stub) {
@@ -423,7 +457,8 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
             return RT_INSTALL_NO_ROOM;
         }
         size_t n = rt_write_boundary_stub(stub, RT_BOUNDARY_STUB_MAX, (uint64_t)(uintptr_t)target,
-                                          rt_tls_host_base(), rt_tls_guest_base(), 0, per_thread);
+                                          rt_tls_host_base(), rt_tls_guest_base(), 0, per_thread,
+                                          check_addr);
         if (n == 0 || n > RT_BOUNDARY_STUB_MAX) {
             fprintf(stderr, "hook: boundary stub refused to emit into %d bytes at offset 0x%llx\n",
                     RT_BOUNDARY_STUB_MAX, (unsigned long long)offset);
@@ -451,7 +486,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         }
         size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
                                           (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(),
-                                          entered_addr, capturing, per_thread);
+                                          entered_addr, capturing, per_thread, check_addr);
         if (w == 0) {
             fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
                     (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,

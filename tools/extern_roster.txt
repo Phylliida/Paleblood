@@ -7,5 +7,7 @@ rt_host_hooks_sites_snapshot
 rt_libc_guard_selftest
 rt_tls_guest_base
 rt_tls_host_base
+rt_tls_thread_ready
+rt_tls_check_fail
 write
 # a stale justification

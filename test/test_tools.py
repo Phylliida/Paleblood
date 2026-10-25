@@ -592,12 +592,12 @@ class Boot(unittest.TestCase):
         self.assertNotIn('modelled memsz 0x4a0', p.stderr)
 
     def test_unbound_trampoline_size_is_pinned(self):
-        """666 = 578 + 88 is structural; the 70 is not. This is the distance from the unbound
-        form's 150 bytes to TRAMPOLINE_SIZE 220, and it shrinks whenever the emitter grows. Pin
-        the size, not the count, and let the fatal's new operands explain the failure."""
+        """The left margin is not structural: the emitter now writes the 75-byte %gs checker into
+        the spare slot, and charges each unbound import 155 bytes (150 + the 5-byte gate call).
+        Pin the size, not the count, and let the fatal's new operands explain the failure."""
         env = dict(os.environ, BB_TRAMPOLINE_VERBOSE='1')
         _, p = self.boot_with_proc(b'\xc3', ['f'], env=env)
-        self.assertIn('trampoline 0: 150 of 220 bytes, 70 left', p.stderr)
+        self.assertIn('trampoline 0: 155 of 220 bytes, 65 left', p.stderr)
 
     def test_first_unimplemented_import_is_named(self):
         import harness

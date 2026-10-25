@@ -113,6 +113,47 @@ __attribute__((noreturn, no_stack_protector)) void rt_tls_host_base_refuse(int r
     __builtin_unreachable();
 }
 
+/* The boundary checker's refusal. It runs before the first selector-dependent read, so %fs is still the
+   guest block; no libc, no stack protector, no %gs read here -- the observed magic is an argument. The
+   two reasons are the existing TLS reason codes: a zero selector and a nonzero %gs that does not carry
+   RT_TLS_MAGIC. An unknown reason is reported as unknown rather than borrowing the zero-selector
+   sentence, because a default that names a state it did not test is worse than silence. */
+__attribute__((noreturn, no_stack_protector)) void rt_tls_check_fail(int reason, uint64_t observed)
+{
+    char buf[192];
+    char *p = buf;
+    const char *prefix;
+    unsigned long len;
+    if (reason == RT_TLS_REFUSE_SELECTOR_ZERO) {
+        prefix = "runtime: TLS check: zero %gs selector at the boundary; refusing to read a host base "
+                 "through it\n";
+    } else if (reason == RT_TLS_REFUSE_FOREIGN_STATE) {
+        prefix = "runtime: TLS check: foreign TLS state at the boundary; magic observed 0x";
+    } else {
+        prefix = "runtime: TLS check: unknown refusal reason at the boundary; observed 0x";
+    }
+    for (len = 0; prefix[len]; len++) buf[len] = prefix[len];
+    p = buf + len;
+    if (reason == RT_TLS_REFUSE_FOREIGN_STATE) {
+        for (int shift = 60; shift >= 0; shift -= 4) {
+            unsigned d = (unsigned)((observed >> shift) & 0xfu);
+            *p++ = (char)(d < 10 ? '0' + d : 'a' + d - 10);
+        }
+        *p++ = '\n';
+    } else if (reason != RT_TLS_REFUSE_SELECTOR_ZERO) {
+        for (int shift = 60; shift >= 0; shift -= 4) {
+            unsigned d = (unsigned)((observed >> shift) & 0xfu);
+            *p++ = (char)(d < 10 ? '0' + d : 'a' + d - 10);
+        }
+        *p++ = '\n';
+    }
+    long ignored;
+    __asm__ volatile("syscall" : "=a"(ignored) : "a"((long)SYS_write), "D"(2L), "S"(buf),
+                     "d"((unsigned long)(p - buf)) : "rcx", "r11", "memory");
+    __asm__ volatile("syscall" : : "a"((long)SYS_exit_group), "D"(134L) : "rcx", "r11", "memory");
+    __builtin_unreachable();
+}
+
 static _Noreturn void tls_state_refuse(unsigned long gs, unsigned long self)
 {
     char buf[192];

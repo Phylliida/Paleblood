@@ -89,6 +89,7 @@ typedef struct {
     int *provider_object;    /* MODULE: which object */
     size_t *provider_export; /* MODULE: which export */
     unsigned char *called;   /* per import: called at least once */
+    uint64_t tls_check;      /* the shared %gs checker, in the trampoline mapping's spare slot */
 } object;
 
 static object objects[MAX_OBJECTS];
@@ -297,7 +298,8 @@ static int guest_rx_contains(uint64_t guest)
 /* The guest stack's alignment at the call site is the guest's business; our C bodies need the ABI's. */
 volatile uint64_t rt_stub_rsp;
 
-static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target)
+static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target,
+                             uint64_t check_addr)
 {
     unsigned char *p = t;
     const uint64_t m = (uint64_t)(uintptr_t)mark;
@@ -349,7 +351,8 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         const size_t room = TRAMPOLINE_SIZE - (size_t)(p - t);
         const size_t stub = rt_write_boundary_stub(p, room, target, rt_tls_host_base(),
                                                    rt_tls_guest_base(),
-                                                   (uint64_t)(uintptr_t)&rt_syslib_in_flight, 1);
+                                                   (uint64_t)(uintptr_t)&rt_syslib_in_flight, 1,
+                                                   check_addr);
         if (stub == 0 || stub > room) {
             /* A fatal that omits its operands cannot be diagnosed from the log: the next reader needs
                the slot, the prefix already emitted, the room left and what the emitter returned. */
@@ -913,10 +916,31 @@ int main(int argc, char **argv)
             fprintf(stderr, "pbboot: cannot map memory for %s: %s\n", o->path, strerror(errno));
             return 3;
         }
+        /* One %gs checker per object's trampoline mapping, in the spare slot after every import. It is
+           emitted before any stub that can call it: a trampoline patched to a call into unwritten bytes
+           is a crash with no owner. */
+        {
+            unsigned char *check = o->tramp + o->imports * TRAMPOLINE_SIZE;
+            const size_t check_size = rt_tls_check_size();
+            const size_t check_n = rt_write_tls_check(check, TRAMPOLINE_SIZE,
+                                                       (uint64_t)(uintptr_t)rt_tls_check_fail);
+            if (check_n == 0 || check_n > TRAMPOLINE_SIZE || check_n != check_size) {
+                char msg[160];
+                snprintf(msg, sizeof msg,
+                         "%%gs checker does not fit the spare trampoline slot (imports=%zu size=%zu TRAMPOLINE_SIZE=%d)",
+                         o->imports, check_size, TRAMPOLINE_SIZE);
+                rt_fatal("trampoline", msg);
+            }
+            __builtin___clear_cache((char *)check, (char *)check + check_n);
+            o->tls_check = (uint64_t)(uintptr_t)check;
+            if (getenv("BB_TRAMPOLINE_VERBOSE"))
+                fprintf(stderr, "trampoline %s: %%gs checker %zu bytes at %p (spare slot %zu)\n",
+                        o->label, check_n, (void *)check, o->imports);
+        }
         for (size_t i = 0; i < o->imports; i++)
             if (rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_FUNCTION)
                 write_trampoline(o->tramp + i * TRAMPOLINE_SIZE, &o->called[i], (uint32_t)(k << 20 | i),
-                                 (uint64_t)(uintptr_t)o->bound[i]);
+                                 (uint64_t)(uintptr_t)o->bound[i], o->tls_check);
         if (rt_elf_map(o->elf, o->image, bind_import, o, error, sizeof error)) {
             fprintf(stderr, "pbboot: %s\n", error);
             return 3;

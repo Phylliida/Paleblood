@@ -36,12 +36,26 @@
    (it lives in boot.c, not in the library both paths link). Pass 0 to omit it. The test compares the
    two emissions up to this point, not through it: the ABI segment is identical by construction, and
    the tail difference is stated rather than discovered. */
+/* `check_addr` is the address of the shared %gs selector checker, emitted once per executable region
+   with rt_write_tls_check(). It is REQUIRED whenever per_thread is 1: the emitter returns 0 rather
+   than emit a form that would read %gs without first proving the selector is this runtime's state.
+   The call is the first instruction, before the target is loaded into %r10, because the checker owns
+   %r10/%r11 and a checker that clobbers the target it was called to protect is the defect one tier up.
+   For per_thread == 0 the bases are baked and check_addr is ignored; pass 0. */
 size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t target, uint64_t host_fs,
-                              uint64_t guest_fs, uint64_t in_flight_addr, int per_thread);
+                              uint64_t guest_fs, uint64_t in_flight_addr, int per_thread,
+                              uint64_t check_addr);
 
-/* The length the emitter will produce, so a caller can refuse before it writes and so the maximum above
-   can be checked against arithmetic rather than against a comment. */
-size_t rt_boundary_stub_size(uint64_t in_flight_addr, int per_thread);
+/* The length the emitter will produce, or 0 when the requested form is unemittable (per_thread with
+   no checker). A size helper that returns a length for a form the emitter refuses is a lie. */
+size_t rt_boundary_stub_size(uint64_t in_flight_addr, int per_thread, uint64_t check_addr);
+
+/* The shared checker: one per executable region, entered with e8 rel32 and leaving with c3. It names a
+   zero selector (exit 134, reason 0x11) and a wrong magic at %gs:RT_TLS_GS_MAGIC_OFF (reason 0x12,
+   observed word printed); a nonzero but unmapped %gs still faults at the compare. `fail_addr` is
+   rt_tls_check_fail() in the product and a fixture's equivalent in a test; it must be nonzero. */
+size_t rt_tls_check_size(void);
+size_t rt_write_tls_check(unsigned char *dst, size_t capacity, uint64_t fail_addr);
 
 #endif
 
@@ -51,8 +65,9 @@ size_t rt_boundary_stub_size(uint64_t in_flight_addr, int per_thread);
    setup in the emitted bytes. Identity comes from __builtin_return_address(0), inside the per-site wrapper. */
 void rt_capture_snapshot(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5);
 
-size_t rt_snapshot_stub_size(int capturing, int per_thread);
+size_t rt_snapshot_stub_size(int capturing, int per_thread, uint64_t check_addr);
 size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr,
                               uint64_t host_fs, uint64_t guest_fs, uint64_t entered_addr, int capturing,
-                              int per_thread);
-/* 86 of 96 in the per-thread capture form: 73 + 13 for the entry counter. The slot arithmetic must move before the bytes do. */
+                              int per_thread, uint64_t check_addr);
+/* 91 of 96 in the per-thread capture form: 86 + 5 for the checker call (the baked form is 88 and needs
+   no selector check; the empty form is 5). The slot arithmetic must move before the bytes do. */

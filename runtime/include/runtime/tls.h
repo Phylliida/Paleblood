@@ -38,6 +38,12 @@ int rt_tls_thread_ready(void);
 #define RT_TLS_REFUSE_SELECTOR_ZERO 0x11  /* guest returned with a zero %gs; host base unknown */
 #define RT_TLS_REFUSE_FOREIGN_STATE 0x12  /* guest returned with a nonzero %gs that is not ours */
 void rt_tls_host_base_refuse(int reason);
+/* The boundary checker's refusal. Same two states as the guest-return refusal, but it runs at stub
+   ENTRY, before any selector-dependent read, and its sentence names that placement. Raw write and
+   exit_group: it may run with %fs still the guest block, so it must not touch libc or its canary.
+   `observed` is 0 for a zero selector and the wrong magic word for a foreign state; it arrives as an
+   argument because a diagnostic that re-reads the register under judgement is not a diagnostic. */
+void rt_tls_check_fail(int reason, uint64_t observed);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four
    numbers that agree proves nothing; `gs` and `state.self` are the runtime's state, `fs[0]` is what the
