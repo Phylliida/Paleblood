@@ -23,22 +23,59 @@ static void libc_init_env(void) {}
 
 RT_SYSLIB("libc", _init_env, libc_init_env);
 
-/* `atexit` (NID 8G2LB+A3rzg, libc import 33) registers a function to run at normal process
-   termination and returns 0 on success (ISO C atexit). The runtime never terminates the process
-   through the C library's exit path -- the guest leaves through its own exit import -- so a handler
-   registered here is never invoked. Declared MODELLED for exactly that reason: a REAL entry would
-   have to run the handler at exit. The guest is told the registration succeeded, which is what a
-   real system would tell it, and it proceeds. Import 33 is where the boot stopped before this
-   existed, two calls into the entry function. */
-static int libc_atexit(void (*fn)(void))
+/* `atexit` (NID 8G2LB+A3rzg, libc import 33) and `__cxa_atexit` (NID tsvEmnenz48, libc import 41)
+   both REGISTER a handler to run at normal termination. They share one table, because two tables
+   would be two answers to "what is registered". The runtime leaves through the guest's own exit
+   import and does not re-enter guest code afterwards, so the handlers do not run -- and that gap is
+   printed as a COUNT at exit, not left as a sentence: a registration that is accepted and silently
+   forgotten is the "success while doing nothing" class. What is honest here is the record and the
+   refusal: the table is real, a full table returns -1 by name, and the exit report says how many
+   were registered and that none ran. */
+#define ATEXIT_CAPACITY 64u
+static struct {
+    void (*fn)(void *);
+    void *arg;
+    void *dso;
+} atexit_handlers[ATEXIT_CAPACITY];
+static unsigned atexit_registered;
+
+unsigned rt_libc_atexit_registered(void) { return atexit_registered; }
+unsigned rt_libc_atexit_capacity(void) { return ATEXIT_CAPACITY; }
+
+static int atexit_record(void (*fn)(void *), void *arg, void *dso)
 {
-    (void)fn;
-    fprintf(stderr, "libc atexit: handler registered, will not run -- the runtime does not exit "
-                    "through libc (modelled)\n");
+    if (!fn) return -1;
+    if (atexit_registered >= ATEXIT_CAPACITY) {
+        fprintf(stderr, "libc atexit: table full (%u registered), registration refused by name\n",
+                atexit_registered);
+        return -1;
+    }
+    atexit_handlers[atexit_registered].fn = fn;
+    atexit_handlers[atexit_registered].arg = arg;
+    atexit_handlers[atexit_registered].dso = dso;
+    atexit_registered++;
     return 0;
 }
 
+static int libc_atexit(void (*fn)(void))
+{
+    /* ISO C atexit: no argument, no dso. Same table, so the exit count is one number. */
+    int rc = atexit_record((void (*)(void *))(uintptr_t)fn, NULL, NULL);
+    fprintf(stderr, "libc atexit: handler registered (%u total), not run -- the runtime does not "
+                    "re-enter guest code after exit (modelled)\n", atexit_registered);
+    return rc;
+}
+
+static int libc_cxa_atexit(void (*fn)(void *), void *arg, void *dso)
+{
+    int rc = atexit_record(fn, arg, dso);
+    fprintf(stderr, "libc __cxa_atexit: handler registered (%u total, dso %p), not run -- the runtime "
+                    "does not re-enter guest code after exit (modelled)\n", atexit_registered, dso);
+    return rc;
+}
+
 RT_SYSLIB_MODELLED("libc", atexit, libc_atexit);
+RT_SYSLIB_MODELLED("libc", __cxa_atexit, libc_cxa_atexit);
 
 /* The Itanium C++ ABI's one-time static initialisation guard: `__cxa_guard_acquire` (libc import 40,
    NID 3GPpjQdAMTw), `release` and `abort`. The guard is an 8-byte word in guest memory whose low byte

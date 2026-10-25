@@ -166,3 +166,28 @@ Suite state at `cf92f2d`, both binaries set and `BB_LOADER` = `build-release/run
 `Ran 535 / 497.174 s / 8F 2E 1S`, and all ten are pre-existing — the same modules are red
 at `60fd524` in a worktree. (`BB_LOADER` pointed at `pbboot`, a PIE the harness cannot
 `dlopen`, manufactures 45 failures and 8 errors in the same suite.)
+
+## The boot's first walls, once the plugin stops refusing (measured 2026-10-24)
+
+Before this slice, one 41-byte static guard on a full stub page made `install_hook` return -1,
+which refused `bbgame_init`, which refused the boot — so the only evidence-capable configuration
+never ran a guest byte. `runtime/plugin.c` now treats a site it cannot PLACE (RT_INSTALL_NO_ROOM)
+as a printed gap and keeps installing; a site it cannot instrument HONESTLY still stops the
+install.
+
+Reached with `BB_PLUGIN=build-release/game/libbbgame.so`, rc=4:
+
+1. `bbgame: installed 40 of 1737 selected, 1697 not instrumented for page room` — the stub
+   allocator is ONE 4 KiB page and 40 hooks is its whole capacity (~101 B/site). This is the
+   hook population's ceiling, printed, and it is the reason a capture can host at most 40 sites.
+2. `eboot calls libc tsvEmnenz48` = `__cxa_atexit` (libc ordinal 41) — now MODELLED with a real
+   64-entry table shared with `atexit`; a full table refuses with -1; the exit report prints
+   `atexit: N handler(s) registered, 0 run` because the runtime does not re-enter guest code
+   after the exit import. Serving it moved the wall.
+3. `eboot calls libc sqWytnhYdEg` = `_ZNSt8ios_base4InitC1Ev` = `std::ios_base::Init::Init()`
+   (libc ordinal 259). **This is where the boot stops now.** It is a C++ ABI boundary, not a
+   kernel one: SceLibc implements iostreams, so a no-op would be "success while doing nothing".
+   Options, in order of honesty: refuse by name and keep the wall (current); model the
+   ios_base/standard-stream statics; or link a real C++ runtime for the guest. Not decided.
+
+The import census moved by exactly one and closes: 97 = 60 real + 26 modelled + 5 noop + 6 refused.

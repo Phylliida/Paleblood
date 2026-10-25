@@ -1108,6 +1108,14 @@ int main(int argc, char **argv)
        exit code is passed through unchanged, so a guest that exits 4 is indistinguishable from this
        program's "stopped at an unbound import"; the printed line is the discriminator, and a caller
        that needs certainty reads stdout. */
+    /* An accepted registration that never runs is a gap; a gap that is not printed is a silence.
+       One line, in host context, with the count -- and it does not depend on the outcome, because a
+       fault can happen with handlers registered just as an exit can. */
+    if (rt_libc_atexit_registered())
+        printf("pbboot: atexit: %u handler(s) registered, 0 run -- the runtime leaves through the "
+               "guest's exit import and does not re-enter guest code (modelled)\n",
+               rt_libc_atexit_registered());
+
     switch (outcome) {
     case UNIMPLEMENTED: return 4;   /* the guest reached an import this runtime cannot serve */
     case FAULT: return 1;           /* the guest faulted (signal) */

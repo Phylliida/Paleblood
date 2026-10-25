@@ -73,6 +73,12 @@ const rt_syslib_entry *rt_syslib_end(void);
     RT_SYSLIB_REGISTER(RT_SYSLIB_CAT(rt_syslib_unresolved_entry_, __LINE__), library, symbol, fn, \
                        RT_SYSLIB_CAPABILITY_UNRESOLVED, RT_SYSLIB_KIND_REFUSED)
 
+/* atexit handlers the guest registered and this runtime does not run (see libc.c): the guest leaves
+   through its own exit import and the runtime does not re-enter guest code afterwards. Exposed so the
+   exit report can print the gap as a COUNT rather than leave it inside a registration line. */
+unsigned rt_libc_atexit_registered(void);
+unsigned rt_libc_atexit_capacity(void);
+
 /* Section bounds provided by the linker. Weak: a build with no entries still links. */
 extern const rt_syslib_entry __start_rt_syslib[] __attribute__((weak));
 extern const rt_syslib_entry __stop_rt_syslib[] __attribute__((weak));

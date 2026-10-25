@@ -13,6 +13,10 @@
 #include <unistd.h>
 
 static int unresolved_test_entry(void) { return -1; }
+/* Handlers for the atexit table: never called (the runtime does not re-enter guest code after exit),
+   so their bodies are empty on purpose -- a cast from libc_memset would be a lie the compiler caught. */
+static void atexit_handler_arg(void *arg) { (void)arg; }
+static void atexit_handler_plain(void) {}
 RT_SYSLIB_UNRESOLVED("test", testUnresolvedEntry, unresolved_test_entry);
 
 static int failures;
@@ -400,6 +404,31 @@ int main(void)
     CHECK(filled[0] == 0xa5 && filled[1] == 0xa5 && filled[2] == 0xa5 && filled[3] == 0xee);
     CHECK(libc_memset(filled, 0, 0) == filled && filled[0] == 0xa5);
     CHECK(is_implemented("libSceLibcInternal", "memcpy") && is_implemented("libSceLibcInternal", "memset"));
+
+    /* atexit and __cxa_atexit share one table: registration is recorded, a full table refuses by
+       name, and the exit report prints how many were registered and that none ran. Capacity comes
+       from the code, not from a constant typed here -- a test that restates the bound it tests is a
+       comment with an assert. */
+    {
+        int (*cxa)(void (*)(void *), void *, void *) =
+            (int (*)(void (*)(void *), void *, void *))fn("libc", "__cxa_atexit");
+        int (*plain)(void (*)(void)) = (int (*)(void (*)(void)))fn("libc", "atexit");
+        CHECK(cxa != NULL && plain != NULL);
+        if (cxa && plain) {
+            const unsigned before = rt_libc_atexit_registered();
+            const unsigned capacity = rt_libc_atexit_capacity();
+            CHECK(before <= capacity);
+            CHECK(cxa(atexit_handler_arg, (void *)0x1, NULL) == 0);
+            CHECK(rt_libc_atexit_registered() == before + 1);
+            CHECK(plain(atexit_handler_plain) == 0);
+            CHECK(rt_libc_atexit_registered() == before + 2);
+            while (rt_libc_atexit_registered() < capacity)
+                CHECK(cxa(atexit_handler_arg, NULL, NULL) == 0);
+            CHECK(rt_libc_atexit_registered() == capacity);
+            CHECK(cxa(atexit_handler_arg, NULL, NULL) == -1);   /* full: refused, not lost */
+            CHECK(rt_libc_atexit_registered() == capacity);
+        }
+    }
 
     if (!failures) puts("syslib: ok");
     return failures != 0;
