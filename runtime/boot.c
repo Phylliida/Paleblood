@@ -350,8 +350,16 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
         const size_t stub = rt_write_boundary_stub(p, room, target, rt_tls_host_base(),
                                                    rt_tls_guest_base(),
                                                    (uint64_t)(uintptr_t)&rt_syslib_in_flight, 1);
-        if (stub == 0 || stub > room)
-            rt_fatal("trampoline", "boundary stub does not fit the trampoline slot");
+        if (stub == 0 || stub > room) {
+            /* A fatal that omits its operands cannot be diagnosed from the log: the next reader needs
+               the slot, the prefix already emitted, the room left and what the emitter returned. */
+            char msg[256];
+            snprintf(msg, sizeof msg,
+                     "boundary stub does not fit trampoline slot (which=%u prefix=%zu room=%zu "
+                     "TRAMPOLINE_SIZE=%d stub=%zu)",
+                     which, (size_t)(p - t), room, TRAMPOLINE_SIZE, stub);
+            rt_fatal("trampoline", msg);
+        }
         p += stub;
         if (getenv("BB_RECORD_ADDR")) {
             /* One declaration in the tree is not one copy at runtime: the emitted store carries a LITERAL address,
