@@ -106,8 +106,9 @@ int bbgame_init(const rt_host *host)
            readback disagrees, the wrapper will not emit) still stops the install. */
         if (rc == RT_INSTALL_NO_ROOM) {
             not_instrumented++;
-            fprintf(stderr, "bbgame: %s (0x%08x, %u bytes) not instrumented: the stub page is full; "
-                            "the body runs as shipped\n", h->name, h->address, h->size);
+            fprintf(stderr, "bbgame: %s (0x%08x, %u bytes) not instrumented: no placement room "
+                            "(stub page, boundary stub, or capture table); the body runs as shipped\n",
+                    h->name, h->address, h->size);
             continue;
         }
         if (rc) {
@@ -117,7 +118,7 @@ int bbgame_init(const rt_host *host)
         }
         installed++;
     }
-    fprintf(stderr, "bbgame: installed %u of %u selected, %u not instrumented for page room (%s)\n",
+    fprintf(stderr, "bbgame: installed %u of %u selected, %u not instrumented for placement room (%s)\n",
             installed, selected, not_instrumented, (only && *only) ? "BB_HOOK_ONLY" : "all hooks");
     if (selected && !host->install_hook)
         fprintf(stderr, "bbgame: %u hook(s) selected and none installed: the host's install_hook is NULL, which "

@@ -122,7 +122,14 @@ static int guest_tls_is_live(void)
 /* One page of executable memory holds every hook's stub. Bounded and reported, never a silent
    overrun: a hook that cannot get a stub must fail loudly, because a jump to nowhere is a green run
    that executes nothing. */
-enum { STUB_PAGE = 4096 };
+/* The stub page is one resource shared by every wrapper. It is a test-overridable constant because
+   RT_SITES_MAX = 64 capture wrappers cannot fit in the shipped 4096-byte page (64 * 88 = 5632), so
+   the capture-table-full branch is otherwise unreachable in the shipped configuration; the fixture
+   enlarges the page to exercise the real 64 -> 65 boundary rather than lowering the table cap. */
+#ifndef RT_STUB_PAGE
+#define RT_STUB_PAGE 4096
+#endif
+enum { STUB_PAGE = RT_STUB_PAGE };
 static unsigned char *stub_area;
 static size_t stub_used;
 
@@ -325,6 +332,26 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
     unsigned char site_before[ABSOLUTE_JUMP_SIZE];
     memcpy(site_before, guest_image + offset, sizeof site_before);
     const int capturing = getenv("BB_CAPTURE") != NULL;
+    /* The slot is reserved here, before any allocation, and committed only after the jump reads back.
+       The capacity check and the pointer derivation are one decision: previously the write was guarded
+       by `g_site_count < RT_SITES_MAX` while entered_addr was derived afterwards from
+       `g_site_count - 1`, so every capturing site past the cap incremented slot 63 and the report
+       named 64 sites while 65 wrappers ran. A slot that is reserved but not committed is invisible
+       to rt_sites_report (it iterates g_site_count), so a refused emit cannot leave a phantom row. */
+    unsigned capture_slot = 0;
+    uint64_t entered_addr = 0;
+    if (capturing) {
+        if (g_site_count >= RT_SITES_MAX) {
+            fprintf(stderr, "hook: refusing to install at 0x%llx: capture table is full (%u of %u slots); "
+                            "the site is not recorded and the body runs as shipped\n",
+                    (unsigned long long)rt_guest_address(offset), g_site_count, (unsigned)RT_SITES_MAX);
+            return RT_INSTALL_NO_ROOM;
+        }
+        capture_slot = g_site_count;
+        g_site_address[capture_slot] = rt_guest_address(offset);   /* guest-keyed, like every table */
+        g_site_entered[capture_slot] = 0;
+        entered_addr = (uint64_t)(uintptr_t)&g_site_entered[capture_slot];
+    }
     const size_t wrapper_capacity = rt_snapshot_stub_size(capturing);
     if (wrapper_capacity == SIZE_MAX) {
         fprintf(stderr, "hook: refusing to install at 0x%llx: the capture form is unsatisfiable "
@@ -396,12 +423,6 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
                     (unsigned long long)(uintptr_t)wrapper);
             return -1;
         }
-                if (capturing && g_site_count < RT_SITES_MAX) {
-            g_site_address[g_site_count] = rt_guest_address(offset);   /* guest-keyed, like every table */
-            g_site_entered[g_site_count] = 0;
-            g_site_count++;
-        }
-        const uint64_t entered_addr = capturing ? (uint64_t)(uintptr_t)&g_site_entered[g_site_count ? g_site_count - 1 : 0] : 0;
         size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
                                           (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(),
                                           entered_addr, capturing);
@@ -464,6 +485,9 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
                 (unsigned long long)destination,
                 (long long)((intptr_t)destination -
                             (intptr_t)(uintptr_t)(guest_image + offset)));
+    /* Commit the reserved slot only after the patch and its readback succeeded. A failed install leaves
+       g_site_count untouched, so the slot is reused rather than reported as a site that never entered. */
+    if (capturing) g_site_count = capture_slot + 1;
     return 0;
 }
 

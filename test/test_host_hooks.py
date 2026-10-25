@@ -99,6 +99,70 @@ int main(void)
 }
 '''
 
+
+CAP_DRIVER = r'''
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include "runtime/host_hooks.h"
+
+enum { IMAGE_SIZE = 0x1000, CAPTURE_SITES = 65 };
+
+static int replacement(int left, int right) { return left * 3 + right; }
+
+int main(void)
+{
+    char dir[] = "/tmp/pb_capture_cap.XXXXXX";
+    if (!mkdtemp(dir)) { puts("mkdtemp failed"); return 1; }
+    char cap_path[256], site_path[256];
+    snprintf(cap_path, sizeof cap_path, "%s/capture_ok.csv", dir);
+    snprintf(site_path, sizeof site_path, "%s/site_ok.csv", dir);
+    char hex[29];
+    for (int k = 0; k < 14; k++) { hex[2 * k] = '9'; hex[2 * k + 1] = '0'; }
+    hex[28] = '\0';
+    FILE *site = fopen(site_path, "w");
+    FILE *cap = fopen(cap_path, "w");
+    if (!site || !cap) { puts("table write failed"); return 1; }
+    for (int i = 0; i < CAPTURE_SITES; i++) {
+        const unsigned addr = 0x400000u + 0x20u + (unsigned)i * 0x10u;
+        fprintf(site, "0x%08x,%s\n", addr, hex);
+        fprintf(cap, "0x%08x,none,deadbeef,cafe\n", addr);
+    }
+    fclose(site);
+    fclose(cap);
+    setenv("BB_CAPTURE", "1", 1);
+    setenv("BB_CAPTURE_OK", cap_path, 1);
+    setenv("BB_SITE_OK", site_path, 1);
+    setenv("BB_CAPTURE_TABLE_ID", "cafe", 1);
+
+    unsigned char *image = mmap(NULL, IMAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (image == MAP_FAILED) { puts("mmap failed"); return 1; }
+    memset(image, 0x90, IMAGE_SIZE);
+    rt_host host = {0};
+    host.version = RT_HOST_API_VERSION;
+    host.image = image;
+    host.image_size = IMAGE_SIZE;
+    if (rt_host_hooks_initialize(&host) != 0) { puts("init refused"); return 2; }
+
+    int refusals = 0, last = 0;
+    for (int i = 0; i < CAPTURE_SITES; i++) {
+        last = host.install_hook(0x20 + (uint64_t)i * 0x10, 0x20, (const void *)replacement);
+        printf("%d %d\n", i, last);
+        if (last == RT_INSTALL_NO_ROOM) refusals++;
+    }
+    /* The 65th is the first past RT_SITES_MAX: exactly one named placement refusal, and its site
+       byte is untouched. Without the fix this is 0 refusals and the 65th aliases slot 63. */
+    if (refusals != 1 || last != RT_INSTALL_NO_ROOM) { printf("refusals %d last %d\n", refusals, last); return 3; }
+    if (image[0x20 + 64 * 0x10] != 0x90) { puts("65th site was patched"); return 4; }
+    puts("ok");
+    return 0;
+}
+'''
+
 LIVE_TLS = r'''
 /* Stands in for runtime/tls.c once the boot has a guest block: the weak probes resolve and say the
    guest %fs is live, which is the condition under which the jump must go through a boundary stub. */
@@ -152,6 +216,29 @@ class HostHooks(unittest.TestCase):
         # the patch no longer names the replacement; it names a stub that leads to it
         self.assertNotIn('dest 0x1234567890abcdef', run.stdout)
         self.assertIn('stub ', run.stdout)
+
+
+    def test_capture_table_full_refuses_the_65th(self):
+        """The stub page cannot hold 64 capture wrappers, so the real cap is unreachable in the shipped
+        page. Compile with a larger page and drive 65 installs: the 65th must be a named placement
+        refusal, not a wrapper aliasing slot 63. The compile-time page size is the seam; the table cap
+        stays at its production value."""
+        d = tempfile.mkdtemp()
+        src = os.path.join(d, 'capture_cap.c')
+        with open(src, 'w') as f:
+            f.write(CAP_DRIVER)
+        exe = os.path.join(d, 'capture_cap')
+        cmd = [CC, '-O1', '-Wall', '-Wextra', '-DRT_STUB_PAGE=16384',
+               f'-I{os.path.join(ROOT, "runtime", "include")}', src,
+               os.path.join(ROOT, 'runtime', 'host_hooks.c'),
+               os.path.join(ROOT, 'runtime', 'boundary_stub.c'), '-o', exe]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        run = subprocess.run([exe], capture_output=True, text=True, timeout=30)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('ok', run.stdout)
+        self.assertIn('64 -2', run.stdout)
+        self.assertIn('capture table is full (64 of 64 slots)', run.stderr)
 
 
 if __name__ == '__main__':

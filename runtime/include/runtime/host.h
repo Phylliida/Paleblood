@@ -14,10 +14,12 @@ extern "C" {
 #define RT_HOST_API_VERSION 1u
 
 /* install_hook's return codes. 0 means installed. RT_INSTALL_NO_ROOM means the instrument could not
-   be PLACED -- the stub page is full -- which is a coverage gap the caller prints and walks past: the
-   body then runs as shipped, which is a smaller truth than refusing every hook in the table. Every
-   other nonzero value means the site could not be instrumented HONESTLY (readback disagrees, the
-   wrapper would not emit), which is a lie about the subject and must stop the install. */
+   be PLACED -- the shared stub page, a boundary stub, or the capture table's slots are full -- which
+   is a coverage gap the caller prints and walks past: the body then runs as shipped, which is a
+   smaller truth than refusing every hook in the table. The caller must not name one exhausted
+   resource when install_hook can refuse for three. Every other nonzero value means the site could not
+   be instrumented HONESTLY (readback disagrees, the wrapper would not emit), which is a lie about the
+   subject and must stop the install. */
 #define RT_INSTALL_NO_ROOM (-2)
 
 typedef struct {
