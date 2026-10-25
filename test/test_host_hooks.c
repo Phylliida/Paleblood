@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "runtime/boundary_stub.h"
@@ -414,6 +415,40 @@ int main(void)
         failed |= check(result == 23, "the body must receive ABI arguments through the stub");
         failed |= check(body_saw_fs == live_host_fs, "the body must run on the host %fs base");
         failed |= check(after == live_guest_fs, "the guest's %fs base must be restored before return");
+
+        /* The instruction test above proves which bytes were emitted; it cannot prove which register
+           they read. Fork a child with its own TCB and its own bases, execute the same patched site,
+           and require the body to see the child's host base and the call to return on the child's
+           guest base. Under a baked-base stub this child sees the parent's values and this fails while
+           every byte check above still passes. The two bases deliberately differ from the parent's by
+           different amounts, so a selector that reads the wrong field cannot coincide with either. */
+        {
+            pid_t pid = fork();
+            if (pid == 0) {
+                struct fake_tcb child_tcb;
+                memset(&child_tcb, 0, sizeof child_tcb);
+                child_tcb.self = (uintptr_t)&child_tcb;
+                child_tcb.guest_block = fake_guest_fs + 0x1000;
+                child_tcb.host_fsbase = fake_host_fs + 0x2000;
+                write_gs((uint64_t)(uintptr_t)&child_tcb);
+                write_fs(child_tcb.guest_block);
+                const int child_result = guest_function(5, 8);
+                const uint64_t child_after = read_fs();
+                if (child_result != 23 || body_saw_fs != child_tcb.host_fsbase ||
+                    child_after != child_tcb.guest_block) {
+                    fprintf(stderr, "test_host_hooks: child selector result=%d body_fs=%#llx host=%#llx "
+                                    "after=%#llx guest=%#llx\n", child_result,
+                            (unsigned long long)body_saw_fs, (unsigned long long)child_tcb.host_fsbase,
+                            (unsigned long long)child_after, (unsigned long long)child_tcb.guest_block);
+                    _exit(1);
+                }
+                _exit(0);
+            }
+            int status = 0;
+            failed |= check(pid > 0 && waitpid(pid, &status, 0) == pid && WIFEXITED(status) &&
+                            WEXITSTATUS(status) == 0,
+                            "a child thread's own %gs TCB must select its guest block, not main's");
+        }
         write_gs(saved_gs);
     } else {
         fprintf(stderr, "test_host_hooks: SIGILL from wrfsbase on this host, live-TLS case skipped\n");
