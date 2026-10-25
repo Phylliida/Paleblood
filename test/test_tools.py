@@ -588,7 +588,10 @@ class Boot(unittest.TestCase):
     def test_fault_is_reported_with_offset(self):
         s = self.boot(b'\x90' * 4 + b'\x48\x8b\x04\x25\x00\x00\x00\x00', rc=1)    # mov rax, [0]
         self.assertEqual(s['outcome'], 'fault')
-        self.assertEqual(s['fault']['at'], 'eboot+0x4')
+        # The renderer deliberately carries BOTH coordinates since the four-space work: the guest-relative
+        # offset is what a disassembler and a catalogue disagree about, so a test that pins only the first
+        # half blesses a value that stopped being the whole answer.
+        self.assertEqual(s['fault']['at'], 'eboot+0x4 (catalogue 0x400004)')
 
     def test_imports_bind_to_a_bundled_module(self):
         import harness
