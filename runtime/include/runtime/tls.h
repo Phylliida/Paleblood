@@ -26,8 +26,11 @@ uint64_t rt_tls_guest_base(void);
    glibc's TCB also points at itself at offset 0, so a self-pointer check cannot tell the two apart. */
 int rt_tls_thread_ready(void);
 /* Called from rt_boot_call's asm with %fs already the guest block. Raw write+exit_group; no libc.
-   reason 0: the thread's host base is zero. reason 1: guest returned with a zero %gs selector, so this
-   thread's host base is unknown and main's published base must not be substituted. */
+   The reason codes are deliberately not 0/1: rt_boot_call's entry refusal uses 0/1/2 on a different
+   axis, and its 1 means a live selector while a zero selector here would be the opposite state at the
+   same numeral. A reason is a coordinate; give it its own space. */
+#define RT_TLS_REFUSE_HOST_ZERO 0x10      /* the thread's host base is zero */
+#define RT_TLS_REFUSE_SELECTOR_ZERO 0x11  /* guest returned with a zero %gs; host base unknown */
 void rt_tls_host_base_refuse(int reason);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four

@@ -91,9 +91,10 @@ __attribute__((noreturn, no_stack_protector)) void rt_tls_host_base_refuse(int r
     static const char msg_selector[] =
         "runtime: TLS: guest returned with %gs selector zero; this thread's host %fs base is unknown, "
         "refusing to install main's host base\n";
-    const char *msg = reason ? msg_selector : msg_zero;
-    const unsigned long len = reason ? (unsigned long)(sizeof msg_selector - 1)
-                                     : (unsigned long)(sizeof msg_zero - 1);
+    const int selector_zero = reason == RT_TLS_REFUSE_SELECTOR_ZERO;
+    const char *msg = selector_zero ? msg_selector : msg_zero;
+    const unsigned long len = selector_zero ? (unsigned long)(sizeof msg_selector - 1)
+                                            : (unsigned long)(sizeof msg_zero - 1);
     long ignored;
     __asm__ volatile("syscall" : "=a"(ignored) : "a"(1L), "D"(2), "S"(msg), "d"(len)
                      : "rcx", "r11", "memory");

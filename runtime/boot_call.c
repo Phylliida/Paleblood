@@ -14,6 +14,13 @@
 #define RT_STR_(x) #x
 #define RT_STR(x) RT_STR_(x)
 
+/* Entry refusal reasons. They are a different axis from tls.h's RT_TLS_REFUSE_*: here 1 means a live
+   selector with no block, there 0x11 means a zero selector after return. Name them, and give them
+   values that cannot be mistaken for one another in a disassembly. */
+#define RT_BC_NO_TLS_NONE 0
+#define RT_BC_NO_TLS_LIVE 1
+#define RT_BC_NO_TLS_PUBLISHED 2
+
 /* Reached from the asm below with the host stack and the host %fs still installed. It must not return:
    writing a zero %fs and calling the guest is legal, silent, and gives the guest a null TCB. */
 __attribute__((noreturn, used)) void rt_boot_call_bad_stack(uintptr_t stack_top);
@@ -33,11 +40,11 @@ void rt_boot_call_bad_stack(uintptr_t stack_top)
 __attribute__((noreturn, used)) void rt_boot_call_no_guest_tls(int reason);
 void rt_boot_call_no_guest_tls(int reason)
 {
-    if (reason == 2)
+    if (reason == RT_BC_NO_TLS_PUBLISHED)
         rt_fatal("boot", "rt_boot_call: no per-thread guest TLS state (%gs selector is zero) but a "
                          "published block exists; refusing to run on main's block from a thread that "
                          "has no state");
-    if (reason)
+    if (reason == RT_BC_NO_TLS_LIVE)
         rt_fatal("boot", "rt_boot_call: a live %gs names a thread with no guest TLS block; refusing to "
                          "enter guest code with a null TCB (the published word belongs to main, not to "
                          "the executing thread)");
@@ -63,16 +70,16 @@ __asm__(".text\n"
         "  mov rt_tls_guest_base_v(%rip), %r11\n"
         "  test %r11, %r11\n"
         "  jnz .Lrtbc_no_selector_published\n"
-        "  xor %edi, %edi\n"                              /* no selector and no published block */
+        "  mov $" RT_STR(RT_BC_NO_TLS_NONE) ", %edi\n"    /* no selector and no published block */
         "  jmp .Lrtbc_no_tls\n"
         ".Lrtbc_no_selector_published:\n"
-        "  mov $2, %edi\n"                                /* selector zero, main's block published */
+        "  mov $" RT_STR(RT_BC_NO_TLS_PUBLISHED) ", %edi\n" /* selector zero, main's block published */
         "  jmp .Lrtbc_no_tls\n"
         ".Lrtbc_live:\n"
         "  mov %gs:" RT_STR(RT_TLS_GS_GUEST_BLOCK_OFF) ", %r11\n"
         "  test %r11, %r11\n"
         "  jnz .Lrtbc_have_block\n"
-        "  mov $1, %edi\n"                                /* live selector, no block */
+        "  mov $" RT_STR(RT_BC_NO_TLS_LIVE) ", %edi\n"    /* live selector, no block */
         "  jmp .Lrtbc_no_tls\n"
         ".Lrtbc_have_block:\n"
         "  test %rdx, %rdx\n"
@@ -94,10 +101,10 @@ __asm__(".text\n"
         "  jz .Lrtbc_zero_host\n"
         "  jmp .Lrtbc_restore\n"
         ".Lrtbc_no_selector_after:\n"
-        "  mov $1, %edi\n"                                /* raw refusal: selector zero */
+        "  mov $" RT_STR(RT_TLS_REFUSE_SELECTOR_ZERO) ", %edi\n" /* raw refusal: selector zero */
         "  jmp .Lrtbc_host_refuse\n"
         ".Lrtbc_zero_host:\n"
-        "  xor %edi, %edi\n"                              /* raw refusal: host base zero */
+        "  mov $" RT_STR(RT_TLS_REFUSE_HOST_ZERO) ", %edi\n"     /* raw refusal: host base zero */
         ".Lrtbc_host_refuse:\n"
         "  and $-16, %rsp\n"                              /* raw refusal; no return, alignment still matters */
         "  call rt_tls_host_base_refuse\n"
