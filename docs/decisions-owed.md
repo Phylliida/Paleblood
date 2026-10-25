@@ -185,9 +185,27 @@ Reached with `BB_PLUGIN=build-release/game/libbbgame.so`, rc=4:
    `atexit: N handler(s) registered, 0 run` because the runtime does not re-enter guest code
    after the exit import. Serving it moved the wall.
 3. `eboot calls libc sqWytnhYdEg` = `_ZNSt8ios_base4InitC1Ev` = `std::ios_base::Init::Init()`
-   (libc ordinal 259). **This is where the boot stops now.** It is a C++ ABI boundary, not a
-   kernel one: SceLibc implements iostreams, so a no-op would be "success while doing nothing".
-   Options, in order of honesty: refuse by name and keep the wall (current); model the
-   ios_base/standard-stream statics; or link a real C++ runtime for the guest. Not decided.
+   (libc ordinal 259). **This is where the boot stops now.**
+
+   Measured afterwards, and it decides what "modelling" would even mean: of the target's 34
+   mangled libc imports, **six are the standard stream OBJECTS** -- `_ZSt3cin` (26), `_ZSt4cerr`
+   (27), `_ZSt5wcerr` (28), `_ZSt4wcin` (29), `_ZSt4cout` (30), `_ZSt5wcout` (31) -- plus both
+   `Init` constructors (259 narrow, 260 wide), `ios_base::Init`'s destructor (10), `_Locinfo`,
+   vtables and typeinfo. **There is not one stream operation among them**: no `operator<<`, no
+   `__ostream_insert`, no `basic_ios` method.
+
+   So `Init`'s entire observable effect IS the existence of those six objects, and a `modelled`
+   entry that records the call and returns 0 while the objects stay unbound is `noop` wearing
+   `modelled`'s name -- the collision class this campaign keeps paying for. **The unit of
+   modelling is the six objects, not the constructor.** Modelling them requires SceLibc's exact
+   `basic_ostream`/`basic_ios` layout and vtable ABI, which this repository does not have and has
+   no note about; fabricating a layout to satisfy the gate is the default-0 defect one tier up.
+
+   Options, now priced: (a) refuse by name and keep the wall (current) -- honest, blocks the boot;
+   (b) host a real C++ stream object whose ABI matches SceLibc's -- needs the vintage/layout
+   question answered first; (c) map six zero-filled objects and let a use fault with a nameable
+   PC -- changes an unbound-import fault into a *constructed-looking* fault, which is worse than
+   the current state because it prices a missing model as an addressing bug. **(c) is refused.**
+   Not decided between (a) and (b).
 
 The import census moved by exactly one and closes: 97 = 60 real + 26 modelled + 5 noop + 6 refused.
