@@ -350,6 +350,41 @@ static unsigned short *libc_wcschr(const unsigned short *s, unsigned short c)
 }
 
 RT_SYSLIB("libc", wcschr, libc_wcschr);
+/* wcsncmp, libc ordinal 269 -- the wide-path dispatcher's compare. Same measured 2-byte unit; the walk
+   stops at a difference OR at a NUL in both, which is what the standard fixes, and prints once so the
+   width stays falsifiable from the log rather than from my confidence in it. */
+static unsigned wcsncmp_reported;
+
+static int libc_wcsncmp(const unsigned short *a, const unsigned short *b, size_t n)
+{
+    if (n > RT_WCSLEN_MAX)
+        rt_fatal("libc", "wcsncmp: unit count beyond any buffer this runtime models");
+    size_t i = 0;
+    while (i < n && a[i] == b[i] && a[i]) i++;
+    int r = (i == n || a[i] == b[i]) ? 0 : (a[i] < b[i] ? -1 : 1);
+    if (!wcsncmp_reported++)
+        fprintf(stderr, "pbboot: libc wcsncmp: n=%zu, stopped at unit %zu, first units 0x%04x/0x%04x -> %d\n",
+                n, i, i < n ? a[i] : 0u, i < n ? b[i] : 0u, r);
+    return r;
+}
+
+RT_SYSLIB("libc", wcsncmp, libc_wcsncmp);
+/* _Getpctype, libc 65: the locale's character-classification table. REFUSED BY NAME, because the thing
+   that matters is not the pointer but the ENCODING of the flags the guest will test against it -- and that
+   encoding is a target ABI this tree does not establish. Returning the host's table would classify
+   characters by another libc's bits: every test would succeed, every answer would be plausible, and nothing
+   would fault. That is the most expensive failure shape available, so it is not taken.
+   The measurement that settles it is the guest's own call sites: the masks it tests are inlined
+   immediates sitting beside its call, so a static read of those sites fixes the encoding from evidence. */
+static unsigned short *libc_Getpctype(void)
+{
+    rt_fatal("_Getpctype", "the ctype flag ENCODING of this target is not established here; the guest tests "
+                           "target-specific bits, and the host's table would answer every test plausibly. "
+                           "Measure it from the masks inlined beside the guest's own call sites.");
+}
+RT_SYSLIB_UNRESOLVED("libc", _Getpctype, libc_Getpctype);
+
+
 
 
 

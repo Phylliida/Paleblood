@@ -342,3 +342,19 @@ fields it believes exist or write through a null buffer. That is the "zero page 
 use" defect with the object's size added to make it more convincing. What the runtime can honestly do is what
 it already does: leave the slot unbound, so the guard **faults at that object's own page and names it**. A
 real model is a decision owed, and it needs the fields -- `_flags`, `_p`, `_r`, `_w`, `_cookie` -- not a size.
+
+## _Getpctype: a wall converted into a named unknown (2026-10-25)
+
+The wide-path dispatcher's next request after `wcsncmp` (which compared `/` against `s`: `n=6, stopped at
+unit 0, 0x002f/0x0073 -> -1`) was `_Getpctype` (libc 65) -- the locale's character-classification table.
+
+**Refused by name, deliberately.** The pointer is not the problem; the ENCODING of the flags the guest tests
+against it is a target ABI this tree does not establish. Returning the host's table would classify characters
+by another libc's bits: every test succeeds, every answer is plausible, nothing faults -- the most expensive
+failure shape available.
+
+The distinction this buys: an unbound import says "not done"; a named refusal says **which fact is missing and
+how to measure it**. The measurement is the guest's own call sites -- the masks it tests are inlined
+immediates beside its call, so a static read of those sites fixes the encoding from evidence, not from a
+remembered header. That is a candidate, not a guess: `RT_SYSLIB_UNRESOLVED` prints the reason and aborts
+(rc=134), so the wall cannot be walked past silently.
