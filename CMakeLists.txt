@@ -50,6 +50,13 @@ add_test(NAME snapshot_stub COMMAND test_snapshot_stub)
 # The first 047 acceptance test: two host threads through the real tls.c, each with its own TCB and its
 # own host FS. A shared block fails the distinctness and fs:[0] checks, not the log.
 add_executable(test_tls_threads test/test_tls_threads.c runtime/tls.c runtime/process.c)
+# rt_boot_call's selector decision, through the real asm. boot_call.c is separate from boot.c so this
+# target does not link a second main().
+add_executable(test_boot_call test/test_boot_call.c runtime/boot_call.c runtime/tls.c runtime/process.c)
+target_include_directories(test_boot_call PRIVATE runtime/include)
+target_compile_options(test_boot_call PRIVATE -Wshadow -Werror=shadow)
+add_test(NAME boot_call COMMAND test_boot_call)
+set_tests_properties(boot_call PROPERTIES SKIP_RETURN_CODE 77)
 target_include_directories(test_tls_threads PRIVATE runtime/include)
 target_link_libraries(test_tls_threads PRIVATE pthread)
 target_compile_options(test_tls_threads PRIVATE -Wshadow -Werror=shadow)
