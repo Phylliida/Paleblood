@@ -400,7 +400,11 @@ static void rt_import_pc_report(void)
            the process died of SIGSEGV (rc=139), which is a crash wearing a refusal's clothes. */
         if (!objects[k].elf) { boot_known = 0; break; }
         const size_t n = rt_elf_import_count(objects[k].elf);
-        if (!objects[k].called || !n) { boot_known = 0; break; }
+        /* Zero imports is a known zero, not an unreachable subject: a module that exports but does not
+           import makes n == 0 and leaves `called` NULL, and the old guard printed boot called=n/a for a
+           run whose eboot imports were all counted. Only a missing array with n > 0 is unknown. */
+        if (!n) continue;
+        if (!objects[k].called) { boot_known = 0; break; }
         for (size_t i = 0; i < n; i++) boot_called += objects[k].called[i] ? 1u : 0u;
     }
     if (boot_known)

@@ -644,6 +644,10 @@ class Boot(unittest.TestCase):
             with open(os.path.join(d, 's.json')) as fh:
                 s = json.load(fh)
             self.assertEqual((s['outcome'], s['imports_bundled'], s['imports_remaining']), ('returned', 1, 0))
+            # The atexit reporter is the only witness of the called/imports split, and this case is the
+            # only Boot test that loads a module. A zero-import module used to turn its known zero into
+            # boot called=n/a; pin the counted line now that the entry-state experiment is out of the path.
+            self.assertIn('imports called: 1 rows, 1 calls total, boot called=1', p.stderr)
             listing = subprocess.run([self.pbboot, os.path.join(d, 'e.elf'), '--module', os.path.join(d, 'm.elf'),
                                       '--imports'], capture_output=True, text=True, timeout=60).stdout.split('\t')
             self.assertEqual(listing[:2] + listing[3:6], ['eboot', 'libfoo', 'function', 'm.elf', '0x00000040'])
