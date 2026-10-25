@@ -473,3 +473,29 @@ a prefix match looks like a family. The repair is never a better pattern to be a
 **second derivation by a different mechanism** (the preprocessor, `nm`, the linker section, the control that
 fires) -- which is exactly why the `PB_ATTR_NOOP` rows were caught by `nm` counting object symbols rather
 than by another grep.
+
+## The ctype alphabet: what the guest's 73 call sites actually test (2026-10-25)
+
+Measured after `_Getpctype` shipped (`510a1cf`), over every `e8` call to the import's only stub
+(`0x2fbe6c8`; the slot `0x57e4798` is referenced by that `jmp [rip+d]` and nothing else -- the address
+appears nowhere in the file as an 8-byte value, so there is no second copy to diverge).
+
+- **73 call sites.** In the first 12 instructions after the call, **61** contain an immediate `test`/`and`
+  (62 instructions); **12** contain none. The 12 are a *named* unclassified remainder, not a zero: they are
+  call-and-do-something-else shapes and their tests, if any, are further out. A later pass may classify them;
+  nothing here claims they do not test.
+- **Distinct masks: `0x10, 0x80, 0xf, 0x144, 0x212, 0x232, 0x23e`.**
+- **Constant-false masks: 0.** The table's alphabet is `0x1,0x2,0x4,0x8,0x10,0x20,0x40,0x80,0x400`, and no
+  observed mask lacks every one of those bits. The concern that the guest tests bits the table never sets
+  (`0x100`, `0x200`) is real but is *not* the failure it looks like: a mask carrying an unset bit **beside**
+  set bits is a test **equivalent to its smaller subset**, not a test that is always false. Counted:
+  `0x0100` appears with set bits in **21** sites (e.g. `test ax,0x144` == `test ax,0x44`) and `0x0200` in
+  **14** (e.g. `0x232` == `0x32`). So the guest's classification is decided by bits this table can report,
+  and the unset bits contribute nothing to any branch observed.
+- **Open, scoped:** whether some *other* code path (beyond 12 instructions) tests a mask made only of unset
+  bits. Answering it is a search over the 61 classified windows plus the 12 remainders, not over the table.
+
+**Scanner note, third instance of the same class:** the first pass over these 73 sites returned **0** because
+the stub-search assigned nothing and compared an int against an unset variable -- a zero about the scanner,
+printed as a zero about the population. `73` was already known from the previous pass, which is the only
+reason the zero was caught: **a second run of the same scanner is not a control; the earlier number was.**
