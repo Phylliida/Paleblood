@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "runtime/host_hooks.h"
+#include "runtime/host.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -319,7 +320,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         if (!stub) {
             fprintf(stderr, "hook: no room for a boundary stub at 0x%llx (page holds %u of %u bytes)\n",
                     (unsigned long long)offset, (unsigned)STUB_PAGE, (unsigned)stub_used);
-            return -1;
+            return RT_INSTALL_NO_ROOM;
         }
         size_t n = rt_write_boundary_stub(stub, RT_BOUNDARY_STUB_MAX, (uint64_t)(uintptr_t)target,
                                           rt_tls_host_base(), rt_tls_guest_base(), 0);
@@ -338,7 +339,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         unsigned char *wrapper = stub_alloc(wrapper_capacity);
         if (!wrapper) {
             fprintf(stderr, "hook: no room for a snapshot wrapper at 0x%llx\n", (unsigned long long)offset);
-            return -1;
+            return RT_INSTALL_NO_ROOM;
         }
         /* The site's executability is checked above; the wrapper is a different page, and a wrapper in a
            read-only page reads back perfectly and faults on entry -- the same defect one level earlier,

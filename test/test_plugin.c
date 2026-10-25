@@ -15,7 +15,9 @@ typedef struct {
 
 static installed_hook installed[4];
 static unsigned installed_count;
+static unsigned installed_ok;      /* calls that returned 0; `installed_count` counts attempts */
 static int install_error;
+static int install_error_at = -1;  /* -1: every call fails; else only that call index does */
 static unsigned probe_count;
 static unsigned char *probe_image;
 static uint64_t probe_size;
@@ -42,8 +44,13 @@ static int fake_install_hook(uint64_t offset, uint64_t size, const void *target)
 {
     if (installed_count >= sizeof installed / sizeof installed[0])
         return -1;
+    const unsigned call = installed_count;
     installed[installed_count++] = (installed_hook){offset, size, target};
-    return install_error;
+    /* The fixture has to be able to say "this ONE site failed", or a test about the site after a
+       refusal can only be written by failing every site -- which is the case that already aborts. */
+    const int rc = (install_error_at < 0 || (unsigned)install_error_at == call) ? install_error : 0;
+    if (rc == 0) installed_ok++;
+    return rc;
 }
 
 static int check(int condition, const char *what)
@@ -57,7 +64,9 @@ static int check(int condition, const char *what)
 static void reset_observations(void)
 {
     installed_count = 0;
+    installed_ok = 0;
     install_error = 0;
+    install_error_at = -1;
     probe_count = 0;
     probe_image = NULL;
     probe_size = 0;
@@ -137,6 +146,18 @@ int main(void)
     failed |= check(bbgame_init(&host) != 0, "hook installation failure must abort initialization");
     failed |= check(installed_count == 1 && probe_count == 0,
                     "hook failure must stop before later hooks and probes");
+
+    /* The capacity refusal is the one failure that means "not PLACED", and it must not refuse the
+       boot: fail ONLY the first site, for that reason, and the second site must still install. Before
+       the split, one site on a full stub page aborted the install, the plugin refused, and no
+       evidence run could start -- 40 installed of 41 selected was reported as the plugin's refusal. */
+    reset_observations();
+    install_error = RT_INSTALL_NO_ROOM;
+    install_error_at = 0;
+    failed |= check(bbgame_init(&host) == 0,
+                    "a site that cannot be placed must not refuse the whole install");
+    failed |= check(installed_count == 2 && installed_ok == 1,
+                    "the site after a capacity refusal must still be installed");
 
     reset_observations();
     probe_error = 1;

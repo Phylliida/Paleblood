@@ -13,6 +13,13 @@ extern "C" {
 
 #define RT_HOST_API_VERSION 1u
 
+/* install_hook's return codes. 0 means installed. RT_INSTALL_NO_ROOM means the instrument could not
+   be PLACED -- the stub page is full -- which is a coverage gap the caller prints and walks past: the
+   body then runs as shipped, which is a smaller truth than refusing every hook in the table. Every
+   other nonzero value means the site could not be instrumented HONESTLY (readback disagrees, the
+   wrapper would not emit), which is a lie about the subject and must stop the install. */
+#define RT_INSTALL_NO_ROOM (-2)
+
 typedef struct {
     uint32_t version;
     unsigned char *image;      /* host address of guest offset 0 (ELF p_vaddr 0) */

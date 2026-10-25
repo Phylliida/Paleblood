@@ -81,7 +81,7 @@ int bbgame_init(const rt_host *host)
     rt_process.image_size = host->image_size;
     if (rt_hooks_install(game_hooks, game_hook_count))
         return 1;
-    unsigned installed = 0, selected = 0;
+    unsigned installed = 0, selected = 0, not_instrumented = 0;
     for (unsigned i = 0; i < game_hook_count; i++) {
         const rt_hook_entry *h = &game_hooks[i];
         const char *by = NULL;
@@ -90,15 +90,35 @@ int bbgame_init(const rt_host *host)
             continue;
         }
         selected++;
-        installed++;
-        if (h->address < RT_EBOOT_BASE ||
-            host->install_hook(h->address - RT_EBOOT_BASE, h->size, (const void *)h->fn)) {
-            fprintf(stderr, "bbgame: cannot hook %s at 0x%08x (%u bytes)\n", h->name, h->address, h->size);
+        if (h->address < RT_EBOOT_BASE) {
+            fprintf(stderr, "bbgame: cannot hook %s at 0x%08x (%u bytes): below the image base\n",
+                    h->name, h->address, h->size);
             return 1;
         }
+        /* `installed` counts successes, so it moves after the call, not before it. When it moved first,
+           a failing site was counted as installed and the summary would have named a lie. */
+        if (!host->install_hook) { installed++; continue; }   /* named by the warning below */
+        const int rc = host->install_hook(h->address - RT_EBOOT_BASE, h->size, (const void *)h->fn);
+        /* An instrument that cannot be PLACED is a gap to print and walk past: the body runs as
+           shipped, which is a smaller truth than refusing every hook in the table -- and refusing the
+           table refuses the boot, which makes every evidence run impossible. One 41-byte static guard
+           on a full stub page did exactly that. An instrument that cannot be placed HONESTLY (the
+           readback disagrees, the wrapper will not emit) still stops the install. */
+        if (rc == RT_INSTALL_NO_ROOM) {
+            not_instrumented++;
+            fprintf(stderr, "bbgame: %s (0x%08x, %u bytes) not instrumented: the stub page is full; "
+                            "the body runs as shipped\n", h->name, h->address, h->size);
+            continue;
+        }
+        if (rc) {
+            fprintf(stderr, "bbgame: cannot hook %s at 0x%08x (%u bytes): install_hook returned %d\n",
+                    h->name, h->address, h->size, rc);
+            return 1;
+        }
+        installed++;
     }
-    fprintf(stderr, "bbgame: installed %u of %u selected (%s)\n", installed, selected,
-            (only && *only) ? "BB_HOOK_ONLY" : "all hooks");
+    fprintf(stderr, "bbgame: installed %u of %u selected, %u not instrumented for page room (%s)\n",
+            installed, selected, not_instrumented, (only && *only) ? "BB_HOOK_ONLY" : "all hooks");
     if (selected && !host->install_hook)
         fprintf(stderr, "bbgame: %u hook(s) selected and none installed: the host's install_hook is NULL, which "
                         "is a callback problem and not a table or wiring problem\n", selected);
