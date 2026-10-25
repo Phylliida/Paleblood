@@ -33,18 +33,31 @@ export BB_PLUGIN="$plugin"
 # The identity block is ALSO appended to a file, because four commit-message hashes were typed from memory and
 # one quoted a build that never existed. A hash has a lifetime of one run; the only safe one is copied from
 # output the same session produced, so copying must be cheaper than remembering: paste from this file.
-ident="$(git -C "$root" rev-parse --git-dir 2>/dev/null || echo "$root/.git")/boot-identity"
-{
-    echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ)  $*"
-    echo "pbboot sha256 $(sha256sum "$pp" | cut -c1-12)  ($pp)"
-    echo "plugin sha256 $(sha256sum "$plugin" | cut -c1-12)  ($plugin)"
-    # The subject, not just the runtime: the guest ELF is untracked and 93 MB, so a hash-valid run from before
-    # it changed would silently describe a different file. A run without its subject is a number without one.
-    echo "eboot sha256 $(sha256sum "$elf" | cut -c1-12)  ($elf)"
-} | tee -a "$ident" >&2
+# ABSOLUTE: `rev-parse --git-dir` prints `.git`, and this script never cds -- from /tmp that wrote into
+# /tmp/.git or failed the tee, and under `set -e` the failed pipeline exited rc=1 BEFORE pbboot ran. A
+# convenience record must not be able to turn a guest run into an unnamed rc, so a write failure is a
+# warning and the run continues; the hashes above remain the record.
+git_dir="$(git -C "$root" rev-parse --absolute-git-dir 2>/dev/null || true)"
+ident=""
+[ -n "$git_dir" ] && ident="$git_dir/boot-identity"
+ident_block="$(printf '# %s  %s\npbboot sha256 %s  (%s)\nplugin sha256 %s  (%s)\nguest sha256 %s  (%s)' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" \
+    "$(sha256sum "$pp" | cut -c1-12)" "$pp" \
+    "$(sha256sum "$plugin" | cut -c1-12)" "$plugin" \
+    "$(sha256sum "$elf" | cut -c1-12)" "$elf")"
+printf '%s\n' "$ident_block" >&2
+# `guest`, not `eboot`: a probe subject wearing eboot's label is the false-subject class. The path is the
+# exact one that ran, so /sys and eboot are distinguishable in the record.
+if [ -n "$ident" ]; then
+    if ! printf '%s\n' "$ident_block" >>"$ident" 2>/dev/null; then
+        echo "boot.sh: warning: cannot append identity to $ident; hashes above are still the record" >&2
+    fi
+fi
 
 rc=0
 "$pp" "$@" || rc=$?
 echo "pbboot rc=$rc" >&2
-echo "pbboot rc=$rc" >>"$ident"
+if [ -n "$ident" ]; then
+    printf 'pbboot rc=%s\n' "$rc" >>"$ident" 2>/dev/null || true
+fi
 exit "$rc"
