@@ -401,6 +401,9 @@ int rt_elf_map(const rt_elf *e, void *base, rt_elf_bind_fn bind, void *user, cha
         const uint64_t v = r->kind == KIND_LOCAL         ? (uint64_t)(uintptr_t)image + r->value
                            : r->kind == KIND_TLS_MODULE ? e->tls_module_id
                                                         : bound[r->value] + (uint64_t)r->addend;
+        if (getenv("BB_RELOC_DUMP") && r->kind != KIND_LOCAL && r->kind != KIND_TLS_MODULE)
+            fprintf(stderr, "reloc slot %llx import %llu\n",
+                    (unsigned long long)r->target, (unsigned long long)r->value);
         memcpy(image + r->target, &v, 8);
     }
     free(bound);

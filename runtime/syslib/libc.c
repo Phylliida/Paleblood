@@ -382,20 +382,84 @@ static int libc_wcsncmp(const unsigned short *a, const unsigned short *b, size_t
 }
 
 RT_SYSLIB("libc", wcsncmp, libc_wcsncmp);
-/* _Getpctype, libc 65: the locale's character-classification table. REFUSED BY NAME, because the thing
-   that matters is not the pointer but the ENCODING of the flags the guest will test against it -- and that
-   encoding is a target ABI this tree does not establish. Returning the host's table would classify
-   characters by another libc's bits: every test would succeed, every answer would be plausible, and nothing
-   would fault. That is the most expensive failure shape available, so it is not taken.
-   The measurement that settles it is the guest's own call sites: the masks it tests are inlined
-   immediates sitting beside its call, so a static read of those sites fixes the encoding from evidence. */
+/* _Getpctype, libc 65: the locale's character-classification table. Now MEASURED, not assumed.
+   Provenance: data/bb/elf/libc.elf `_Getpctype` at 0xe880 is `48 8d 05 eb 37 07 00 c3`
+   (`lea rax,[rip+0x737eb]; ret`), returning the immutable RX-image table at **0x82072**;
+   256 x uint16 = 512 bytes, sha256 of those raw bytes
+   ~~~~7a679e4cdb13e9f5626792152188f568bc35e895d6151397446bd03a91b94b8e (verified here, not quoted).
+   Module-local: do NOT transplant to the retrobios libSceLibcInternal.sprx.
+
+   The encoding was settled from the guest's own call sites (eboot stub 0x2fbe6c8 for this slot, 73 `e8`
+   call sites; windows read at 0x457cc8, 0x835e1a, 0xe033a4, 0xe03674, 0xe10804, 0xe10a60, 0xe11087):
+     (a) the call takes NO argument -- the pointer is the return value, index supplied after the call;
+     (b) the return is used with NO second dereference -- `[rax + idx*2]` directly, so this is a table
+         pointer, not a pointer to a table pointer;
+     (c) stride is TWO bytes -- `movzx eax, word ptr [rax + rbx*2]`, `movzx ecx, word ptr [rax + rbx*2]`;
+     and every test is a 16-bit mask: `test ax,0x144`, `test ax,0x232`, `test ax,0x23e`, `test ax,0x212`,
+     `test byte ptr [...], 0x80`, `test byte ptr [...], 1`.
+   Bits this table actually sets: 0x0001,0x0002,0x0004,0x0008,0x0010,0x0020,0x0040,0x0080,0x0400.
+   The call sites also test 0x0100 and 0x0200, which this table never sets -- consistent (a test that is
+   always false is not a contradiction), and it is why the stride had to be measured before any mask was
+   named: an immediate read at the wrong width is a correct mask describing the wrong byte.
+
+   The body returns a private writable copy, and refuses if its own literal array does not hash to the
+   measured bytes: a source edit that changes one entry must not fail *plausibly*. */
+#define PCTYPE_ENTRIES 256u
+static const unsigned short pctype_source[PCTYPE_ENTRIES] = {
+    0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080,
+    0x0080, 0x04c0, 0x00c0, 0x00c0, 0x00c0, 0x00c0, 0x0080, 0x0080,
+    0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080,
+    0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080, 0x0080,
+    0x0004, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008,
+    0x0008, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008,
+    0x0021, 0x0021, 0x0021, 0x0021, 0x0021, 0x0021, 0x0021, 0x0021,
+    0x0021, 0x0021, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008,
+    0x0008, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0002,
+    0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002,
+    0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002,
+    0x0002, 0x0002, 0x0002, 0x0008, 0x0008, 0x0008, 0x0008, 0x0008,
+    0x0008, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0010,
+    0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010,
+    0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010,
+    0x0010, 0x0010, 0x0010, 0x0008, 0x0008, 0x0008, 0x0008, 0x0080,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+};
+static unsigned short pctype_copy[PCTYPE_ENTRIES];
+static int pctype_ready;
 static unsigned short *libc_Getpctype(void)
 {
-    rt_fatal("_Getpctype", "the ctype flag ENCODING of this target is not established here; the guest tests "
-                           "target-specific bits, and the host's table would answer every test plausibly. "
-                           "Measure it from the masks inlined beside the guest's own call sites.");
+    if (!pctype_ready) {
+        unsigned long long h = 0xcbf29ce484222325ull;
+        for (unsigned i = 0; i < PCTYPE_ENTRIES; i++) {
+            unsigned lo = pctype_source[i] & 0xffu, hi = (pctype_source[i] >> 8) & 0xffu;
+            h = (h ^ lo) * 0x100000001b3ull;
+            h = (h ^ hi) * 0x100000001b3ull;
+        }
+        if (h != 0xd0bafaafcf18b805ull)
+            rt_fatal("_Getpctype", "the embedded ctype table does not match the measured bytes "
+                              "(FNV-1a mismatch); the table is evidence and a source edit may not alter it");
+        memcpy(pctype_copy, pctype_source, sizeof pctype_copy);
+        pctype_ready = 1;
+    }
+    return pctype_copy;
 }
-RT_SYSLIB_UNRESOLVED("libc", _Getpctype, libc_Getpctype);
+RT_SYSLIB("libc", _Getpctype, libc_Getpctype);
+
 
 
 

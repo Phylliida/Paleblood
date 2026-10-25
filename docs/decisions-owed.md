@@ -424,7 +424,7 @@ rounded to zero (card `057`).
 `pthread_sema.c` registers **14** attr handlers through `PB_ATTR_NOOP(lib, sym)` -- 15 textual matches,
 `RT_SYSLIB_MODELLED` around a generated `attr_noop_<sym>`. Six of them duplicate keys that
 `kernel_thread.c` registers with **real** bodies, and `kernel_thread.c` sits earlier in the section, so all
-six have never run. They are removed; the nine unique ones stay.
+six have never run. They are removed; the eight unique ones stay (14 call sites - 6 removed).
 
 That is the whole discrepancy, and it was never mysterious. One textual match is the `#define` line itself,
 so the derivation is `94 - 1 + 14 = 107` registrations: the grep counts the macro **body** once and the
