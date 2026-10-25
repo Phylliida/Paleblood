@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <string.h>
 
 static uint32_t ror(uint32_t x, int n) { return (x >> n) | (x << (32 - n)); }
@@ -52,15 +53,31 @@ static int sha256_file(const char *path, unsigned char out[32])
     if (!f) return -1;
     uint32_t h[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                      0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+    /* The size is the subject: hash exactly the bytes fstat reports, and refuse if the file does not supply
+       them. A short fread on a regular file is not EOF -- it is a file that changed under the hash, and
+       treating it as EOF prints a confident hash of a prefix that matches no file that ever existed. Only a
+       regular file can be a guest image; a directory or /proc entry reports a size it will not supply. */
+    struct stat st;
+    if (fstat(fileno(f), &st) < 0 || !S_ISREG(st.st_mode) || st.st_size < 0) { fclose(f); return -1; }
+    const uint64_t size = (uint64_t)st.st_size;
     unsigned char buf[64];
     uint64_t total = 0;
-    size_t n;
-    while ((n = fread(buf, 1, 64, f)) == 64) {
+    size_t n = 0;
+    while (size - total >= sizeof buf) {
+        if (fread(buf, 1, sizeof buf, f) != sizeof buf) { fclose(f); return -1; }
         block(h, buf);
-        total += 64;
+        total += sizeof buf;
     }
-    /* fread returning short is EOF only if the stream did not error; without this a read error (EISDIR,
-       EIO) hashes an empty file and prints a confident wrong identity. */
+    /* The remainder stays in buf UNHASHED: SHA-256's final block is the remainder, then 0x80, then the
+       length. Hashing the remainder here and padding in a fresh block is a different digest -- the control
+       is sha256sum of the same bytes, which disagreed on a 100000-byte file while agreeing on 4096. */
+    n = (size_t)(size - total);
+    if (n && fread(buf, 1, n, f) != n) { fclose(f); return -1; }
+    /* One byte past the reported size: the file grew under the hash, so no complete byte set was hashed. */
+    {
+        unsigned char extra;
+        if (fread(&extra, 1, 1, f) == 1) { fclose(f); return -1; }
+    }
     if (ferror(f)) { fclose(f); return -1; }
     uint64_t bits = (total + n) * 8;
     buf[n++] = 0x80;
