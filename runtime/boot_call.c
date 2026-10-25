@@ -8,6 +8,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* A whole-function asm block has no operands, so it cannot use %c0; stringifying the same
+   macro the struct static-asserts compare against makes a wrong displacement unproducible all
+   the same. The constants are deliberately unsuffixed: gas does not accept a C `u` suffix. */
+#define RT_STR_(x) #x
+#define RT_STR(x) RT_STR_(x)
+
 /* Reached from the asm below with the host stack and the host %fs still installed. It must not return:
    writing a zero %fs and calling the guest is legal, silent, and gives the guest a null TCB. */
 __attribute__((noreturn, used)) void rt_boot_call_bad_stack(uintptr_t stack_top);
@@ -52,7 +58,7 @@ __asm__(".text\n"
         "  rdgsbase %r11\n"
         "  test %r11, %r11\n"
         "  jz 1f\n"
-        "  mov %gs:0x8, %r11\n"
+        "  mov %gs:" RT_STR(RT_TLS_GS_GUEST_BLOCK_OFF) ", %r11\n"
         "  test %r11, %r11\n"
         "  jnz 2f\n"
         "  mov $1, %edi\n"                                  /* live selector, no block */
@@ -74,7 +80,7 @@ __asm__(".text\n"
         "  rdgsbase %r11\n"
         "  test %r11, %r11\n"
         "  jz 3f\n"
-        "  mov %gs:0x28, %r11\n"
+        "  mov %gs:" RT_STR(RT_TLS_GS_HOST_FSBASE_OFF) ", %r11\n"
         "  test %r11, %r11\n"
         "  jz 5f\n"                                        /* live state, zero host base */
         "  jmp 4f\n"

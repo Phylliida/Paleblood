@@ -5,8 +5,8 @@
 /* The two fields an emitted boundary stub may read from the state at %gs. They are constants because
    the stub's instruction stream needs a displacement, and they are asserted against offsetof() in
    tls.c: a struct edit must stop the build rather than silently read a neighbouring field. */
-#define RT_TLS_GS_GUEST_BLOCK_OFF 0x8u
-#define RT_TLS_GS_HOST_FSBASE_OFF 0x28u
+#define RT_TLS_GS_GUEST_BLOCK_OFF 0x8
+#define RT_TLS_GS_HOST_FSBASE_OFF 0x28
 
 void rt_tls_init(void);
 void rt_tls_thread_begin(void);
