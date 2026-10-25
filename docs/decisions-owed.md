@@ -358,3 +358,63 @@ how to measure it**. The measurement is the guest's own call sites -- the masks 
 immediates beside its call, so a static read of those sites fixes the encoding from evidence, not from a
 remembered header. That is a candidate, not a guess: `RT_SYSLIB_UNRESOLVED` prints the reason and aborts
 (rc=134), so the wall cannot be walked past silently.
+
+## The stream objects: an accepted GAP, and the guest's static use is proven (2026-10-25)
+
+`ios_base::Init::Init` and `_Winit::_Winit` stay `RT_SYSLIB_NOOP` and the print now says **GAP, not model**.
+Both are correct to leave: the real module bodies construct eight BSS objects (`cin`/`wcin` 104 bytes, six
+output-side 96), all with relocations of no kind pointing at them -- the constructors write every pointer at
+runtime, so **no loader fixup can create them**. Kimisupport's measurements (module-local to
+`data/bb/elf/libc.elf`: Init `0x598c0` len 1049, guard `0xb89f0`, objects `0xd1480`/`0xd14e8`/`0xd1548`/
+`0xd15a8`; `_Winit` `0x5c280`, guard `0xb8a70`, `0xd18a8`/`0xd1910`/`0xd1970`/`0xd19d0`) are for **this**
+build and must not be transplanted to the retrobios `libSceLibcInternal.sprx`. Delegatehelper's ABI answer:
+Dinkumware/Plauger V6.40, Sony-built, Itanium-mangled, FreeBSD libc underneath -- so address-only binding is
+not ABI-defensible in general.
+
+The use is static and proven: eboot reads `cin`'s GOT slot (`0x53e45f8`) at `eboot+0x1fa5437`, loads `[cin]`,
+then `[vptr-0x18]`, then calls a virtual through the embedded streambuf at `cin+0x50`; all six slots are
+referenced at `0x20e2681..0x20e26be`. **A zero page faults at `-0x18`, which is not attributable to the
+import; `BB_DATA_GUARD` (default on) faults at the import's own page and names it.** Hence choice (1) of the
+three: keep the printed gap, keep the guard fail-closed, and record that the first stream use is expected to
+fault at the import's own guarded page. (2) refuse the constructor by name and (3) the real V6.40 object
+graph remain priced, unbuilt.
+
+Sentinels that must not become zeroes when they are served: `_ZSt7_BADOFF` (`0x53e4370`, must be **-1**;
+a zero is a *valid* offset), `_ZSt7nothrow` (`0x53e4558`), `_ZTIi` (`0x53e4508`).
+
+## The rt_syslib table has no duplicate detection, and one duplicate is a dead refusal (2026-10-25)
+
+`boot.c:531` scans the `rt_syslib` linker section and keeps the **first** match for (library, symbol); the
+loop binds and stops. There is no duplicate check anywhere, so two registrations for one key mean **link
+order decides, silently**. Measured from `nm -n` on `pbboot`: 108 section entries. Two keys are registered
+twice:
+
+- `libc`/`memset` at section indices 13 (`kernel.c:97`, added by `d62ae07`) and 54 (`libc.c:225`, from
+  `7ff79e6`). Same function, so no behaviour changed -- but **the `d62ae07` message overclaims**: memset was
+  already served under `libc`; **only `memcpy` was the gap**. The duplicate (mine) is now removed.
+- `libkernel`/`scePthreadCreate` at indices 36 (`RT_SYSLIB_MODELLED`, `kernel_thread.c:182`, returns
+  0x80020023 EAGAIN) and 88 (`RT_SYSLIB_UNRESOLVED`, `pthread_sema.c:167`, refuses and names three
+  blockers). **The MODELLED row wins**, which is consistent with the guest's own Dantelion2 panic quoting
+  EAGAIN. The refusal row is therefore **dead code carrying a policy that cannot fire** -- a refusal that
+  is not on the path is advice. The choice between the two policies is a behaviour change and is not taken
+  here; card `055` carries it.
+
+### Correction, same slice: the "duplicate" was a NAME collision, not one body twice
+
+My duplicate detector collected `(library, symbol)` and never the function pointer, so "same function" was an
+assertion about a key I had not read. Measured: **two `static` functions both named `libc_memset`**, one per
+translation unit -- `kernel.c:90` (plain, registered under `libSceLibcInternal` and serving `libc`) and
+`libc.c:226` (range-checked: resolves the pointer through guest/image space and refuses one it cannot
+classify). Deleting the `kernel.c` row silently promoted the range-checked body, whose first refusal is
+`memset: the pointer is above the mapping`, and the boot aborted **before** `_Getpctype`. The build was also
+stale on the first retry (attribute after definition), and the stale binary reproduced the pre-fix failure
+exactly. Restored: `rc=134` at `_Getpctype`, `above the mapping` hits **0**.
+
+The open question, card `055`: should a guest heap pointer outside the loaded image be writable through
+`memset`? Until it is decided, `libc`/`memset` resolves to the plain body and the range-checked one compiles
+unused, with its proof kept because that is the design the guest memory model eventually wants.
+
+**Scope of the alias sweep** (`026`): parsed **94** registrations from `runtime/syslib/*.c` against **95**
+macro invocations in `runtime/` and **108** entries in the linked `rt_syslib` section. So "0 alias candidates"
+is a statement about 87% of the table; the 13-entry difference is **unexplained and recorded as such**, not
+rounded to zero (card `057`).

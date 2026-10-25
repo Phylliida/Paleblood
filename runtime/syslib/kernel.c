@@ -94,6 +94,12 @@ static void *libc_memset(void *dest, int c, size_t n)
 }
 RT_SYSLIB("libSceLibcInternal", memset, libc_memset);
 /* Same contract claim as memcpy's alias above: ISO C 7.24.6.1, imported by eboot from `libc`. */
+/* `libc`/memset: the plain body wins this key, and that is a MEASURED choice, not a preference. libc.c
+   registers a range-checked memset under the same key from an earlier commit; it resolves the pointer
+   through the guest/image spaces and refuses one it cannot classify ("the pointer is above the mapping"),
+   which stops the boot at the guest's first memset. First match in the rt_syslib section wins silently, so
+   the two rows did not conflict on paper -- they conflicted at runtime, and the boot picked. The policy
+   question (should a guest heap pointer outside the image be writable?) is card 055, not this line. */
 RT_SYSLIB("libc", memset, libc_memset);
 
 /* sceKernelGetDirectMemorySize: the size of the direct memory region the guest may address.

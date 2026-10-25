@@ -100,11 +100,20 @@ static void libc_ios_init(void *self)
 {
     ios_init_calls++;
     if (ios_init_calls == 1)
-        fprintf(stderr, "libc ios_base::Init: constructed at %p; the six standard stream objects are "
-                        "unbound data imports on private zero pages, so no stream operand is initialised "
-                        "(noop, with a reason: BB_DATA_GUARD=1 tests whether this guest touches them)\n",
+        fprintf(stderr, "libc ios_base::Init: called at %p -- a GAP, not a model: the six standard stream "
+                        "objects (cin/cout/cerr/... ) are unbound data imports, so no stream operand exists. "
+                        "If the guest uses one, BB_DATA_GUARD (default on) faults at that import's own "
+                        "guarded page and NAMES it; with the guard off it would fault at -0x18 through a null "
+                        "vptr, which is NOT attributable to the import. Options priced in "
+                        "docs/decisions-owed.md; do not promote this to MODELLED without the object graph.\n",
                 self);
 }
+/* Two registrations, one gap. The guest's use is STATIC and proven: eboot reads the GOT slot for `cin`
+   (0x53e45f8) at eboot+0x1fa5437, loads [cin], then [vptr-0x18], then calls a virtual through the embedded
+   streambuf at cin+0x50; all six slots are referenced at 0x20e2681..0x20e26be. Those addresses are
+   module-local to data/bb/elf/libc.elf and must not be transplanted to the retrobios sprx -- different
+   build. A shared dummy buffer would alias unrelated objects and a zero page would fault at -0x18; the
+   guarded page is the only option that makes the first use attributable, so it stays the default. */
 RT_SYSLIB_NOOP("libc", _ZNSt8ios_base4InitC1Ev, libc_ios_init);
 RT_SYSLIB_NOOP("libc", _ZNSt6_WinitC1Ev, libc_ios_init);
 
@@ -214,7 +223,7 @@ RT_SYSLIB("libc", __cxa_guard_abort, cxa_guard_abort);
    memset into an expression, and the value is free here. The range is proved writable BEFORE the first
    byte -- a gate that fires after a partial write has already written -- and the whole range must sit
    in one writable segment, so a store that would cross out of .data is refused rather than half done. */
-static void *libc_memset(void *dst, int c, size_t n)
+static __attribute__((unused)) void *libc_memset_unused(void *dst, int c, size_t n)
 {
     unsigned char *p = guest_write_ptr((uint64_t)(uintptr_t)dst, n, "memset");
     fprintf(stderr, ", %zu bytes of 0x%02x -- writing\n", n, (unsigned)(c & 0xff));
@@ -222,7 +231,11 @@ static void *libc_memset(void *dst, int c, size_t n)
     return dst;
 }
 
-RT_SYSLIB("libc", memset, libc_memset);
+/* NOT registered under `libc`: kernel.c's plain body holds that key because this one refuses a pointer it
+   cannot resolve to the image ("the pointer is above the mapping") and the guest's first memset is exactly
+   such a pointer. Kept as a function, compiled and unused, because its range-proof is the design the guest
+   model eventually wants -- see card 055. Two TUs each defined a static `libc_memset`; the duplicate was a
+   NAME collision, never one implementation registered twice. */
 
 /* `strlen` (libc bind 53, NID j4ViWNHEgww -- the wall the boot named after the byte at offset 53 of
    slot 40 was fixed). Two ways to get this wrong, both silent: scan until something faults and report
