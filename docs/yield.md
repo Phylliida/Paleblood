@@ -394,6 +394,17 @@ existing invariant over a wider population is not, and a test added to a surface
 about one. A linter written and green in the same hour as its first run has been tested by nothing but itself, which is
 the failure `1ab` exists to make unwritable for bodies and this clause exists to make unwritable for documents.
 
+## A guard outside the product's call path is a test outside the runner's population
+
+Two artifacts look like coverage and are not: **a test appended after the entry point never runs**, and **a
+guard the emitted prologue never calls never fires**. Both are present in the tree, absent from the population,
+and counted as coverage by anyone reading a list. The thing that makes either real is the discovery or the
+call, not the file.
+
+So 047's owner guard is not claimed as protection until the trampoline emits the call; a C helper wired nowhere
+is a test the runner does not discover. The same rule says why the eight→six baseline is worth more than a
+count: the six are a membership, and each is named.
+
 ## LAST CLAUSE, so it is read on a night nobody remembers writing it: STUBBING is a surface, NARROWING is a scope claim
 
 The fifth clause exempts re-asserting an existing property "over a wider population" and says nothing about the two
