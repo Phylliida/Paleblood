@@ -47,6 +47,14 @@ add_executable(test_snapshot_stub test/test_snapshot_stub.c runtime/boundary_stu
 target_include_directories(test_snapshot_stub PRIVATE runtime/include)
 add_test(NAME snapshot_stub COMMAND test_snapshot_stub)
 
+# The failing-first baseline for the %gs magic check at the boundary: a raw %gs:0x28 read, the current
+# ungated stub, and the gated assertion (exit 134, no signal). The control stays green when the product
+# changes; the ungated characterization is replaced by the gated case in the same commit as the checker.
+add_executable(test_tls_check test/test_tls_check.c runtime/boundary_stub.c)
+target_include_directories(test_tls_check PRIVATE runtime/include)
+target_compile_options(test_tls_check PRIVATE -Wshadow -Werror=shadow)
+add_test(NAME tls_check COMMAND test_tls_check)
+
 # The first 047 acceptance test: two host threads through the real tls.c, each with its own TCB and its
 # own host FS. A shared block fails the distinctness and fs:[0] checks, not the log.
 add_executable(test_tls_threads test/test_tls_threads.c runtime/tls.c runtime/process.c)
