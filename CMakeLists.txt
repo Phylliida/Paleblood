@@ -47,6 +47,15 @@ add_executable(test_snapshot_stub test/test_snapshot_stub.c runtime/boundary_stu
 target_include_directories(test_snapshot_stub PRIVATE runtime/include)
 add_test(NAME snapshot_stub COMMAND test_snapshot_stub)
 
+# The first 047 acceptance test: two host threads through the real tls.c, each with its own TCB and its
+# own host FS. A shared block fails the distinctness and fs:[0] checks, not the log.
+add_executable(test_tls_threads test/test_tls_threads.c runtime/tls.c runtime/process.c)
+target_include_directories(test_tls_threads PRIVATE runtime/include)
+target_link_libraries(test_tls_threads PRIVATE pthread)
+target_compile_options(test_tls_threads PRIVATE -Wshadow -Werror=shadow)
+add_test(NAME tls_threads COMMAND test_tls_threads)
+set_tests_properties(tls_threads PROPERTIES SKIP_RETURN_CODE 77)
+
 # The guard triple's fixture: asserts the BYTE in guest memory (release -> byte 1, read back through the
 # guest mapping) and not the return codes, which a host-side set of seen guards satisfies without ever
 # writing the word. rc 3 is "no writable segment" / missing data and is a skip, not a failure.

@@ -963,20 +963,11 @@ int main(int argc, char **argv)
         return 3;
     }
 
-    /* Thread pointer (x86-64 variant II): the executable's TLS block just below the thread control
-       block, whose first word points to itself. Modules reach their TLS through __tls_get_addr. */
-    const rt_elf_tls *tls = rt_elf_tls_segment(objects[0].elf);
-    const uint64_t align = tls->align > 16 ? tls->align : 16;
-    const uint64_t tls_size = (tls->memsz + align - 1) / align * align;
-    unsigned char *tls_block = aligned_alloc(align, tls_size + 4096);
-    memset(tls_block, 0, tls_size + 4096);
-    unsigned char *tp = tls_block + tls_size;
-    if (tls->filesz) memcpy(tp - tls_size, objects[0].image + tls->vaddr, tls->filesz);
-    *(uint64_t *)tp = (uint64_t)(uintptr_t)tp;
-    if (syscall(SYS_arch_prctl, ARCH_SET_GS, (unsigned long)(uintptr_t)tp)) {
-        fprintf(stderr, "pbboot: arch_prctl: %s\n", strerror(errno));
-        return 3;
-    }
+    /* The executable's TLS block and its %fs install are owned by runtime/tls.c: rt_tls_layout/rt_tls_init.
+       The legacy variant-II block that used to live here set %gs to the guest thread pointer, which is the
+       register the per-thread runtime state now lives in: it overwrote main_state after init, so every
+       rt_tls_enter_host() read an rt_tls_thread out of the guest TLS block and restored %fs to zero. The two
+       TLS implementations cannot both own the thread pointer; the per-thread one is the product's. */
 
     static unsigned char alt[1 << 16];
     stack_t ss = {.ss_sp = alt, .ss_size = sizeof alt};
