@@ -58,6 +58,8 @@ rc=0
 "$pp" "$@" || rc=$?
 echo "pbboot rc=$rc" >&2
 if [ -n "$ident" ]; then
-    printf 'pbboot rc=%s\n' "$rc" >>"$ident" 2>/dev/null || true
+    if ! printf 'pbboot rc=%s\n' "$rc" >>"$ident" 2>/dev/null; then
+        echo "boot.sh: warning: cannot append rc to $ident; the rc above is still the record" >&2
+    fi
 fi
 exit "$rc"
