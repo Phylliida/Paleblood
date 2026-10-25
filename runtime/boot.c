@@ -1018,11 +1018,17 @@ int main(int argc, char **argv)
     const char *phase = "eboot";
     for (size_t k = 1; k < object_count; k++) {
         phase = objects[k].label;
-        /* ENTRY-STATE / LOCATION TEST. The failing case is a hand-emitted wrfsbase executed while %fs already
-           holds the guest block. Reproduce exactly that with a HOST caller: install the guest base with
-           arch_prctl, run the same six bytes from a malloc'd RWX buffer, then restore. Compiler-emitted asm in
-           the same entry state separates "hand-emitted" from "entry state". */
-        {
+        /* ENTRY-STATE / LOCATION TEST, opt-in only. The failing case is a hand-emitted wrfsbase executed
+           while %fs already holds the guest block. Reproduce exactly that with a HOST caller: install the
+           guest base with arch_prctl, run the same six bytes from a malloc'd RWX buffer, then restore.
+           Compiler-emitted asm in the same entry state separates "hand-emitted" from "entry state".
+           The emitted bytes are WRGSBASE (/3), deliberately: the experiment's whole point is that a
+           legal encoding wrote the OTHER register, so the buffer corrupts %gs. This used to run on every
+           module boot and leave that corruption in place, which is why the sole module-binding test
+           faulted after BB_PLUGIN=absent. Gate it, and restore the GS base even when it runs. */
+        if (getenv("BB_ENTRY_STATE_TEST")) {
+            unsigned long gs_before = 0;
+            __asm__ volatile("rdgsbase %0" : "=r"(gs_before));
             const uint64_t hostbase = rt_tls_host_base(), guestbase = rt_tls_guest_base();
             unsigned char *buf = mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
                                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -1039,6 +1045,7 @@ int main(int argc, char **argv)
             syscall(158, 0x1002UL, (unsigned long)hostbase);  /* restore the host TCB */
             printf("pbboot: entry-state test: hand-emitted %#llx  compiler-emitted %#llx  host base %#llx\n",
                    (unsigned long long)seen, (unsigned long long)asm_seen, (unsigned long long)hostbase);
+            __asm__ volatile("wrgsbase %0" ::"r"(gs_before));
         }
         run_guest(objects[k].image + rt_elf_entry(objects[k].elf), NULL, NULL, NULL, stack_top, timeout);
         if (outcome != RETURNED) break;
