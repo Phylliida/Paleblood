@@ -219,17 +219,23 @@ RT_SYSLIB_MODELLED("libkernel", scePthreadAttrSetstacksize, attr_set_stacksize);
     }                                                                                                 \
     RT_SYSLIB_MODELLED(lib, sym, attr_noop_##sym)
 
-PB_ATTR_NOOP("libkernel", scePthreadAttrInit);
-PB_ATTR_NOOP("libkernel", scePthreadAttrDestroy);
-PB_ATTR_NOOP("libkernel", scePthreadAttrSetdetachstate);
+/* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrInit); -- kernel_thread.c registers the real body for this key and wins on
+   section order, so this row has never run. The startup duplicate check now refuses such rows. */
+/* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrDestroy); -- kernel_thread.c registers the real body for this key and wins on
+   section order, so this row has never run. The startup duplicate check now refuses such rows. */
+/* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrSetdetachstate); -- kernel_thread.c registers the real body for this key and wins on
+   section order, so this row has never run. The startup duplicate check now refuses such rows. */
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetinheritsched);
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedparam);
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetschedpolicy);
 PB_ATTR_NOOP("libkernel", scePthreadAttrSetaffinity);
-PB_ATTR_NOOP("libkernel", scePthreadAttrGet);
-PB_ATTR_NOOP("libkernel", scePthreadAttrGetaffinity);
+/* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrGet); -- kernel_thread.c registers the real body for this key and wins on
+   section order, so this row has never run. The startup duplicate check now refuses such rows. */
+/* removed: PB_ATTR_NOOP("libkernel", scePthreadAttrGetaffinity); -- kernel_thread.c registers the real body for this key and wins on
+   section order, so this row has never run. The startup duplicate check now refuses such rows. */
 PB_ATTR_NOOP("libScePosix", pthread_attr_init);
 PB_ATTR_NOOP("libScePosix", pthread_attr_destroy);
-PB_ATTR_NOOP("libScePosix", pthread_attr_setdetachstate);
+/* removed: PB_ATTR_NOOP("libScePosix", pthread_attr_setdetachstate); -- kernel_thread.c registers the real body for this key and wins on
+   section order, so this row has never run. The startup duplicate check now refuses such rows. */
 PB_ATTR_NOOP("libScePosix", pthread_attr_setstacksize);
 PB_ATTR_NOOP("libScePosix", pthread_attr_setschedparam);

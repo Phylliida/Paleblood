@@ -137,6 +137,19 @@ static void read_detach_state_without_variable(void) { (void)detach_state_of(NUL
 
 int main(void)
 {
+    {
+        /* Control for rt_syslib_check_unique: a synthetic table proves the checker can fire. A check that
+           has only ever been seen silent is not a check. The first pair is the real one, reproduced: same
+           library and symbol, different bodies, opposite kinds. */
+        rt_syslib_entry dup[3] = {
+            {"libkernel", "scePthreadCreate", (void *)0x1, RT_SYSLIB_CAPABILITY_IMPLEMENTED, RT_SYSLIB_KIND_MODELLED},
+            {"libkernel", "other", (void *)0x2, RT_SYSLIB_CAPABILITY_IMPLEMENTED, RT_SYSLIB_KIND_REAL},
+            {"libkernel", "scePthreadCreate", (void *)0x3, RT_SYSLIB_CAPABILITY_UNRESOLVED, RT_SYSLIB_KIND_REFUSED},
+        };
+        unsigned d = rt_syslib_check_unique(dup, dup + 3);
+        if (d != 1) { fprintf(stderr, "rt_syslib_check_unique: expected 1 duplicate, got %u\n", d); return 1; }
+        if (rt_syslib_check_unique(dup, dup + 1) != 0) { fprintf(stderr, "rt_syslib_check_unique: expected 0 on one entry\n"); return 1; }
+    }
     /* This unit test has no guest image: the syslib handlers write through pointers the test owns on its
        own stack. boot.c is what sets rt_process.image in a real run, so declare a fixture that covers this
        frame -- an unset bound is now a refusal rather than a silent admission of every address, which is

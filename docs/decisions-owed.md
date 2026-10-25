@@ -418,3 +418,30 @@ unused, with its proof kept because that is the design the guest memory model ev
 macro invocations in `runtime/` and **108** entries in the linked `rt_syslib` section. So "0 alias candidates"
 is a statement about 87% of the table; the 13-entry difference is **unexplained and recorded as such**, not
 rounded to zero (card `057`).
+
+## The 13 are named: `PB_ATTR_NOOP` is a registration macro a `RT_SYSLIB*` grep cannot see (2026-10-25)
+
+`pthread_sema.c` registers **15** attr handlers through `PB_ATTR_NOOP(lib, sym)`, which expands to
+`RT_SYSLIB_MODELLED` around a generated `attr_noop_<sym>`. Six of them duplicate keys that
+`kernel_thread.c` registers with **real** bodies, and `kernel_thread.c` sits earlier in the section, so all
+six have never run. They are removed; the nine unique ones stay.
+
+That is the whole discrepancy, and it was never mysterious: **95** `RT_SYSLIB*` invocations + **15**
+`PB_ATTR_NOOP` = 110 source rows, against **108** entries linked. The parser that reported 94 used one
+macro's spelling as the definition of the table -- the same defect as `store_k`, one level up.
+
+**Entry count now closes by subtraction**: 108 at the start of the slice, **100** measured after it --
+`-1` (`libc`/memset key collapsed to one body), `-1` (`libkernel`/scePthreadCreate collapsed), `-6` (the
+dead no-ops). No unexplained remainder.
+
+## Two registrations of one key now refuse at startup, with a control that fires (2026-10-25)
+
+`rt_syslib_check_unique()` walks the section, compares `(library, symbol)` in the **binary's** strings rather
+than in source text, prints both section indices and both function pointers for every pair, and `boot.c`
+refuses when the count is nonzero -- a duplicate resolving by link order is a policy nobody chose, and the
+second registration is the one that has never run. `test_syslib` calls it on a synthetic three-entry table
+that reproduces the real pair and asserts exactly **1**; that control is the only reason to believe the
+startup silence. `libkernel`/scePthreadCreate now resolves to the refusal in `pthread_sema.c`; EXPERIMENT A's
+EAGAIN model is kept, compiled but unregistered, because **it is not pre-registered anywhere**: measured,
+the only occurrences of "EXPERIMENT A" in the tree are its own comment and its print, and "EXPERIMENT B"
+occurs nowhere at all.

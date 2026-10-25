@@ -609,6 +609,14 @@ extern int rt_libc_guard_selftest(void *guard);
 
 int main(int argc, char **argv)
 {
+    {
+        /* A duplicate resolves by link order, so the policy that runs is one nobody chose. Refuse rather
+           than pick: this is the one place where the second registration is always the honest one. */
+        unsigned dup = rt_syslib_check_unique(rt_syslib_begin(), rt_syslib_end());
+        if (dup)
+            rt_fatal("syslib", "duplicate (library, symbol) registrations (pairs listed above): the first "
+                               "entry wins on section order and the second never runs");
+    }
     rt_announce_identity();
     /* TLS is laid out after the loading loop below: it needs the executable open. A layout placed here
        (where it lived until now) runs with objects[0].elf == NULL on every boot, so its scan never fired

@@ -49,6 +49,11 @@ typedef struct {
 const rt_syslib_entry *rt_syslib_begin(void);
 const rt_syslib_entry *rt_syslib_end(void);
 
+/* Two registrations of one (library, symbol) mean the FIRST in section order wins and the second never
+   runs -- a policy nobody chose. Returns the number of duplicate keys and prints every pair with both
+   section indices and both function pointers. Callers must refuse on a nonzero return. */
+unsigned rt_syslib_check_unique(const rt_syslib_entry *begin, const rt_syslib_entry *end);
+
 #define RT_SYSLIB_CAT2(a, b) a##b
 #define RT_SYSLIB_CAT(a, b) RT_SYSLIB_CAT2(a, b)
 #define RT_SYSLIB_REGISTER(entry, library, symbol, fn, capability, kind)                                 \

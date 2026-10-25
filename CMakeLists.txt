@@ -82,6 +82,9 @@ file(GLOB PB_TEST_SYSLIB CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/runtime/syslib/
 add_executable(test_syslib test/test_syslib.c runtime/guest_mem.c runtime/process.c runtime/loader.c
                               runtime/tls.c runtime/syslib_flight.c ${PB_TEST_SYSLIB})
 target_include_directories(test_syslib PRIVATE runtime/include)
+# libc.c models _FSin with sinf; pbboot got `m` when that landed and this target did not, so it went
+# unlinkable the same way the missing translation units did -- found by building it, not by reading it.
+target_link_libraries(test_syslib PRIVATE m)
 # The tree is normally built per-target, so a target that stopped linking sat undetected while every
 # other target stayed green -- which is how test_plugin and test_syslib were both broken at once,
 # by one missing translation unit each. This entry builds everything, with no target, so "the

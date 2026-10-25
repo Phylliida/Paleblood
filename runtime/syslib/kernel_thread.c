@@ -170,7 +170,7 @@ int rt_thread_attr_detach_state(void *const *attr, const char *caller)
    the one code eboot's caller is written to tolerate. Declared MODELLED, not REAL: no thread exists, and
    any guest state that implies one is fabricated. The print goes to stderr because the boot harness
    treats stdout as a JSON map keyed by case id. */
-static int sce_pthread_create_a(void **thread, const char *name, void *entry, void *arg, const void *attr)
+static __attribute__((unused)) int sce_pthread_create_a(void **thread, const char *name, void *entry, void *arg, const void *attr)
 {
     (void)thread; (void)name; (void)entry; (void)arg; (void)attr;
     fprintf(stderr, "scePthreadCreate: EXPERIMENT A -- reached, returning 0x80020023 (EAGAIN), "
@@ -179,7 +179,12 @@ static int sce_pthread_create_a(void **thread, const char *name, void *entry, vo
 }
 
 RT_SYSLIB("libkernel", scePthreadSelf, thread_self);
-RT_SYSLIB_MODELLED("libkernel", scePthreadCreate, sce_pthread_create_a);
+/* NOT registered: `libkernel`/scePthreadCreate is bound by pthread_sema.c's refusal. Until this slice both
+   rows existed and THIS one won on section order (index 36 against 88), so every boot ran EXPERIMENT A
+   while the tree's later, deliberate policy never executed once. EXPERIMENT A is not pre-registered
+   anywhere -- measured: the only occurrences of the name in the tree are the comment above and the print
+   below. It produced the guest's Dantelion2 panic (the error path dereferences the unpopulated __sFILE),
+   which is why the refusal exists at all. Reproduce it by restoring this line. */
 RT_SYSLIB("libkernel", scePthreadEqual, thread_equal);
 RT_SYSLIB("libkernel", sched_yield, kernel_sched_yield);
 RT_SYSLIB_UNRESOLVED("libkernel", scePthreadYield, thread_yield);
