@@ -94,12 +94,18 @@ __attribute__((noreturn, no_stack_protector)) void rt_tls_host_base_refuse(int r
     static const char msg_foreign[] =
         "runtime: TLS: guest returned with %gs naming a foreign TLS state; refusing to install its "
         "host base\n";
-    const char *msg = reason == RT_TLS_REFUSE_SELECTOR_ZERO ? msg_selector
-                    : reason == RT_TLS_REFUSE_FOREIGN_STATE ? msg_foreign
-                                                            : msg_zero;
-    const unsigned long len = reason == RT_TLS_REFUSE_SELECTOR_ZERO ? (unsigned long)(sizeof msg_selector - 1)
-                            : reason == RT_TLS_REFUSE_FOREIGN_STATE ? (unsigned long)(sizeof msg_foreign - 1)
-                                                                    : (unsigned long)(sizeof msg_zero - 1);
+    const char *msg;
+    unsigned long len;
+    if (reason == RT_TLS_REFUSE_SELECTOR_ZERO) {
+        msg = msg_selector;
+        len = (unsigned long)(sizeof msg_selector - 1);
+    } else if (reason == RT_TLS_REFUSE_FOREIGN_STATE) {
+        msg = msg_foreign;
+        len = (unsigned long)(sizeof msg_foreign - 1);
+    } else {
+        msg = msg_zero;
+        len = (unsigned long)(sizeof msg_zero - 1);
+    }
     long ignored;
     __asm__ volatile("syscall" : "=a"(ignored) : "a"(1L), "D"(2), "S"(msg), "d"(len)
                      : "rcx", "r11", "memory");
