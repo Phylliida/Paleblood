@@ -484,8 +484,13 @@ static ssize_t read_nid_db(const char *path, nid_name **out, char **text, size_t
     nid_name *names = NULL;
     for (char *p = strstr(t, "obf=\""); p; p = strstr(p, "obf=\"")) {
         char *nid = p + 5, *end = strchr(nid, '"');
+        /* Both searches are bounded by the NEXT entry: an unmatched obf=" with no sym of its own must not
+           pair with the following entry's symbol, take p past it, and swallow a valid name. The skip count
+           would then say "one malformed, no valid lost", which is the partial-table class again. */
+        char *next = end ? strstr(end, "obf=\"") : NULL;
         char *sym = end ? strstr(end, "sym=\"") : NULL;
-        char *send = sym ? strchr(sym + 5, '"') : NULL;
+        if (next && (!sym || sym >= next)) sym = NULL;
+        char *send = sym && (!next || strchr(sym + 5, '"') < next) ? strchr(sym + 5, '"') : NULL;
         if (!send) {
             /* A malformed entry must not truncate the table: skip it, keep every valid entry after it, and
                COUNT it, so the caller cannot quote the result as complete. `!end` means the file ends inside
