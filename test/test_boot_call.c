@@ -47,7 +47,7 @@ typedef struct {
     char message[1024];
 } child_result;
 
-static child_result run_boot_child(unsigned char *state, void *guest_block, int malloc_after)
+static child_result run_boot_child(unsigned char *state, void *guest_block, int malloc_after, int stack_mode)
 {
     child_result r;
     memset(&r, 0, sizeof r);
@@ -60,9 +60,12 @@ static child_result run_boot_child(unsigned char *state, void *guest_block, int 
         if (dup2(fds[1], 2) < 0) _exit(2);
         close(fds[1]);
         static unsigned char guest_stack[0x1000] __attribute__((aligned(16)));
+        unsigned char *stack_top = guest_stack + sizeof guest_stack;
+        if (stack_mode == 1) stack_top -= 8;   /* 8 mod 16: callee entry would be 0 mod 16 */
+        if (stack_mode == 2) stack_top = NULL;
         write_gsbase(state);
         rt_tls_guest_base_v = (uint64_t)(uintptr_t)guest_block;
-        rt_boot_call(marker, NULL, guest_stack + sizeof guest_stack, NULL, NULL);
+        rt_boot_call(marker, NULL, stack_top, NULL, NULL);
         if (malloc_after) {
             /* The point of the valid control: prove %fs is the host's, not just that the call returned.
                malloc alone did not catch a null %fs in this test; errno does, because the macro reads
@@ -97,7 +100,7 @@ int main(void)
 
     /* 1. Live %gs, zero guest block, nonzero published word: old code ran marker and returned. */
     make_state(state, NULL, host_fs);
-    child_result r = run_boot_child(state, guest_block, 0);
+    child_result r = run_boot_child(state, guest_block, 0, 0);
     if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
         fprintf(stderr, "boot_call: live selector with no block was not refused: status=0x%x marker=%d message=%s\n",
                 r.status, (int)marker_ran, r.message);
@@ -112,7 +115,7 @@ int main(void)
     /* 2. Live %gs, valid guest block, zero host base: the guest runs, then the restore must refuse
           before wrfsbase 0. Raw write+exit_group(134), and the message must name the host base. */
     make_state(state, guest_block, 0);
-    r = run_boot_child(state, guest_block, 1);
+    r = run_boot_child(state, guest_block, 1, 0);
     if (!WIFEXITED(r.status) || WEXITSTATUS(r.status) != 134) {
         fprintf(stderr, "boot_call: zero host base was not refused: status=0x%x marker=%d message=%s\n",
                 r.status, (int)marker_ran, r.message);
@@ -127,11 +130,27 @@ int main(void)
     /* 3. Positive control: same shape, valid host base, and malloc/free after return. This is what
           distinguishes "refuses the zero" from "refuses everything". */
     make_state(state, guest_block, host_fs);
-    r = run_boot_child(state, guest_block, 1);
+    r = run_boot_child(state, guest_block, 1, 0);
     if (!WIFEXITED(r.status) || WEXITSTATUS(r.status) != 0) {
         fprintf(stderr, "boot_call: valid host base did not survive the round trip: status=0x%x message=%s\n",
                 r.status, r.message);
         return 1;
+    }
+
+    /* 4. A valid state, but a stack that violates the SysV contract. The old code switched rsp anyway:
+          an 8-mod-16 top faults on the guest's first movaps, and a null top faults on its first push,
+          both inside a function nobody suspects. The refusal must come before wrfsbase. */
+    for (int mode = 1; mode <= 2; mode++) {
+        r = run_boot_child(state, guest_block, 0, mode);
+        if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
+            fprintf(stderr, "boot_call: stack_top mode %d was not refused: status=0x%x message=%s\n",
+                    mode, r.status, r.message);
+            return 1;
+        }
+        if (!strstr(r.message, "stack_top=0x") || !strstr(r.message, "16-byte-aligned guest stack")) {
+            fprintf(stderr, "boot_call: stack refusal did not name the stack: %s\n", r.message);
+            return 1;
+        }
     }
     return 0;
 }

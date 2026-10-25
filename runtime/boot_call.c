@@ -5,8 +5,25 @@
 #include "runtime/process.h"
 #include "runtime/tls.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 /* Reached from the asm below with the host stack and the host %fs still installed. It must not return:
    writing a zero %fs and calling the guest is legal, silent, and gives the guest a null TCB. */
+__attribute__((noreturn, used)) void rt_boot_call_bad_stack(uintptr_t stack_top);
+void rt_boot_call_bad_stack(uintptr_t stack_top)
+{
+    /* The guest stack is switched in before the call; a misaligned rsp faults on the first movaps
+       inside the guest (si_addr is 0, not the stack), and a zero stack faults on the first push.
+       This path is before wrfsbase, so the host TCB is still installed and libc is safe. */
+    char msg[192];
+    snprintf(msg, sizeof msg,
+             "rt_boot_call: stack_top=0x%llx is not a usable 16-byte-aligned guest stack; refusing to "
+             "enter guest code",
+             (unsigned long long)stack_top);
+    rt_fatal("boot", msg);
+}
+
 __attribute__((noreturn, used)) void rt_boot_call_no_guest_tls(int reason);
 void rt_boot_call_no_guest_tls(int reason)
 {
@@ -46,6 +63,10 @@ __asm__(".text\n"
         "  test %r11, %r11\n"
         "  jz 9f\n"
         "2:\n"
+        "  test %rdx, %rdx\n"
+        "  jz 6f\n"
+        "  test $15, %dl\n"
+        "  jnz 6f\n"                                       /* SysV: callee entry rsp is 8 mod 16 */
         "  mov %rdx, %rsp\n"                                /* switch to the guest stack after the check */
         "  mov %r8, %rdx\n"
         "  wrfsbase %r11\n"
@@ -73,4 +94,9 @@ __asm__(".text\n"
         "5:\n"
         "  and $-16, %rsp\n"                                /* raw refusal; no return, alignment still matters */
         "  call rt_tls_host_base_refuse\n"
+        "  ud2\n"
+        "6:\n"
+        "  mov %rdx, %rdi\n"
+        "  and $-16, %rsp\n"
+        "  call rt_boot_call_bad_stack\n"
         "  ud2\n");
