@@ -12,7 +12,8 @@
 /* Declared here rather than in host_hooks.h on purpose: that header is included by pinned replacements, and the pin
    set is a constraint on where code may live (see check_pins.py). Counters are a diagnostic, not an ABI. */
 extern unsigned rt_host_hooks_installed_count(void);
-extern void rt_host_hooks_sites_snapshot(unsigned *checked, unsigned *already_patched, unsigned *mismatched, unsigned *unlisted);
+extern void rt_host_hooks_sites_snapshot(unsigned *checked, unsigned *already_patched,
+                                         unsigned *mismatched, unsigned *unlisted);
 
 int rt_boot_load_plugin(void *image, uint64_t image_size, const char *path, unsigned *hooks_installed)
 {

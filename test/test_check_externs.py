@@ -24,6 +24,14 @@ class Classifier(unittest.TestCase):
         self.assertEqual(E.classify("extern const T __start_s[] __attribute__((weak));\n"),
                          [("data", "__start_s")])
 
+    def test_a_function_extern_split_across_lines_is_still_a_function(self):
+        """A line-oriented scanner refuses a correct prototype that a formatter wrapped. The declaration is the unit."""
+        self.assertEqual(E.classify("extern void\nf(unsigned *a,\n         unsigned *b);\n"),
+                         [("function", "f")])
+
+    def test_a_data_extern_split_across_lines_is_still_data(self):
+        self.assertEqual(E.classify("extern int32_t\nrt_x;\n"), [("data", "rt_x")])
+
     def test_a_static_inline_definition_is_not_an_extern(self):
         self.assertEqual(E.classify("static inline int f(void) { return 0; }\n"), [])
 

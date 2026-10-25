@@ -17,6 +17,10 @@ place a future reader assumes someone justified.
 
 Comments are stripped before scanning: a docstring-style comment saying "extern uint32_t rt_x" is not a
 declaration, and a gate that fires on prose gets an exemption added instead of a fix.
+
+Declarations are scanned to their terminating semicolon at bracket depth zero, not per physical line: a
+prototype split across lines is one declaration, and a gate whose scope is a line silently refuses the
+multi-line prototype a formatter would produce. The one-line spelling is a convention, never a requirement.
 """
 import pathlib
 import re
@@ -26,7 +30,7 @@ import rosters  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROSTER = ROOT / "tools" / "extern_roster.txt"
-DECL = re.compile(r"^\s*extern\s+(?P<rest>.+?;)\s*$")
+EXTERN_START = re.compile(r"(?m)^\s*extern\b")
 NAME_FN = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 NAME_DATA = re.compile(r"\b([A-Za-z_]\w*)\s*(?:\[|=|;)")
 EXEMPT_NAMES = {"__attribute__", "__asm__"}
@@ -37,14 +41,43 @@ def strip_comments(text):
     return re.sub(r"//[^\n]*", "", text)
 
 
+def declarations(text):
+    """Yield each extern declaration's text, from `extern` to its depth-zero semicolon.
+
+    The scan is over the source, not the line: parentheses, brackets and braces are tracked, and string and
+    character literals are skipped, so a semicolon inside `(...)` or `"..."` cannot end a declaration early.
+    A line continuation is joined first; a multi-line prototype is then the same declaration as a one-line one.
+    """
+    text = re.sub(r"\\\n", " ", strip_comments(text))
+    for m in EXTERN_START.finditer(text):
+        start = m.end()
+        depth = 0
+        quote = None
+        i = start
+        while i < len(text):
+            ch = text[i]
+            if quote:
+                if ch == "\\":
+                    i += 2
+                    continue
+                if ch == quote:
+                    quote = None
+            elif ch in ("'", '"'):
+                quote = ch
+            elif ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth = max(0, depth - 1)
+            elif ch == ";" and depth == 0:
+                yield text[start:i + 1]
+                break
+            i += 1
+
+
 def classify(src):
     """[(kind, name)] for one source TEXT -- the unit the tests feed strings to."""
     out = []
-    for line in strip_comments(src).splitlines():
-        m = DECL.match(line)
-        if not m:
-            continue
-        rest = m.group("rest")
+    for rest in declarations(src):
         fn = NAME_FN.search(rest)
         data = NAME_DATA.search(rest)
         # A function declaration has '(' before the first ';'/']' terminator; an array symbol does not.
