@@ -8,7 +8,9 @@
    A no-op that records when it *would* have blocked is a measurement; a silent one is a wish. So Wait
    prints the case it could not serve -- count short of the request -- which is exactly the situation that
    would hang a real kernel and is therefore evidence of guest logic rather than of our stub. */
+#include "runtime/address_spaces.h"
 #include "runtime/guest_mem.h"
+#include "runtime/inflight.h"
 #include "runtime/process.h"
 #include "runtime/syslib.h"
 
@@ -150,13 +152,29 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
        ended in a stdio-looking fault two layers away from the cause. Stopping here means nothing after this
        point is fabricated state -- a synchronisation model that cannot be honoured must not be handed a
        success, and the guest's own failure path is not an honest alternative when the failure is ours. */
-    static char wall[512];
-    snprintf(wall, sizeof wall,
-             "the guest asked for a thread (entry %p, arg %p) and this runtime cannot give it one: guest "
-             "TLS layout is NOT established (two artifacts disagree: PT_TLS read as 0x0/0x750 against the 0x220/0x4a0 "
-             "this text used to quote), the arena is one unlocked bump "
-             "pointer, and every host call assumes one guest thread in flight",
-             (void *)(uintptr_t)entry, (void *)(uintptr_t)arg);
+    static char wall[768];
+    /* Each module owns its PT_TLS block; they are not supposed to agree, and calling that a contradiction
+       was a misdiagnosis (measured with readelf -lW on this tree, not quoted from an older text):
+         eboot.elf  filesz 0x0    memsz 0x750   -- zero-init, no TLS image
+         libc.elf   filesz 0x220  memsz 0x4a0   -- an init image that would have to be copied per thread
+       What is actually missing is machinery, not agreement. */
+    const uint64_t call = rt_guest_call_pc();
+    if (call)
+        snprintf(wall, sizeof wall,
+                 "the guest asked for a thread (entry %p, arg %p, called from eboot+0x%llx = catalogue 0x%llx) "
+                 "and this runtime cannot give it one: there is no per-thread TCB/TLS allocation (eboot TLS "
+                 "0x0/0x750 zero-init; libc.elf TLS 0x220/0x4a0 needs its image copied per thread), no guest/host "
+                 "%%fs switch on the child side, the arena is one unlocked bump pointer, and every host call "
+                 "assumes one guest thread in flight",
+                 (void *)(uintptr_t)entry, (void *)(uintptr_t)arg, (unsigned long long)rt_runtime_to_vaddr(call),
+                 (unsigned long long)rt_vaddr_to_catalogue(rt_runtime_to_vaddr(call)));
+    else
+        snprintf(wall, sizeof wall,
+                 "the guest asked for a thread (entry %p, arg %p, call site not captured for this object) and "
+                 "this runtime cannot give it one: no per-thread TCB/TLS allocation (eboot 0x0/0x750 zero-init; "
+                 "libc.elf 0x220/0x4a0), no guest/host %%fs switch on the child side, one unlocked bump arena, "
+                 "and every host call assumes one guest thread in flight",
+                 (void *)(uintptr_t)entry, (void *)(uintptr_t)arg);
     rt_fatal("scePthreadCreate", wall);
 }
 

@@ -27,6 +27,7 @@
 #include "runtime/nid.h"
 #include "runtime/process.h"
 #include "runtime/identity.h"
+#include "runtime/address_spaces.h"
 #include "runtime/guest.h"
 #include "runtime/tls.h"
 #include "runtime/syslib.h"
@@ -102,8 +103,17 @@ static volatile uint64_t fault_regs[16];
 static volatile int fault_signal;
 static volatile int exit_code;
 
+/* The guest PC that entered the import currently in flight, in RUNTIME space, or 0 when not captured (an
+   import of any object but eboot). Bodies print it instead of their own return address. */
+uint64_t rt_guest_call_pc(void);
+
+_Static_assert(kPs4ImageBase == RT_EBOOT_BASE, "the PS4-space bias and the guest.h spelling must be one value");
+_Static_assert(kGuestExecBase == GUEST_BASE, "the execution base is the loader's GUEST_BASE, not a second opinion");
+
 /* Defined below, after rt_import_pc and the loader's accessors: this file's unimplemented() is above them. */
 static uint64_t import_guest_pc(uint32_t which);
+uint64_t rt_guest_call_pc(void) { return import_guest_pc(rt_syslib_in_flight); }
+
 static int guest_rx_contains(uint64_t guest);
 
 /* Entered from an unimplemented import's trampoline (edi = object << 20 | import). Never returns. */
@@ -631,7 +641,11 @@ static void where(uint64_t address, char *out, size_t size)
     for (size_t k = 0; k < object_count; k++) {
         const uint64_t base = (uint64_t)(uintptr_t)objects[k].image;
         if (address >= base && address < base + objects[k].size) {
-            snprintf(out, size, "%s+0x%llx", objects[k].label, (unsigned long long)(address - base));
+            const uint64_t v = address - base;
+            /* BOTH coordinates, because they differ by kPs4ImageBase and a reader quoting one against a
+               catalogue written in the other is the mistake this campaign made twice in one hour. */
+            snprintf(out, size, "%s+0x%llx (catalogue 0x%llx)", objects[k].label, (unsigned long long)v,
+                     (unsigned long long)rt_vaddr_to_catalogue(v));
             return;
         }
     }
