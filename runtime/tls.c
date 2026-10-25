@@ -40,6 +40,7 @@ typedef struct rt_tls_thread {
     unsigned char *guest_alloc_base; /* the pointer actually returned by posix_memalign */
     size_t guest_alloc;
     unsigned guest_memsz;
+    int guest_memsz_default;     /* memsz came from the 0x4a0 placeholder, not the ELF */
     unsigned long host_fsbase;   /* this thread's own host FS, never the main thread's */
     unsigned long host_gsbase;   /* the GS base to restore when this thread ends */
     int is_main;
@@ -53,8 +54,8 @@ _Static_assert(offsetof(rt_tls_thread, guest_block) == RT_TLS_GS_GUEST_BLOCK_OFF
 _Static_assert(offsetof(rt_tls_thread, host_fsbase) == RT_TLS_GS_HOST_FSBASE_OFF,
                "the emitted %gs selector reads host_fsbase at this displacement");
 
-static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0x4a0u, .is_main = 1,
-                                   .magic = RT_TLS_MAGIC};
+static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0, .guest_memsz_default = 0,
+                                   .is_main = 1, .magic = RT_TLS_MAGIC};
 
 /* Off unless the environment asks: a mirror is an experiment, not a design. */
 static int rt_mirror_host_tls;
@@ -199,6 +200,11 @@ static int fs0_reads_self(uint64_t fs)
     return seen == fs ? 0 : 1;
 }
 
+int rt_tls_guest_memsz_is_default(void)
+{
+    return main_state.guest_memsz_default;
+}
+
 void rt_tls_init(void)
 {
     probe_fsgsbase();
@@ -209,7 +215,10 @@ void rt_tls_init(void)
        the block is already sized and fs is already derived from 0x750, and printing 0x4a0 here was a
        false statement about the block it just accepted. The trampolines no longer bake the base; they
        read this thread's guest_block through %gs at execution. */
-    if (!main_state.guest_memsz) main_state.guest_memsz = 0x4a0u;
+    if (!main_state.guest_memsz) {
+        main_state.guest_memsz = 0x4a0u;
+        main_state.guest_memsz_default = 1;
+    }
     __asm__ volatile("rdfsbase %0" : "=r"(main_state.host_fsbase));
     main_state.host_gsbase = get_gs_base();
     set_gs_base(&main_state);
@@ -223,8 +232,10 @@ void rt_tls_init(void)
        The copy is a stopgap: it is the host's TCB, whose contents are glibc's business, so it must not survive
        past threads. */
     if (!main_state.guest_block) rt_tls_layout(NULL, 0, main_state.guest_memsz);
-    fprintf(stderr, "pbboot: tls: guest block at %p, modelled memsz 0x%x, swap via %s\n",
-            (void *)main_state.guest_block, main_state.guest_memsz, have_wrfsbase ? "wrfsbase" : "arch_prctl");
+    fprintf(stderr, "pbboot: tls: guest block at %p, %s memsz 0x%x, swap via %s\n",
+            (void *)main_state.guest_block,
+            main_state.guest_memsz_default ? "default" : "modelled",
+            main_state.guest_memsz, have_wrfsbase ? "wrfsbase" : "arch_prctl");
     /* Written is not verified: the guest reads this slot 16,854 times and a zero here is a null TCB base
        for every one of them. Reread it through the register the guest will use and refuse if it differs. */
     if (fs0_reads_self((uint64_t)(uintptr_t)main_state.guest_block) == 1)
@@ -254,10 +265,14 @@ void rt_tls_thread_begin(void)
        eboot's 0x750 before rt_tls_init; a child that omits rt_tls_layout used to get a 0x4a0 block
        and write past its own TLS segment. 0x4a0 remains only the pre-init fallback. */
     st->guest_memsz = main_state.guest_memsz ? main_state.guest_memsz : 0x4a0u;
+    st->guest_memsz_default = main_state.guest_memsz ? main_state.guest_memsz_default : 1;
     __asm__ volatile("rdfsbase %0" : "=r"(st->host_fsbase));
     st->host_gsbase = get_gs_base();
     set_gs_base(st);
     rt_tls_layout(NULL, 0, st->guest_memsz);
+    /* layout() marks a nonzero memsz as ELF-derived; a child inherits the classification, not a fresh
+       measurement, so restore it after the sizing call. */
+    st->guest_memsz_default = main_state.guest_memsz ? main_state.guest_memsz_default : 1;
 }
 
 /* Drops this thread's guest block after restoring its host FS and GS. A freed block left installed as %fs
@@ -292,7 +307,15 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
 {
     rt_tls_thread *st = tls_state();
     if (!st) rt_fatal("TLS", "layout called on a thread with no TLS state");
-    if (memsz) st->guest_memsz = memsz;
+    if (memsz) {
+        st->guest_memsz = memsz;
+        st->guest_memsz_default = 0;
+    } else if (!st->guest_memsz) {
+        /* The ELF declares no TLS image and no size. 0x4a0 is libc's memsz, not this executable's: it is a
+           placeholder that keeps the boot alive, and every printer must say "default", never "modelled". */
+        st->guest_memsz = 0x4a0u;
+        st->guest_memsz_default = 1;
+    }
     if (st->guest_memsz > RT_TLS_AREA_BYTES)
         rt_fatal("TLS", "the module's TLS memsz exceeds the per-thread block budget");
     /* The block must hold [fs - memsz, fs + TCB), and `fs` may be up to 63 bytes above base + memsz + TCB:

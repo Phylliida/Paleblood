@@ -813,8 +813,13 @@ int main(int argc, char **argv)
         const rt_elf_tls *t = rt_elf_tls_segment(objects[0].elf);
         const unsigned char *img = t->filesz ? objects[0].image + (t->vaddr - RT_EBOOT_BASE) : NULL;
         rt_tls_layout(img, (unsigned)t->filesz, (unsigned)t->memsz);
-        fprintf(stderr, "pbboot: tls: modelled from %s: filesz 0x%x memsz 0x%x\n", objects[0].label,
-                (unsigned)t->filesz, (unsigned)t->memsz);
+        if (t->memsz)
+            fprintf(stderr, "pbboot: tls: modelled from %s: filesz 0x%x memsz 0x%x\n", objects[0].label,
+                    (unsigned)t->filesz, (unsigned)t->memsz);
+        else
+            fprintf(stderr, "pbboot: tls: %s declares PT_TLS filesz 0x%x memsz 0x%x; "
+                            "a placeholder block follows\n", objects[0].label, (unsigned)t->filesz,
+                    (unsigned)t->memsz);
         /* One module of however many declare PT_TLS. Say so at every boot rather than let a reader assume
            the block covers everything: which module's @tpoff constants are in play is a measurement this
            runtime has not made, and a modelled block that is a default is a silent truncation. */

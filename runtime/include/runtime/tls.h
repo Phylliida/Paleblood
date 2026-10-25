@@ -9,6 +9,8 @@
 #define RT_TLS_GS_HOST_FSBASE_OFF 0x28
 
 void rt_tls_init(void);
+/* 1 when guest_memsz is the 0x4a0 placeholder, not a size the ELF declared. */
+int rt_tls_guest_memsz_is_default(void);
 void rt_tls_thread_begin(void);
 void rt_tls_thread_end(void);
 void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz);

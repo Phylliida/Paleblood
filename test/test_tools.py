@@ -582,6 +582,15 @@ class Boot(unittest.TestCase):
         s = self.boot(b'\xc3')
         self.assertEqual((s['outcome'], s['milestone'], s['imports_total']), ('returned', 'loaded', 0))
 
+    def test_zero_pt_tls_is_printed_as_a_default_not_a_measurement(self):
+        """An ELF with no PT_TLS still needs a block, but 0x4a0 is libc's memsz, not this
+        executable's. Printing `modelled 0x4a0` beside `filesz 0x0 memsz 0x0` fabricates a
+        measurement; the placeholder must name itself."""
+        _, p = self.boot_with_proc(b'\xc3')
+        self.assertIn('eboot declares PT_TLS filesz 0x0 memsz 0x0', p.stderr)
+        self.assertIn('default memsz 0x4a0', p.stderr)
+        self.assertNotIn('modelled memsz 0x4a0', p.stderr)
+
     def test_unbound_trampoline_size_is_pinned(self):
         """666 = 578 + 88 is structural; the 70 is not. This is the distance from the unbound
         form's 150 bytes to TRAMPOLINE_SIZE 220, and it shrinks whenever the emitter grows. Pin
