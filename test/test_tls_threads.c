@@ -78,9 +78,13 @@ static void *worker(void *arg)
     if (view.installer != guest) fail(i, "installer == guest", view.installer, guest);
     if (view.enter_guest != guest) fail(i, "enter_guest == guest", view.enter_guest, guest);
     /* A child must not overwrite the main thread's published globals. This asserts the record, not the
-       selector: rt_boot_call still reads rt_tls_guest_base_v, which is todo/047. The trace prints both
-       values side by side so that defect is visible rather than silently absorbed. */
+       selector: rt_boot_call and the emitted stubs now read this thread's state through %gs (todo/047),
+       so `published` is a report of main's word rather than the value a child would install. The trace
+       prints both side by side so the difference stays visible. */
     if (view.published != main_guest) fail(i, "published is main's global", view.published, main_guest);
+    /* The point of 047: the reported global and the value this thread would install are different
+       subjects on a child, so the selector cannot be the global without failing here. */
+    if (view.published == view.enter_guest) fail(i, "published differs from this thread's base", view.published, view.enter_guest);
 
     guest_bases[i] = guest;
     host_bases[i] = host;

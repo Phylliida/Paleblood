@@ -216,24 +216,56 @@ static void on_signal(int sig, siginfo_t *info, void *context)
 
 /* Calls fn(a, b, c) on the guest stack: rt_boot_call(fn, a, stack_top, b, c). */
 uint64_t rt_boot_call(void *fn, void *a, void *stack_top, void *b, void *c);
+/* Reached from the asm below with the host stack and the host %fs still installed. It must not return:
+   writing a zero %fs and calling the guest is legal, silent, and gives the guest a null TCB. */
+__attribute__((noreturn, used)) void rt_boot_call_no_guest_tls(void);
+void rt_boot_call_no_guest_tls(void)
+{
+    rt_fatal("boot", "rt_boot_call: no guest TLS block (%gs selector and published base are both zero); "
+                     "refusing to enter guest code with a null TCB");
+}
 __asm__(".text\n"
         ".globl rt_boot_call\n"
         "rt_boot_call:\n"
         "  push %rbp\n  push %rbx\n  push %r12\n  push %r13\n  push %r14\n  push %r15\n"
         "  mov %rsp, %r12\n"
-        "  mov %rdx, %rsp\n"
         "  mov %rdi, %rax\n"
         "  mov %rsi, %rdi\n"
         "  mov %rcx, %rsi\n"
+        /* Selector: the current thread's state through %gs, never main's published word. A zero %gs is
+           the pre-init or post-end case; fall back to the published word only so that a zero there is
+           named by rt_boot_call_no_guest_tls instead of becoming a legal null %fs. */
+        "  rdgsbase %r11\n"
+        "  test %r11, %r11\n"
+        "  jz 1f\n"
+        "  mov %gs:0x8, %r11\n"
+        "  test %r11, %r11\n"
+        "  jnz 2f\n"
+        "1:\n"
+        "  mov rt_tls_guest_base_v(%rip), %r11\n"
+        "  test %r11, %r11\n"
+        "  jz 9f\n"
+        "2:\n"
+        "  mov %rdx, %rsp\n"                                /* switch to the guest stack after the check */
         "  mov %r8, %rdx\n"
-        "  mov rt_tls_guest_base_v(%rip), %r11\n"          /* guest %fs: r11 is caller-saved, so free */
         "  wrfsbase %r11\n"
         "  call *%rax\n"
+        "  rdgsbase %r11\n"
+        "  test %r11, %r11\n"
+        "  jz 3f\n"
+        "  mov %gs:0x28, %r11\n"
+        "  jmp 4f\n"
+        "3:\n"
         "  mov rt_tls_host_base_v(%rip), %r11\n"           /* back to the host's TCB on return */
+        "4:\n"
         "  wrfsbase %r11\n"
         "  mov %r12, %rsp\n"
         "  pop %r15\n  pop %r14\n  pop %r13\n  pop %r12\n  pop %rbx\n  pop %rbp\n"
-        "  ret\n");
+        "  ret\n"
+        "9:\n"
+        "  sub $8, %rsp\n"                                  /* host rsp is 8 mod 16 after six pushes */
+        "  call rt_boot_call_no_guest_tls\n"
+        "  ud2\n");
 
 /* Runs fn until it returns, exits, faults, times out or reaches an unimplemented import. Kept
    apart from main so that no caller state is live across the jump back. */
@@ -356,18 +388,18 @@ static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t whi
            store instead of after it. An addition to the import path must displace something: the slot
            is TRAMPOLINE_SIZE bytes and the emitter returns 0 rather than overrun it. */
         if (getenv("BB_TLS_TRACE") && ((which & 0xfffffu) == 40 || (which & 0xfffffu) < 2)) {
-            /* The base the CROSSING will be emitted with, read at the moment of emission: a stub whose
-               wrfsbase is correct still lands on the wrong TCB if the value baked into it is the wrong
-               one, and emit-time bake-in is exactly how a %fs = 0 or %fs = guest gets installed. */
+            /* The stub no longer bakes a base: it reads the executing thread's state through %gs. The
+               accessor values still print as main's record, which is what a child must not inherit. */
             unsigned long long fs = 0;
             syscall(158, 0x1003UL, &fs);
-            fprintf(stderr, "tls trace trampoline %u: emit host_fs %#llx guest_fs %#llx current fs %#llx\n",
+            fprintf(stderr, "tls trace trampoline %u: selector gs, main record host_fs %#llx guest_fs %#llx "
+                    "current fs %#llx\n",
                     which, (unsigned long long)rt_tls_host_base(), (unsigned long long)rt_tls_guest_base(), fs);
         }
         const size_t room = TRAMPOLINE_SIZE - (size_t)(p - t);
         const size_t stub = rt_write_boundary_stub(p, room, target, rt_tls_host_base(),
                                                    rt_tls_guest_base(),
-                                                   (uint64_t)(uintptr_t)&rt_syslib_in_flight);
+                                                   (uint64_t)(uintptr_t)&rt_syslib_in_flight, 1);
         if (stub == 0 || stub > room)
             rt_fatal("trampoline", "boundary stub does not fit the trampoline slot");
         p += stub;
@@ -814,7 +846,8 @@ int main(int argc, char **argv)
     }
 
     /* The guest's TLS layout, derived from the executable that declares it, now that it is open. It has to
-       land before the trampolines, which bake the guest base into every stub as a literal.
+       land before the trampolines because a child must find a TCB through %gs at execution; the stub no
+       longer bakes a base as a literal.
        The main executable is the module whose @tpoff constants the guest's own code uses, so its memsz is
        the one a variant-II layout must satisfy: image sits exactly memsz below the TCB, because any padding
        there shifts every TLS variable to a different address. */

@@ -2,6 +2,12 @@
    measurements that scope this: fs:[0] only, and wrfsbase available here. */
 #include <stdint.h>
 
+/* The two fields an emitted boundary stub may read from the state at %gs. They are constants because
+   the stub's instruction stream needs a displacement, and they are asserted against offsetof() in
+   tls.c: a struct edit must stop the build rather than silently read a neighbouring field. */
+#define RT_TLS_GS_GUEST_BLOCK_OFF 0x8u
+#define RT_TLS_GS_HOST_FSBASE_OFF 0x28u
+
 void rt_tls_init(void);
 void rt_tls_thread_begin(void);
 void rt_tls_thread_end(void);
@@ -17,8 +23,9 @@ uint64_t rt_tls_guest_base(void);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four
    numbers that agree proves nothing; `gs` and `state.self` are the runtime's state, `fs[0]` is what the
-   guest's own instruction would read, `installer` is this thread's record, `published` is the global the
-   assembly helper uses (main-thread only), and `enter_guest` is what rt_tls_enter_guest would install.
+   guest's own instruction would read, `installer` is this thread's record, `published` is main's global
+   (rt_boot_call's fallback only, never the emitted stubs' selector), and `enter_guest` is what
+   rt_tls_enter_guest would install.
    Printing the sources is what makes a disagreement a question rather than a coincidence. */
 typedef struct rt_tls_view {
     uint64_t gs;            /* rdgsbase */
@@ -27,7 +34,7 @@ typedef struct rt_tls_view {
     uint64_t fsbase;        /* rdfsbase */
     uint64_t fs0;           /* mov %fs:0, read through the register */
     uint64_t installer;     /* state->guest_block */
-    uint64_t published;     /* rt_tls_guest_base_v, main's value only */
+    uint64_t published;     /* rt_tls_guest_base_v, main's record only; not the selector */
     uint64_t enter_guest;   /* rt_tls_guest_base(), what enter_guest would install */
     unsigned memsz;         /* state->guest_memsz */
 } rt_tls_view;

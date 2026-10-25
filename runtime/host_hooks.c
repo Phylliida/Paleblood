@@ -123,7 +123,7 @@ static int guest_tls_is_live(void)
    overrun: a hook that cannot get a stub must fail loudly, because a jump to nowhere is a green run
    that executes nothing. */
 /* The stub page is one resource shared by every wrapper. It is a test-overridable constant because
-   RT_SITES_MAX = 64 capture wrappers cannot fit in the shipped 4096-byte page (64 * 88 = 5632), so
+   RT_SITES_MAX = 64 capture wrappers cannot fit in the shipped 4096-byte page (64 * 86 = 5504), so
    the capture-table-full branch is otherwise unreachable in the shipped configuration; the fixture
    enlarges the page to exercise the real 64 -> 65 boundary rather than lowering the table cap. */
 #ifndef RT_STUB_PAGE
@@ -369,10 +369,10 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         g_site_entered[capture_slot] = 0;
         entered_addr = (uint64_t)(uintptr_t)&g_site_entered[capture_slot];
     }
-    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing);
+    const size_t wrapper_capacity = rt_snapshot_stub_size(capturing, 1);
     if (wrapper_capacity == SIZE_MAX) {
         fprintf(stderr, "hook: refusing to install at 0x%llx: the capture form is unsatisfiable "
-                        "(rt_snapshot_stub_size(%d) == SIZE_MAX); nothing is written\n",
+                        "(rt_snapshot_stub_size(%d, 1) == SIZE_MAX); nothing is written\n",
                 (unsigned long long)offset, capturing);
         sites_unlisted++;   /* the form, not the catalog: counted, so a zero cannot silently hide it */
         /* The assertion is an instrument, not a claim: hooks_installed=0 counts successful installs and is not a
@@ -414,7 +414,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
             return RT_INSTALL_NO_ROOM;
         }
         size_t n = rt_write_boundary_stub(stub, RT_BOUNDARY_STUB_MAX, (uint64_t)(uintptr_t)target,
-                                          rt_tls_host_base(), rt_tls_guest_base(), 0);
+                                          rt_tls_host_base(), rt_tls_guest_base(), 0, 1);
         if (n == 0 || n > RT_BOUNDARY_STUB_MAX) {
             fprintf(stderr, "hook: boundary stub refused to emit into %d bytes at offset 0x%llx\n",
                     RT_BOUNDARY_STUB_MAX, (unsigned long long)offset);
@@ -442,7 +442,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         }
         size_t w = rt_write_snapshot_stub(wrapper, wrapper_capacity, (uint64_t)(uintptr_t)wrapper,
                                           (uint64_t)destination, rt_tls_host_base(), rt_tls_guest_base(),
-                                          entered_addr, capturing);
+                                          entered_addr, capturing, 1);
         if (w == 0) {
             fprintf(stderr, "hook: snapshot wrapper refused to emit at 0x%llx -> 0x%llx (distance %lld)\n",
                     (unsigned long long)(uintptr_t)wrapper, (unsigned long long)destination,
@@ -452,7 +452,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
         __builtin___clear_cache((char *)wrapper, (char *)wrapper + w);
         /* Readback from the page, not the emitter's return: "emitted N bytes" is a claim, the page is
            the evidence. The assertion's inputs are printed beside its verdict. */
-        /* The readback follows the FORM: a 5-byte wrapper opens with `e9`, and the 75-byte capture form opens
+        /* The readback follows the FORM: a 5-byte wrapper opens with `e9`, and the 73-byte capture form opens
            with `push rdi` and carries its `e9 rel32` in the last five bytes. An assertion written against one
            shape outlived its subject here once already; this one decodes the jump where the form puts it. */
         const unsigned char want_first = capturing ? 0x49 : 0xe9;   /* capture form opens with `movabs r11, &entered` */

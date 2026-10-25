@@ -1,4 +1,5 @@
 #include "runtime/boundary_stub.h"
+#include "runtime/tls.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -38,19 +39,33 @@ void rt_capture_snapshot_c(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, u
             (unsigned long long)a5);
 }
 
-size_t rt_boundary_stub_size(uint64_t in_flight_addr)
+/* mov r11, qword ptr gs:[off] -- 65 4c 8b 1c 25 <disp32>. The displacement is asserted against
+   offsetof(struct rt_tls_thread, ...) in tls.c, so this is a constant the build checks rather than a
+   number copied into an emitter. */
+static unsigned char *stub_mov_r11_gs(unsigned char *p, uint32_t off)
 {
-    /* 10 movabs target + 10 movabs host + 5 wrfsbase + 1 push + 3 mov rbx,rsp + 4 and rsp + 3 call
-       + 3 mov rsp,rbx + 1 pop + 10 movabs guest + 5 wrfsbase + 1 ret = 56, plus 22 for the import
-       path's bookkeeping word. */
-    return 56u + (in_flight_addr ? 22u : 0u);
+    *p++ = 0x65;
+    *p++ = 0x4c;
+    *p++ = 0x8b;
+    *p++ = 0x1c;
+    *p++ = 0x25;
+    memcpy(p, &off, 4), p += 4;
+    return p;
+}
+
+size_t rt_boundary_stub_size(uint64_t in_flight_addr, int per_thread)
+{
+    /* 10 movabs target + (per_thread ? 9 gs load : 10 movabs) + 5 wrfsbase + 1 push + 3 mov rbx,rsp
+       + 4 and rsp + 3 call + 3 mov rsp,rbx + 1 pop + (per_thread ? 9 gs load : 10 movabs) + 5
+       wrfsbase + 1 ret = 54 per-thread, 56 baked, plus 22 for the import path's bookkeeping word. */
+    return (per_thread ? 54u : 56u) + (in_flight_addr ? 22u : 0u);
 }
 
 size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t target, uint64_t host_fs, uint64_t guest_fs,
-                              uint64_t in_flight_addr)
+                              uint64_t in_flight_addr, int per_thread)
 {
     /* Refuse before the first store: a bound checked after the write is a report about an overrun. */
-    const size_t needed = rt_boundary_stub_size(in_flight_addr);
+    const size_t needed = rt_boundary_stub_size(in_flight_addr, per_thread);
     if (!dst || capacity < needed) return 0;
 
     unsigned char *p = dst;
@@ -58,7 +73,12 @@ size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t targ
     /* r10 and r11 are caller-saved and carry no arguments in the System V convention, so the guest
        cannot hold anything live in them across its call: no saves, no restores, no hazard. */
     *p++ = 0x49, *p++ = 0xba, memcpy(p, &target, 8), p += 8;           /* movabs r10, target */
-    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &host_fs, 8), p += 8;          /* movabs r11, host %fs base */
+    if (per_thread) {
+        /* A child never sees main's base: read the current thread's state, which is the only subject. */
+        p = stub_mov_r11_gs(p, RT_TLS_GS_HOST_FSBASE_OFF);
+    } else {
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &host_fs, 8), p += 8;      /* movabs r11, host %fs base */
+    }
     /* F3 is mandatory and the ModRM /2 field names the register: 0xd3 is wrfsbase r11, 0xdb is
        wrgsbase r11. The 0xdb form is legal, silent, and writes the wrong register. */
     *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;   /* wrfsbase r11 */
@@ -72,7 +92,11 @@ size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t targ
     *p++ = 0x41, *p++ = 0xff, *p++ = 0xd2;                             /* call r10 */
     *p++ = 0x48, *p++ = 0x89, *p++ = 0xdc;                             /* mov rsp, rbx */
     *p++ = 0x5b;                                                       /* pop rbx */
-    *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guest_fs, 8), p += 8;         /* movabs r11, guest %fs base */
+    if (per_thread) {
+        p = stub_mov_r11_gs(p, RT_TLS_GS_GUEST_BLOCK_OFF);
+    } else {
+        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guest_fs, 8), p += 8;     /* movabs r11, guest %fs base */
+    }
     *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3;   /* wrfsbase r11 */
     if (in_flight_addr) {
         /* Bookkeeping, not boundary: the import path records which import is running and clears it
@@ -86,7 +110,7 @@ size_t rt_write_boundary_stub(unsigned char *dst, size_t capacity, uint64_t targ
     return (size_t)(p - dst);
 }
 
-size_t rt_snapshot_stub_size(int capturing)
+size_t rt_snapshot_stub_size(int capturing, int per_thread)
 {
     /* Commit A emits only the empty form. The capture form (+ six pushes, movabs host, wrfsbase,
        movabs snapshot, call, six pops) is Commit B; until its bytes exist, its size is UNSATISFIABLE
@@ -109,13 +133,14 @@ size_t rt_snapshot_stub_size(int capturing)
     /* 75 + 13 for the entry counter (`movabs r11,&entered; incq [r11]`), which must run BEFORE the first push:
        a counter inside the snapshot cannot tell "never entered" from "entered and died in the prologue", and the
        /3- and rsp-class defects live in exactly those bytes. */
-    return capturing ? 88u : 5u; /* 88 = capture form + entry counter; 5 = e9 rel32 */
+    return capturing ? (per_thread ? 86u : 88u) : 5u; /* 86/88 = capture form + entry counter; 5 = e9 rel32 */
 }
 
 size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self_addr, uint64_t stub_addr,
-                              uint64_t host_fs, uint64_t guest_fs, uint64_t entered_addr, int capturing)
+                              uint64_t host_fs, uint64_t guest_fs, uint64_t entered_addr, int capturing,
+                              int per_thread)
 {
-    const size_t needed = rt_snapshot_stub_size(capturing);
+    const size_t needed = rt_snapshot_stub_size(capturing, per_thread);
     /* Refuse before the first store, and refuse an unsatisfiable size: capacity < SIZE_MAX is every
        capacity, so B cannot be installed by accident before it is written. */
     if (!dst || !self_addr || !stub_addr || capacity < needed) return 0;
@@ -143,7 +168,11 @@ size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self
         *p++ = 0x51;                                                   /* push rcx */
         *p++ = 0x41, *p++ = 0x50;                                      /* push r8 */
         *p++ = 0x41, *p++ = 0x51;                                      /* push r9 */
-        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &host_fs, 8), p += 8;      /* movabs r11, host %fs */
+        if (per_thread) {
+            p = stub_mov_r11_gs(p, RT_TLS_GS_HOST_FSBASE_OFF);
+        } else {
+            *p++ = 0x49, *p++ = 0xbb, memcpy(p, &host_fs, 8), p += 8;  /* movabs r11, host %fs */
+        }
         *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3; /* wrfsbase r11: F3 and /2 are
                                                                           mandatory; 0xdb is /3 (wrgsbase),
                                                                           legal, silent, wrong register */
@@ -155,7 +184,11 @@ size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self
         *p++ = 0xff, *p++ = 0xd0;                                      /* call rax */
         *p++ = 0x48, *p++ = 0x89, *p++ = 0xdc;                         /* mov rsp, rbx */
         *p++ = 0x5b;                                                   /* pop rbx */
-        *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guest_fs, 8), p += 8;     /* movabs r11, guest %fs */
+        if (per_thread) {
+            p = stub_mov_r11_gs(p, RT_TLS_GS_GUEST_BLOCK_OFF);
+        } else {
+            *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guest_fs, 8), p += 8; /* movabs r11, guest %fs */
+        }
         *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3; /* wrfsbase r11 */
         /* The pushes above are rdi, rsi, rdx, rcx, r8, r9; the pops must therefore be the reverse.
            Popping in push order restores r9 into rdi (and so on), which looks symmetrical in review and

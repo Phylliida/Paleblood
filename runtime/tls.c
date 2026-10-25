@@ -16,6 +16,7 @@
 #include "runtime/process.h"
 
 #include <cpuid.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,13 +45,18 @@ typedef struct rt_tls_thread {
     int is_main;
 } rt_tls_thread;
 
+_Static_assert(offsetof(rt_tls_thread, guest_block) == RT_TLS_GS_GUEST_BLOCK_OFF,
+               "the emitted %gs selector reads guest_block at this displacement");
+_Static_assert(offsetof(rt_tls_thread, host_fsbase) == RT_TLS_GS_HOST_FSBASE_OFF,
+               "the emitted %gs selector reads host_fsbase at this displacement");
+
 static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0x4a0u, .is_main = 1};
 
 /* Off unless the environment asks: a mirror is an experiment, not a design. */
 static int rt_mirror_host_tls;
 
-/* Read by the assembly stubs that cannot call a C helper without eating caller-saved arguments. Only the
-   main thread publishes these; the child-side selector reads its own state through %gs. */
+/* Main's record, for reports. The emitted stubs read the current thread's state through %gs, so these
+   are not the selector any more; keeping them as the selector was todo/047. */
 uint64_t rt_tls_guest_base_v;
 uint64_t rt_tls_host_base_v;
 static int have_wrfsbase;
@@ -180,9 +186,10 @@ void rt_tls_init(void)
     probe_fsgsbase();
     main_state.self = &main_state;
     main_state.is_main = 1;
-    /* boot.c lays out the real PT_TLS before rt_tls_init, because the trampolines bake the guest base.
-       Do not overwrite that memsz with the default: the block is already sized and fs is already derived
-       from 0x750, and printing 0x4a0 here was a false statement about the block it just accepted. */
+    /* boot.c lays out the real PT_TLS before rt_tls_init. Do not overwrite that memsz with the default:
+       the block is already sized and fs is already derived from 0x750, and printing 0x4a0 here was a
+       false statement about the block it just accepted. The trampolines no longer bake the base; they
+       read this thread's guest_block through %gs at execution. */
     if (!main_state.guest_memsz) main_state.guest_memsz = 0x4a0u;
     __asm__ volatile("rdfsbase %0" : "=r"(main_state.host_fsbase));
     main_state.host_gsbase = get_gs_base();
@@ -239,8 +246,9 @@ void rt_tls_thread_end(void)
     st->guest_alloc = 0;
     set_gs_base((const void *)restore_gs);
     if (is_main) {
-        /* The published base pointed at the block just freed; a later rt_boot_call must fail loudly
-           rather than use a dangling TCB. */
+        /* The published base pointed at the block just freed, and %gs is restored to the host base.
+           rt_boot_call refuses when both its %gs selector and this published word are zero, rather than
+           entering guest code with a null TCB. A child's state is freed; its %gs is restored first. */
         rt_tls_guest_base_v = 0;
         rt_tls_host_base_v = 0;
     }
@@ -284,9 +292,9 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
                st->guest_memsz);
     st->guest_block = (unsigned char *)fs;
     *(uint64_t *)st->guest_block = (uint64_t)fs;
-    /* The assembly call helper still reads these globals; only the main thread publishes them. A child
-       must not write them, or two threads race the value the main thread's rt_boot_call will use. The
-       child-side selector is a separate change (todo/047). */
+    /* rt_boot_call still reads these as its pre-init/post-end fallback; the emitted stubs read the
+       executing thread's state through %gs (todo/047). Only the main thread publishes them: a child
+       must not overwrite main's record, which is what a report would show after a child ran. */
     if (st->is_main) {
         rt_tls_guest_base_v = (uint64_t)fs;
         rt_tls_host_base_v = (uint64_t)st->host_fsbase;

@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "runtime/boundary_stub.h"
+#include "runtime/tls.h"
 
 enum { GUEST_CODE_SIZE = 32, MINIMUM_HOOK_SIZE = 14 };
 
@@ -51,6 +52,27 @@ static void write_fs(uint64_t base)
 {
     __asm__ volatile("wrfsbase %0" : : "r"(base) : "memory");
 }
+
+static uint64_t read_gs(void)
+{
+    unsigned long base;
+    __asm__ volatile("rdgsbase %0" : "=r"(base));
+    return (uint64_t)base;
+}
+
+static void write_gs(uint64_t base)
+{
+    __asm__ volatile("wrgsbase %0" : : "r"(base) : "memory");
+}
+
+/* The only fields the emitted selector reads, at the displacements tls.c asserts against offsetof. */
+struct fake_tcb {
+    uintptr_t self;          /* 0x00 */
+    uint64_t guest_block;    /* 0x08 */
+    uint64_t pad[3];         /* 0x10 .. 0x20 */
+    uint64_t host_fsbase;    /* 0x28 */
+};
+_Static_assert(sizeof(struct fake_tcb) == 0x30, "fake TCB keeps the product's field offsets");
 
 /* Does this host actually have FSGSBASE? Ask the instruction, not CPUID: this machine reports
    CPUID.07H:EBX[16] == 0 and still executes rdfsbase, so a capability bit is a claim and the round
@@ -168,19 +190,23 @@ int main(void)
         *w++ = 0xf3, *w++ = 0x49, *w++ = 0x0f, *w++ = 0xae, *w++ = 0xd3; /* wrfsbase r11 */
         *w++ = 0xc3;                                               /* ret */
         unsigned char got[128];
-        size_t n = rt_write_boundary_stub(got, sizeof got, target, host, guest, 0);
-        failed |= check(n == rt_boundary_stub_size(0), "the emitted length must match the size helper");
+        size_t n = rt_write_boundary_stub(got, sizeof got, target, host, guest, 0, 0);
+        failed |= check(n == rt_boundary_stub_size(0, 0), "the emitted length must match the size helper");
         /* A capacity one byte short must be refused before the first store, and the buffer untouched. */
         unsigned char tiny[128];
         memset(tiny, 0xcc, sizeof tiny);
-        const size_t full = rt_boundary_stub_size(0);
-        failed |= check(rt_write_boundary_stub(tiny, full - 1, target, host, guest, 0) == 0,
+        const size_t full = rt_boundary_stub_size(0, 0);
+        failed |= check(rt_write_boundary_stub(tiny, full - 1, target, host, guest, 0, 0) == 0,
                         "an under-sized capacity must be refused");
         failed |= check(tiny[0] == 0xcc, "a refused emission must not write a single byte");
-        failed |= check(rt_write_boundary_stub(tiny, full, target, host, guest, 0) == full,
+        failed |= check(rt_write_boundary_stub(tiny, full, target, host, guest, 0, 0) == full,
                         "an exactly-sized capacity must be accepted");
-        failed |= check(rt_boundary_stub_size(1) == full + 22,
+        failed |= check(rt_boundary_stub_size(1, 0) == full + 22,
                         "the import path's bookkeeping word must be counted in the size");
+        failed |= check(rt_boundary_stub_size(0, 1) == full - 2,
+                        "the per-thread selector is two bytes shorter than the baked one");
+        failed |= check(rt_boundary_stub_size(1, 1) == full + 20,
+                        "the import path's bookkeeping word is selector-independent");
         failed |= check(n == (size_t)(w - want), "boundary stub length must match the derived bytes");
         failed |= check(memcmp(got, want, n) == 0, "boundary stub bytes must match the derived bytes");
         /* Counted, not indexed: hand-computed offsets into an instruction stream were wrong twice in
@@ -194,6 +220,34 @@ int main(void)
         }
         failed |= check(wrfsbase == 2, "the crossing must write %fs exactly twice, both wrfsbase");
         failed |= check(wrgsbase == 0, "%fs must never be written with wrgsbase (/3 = 0xdb)");
+    }
+
+    /* The product's selector shape: two %gs loads and no baked base. The fixture has a TCB, which is
+       the only way to represent the subject; a baked-bases fixture cannot notice this leaving the
+       product. */
+    {
+        unsigned char got[128];
+        unsigned char *g = got;
+        const uint64_t target = 0x1122334455667788ULL;
+        const size_t n = rt_write_boundary_stub(got, sizeof got, target, 0x99aabbccddeeff00ULL,
+                                                0x0f1e2d3c4b5a6978ULL, 0, 1);
+        failed |= check(n == 54u, "the per-thread boundary stub is 54 bytes");
+        failed |= check(n == rt_boundary_stub_size(0, 1), "the per-thread size helper must agree");
+        failed |= check(g[0] == 0x49 && g[1] == 0xba, "the per-thread stub still starts with movabs r10");
+        static const unsigned char host_gs[] = {0x65, 0x4c, 0x8b, 0x1c, 0x25,
+                                                RT_TLS_GS_HOST_FSBASE_OFF & 0xffu, 0, 0, 0};
+        static const unsigned char guest_gs[] = {0x65, 0x4c, 0x8b, 0x1c, 0x25,
+                                                 RT_TLS_GS_GUEST_BLOCK_OFF & 0xffu, 0, 0, 0};
+        failed |= check(memcmp(g + 10, host_gs, sizeof host_gs) == 0,
+                        "the host base must be read from %gs, not baked");
+        failed |= check(g[19] == 0xf3 && g[23] == 0xd3, "the first wrfsbase follows the %gs load");
+        failed |= check(memcmp(g + 39, guest_gs, sizeof guest_gs) == 0,
+                        "the guest base must be read from %gs, not baked");
+        failed |= check(g[48] == 0xf3 && g[52] == 0xd3, "the second wrfsbase follows the %gs load");
+        int movabs_r11 = 0;
+        for (size_t k = 0; k + 2 <= n; k++)
+            if (g[k] == 0x49 && g[k + 1] == 0xbb) movabs_r11++;
+        failed |= check(movabs_r11 == 0, "the per-thread selector must not bake an r11 immediate");
     }
 
     /* Capture mode: the table is the contract. The .so identity is mandatory (a default would manufacture
@@ -281,7 +335,7 @@ int main(void)
            BACK WITH THE CAPTURE STUB, and it is named here so it cannot be quietly forgotten. */
         /* THE PASS CASE CAME BACK WITH THE CAPTURE STUB, exactly as the comment promised it would, and the
            assertion is the same one that was here before the hole was found -- now it is true for the right
-           reason, because rt_snapshot_stub_size(1) is 75 and the form exists. */
+           reason, because rt_snapshot_stub_size(1, 1) is 73 and the form exists. */
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
                         "capture mode must allow a pass row with a matching library and a matching prologue");
         remove(path);
@@ -304,6 +358,17 @@ int main(void)
         live_host_fs = fake_host_fs;
         live_guest_fs = fake_guest_fs;
         body_saw_fs = 0;
+
+        /* The product reads the executing thread's state through %gs. Without a TCB the per-thread
+           stub would fault on its own first instruction, and a fixture that cannot have one cannot
+           notice that the selector left the product. */
+        struct fake_tcb tcb;
+        memset(&tcb, 0, sizeof tcb);
+        tcb.self = (uintptr_t)&tcb;
+        tcb.guest_block = fake_guest_fs;
+        tcb.host_fsbase = fake_host_fs;
+        const uint64_t saved_gs = read_gs();
+        write_gs((uint64_t)(uintptr_t)&tcb);
 
         failed |= check(host.install_hook(0, GUEST_CODE_SIZE, (const void *)boundary_body) == 0,
                         "with a live guest %fs the hook must install a boundary stub");
@@ -330,8 +395,12 @@ int main(void)
         failed |= check(((unsigned char *)dest)[0] == 0x49 && ((unsigned char *)dest)[1] == 0xba,
                         "stub must start with movabs r10, target");
         {
+            static const unsigned char host_gs[] = {0x65, 0x4c, 0x8b, 0x1c, 0x25,
+                                                    RT_TLS_GS_HOST_FSBASE_OFF & 0xffu, 0, 0, 0};
             static const unsigned char wf[5] = {0xf3, 0x49, 0x0f, 0xae, 0xd3};
-            failed |= check(memcmp((unsigned char *)dest + 20, wf, 5) == 0,
+            failed |= check(memcmp((unsigned char *)dest + 10, host_gs, sizeof host_gs) == 0,
+                            "the live stub must read the thread's host base through %gs");
+            failed |= check(memcmp((unsigned char *)dest + 19, wf, 5) == 0,
                             "the stub must swap %fs before it calls the body");
         }
 
@@ -343,6 +412,7 @@ int main(void)
         failed |= check(result == 23, "the body must receive ABI arguments through the stub");
         failed |= check(body_saw_fs == live_host_fs, "the body must run on the host %fs base");
         failed |= check(after == live_guest_fs, "the guest's %fs base must be restored before return");
+        write_gs(saved_gs);
     } else {
         fprintf(stderr, "test_host_hooks: SIGILL from wrfsbase on this host, live-TLS case skipped\n");
     }
