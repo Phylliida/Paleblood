@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/syscall.h>
 #include <ucontext.h>
 #include <dlfcn.h>
@@ -71,7 +72,7 @@ static const struct {
 };
 #define MILESTONES (sizeof milestones / sizeof milestones[0])
 
-enum provider { NONE, MODULE, RUNTIME, RUNTIME_UNRESOLVED };
+enum provider { NONE, MODULE, RUNTIME, RUNTIME_UNRESOLVED, DATA_PROVIDER };
 
 typedef struct {
     const char *path, *label;
@@ -463,6 +464,44 @@ static int export_unfilled(const rt_elf *e, size_t index)
 }
 
 /* Binding: modules' exports first, then the runtime's implementations. */
+/* A DATA import needs an ADDRESS, not code, so the syslib table -- which supplies function pointers --
+   cannot serve one, and boot's module lookup only finds data in objects that are loaded. That gap is
+   why every unbound object import used to be a private zero page: readable, plausibly shaped, and a
+   silent lie. A data provider is a row here, with the kind spelled out, for the same reason the syslib
+   table spells out real/modelled/noop/refused.
+
+   `__stack_chk_guard` (libkernel, NID f7uOxY9mM1U) is the FIRST data import this guest reads: measured
+   at eboot+0x2083ff7, with BB_DATA_GUARD on. Served as zeroes, the value stored in a prologue and the
+   value compared in an epilogue are both zero, so every stack-protector check in the guest passes --
+   the protector is a DETECTOR, so nothing breaks; smashes simply stop being reportable, and a boot that
+   reaches a wall is thereafter evidence about control flow and no evidence about memory.
+
+   Modelled, not real: a host CSPRNG value with the ABI's zero terminator byte (a string overflow hits
+   that byte first), one value per process. The guest gets a canary that FIRES, which is what the ground
+   truth requires; what it does not get is the value the real kernel would have chosen, and that is the
+   whole of the difference. The value is deliberately not printed: a canary in a log protects nothing. */
+static unsigned char stack_chk_guard[8] __attribute__((aligned(8)));
+static int stack_chk_guard_ready;
+
+static void init_stack_chk_guard(void)
+{
+    uint64_t v = 0;
+    if (getrandom(&v, sizeof v, 0) != (ssize_t)sizeof v)
+        rt_fatal("imports", "f7uOxY9mM1U (__stack_chk_guard): no entropy source. Refusing to install a "
+                            "predictable canary; a zero canary is the defect this provider exists for");
+    v &= ~0xffull;
+    if (!v) v = 0x0101010101010100ull;
+    memcpy(stack_chk_guard, &v, sizeof v);
+    stack_chk_guard_ready = 1;
+    fprintf(stderr, "pbboot: data provider __stack_chk_guard -> %p (modelled: host CSPRNG, ABI "
+                    "terminator byte 0, one value per process; not printed)\n", (void *)stack_chk_guard);
+}
+
+struct data_provider { const char *library, *nid, *what; void *address; size_t size; };
+static const struct data_provider data_providers[] = {
+    {"libkernel", "f7uOxY9mM1U", "__stack_chk_guard", stack_chk_guard, sizeof stack_chk_guard},
+};
+
 static void resolve(object *o)
 {
     for (size_t i = 0; i < o->imports; i++) {
@@ -500,6 +539,17 @@ static void resolve(object *o)
                                      : RUNTIME_UNRESOLVED;
             }
         }
+        /* A data provider is consulted only for a DATA import: handing an object's address to a function
+           import would be a different lie of the same family. */
+        for (size_t d = 0; !o->bound[i] && library && d < sizeof data_providers / sizeof *data_providers; d++) {
+            char nid[RT_NID_SIZE + 1];
+            snprintf(nid, sizeof nid, "%s#", data_providers[d].nid);
+            if (strcmp(library, data_providers[d].library) || strncmp(name, nid, RT_NID_SIZE)) continue;
+            if (rt_elf_import_kind(o->elf, i) != RT_ELF_IMPORT_DATA) continue;
+            if (!stack_chk_guard_ready) init_stack_chk_guard();
+            o->bound[i] = data_providers[d].address;
+            o->provider[i] = DATA_PROVIDER;
+        }
         /* The partition, not the total: a resolved slot is bundled, syslib, or a third provider nobody has
            named, and only printing it per (object, nid) can tell those apart. A total that does not equal
            the sum of its named parts is a total about nothing. */
@@ -520,11 +570,13 @@ static void resolve(object *o)
                     o->provider[i] == MODULE            ? "bundled"
                     : o->provider[i] == RUNTIME         ? "syslib"
                     : o->provider[i] == RUNTIME_UNRESOLVED ? "syslib-unresolved"
+                    : o->provider[i] == DATA_PROVIDER       ? "data-provider"
                                                           : "none",
                     rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_DATA ? "data" : "function",
                     (o->bound[i] || name[0] == 0) ? "" : (o->bound[i] ? "set" : "null"));
     }
 }
+
 
 static uint64_t bind_import(void *user, size_t index, int kind)
 {
@@ -683,9 +735,17 @@ int main(int argc, char **argv)
            guest that dereferences one faults AT THE OBJECT'S OWN ADDRESS instead of reading zeroes and
            failing later at 0. It is an experiment, not a default: the pages exist to give an unbound
            object import a unique address, and this asks the harder question of whether anything reads it. */
-        if (getenv("BB_DATA_GUARD") && mprotect(o->data, (o->imports + 1) * 4096, PROT_NONE))
-            rt_fatal("imports", "BB_DATA_GUARD: could not protect the unbound-data pages");
-        else if (getenv("BB_DATA_GUARD")) {
+        /* GUARDED IS THE DEFAULT, because the alternative is a read that returns zeroes and reports
+           nothing: an unbound object import silently claiming to be shaped like the real object is the
+           "safety off by default" shape. BB_DATA_PERMISSIVE=1 restores the zero pages and says so out
+           loud -- a permissive run is a run with the detector removed, and must announce itself. */
+        int guard_pages = !getenv("BB_DATA_PERMISSIVE");
+        if (guard_pages && mprotect(o->data, (o->imports + 1) * 4096, PROT_NONE))
+            rt_fatal("imports", "could not protect the unbound-data pages (BB_DATA_PERMISSIVE=1 to opt out)");
+        else if (!guard_pages)
+            fprintf(stderr, "pbboot: %s: unbound-data pages are PERMISSIVE (BB_DATA_PERMISSIVE=1): an "
+                            "unbound object import reads zeroes here, and nothing reports it\n", o->label);
+        else {
             fprintf(stderr, "pbboot: %s: %zu unbound-data page(s) guarded -- a dereference of an unbound "
                             "object import faults at its own address\n", o->label, o->imports + 1);
             /* Every data import gets slot `data + 4096*index`; a bound one is pointed elsewhere, so the

@@ -247,3 +247,32 @@ in the import loop for DATA imports -- with two entries that are not guesses:
 ABI's terminator convention requires), so a real smash is caught; and `Need_sceLibc` -> bound only once
 its semantics are known, still refused until then. The canary's value must be ONE value per process and
 printed once at startup, because two copies of a canary are two different claims.
+
+## The canary is served, and the guard is the default (measured 2026-10-25)
+
+The provider table exists: `boot.c`'s `data_providers[]`, consulted only for DATA imports, because a data
+import needs an ADDRESS and the syslib table supplies function pointers. First row, and the only one:
+`libkernel f7uOxY9mM1U` (`__stack_chk_guard`) -> 8 runtime-owned bytes holding a host-CSPRNG value with
+the ABI's zero terminator byte, one value per process, **not printed** (a canary that appears in a log
+protects nothing). Declared MODELLED in the comment, with the difference stated: the guest gets a canary
+that FIRES, which is what the ground truth requires; it does not get the value the real kernel would have
+chosen, and that is the whole of the difference.
+
+What this settles, and what it does not:
+
+1. **The stack protector is a DETECTOR, not a preventer.** With the canary served as zeroes, no smash was
+   made possible -- smashes stopped being REPORTABLE. So every boot this campaign has run reached its wall
+   under a disabled detector, and the reach measured in those runs is evidence about **control flow only,
+   never about memory**. That does not retract any slice; it bounds what they were evidence of.
+2. **The guard is now the DEFAULT.** `BB_DATA_PERMISSIVE=1` restores the zero pages and prints that it has
+   done so. A permissive run is a run with a detector removed and must announce itself, because "safety off
+   by default" is the shape this campaign refused once already (`--dry-run` opt-in; a default-0 image base).
+3. **Measured after the provider: no other unbound data import is touched.** Guarded arm now reaches
+   `libc WkkeywLJcgU` (rc=4) exactly as the permissive arm does, with `ios_base::Init` called once and zero
+   faults -- so among eboot's 20 data imports, the canary is the only one read before that wall. The next
+   unbound-data read will fault BY NAME, which is the point of the default.
+
+Scope claim, on every percentage this tree prints: `157,757` is a CATALOGUE FLOOR, not a total. Executed
+code now exists with a witness outside it -- `eboot+0x2083ff7` and `eboot+0x20b56d2`, both inside
+`0x02080000-0x020c0000`, where the catalogue holds zero rows. SCOPE is `landed / 157,757` and therefore an
+upper bound on coverage, stated as one.
