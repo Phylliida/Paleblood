@@ -134,6 +134,9 @@ set_tests_properties(tools PROPERTIES TIMEOUT 900)
 add_library(test_plugin_noinit SHARED test/test_plugin_noinit.c)
 add_library(test_plugin_good SHARED test/test_game_plugin.c)
 target_include_directories(test_plugin_good PRIVATE runtime/include)
+# These are loaded through dlopen too: a missing symbol must fail the build, not the fixture.
+target_link_options(test_plugin_noinit PRIVATE -Wl,--no-undefined)
+target_link_options(test_plugin_good PRIVATE -Wl,--no-undefined)
 add_executable(test_plugin_load test/test_plugin_load.c runtime/plugin_load.c runtime/host_hooks.c
                runtime/boundary_stub.c runtime/process.c)
 target_include_directories(test_plugin_load PRIVATE runtime/include)

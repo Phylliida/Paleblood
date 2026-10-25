@@ -4,6 +4,9 @@ target_include_directories(bbrt PUBLIC include)
 # The executable loader on its own, for the verification harness (tools/harness.py loads it).
 add_library(pbloader SHARED loader.c nid.c identity.c)
 target_include_directories(pbloader PUBLIC include)
+# A shared library links with undefined symbols by default; the loader's identity call was added
+# without identity.c and only dlopen noticed. Make that a link error, as bbgame already does.
+target_link_options(pbloader PRIVATE -Wl,--no-undefined)
 # The boot harness: runs the executable's entry on our runtime (runtime/boot.c). System library
 # implementations are compiled in directly, so the linker keeps every RT_SYSLIB entry.
 file(GLOB PB_SYSLIB CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/syslib/*.c)
