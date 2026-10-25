@@ -21,27 +21,75 @@
 static volatile uint64_t g_site_entered[RT_SITES_MAX];
 static uint64_t g_site_address[RT_SITES_MAX];
 static unsigned g_site_count;
+static unsigned installed_count;   /* reported by the signal-safe line; defined here so the reporter can see it */
+
+/* Write-only, bounded, no stdio: this function is called from a SIGABRT handler, and it used to call
+   snprintf. Its final call passed the buffer's FULL size at an advanced pointer, glibc's fortify aborted
+   inside the handler, the handler called the reporter again, and the process printed `abort:` until it was
+   killed. A claim of async-signal-safety beside `snprintf` was the defect, and the recursion was its proof. */
+static char *sites_app(char *p, char *end, const char *s)
+{
+    while (*s && p < end) *p++ = *s++;
+    return p;
+}
+
+static char *sites_dec(char *p, char *end, uint64_t v)
+{
+    char t[24];
+    int n = 0;
+    do { t[n++] = (char)('0' + (v % 10)); v /= 10; } while (v);
+    while (n > 0 && p < end) *p++ = t[--n];
+    return p;
+}
+
+static char *sites_hex16(char *p, char *end, uint64_t v)
+{
+    static const char digits[] = "0123456789abcdef";
+    for (int i = 15; i >= 0; i--) { if (p < end) *p++ = digits[(v >> (i * 4)) & 0xf]; }
+    return p;
+}
 
 static void rt_sites_report(void)
 {
-    unsigned long long n = 0, total = 0;
-    for (unsigned i = 0; i < g_site_count; i++) { if (g_site_entered[i]) n++; total += g_site_entered[i]; }
-    char line[256];
-    int len = snprintf(line, sizeof line, "sites entered %llu of %u (%llu hits)", n, g_site_count, total);
-    for (unsigned i = 0; i < g_site_count && len > 0 && (size_t)len < sizeof line; i++) {
-        len += snprintf(line + len, sizeof line - (size_t)len, " 0x%llx=%llu",
-                        (unsigned long long)g_site_address[i], (unsigned long long)g_site_entered[i]);
+    uint64_t n = 0, total = 0;
+    for (unsigned i = 0; i < g_site_count && i < RT_SITES_MAX; i++) {
+        if (g_site_entered[i]) n++;
+        total += g_site_entered[i];
     }
-    if (len > 0) { snprintf(line + (len < (int)sizeof line ? len : (int)sizeof line - 1), sizeof line, "\n"); }
-    fputs(line, stderr);
+    char line[4096];
+    char *p = line, *end = line + sizeof line;
+    p = sites_app(p, end, "sites entered ");
+    p = sites_dec(p, end, n);
+    p = sites_app(p, end, " of ");
+    p = sites_dec(p, end, g_site_count);
+    p = sites_app(p, end, " tracked (");
+    p = sites_dec(p, end, total);
+    p = sites_app(p, end, " hits), hooks installed ");
+    p = sites_dec(p, end, installed_count);
+    for (unsigned i = 0; i < g_site_count && i < RT_SITES_MAX; i++) {
+        p = sites_app(p, end, " 0x");
+        p = sites_hex16(p, end, g_site_address[i]);
+        p = sites_app(p, end, "=");
+        p = sites_dec(p, end, g_site_entered[i]);
+    }
+    p = sites_app(p, end, "\n");
+    const char *q = line;
+    size_t left = (size_t)(p - line);
+    while (left) {
+        ssize_t w = write(2, q, left);
+        if (w <= 0) break;
+        q += w;
+        left -= (size_t)w;
+    }
 }
 
 static void rt_sites_on_abort(int sig)
 {
-    /* Async-signal-safe by the standard this file already meets: one bounded write, no malloc, no stdio state
-       beyond what glibc's `fputs` uses -- the fault reporter has the same shape and shipped with it. */
+    /* Async-signal-safe now BY CONSTRUCTION: write(2) only, no malloc, no stdio, no snprintf. The old comment
+       licensed the hazard it named; this one is checkable by reading the body. */
     (void)sig;
-    write(2, "abort: ", 7);
+    ssize_t wrote = write(2, "abort: ", 7);
+    (void)wrote;
     rt_sites_report();
     signal(SIGABRT, SIG_DFL);
     raise(SIGABRT);
@@ -198,7 +246,6 @@ static int capture_allowed(uint64_t offset)
     return 1;
 }
 
-static unsigned installed_count;   /* what the startup line reports and what the game run can be compared to */
 /* Four distinct findings, four counters. A total called "refused" merges them, and the two that matter most --
    the site was already patched (two hooks on one site) and the site does not match the catalog (the image is not
    the catalog) -- are opposite diagnoses with the same symptom. */

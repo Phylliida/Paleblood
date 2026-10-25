@@ -15,6 +15,7 @@ directly on a stand-in image, which is the only way to see the bytes before a bo
 """
 
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,8 @@ DRIVER = r'''
 #include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <stdlib.h>
+#include <signal.h>
 #include "runtime/host_hooks.h"
 
 enum { IMAGE_SIZE = 0x100 };
@@ -61,6 +64,9 @@ int main(void)
     else
         printf("stub 0x%llx tail %02x\n", (unsigned long long)dest, image[0x10 + 14]);
     if (before != image[0x10 + 14]) { puts("1 wrong bytes"); return 5; }
+
+    /* The abort reporter is a separate exit path; raise here to exercise it with one installed site. */
+    if (getenv("RAISE_ABORT")) raise(SIGABRT);
 
     /* 2. a 6-byte site (pool B's shape): refused, image unchanged */
     unsigned char keep[IMAGE_SIZE];
@@ -103,7 +109,7 @@ uint64_t rt_tls_host_base(void) { return 0x7f0000000000ULL; }
 
 
 class HostHooks(unittest.TestCase):
-    def build(self, extra_source=None):
+    def build(self, extra_source=None, env=None):
         d = tempfile.mkdtemp()
         src = os.path.join(d, 'driver.c')
         with open(src, 'w') as f:
@@ -118,8 +124,20 @@ class HostHooks(unittest.TestCase):
             cmd.insert(-2, extra)
         r = subprocess.run(cmd, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
-        run = subprocess.run([os.path.join(d, 'driver')], capture_output=True, text=True)
+        run = subprocess.run([os.path.join(d, 'driver')], capture_output=True, text=True,
+                             env={**os.environ, **(env or {})}, timeout=20)
         return run
+
+    def test_abort_reporter_prints_once_and_terminates(self):
+        """The SIGABRT reporter used snprintf; fortify aborted inside the handler and the handler recursed.
+        One `abort:` line and a SIGABRT exit are the property, not a message containing it."""
+        run = self.build(env={'RAISE_ABORT': '1'})
+        self.assertEqual(run.returncode, -signal.SIGABRT, run.stdout + run.stderr)
+        self.assertEqual(run.stderr.count('abort: '), 1, run.stderr[:2000])
+        # Without capture there is no entered-counter row, and "0 of 0" is only honest with its population:
+        # one hook installed, zero tracked. A bare "0 of 0" is the zero-without-a-selector defect.
+        self.assertIn('sites entered 0 of 0 tracked', run.stderr)
+        self.assertIn('hooks installed 1', run.stderr)
 
     def test_patch_refusals_and_readback(self):
         run = self.build()
