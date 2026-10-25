@@ -4,6 +4,7 @@
 #define _GNU_SOURCE
 #include "runtime/loader.h"
 #include "runtime/guest.h"
+#include "runtime/identity.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -108,10 +109,14 @@ static long import_index(rt_elf *e, const char *name, int kind)
     return (long)e->import_count++;
 }
 
-rt_elf *rt_elf_open(const char *path, char *error, size_t error_size)
+/* The stream variant is where attribution happens: it hashes the buffer it just read, BEFORE parsing, and
+   returns that prefix even when parsing refuses. One open with hash-then-load was ONE OPEN AND TWO READS --
+   a writer can rewrite the same inode at the same length between them, and the banner would name A while the
+   guest ran B. This is one read: the bytes hashed are the bytes parsed, or there is no hash at all. */
+static rt_elf *elf_open_stream(FILE *f, const char *path, char sha[13], char *error, size_t error_size)
 {
+    if (sha) sha[0] = '\0';
     rt_elf *e = calloc(1, sizeof *e);
-    FILE *f = fopen(path, "rb");
     if (!e || !f) {
         fail(error, error_size, "%s: cannot open", path);
         goto out;
@@ -144,6 +149,7 @@ rt_elf *rt_elf_open(const char *path, char *error, size_t error_size)
     fclose(f);
     f = NULL;
     e->file_size = (size_t)size;
+    if (sha) rt_identity_bytes_sha(e->file, e->file_size, sha);   /* before parsing: a refused file still names itself */
     const unsigned char *d = e->file;
     if (memcmp(d, "\x7f" "ELF", 4) || d[4] != 2 || d[5] != 1) {
         fail(error, error_size, "%s: not a little-endian 64-bit ELF", path);
@@ -324,6 +330,26 @@ out:
     if (f) fclose(f);
     rt_elf_close(e);
     return NULL;
+}
+
+rt_elf *rt_elf_open(const char *path, char *error, size_t error_size)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        fail(error, error_size, "%s: cannot open", path);
+        return NULL;
+    }
+    return elf_open_stream(f, path, NULL, error, error_size);
+}
+
+rt_elf *rt_elf_open_stream(FILE *f, const char *path, char sha[13], char *error, size_t error_size)
+{
+    if (sha) sha[0] = '\0';
+    if (!f) {
+        fail(error, error_size, "%s: cannot open", path);
+        return NULL;
+    }
+    return elf_open_stream(f, path, sha, error, error_size);
 }
 
 void rt_elf_close(rt_elf *e)

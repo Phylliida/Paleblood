@@ -48,6 +48,7 @@
 #include <sys/syscall.h>
 #include <ucontext.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #define GUEST_BASE 0x800000000ull
@@ -765,20 +766,25 @@ int main(int argc, char **argv)
        tools/boot.sh hashed the ELF. Printed for every object, before any of them is opened, so a refusal still
        names the file it refused. Two mechanisms (sha256sum in the wrapper, this hash) agreeing on eboot is the
        only agreement worth quoting; either alone is one instrument. */
-    for (size_t k = 0; k < object_count; k++) {
-        char gh[13];
-        if (rt_identity_file_sha(objects[k].path, gh) != 0) {
-            fprintf(stderr, "pbboot: guest sha256 unreadable for %s: refusing to run (an unattributable subject "
-                            "is a number without a subject)\n", objects[k].path);
-            return 3;
-        }
-        fprintf(stderr, "guest sha256 %s  (%s)\n", gh, objects[k].path);
-    }
     char error[512];
     for (size_t k = 0; k < object_count; k++) {
         object *o = &objects[k];
         o->label = k ? base_name(o->path) : "eboot";
-        o->elf = rt_elf_open(o->path, error, sizeof error);
+        FILE *stream = fopen(o->path, "rb");
+        if (!stream) {
+            fprintf(stderr, "pbboot: %s: cannot open: %s\n", o->path, strerror(errno));
+            return 3;
+        }
+        /* The hash comes back from the SAME read the loader parses. Printed before the parse verdict, so a
+           refused image still names the bytes that were refused. */
+        char gh[13];
+        o->elf = rt_elf_open_stream(stream, o->path, gh, error, sizeof error);
+        if (gh[0]) fprintf(stderr, "guest sha256 %s  (%s)\n", gh, o->path);
+        else {
+            fprintf(stderr, "pbboot: guest sha256 unreadable for %s: refusing to run (an unattributable "
+                            "subject is a number without a subject)\n", o->path);
+            return 3;
+        }
         if (!o->elf) {
             fprintf(stderr, "pbboot: %s\n", error);
             return 3;

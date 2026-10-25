@@ -10,6 +10,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
 
 static uint32_t ror(uint32_t x, int n) { return (x >> n) | (x << (32 - n)); }
@@ -47,39 +50,22 @@ static void block(uint32_t h[8], const unsigned char *p)
     h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e; h[5] += f; h[6] += g; h[7] += i2;
 }
 
-static int sha256_file(const char *path, unsigned char out[32])
+/* One read, one subject. The hash is computed over the BYTES THE CALLER WILL PARSE, never over a second
+   read of the same descriptor: one open with hash-then-load is one open and two reads, and a writer can
+   rewrite the inode at the same length in between, so the banner names A while the guest runs B. */
+static int sha256_bytes(const unsigned char *data, size_t len, unsigned char out[32])
 {
-    FILE *f = fopen(path, "rb");
-    if (!f) return -1;
     uint32_t h[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                      0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
-    /* The size is the subject: hash exactly the bytes fstat reports, and refuse if the file does not supply
-       them. A short fread on a regular file is not EOF -- it is a file that changed under the hash, and
-       treating it as EOF prints a confident hash of a prefix that matches no file that ever existed. Only a
-       regular file can be a guest image; a directory or /proc entry reports a size it will not supply. */
-    struct stat st;
-    if (fstat(fileno(f), &st) < 0 || !S_ISREG(st.st_mode) || st.st_size < 0) { fclose(f); return -1; }
-    const uint64_t size = (uint64_t)st.st_size;
     unsigned char buf[64];
-    uint64_t total = 0;
-    size_t n = 0;
-    while (size - total >= sizeof buf) {
-        if (fread(buf, 1, sizeof buf, f) != sizeof buf) { fclose(f); return -1; }
-        block(h, buf);
-        total += sizeof buf;
-    }
+    size_t off = 0;
+    for (; len - off >= sizeof buf; off += sizeof buf) block(h, data + off);
     /* The remainder stays in buf UNHASHED: SHA-256's final block is the remainder, then 0x80, then the
-       length. Hashing the remainder here and padding in a fresh block is a different digest -- the control
-       is sha256sum of the same bytes, which disagreed on a 100000-byte file while agreeing on 4096. */
-    n = (size_t)(size - total);
-    if (n && fread(buf, 1, n, f) != n) { fclose(f); return -1; }
-    /* One byte past the reported size: the file grew under the hash, so no complete byte set was hashed. */
-    {
-        unsigned char extra;
-        if (fread(&extra, 1, 1, f) == 1) { fclose(f); return -1; }
-    }
-    if (ferror(f)) { fclose(f); return -1; }
-    uint64_t bits = (total + n) * 8;
+       length. Hashing the remainder and padding in a fresh block is a different digest -- the control was
+       sha256sum of the same bytes, which disagreed on a 100000-byte file while agreeing on 4096. */
+    size_t n = len - off;
+    if (n) memcpy(buf, data + off, n);
+    const uint64_t bits = (uint64_t)len * 8;
     buf[n++] = 0x80;
     if (n > 56) {
         while (n < 64) buf[n++] = 0;
@@ -89,13 +75,22 @@ static int sha256_file(const char *path, unsigned char out[32])
     while (n < 56) buf[n++] = 0;
     for (int i = 7; i >= 0; i--) buf[n++] = (unsigned char)(bits >> (8 * i));
     block(h, buf);
-    fclose(f);
     for (int i = 0; i < 8; i++) {
         out[4 * i] = (unsigned char)(h[i] >> 24);
         out[4 * i + 1] = (unsigned char)(h[i] >> 16);
         out[4 * i + 2] = (unsigned char)(h[i] >> 8);
         out[4 * i + 3] = (unsigned char)h[i];
     }
+    return 0;
+}
+
+int rt_identity_bytes_sha(const void *data, size_t len, char out[13])
+{
+    unsigned char d[32];
+    out[0] = '\0';
+    if (!data && len) return -1;
+    sha256_bytes(data, len, d);
+    for (int i = 0; i < 6; i++) snprintf(out + i * 2, 3, "%02x", d[i]);
     return 0;
 }
 
@@ -106,21 +101,35 @@ const char *rt_identity_sha(void)
     /* Computed once and kept, so any later report -- including a signal handler -- can name the artifact
        that is running instead of a rebuild of it. */
     if (identity_hex[0]) return identity_hex;
-    unsigned char d[32];
-    if (sha256_file("/proc/self/exe", d) != 0) {
+    if (rt_identity_file_sha("/proc/self/exe", identity_hex) != 0)
         snprintf(identity_hex, sizeof identity_hex, "unreadable");
-        return identity_hex;
-    }
-    for (int i = 0; i < 6; i++) snprintf(identity_hex + i * 2, 3, "%02x", d[i]);
     return identity_hex;
 }
 
 int rt_identity_file_sha(const char *path, char out[13])
 {
-    unsigned char d[32];
-    if (sha256_file(path, d) != 0) { out[0] = '\0'; return -1; }
-    for (int i = 0; i < 6; i++) snprintf(out + i * 2, 3, "%02x", d[i]);
-    return 0;
+    out[0] = '\0';
+    const int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return -1;
+    /* The size is the subject. Only a regular file can be a subject here: a directory or /proc entry reports
+       a size it will not supply, and a short read is a changed file, not EOF. */
+    struct stat st;
+    if (fstat(fd, &st) < 0 || !S_ISREG(st.st_mode) || st.st_size < 0) { close(fd); return -1; }
+    const size_t size = (size_t)st.st_size;
+    unsigned char *bytes = size ? malloc(size) : NULL;
+    if (size && !bytes) { close(fd); return -1; }
+    size_t off = 0;
+    while (off < size) {
+        const ssize_t got = read(fd, bytes + off, size - off);
+        if (got <= 0) { free(bytes); close(fd); return -1; }
+        off += (size_t)got;
+    }
+    unsigned char extra;
+    if (read(fd, &extra, 1) == 1) { free(bytes); close(fd); return -1; }   /* grew under the hash */
+    close(fd);
+    const int rc = rt_identity_bytes_sha(bytes, size, out);
+    free(bytes);
+    return rc;
 }
 
 void rt_announce_identity(void)

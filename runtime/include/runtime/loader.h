@@ -14,6 +14,7 @@
    libpbloader.so) and, as the runtime grows, by the runtime itself. */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -41,6 +42,8 @@ typedef uint64_t (*rt_elf_bind_fn)(void *user, size_t import_index, int kind);
 
 /* Reads and checks the executable. On failure returns NULL with a message in `error`. */
 rt_elf *rt_elf_open(const char *path, char *error, size_t error_size);
+/* Parses an already-open stream and takes ownership of it. */
+rt_elf *rt_elf_open_stream(FILE *f, const char *path, char sha[13], char *error, size_t error_size);
 void rt_elf_close(rt_elf *elf);
 
 uint64_t rt_elf_image_size(const rt_elf *elf);   /* bytes from the image start to the end of the last segment */
