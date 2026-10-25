@@ -79,6 +79,13 @@ static void *libc_memcpy(void *dest, const void *src, size_t n)
     return memcpy(dest, src, n);
 }
 RT_SYSLIB("libSceLibcInternal", memcpy, libc_memcpy);
+/* The SAME two C contracts, imported by eboot from `libc` (symbols/imports.csv:522/524) while this table
+   only carried them for libSceFios2. An alias row asserts a shared CONTRACT, not a shared implementation:
+   `memcpy` is ISO C 7.24.2.1 for valid arguments and undefined for overlapping regions on both providers,
+   so no target-specific value distinguishes them, and the alias cannot hide a difference the standard
+   leaves open. A wildcard over libraries would hide exactly that; a row with a stated contract can be
+   falsified by any caller that relies on what the standard leaves undefined. */
+RT_SYSLIB("libc", memcpy, libc_memcpy);
 
 static void *libc_memset(void *dest, int c, size_t n)
 {
@@ -86,6 +93,8 @@ static void *libc_memset(void *dest, int c, size_t n)
     return memset(dest, c, n);
 }
 RT_SYSLIB("libSceLibcInternal", memset, libc_memset);
+/* Same contract claim as memcpy's alias above: ISO C 7.24.6.1, imported by eboot from `libc`. */
+RT_SYSLIB("libc", memset, libc_memset);
 
 /* sceKernelGetDirectMemorySize: the size of the direct memory region the guest may address.
    The runtime maps exactly the executable's image (runtime/boot.c: rt_process.image /

@@ -306,3 +306,39 @@ missing wall until now happened to share the library. So the next decision is no
 table question: whether another library's `memcpy` is an explicit alias row with a stated reason, or a
 wildcard, and the answer is the explicit row -- a wildcard across libraries would bind every same-named
 symbol in every library, which is a claim nobody measured.
+
+## The wide-path cluster, and the two walls whose right answer is an implementation (measured 2026-10-25)
+
+Landed this sitting, each with the print that makes its assumption falsifiable: `memcpy`/`memset` **aliased**
+under `libc` (eboot imports them from `libc`; the bodies were registered only under `libSceLibcInternal` for
+`libSceFios2` -- an alias row asserts a shared CONTRACT, ISO C 7.24.2.1/7.24.6.1, never a shared
+implementation, and a wildcard over libraries would hide exactly that difference); `_FSin` (libc 38), the
+**first wall whose right answer is an implementation's rounding rather than a standard's text** -- modelled on
+the host's `sinf`, with the `_F`-prefix-is-a-fast-variant reading named as a HYPOTHESIS, and the first call
+publishing `x=-1.5708 -> -1` so the float width is falsifiable from the log; `wmemcmp` (libc 245) and
+`wcschr` (libc 243), both on the measured 2-byte unit.
+
+The guest is now demonstrably parsing a **wide path**: `wcslen` 28 units (`'t'`), `wmemcpy` n=28 (the same
+28, from the guest's own call), `wmemcmp` n=6 with the first difference at unit 0, then `wcschr` for `0x002f`
+(`/`) which is **absent** from a 1-unit string.
+
+Two operational facts that cost time: a host math call needs **`m` named in `target_link_libraries`**, and an
+unlisted library fails at **link** time, which **deletes the artifact** rather than leaving a stale one --
+`rc=127`, indistinguishable from a missing binary to anyone who does not read the build line. And my own grep
+pattern `lib[a-z]*` **cannot match `libSceLibcInternal`** (uppercase `S`), so it silently reported the wall's
+library as `libc`; a pattern that cannot express the field's alphabet cannot see the distinction under test.
+
+## The three FILE objects: measured, located, and REFUSED (2026-10-25)
+
+`NEXT.md:482-488` carries the measurement, in this tree and not in a companion's memory: `0xbf060`,
+`0xbf160`, `0xbf260` -- `0xbf060 + k*0x100`, i.e. **three `__sFILE` objects of size 0x100 exactly**, with
+`_Stdin 0xbf060 (__sF[0], _file 0)`. Ordinals, checked against `symbols/import_names.csv`: `_Stdout` is
+**libSceLibcInternal 3**, while `_Stderr` is **libc 4** and `_Stdin` is **libc 9** -- three objects across two
+libraries, so the data-provider table needs rows under both.
+
+**They are still not provided, and that is a decision, not an omission.** A zeroed 0x100-byte object would be
+a *plausible* FILE: `_flags=0`, `_p=NULL`, and the first libc routine to touch it would either allocate into
+fields it believes exist or write through a null buffer. That is the "zero page gives an address and hides its
+use" defect with the object's size added to make it more convincing. What the runtime can honestly do is what
+it already does: leave the slot unbound, so the guard **faults at that object's own page and names it**. A
+real model is a decision owed, and it needs the fields -- `_flags`, `_p`, `_r`, `_w`, `_cookie` -- not a size.

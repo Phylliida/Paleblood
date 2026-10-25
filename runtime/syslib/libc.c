@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -290,6 +291,68 @@ static void *libc_wmemcpy(void *d, const void *s, size_t n)
 }
 
 RT_SYSLIB("libc", wmemcpy, libc_wmemcpy);
+/* _FSin, libc ordinal 38 -- the first wall whose right answer is not fixed by a standard but by an
+   IMPLEMENTATION's rounding. Two things are NOT established here and are not pretended to be:
+     - that `_FSin` takes and returns a float (the `_F` prefix is a hypothesis, not a citation in this tree);
+     - what accuracy the original has. If `_FSin` is a fast-math variant, the host's sinf is MORE accurate,
+       which is the one direction a model may differ safely for a value that feeds further arithmetic --
+       but the difference is stated, not hidden, and no call is bit-compared against it.
+   The instrument is the print: an argument outside float range would refute the width, so the first call
+   publishes its input and output and the assumption is falsifiable from the log. */
+static unsigned fsin_reported;
+
+static float libc_FSin(float x)
+{
+    float y = sinf(x);
+    if (!fsin_reported++)
+        fprintf(stderr, "pbboot: libc _FSin: x=%g -> %g (modelled: host sinf; float width ASSUMED from the "
+                        "_F prefix, and a magnitude a float cannot hold would refute that here)\n",
+                (double)x, (double)y);
+    return y;
+}
+
+RT_SYSLIB("libc", _FSin, libc_FSin);
+/* wmemcmp, libc ordinal 245 -- same measured unit as wcslen and wmemcpy (2 bytes), so the body is a
+   unit-wise compare with the guest's own count. Bounded like the walks: a refusal is better than
+   comparing however much memory happens to be mapped. */
+static unsigned wmemcmp_reported;
+
+static int libc_wmemcmp(const unsigned short *a, const unsigned short *b, size_t n)
+{
+    if (n > RT_WCSLEN_MAX)
+        rt_fatal("libc", "wmemcmp: unit count beyond any buffer this runtime models; refusing rather than "
+                         "walking an unbounded span");
+    size_t i = 0;
+    while (i < n && a[i] == b[i]) i++;
+    int r = i == n ? 0 : (a[i] < b[i] ? -1 : 1);
+    if (!wmemcmp_reported++)
+        fprintf(stderr, "pbboot: libc wmemcmp: n=%zu units, first difference at %zu%s\n", n, i,
+                i == n ? " (equal)" : "");
+    return r;
+}
+
+RT_SYSLIB("libc", wmemcmp, libc_wmemcmp);
+/* wcschr, libc ordinal 243: the first occurrence of a unit, or NULL. The walk is bounded for the same
+   reason wcslen's is -- if the terminator is not where a 2-byte walk expects it, the honest answer is a
+   refusal, not a pointer into whatever happens to be mapped. */
+static unsigned wcschr_reported;
+
+static unsigned short *libc_wcschr(const unsigned short *s, unsigned short c)
+{
+    size_t n = 0;
+    while (n < RT_WCSLEN_MAX && s[n] && s[n] != c) n++;
+    if (n == RT_WCSLEN_MAX)
+        rt_fatal("libc", "wcschr: no terminator within the bounded walk");
+    unsigned short *r = s[n] == c ? (unsigned short *)(s + n) : NULL;
+    if (!wcschr_reported++)
+        fprintf(stderr, "pbboot: libc wcschr: c=0x%04x %s at unit %zu\n", c, r ? "found" : "absent", n);
+    return r;
+}
+
+RT_SYSLIB("libc", wcschr, libc_wcschr);
+
+
+
 
 
 

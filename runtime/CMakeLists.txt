@@ -16,4 +16,7 @@ target_include_directories(pbboot PRIVATE include)
 target_link_options(pbboot PRIVATE -rdynamic)
 # dlopen/dlsym for the plugin path: bbrt already links it, and a missing -ldl fails at link time only
 # once something calls dlopen -- which is exactly the file that must not be silently absent.
-target_link_libraries(pbboot PRIVATE dl)
+# m: libc.c models _FSin on the host's sinf, and a host math call needs libm named -- an unlisted
+# library fails at LINK time only, which is the failure mode that deletes the artifact rather than
+# leaving a stale one (rc=127, indistinguishable from a missing binary to an unwary reader).
+target_link_libraries(pbboot PRIVATE dl m)
