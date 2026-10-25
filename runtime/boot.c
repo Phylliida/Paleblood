@@ -1287,6 +1287,12 @@ int main(int argc, char **argv)
         printf("pbboot: atexit: %u registration(s) REFUSED (table full at %u) -- a refused handler is not "
                "a registered one\n", rt_libc_atexit_refused(), rt_libc_atexit_capacity());
 
+    /* Exit vocabulary, one fact per code: 0 returned/exited · 1 fault · 2 timeout · 3 precondition (a plugin
+       or file the run needs is absent or unusable -- returned from the setup paths above, never a guest
+       outcome) · 4 unimplemented import. 78 and 124 belong to wrappers and never to pbboot: 78 = build failed,
+       nothing ran (tools/boot.sh, tools/test.sh); 124 = cost exceeded (timeout(1), tools/restamp.py).
+       A new code is a new word in the vocabulary -- add it here when you add it, because rc=127 was read as a
+       verdict twice while it had no line. */
     switch (outcome) {
     case UNIMPLEMENTED: return 4;   /* the guest reached an import this runtime cannot serve */
     case FAULT: return 1;           /* the guest faulted (signal) */

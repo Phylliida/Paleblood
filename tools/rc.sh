@@ -10,6 +10,11 @@
 # violation would have arrived through a character the check did not name and would have looked correct when
 # typed. An argument is accepted only if EVERY character is in the allowed class below; anything else is
 # refused with the offending character printed.
+#
+# Code vocabulary (one line per code; a code with no line gets guessed, and 127 was guessed as a verdict twice):
+#   0 clean / returned        1 mismatch / fault       2 timeout          3 precondition (also 126,127 below)
+#   4 unbound import          78 build failed, nothing ran (tools/boot.sh, tools/test.sh)
+#   124 cost exceeded (timeout(1), tools/restamp.py)
 _rc_allowed='A-Za-z0-9 _./:=+,-'
 
 _rc_refuse() {   # rc_refuse <arg>  -> prints why and returns 1 if the arg holds a character outside the class
