@@ -921,7 +921,12 @@ int main(int argc, char **argv)
             fprintf(stderr, "pbboot: %s\n", error);
             return 3;
         }
-        rt_elf_thread_pointer_to_gs(o->elf, o->image);
+        /* No thread-pointer rewrite here. The guest's %fs is its own TCB; %gs is this runtime's
+           per-thread state (rt_tls_thread), whose first word is &main_state, not a guest TCB.
+           rt_elf_thread_pointer_to_gs() rewrote every "mov rax, fs:[0]" to gs:[0] and made the guest
+           treat &main_state as its TCB, so fs:[0] + a valid -0x720 TLS offset landed in pbboot's
+           .data. The function is deleted rather than left as a callable trap; restoring this defect
+           requires writing the scanner again. */
     }
     uint64_t proc_param_size;
     const uint64_t proc_param = rt_elf_proc_param(objects[0].elf, &proc_param_size);

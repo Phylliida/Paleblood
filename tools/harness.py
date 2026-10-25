@@ -204,8 +204,6 @@ def loader_library():
     lib.rt_elf_import_name.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
     lib.rt_elf_map.restype = ctypes.c_int
     lib.rt_elf_map.argtypes = [ctypes.c_void_p, ctypes.c_void_p, LOADER_BIND, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t]
-    lib.rt_elf_thread_pointer_to_gs.restype = ctypes.c_size_t
-    lib.rt_elf_thread_pointer_to_gs.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
     return lib
 
 
@@ -298,16 +296,15 @@ class Machine:
             ctypes.memmove(wrapper, code, len(code))
             stub = b'\x48\xb8' + struct.pack('<Q', wrapper) + b'\xff\xe0'
             ctypes.memmove(CODE + PAGE + 16 * i, stub, len(stub))
-        # Our loader copies the segments in, applies every relocation (imported functions go to
-        # their stubs, imported data to its page) and changes the executable's thread-pointer
-        # loads to read GS, where a case's "gs" points.
+        # Our loader copies the segments in and applies every relocation (imported functions go to
+        # their stubs, imported data to its page). It leaves thread-pointer loads as written: the
+        # product sets %fs to the guest block, and this harness sets %gs only for cases that ask.
         def bind(_user, index, kind):
             return DATA + PAGE * index if kind == 1 else CODE + PAGE + 16 * index
         self.bind = LOADER_BIND(bind)
         error = ctypes.create_string_buffer(512)
         if b['loader'].rt_elf_map(b['handle'], IMAGE, self.bind, None, error, len(error)):
             raise BadInput(error.value.decode(errors='replace'))
-        b['loader'].rt_elf_thread_pointer_to_gs(b['handle'], IMAGE)
 
 
 class Run:

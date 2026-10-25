@@ -494,8 +494,11 @@ class Loader(unittest.TestCase):
             self.assertEqual(word(0x210), 0xD000 + 8)           # imported data + addend
             self.assertEqual(word(0x218), 0xF000 + 0x10)        # imported function (index 1)
             self.assertEqual(img[0x220:], bytes(0xe0))          # zero-filled
-            self.assertEqual(exe['loader'].rt_elf_thread_pointer_to_gs(exe['handle'], base), 1)
-            self.assertEqual(buf.raw[0x100], 0x65)
+            # Mapping is not rewriting: this sequence is the guest's own `mov rax, fs:[0]`, and the
+            # old rt_elf_thread_pointer_to_gs() changed its prefix to 0x65 (gs) because %gs used to be
+            # the guest thread pointer. %gs is now runtime state, so that rewrite made the guest read
+            # &main_state as its TCB. The bytes must survive the map unchanged.
+            self.assertEqual(buf.raw[0x100:0x109], bytes.fromhex('64488b042500000000'))
         finally:
             shutil.rmtree(d)
 

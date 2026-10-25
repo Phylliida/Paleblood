@@ -480,25 +480,6 @@ int rt_elf_map(const rt_elf *e, void *base, rt_elf_bind_fn bind, void *user, cha
     return 0;
 }
 
-size_t rt_elf_thread_pointer_to_gs(const rt_elf *e, void *base)
-{
-    static const unsigned char fs_load[9] = {0x64, 0x48, 0x8b, 0x04, 0x25, 0, 0, 0, 0};
-    unsigned char *image = base;
-    size_t changed = 0;
-    for (size_t i = 0; i < e->load_count; i++) {
-        if (!(e->loads[i].flags & 1)) continue;
-        unsigned char *p = image + e->loads[i].vaddr, *end = p + e->load_filesz[i];
-        while (p + sizeof fs_load <= end) {
-            unsigned char *hit = memmem(p, (size_t)(end - p), fs_load, sizeof fs_load);
-            if (!hit) break;
-            hit[0] = 0x65;
-            changed++;
-            p = hit + sizeof fs_load;
-        }
-    }
-    return changed;
-}
-
 /* The executable the guest is running in, noted by the boot after rt_elf_open. A syslib body that is
    handed a guest pointer has no ELF of its own, and the segments are the only authority on which
    guest addresses are writable, so the boot hands them over once rather than each body re-deriving

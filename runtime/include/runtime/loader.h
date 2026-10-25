@@ -82,12 +82,6 @@ void rt_elf_set_tls_module_id(rt_elf *elf, uint64_t id);
    a message in `error`. */
 int rt_elf_map(const rt_elf *elf, void *base, rt_elf_bind_fn bind, void *user, char *error, size_t error_size);
 
-/* The runtime's thread-pointer model: the executable reads its thread pointer with the exact
-   instruction `mov rax, fs:[0]`; on Linux the host's C library owns FS, so in executable segments
-   each such instruction is changed to read GS (one prefix byte), and the runtime points GS at the
-   guest thread's control block. Returns the number of instructions changed. */
-size_t rt_elf_thread_pointer_to_gs(const rt_elf *elf, void *base);
-
 /* The executable whose segments the guest is running in, so a syslib body can ask whether an
    address it was handed is really guest memory it may write. Set once by the boot after the
    executable is opened; unset in any process that never boots a guest, where every query fails. */
