@@ -18,12 +18,12 @@ cleanup_tmp() {
     [ ! -d "$tmp" ] || rm -r -- "$tmp"
 }
 trap cleanup_tmp EXIT
-git clone -q "$root" "$tmp/r" || { echo "test_hooks: cannot create temporary clone" >&2; exit 2; }
+git clone -q "$root" "$tmp/r" || { echo "test_hooks: cannot create temporary clone" >&2; exit 3; }
 command cp "$root/tools/hooks/pre-commit" "$tmp/r/tools/hooks/pre-commit"
 command cp "$root/tools/install_hooks.sh" "$tmp/r/tools/install_hooks.sh"
 command cp "$root/tools/pre_push.sh" "$tmp/r/tools/pre_push.sh"
-cd "$tmp/r" || { echo "test_hooks: cannot enter temporary clone" >&2; exit 2; }
-git rev-parse --verify -q HEAD >/dev/null || { echo "test_hooks: clone has no commit"; exit 2; }
+cd "$tmp/r" || { echo "test_hooks: cannot enter temporary clone" >&2; exit 3; }
+git rev-parse --verify -q HEAD >/dev/null || { echo "test_hooks: clone has no commit"; exit 3; }
 git config user.name "Test Maintainer"
 git config user.email maintainer@example.invalid
 tools/install_hooks.sh --maintainer >/dev/null

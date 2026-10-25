@@ -13,8 +13,8 @@ repo=$(cd "$(dirname "$0")/.." && pwd)
 
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
-case "$out/" in "$repo"/*) echo "prepare_dump: OUT_DIR must be outside the repository" >&2; exit 2;; esac
-command -v orbis-pkg-util >/dev/null || { echo "prepare_dump: orbis-pkg-util not found (cargo install orbis-pkg-util --version 0.1.0 --locked; add ~/.cargo/bin to PATH)" >&2; exit 2; }
+case "$out/" in "$repo"/*) echo "prepare_dump: OUT_DIR must be outside the repository" >&2; exit 3;; esac
+command -v orbis-pkg-util >/dev/null || { echo "prepare_dump: orbis-pkg-util not found (cargo install orbis-pkg-util --version 0.1.0 --locked; add ~/.cargo/bin to PATH)" >&2; exit 3; }
 
 step() { echo "== $*"; }
 step "extract base"
