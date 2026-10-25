@@ -89,6 +89,8 @@ target_link_libraries(test_syslib PRIVATE m)
 # other target stayed green -- which is how test_plugin and test_syslib were both broken at once,
 # by one missing translation unit each. This entry builds everything, with no target, so "the
 # tree builds" is a gate rather than an observation.
+add_executable(test_loader test/test_loader.c runtime/loader.c)
+target_include_directories(test_loader PRIVATE runtime/include)
 add_executable(test_identity test/test_identity.c runtime/identity.c)
 target_include_directories(test_identity PRIVATE runtime/include)
 add_test(NAME build_tree COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR})
