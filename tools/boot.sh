@@ -32,6 +32,10 @@ export BB_PLUGIN="$plugin"
 
 echo "pbboot sha256 $(sha256sum "$pp" | cut -c1-12)  ($pp)" >&2
 echo "plugin sha256 $(sha256sum "$plugin" | cut -c1-12)  ($plugin)" >&2
+# The subject, not just the runtime: the guest ELF is untracked and 93 MB, so a hash-valid run from before it
+# changed would silently describe a different file. A run without the identity of what it ran is a number
+# without a subject; this is the largest part of the subject.
+echo "eboot sha256 $(sha256sum "$elf" | cut -c1-12)  ($elf)" >&2
 
 rc=0
 "$pp" "$@" || rc=$?
