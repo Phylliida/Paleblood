@@ -37,6 +37,20 @@ void rt_boot_call_bad_stack(uintptr_t stack_top)
     rt_fatal("boot", msg);
 }
 
+__attribute__((noreturn, used)) void rt_boot_call_bad_magic(uint64_t magic);
+void rt_boot_call_bad_magic(uint64_t magic)
+{
+    /* Before the stack switch and before wrfsbase: %fs is the host's, so libc is safe. Print the
+       offending word, not the expected one: "not our state" and "our state zeroed" are different
+       findings, and the value at %gs:RT_TLS_GS_MAGIC_OFF is the only place to tell them apart. */
+    char msg[192];
+    snprintf(msg, sizeof msg,
+             "rt_boot_call: %%gs does not name this runtime's TLS state (magic=0x%llx); refusing to "
+             "enter guest code",
+             (unsigned long long)magic);
+    rt_fatal("boot", msg);
+}
+
 __attribute__((noreturn, used)) void rt_boot_call_no_guest_tls(int reason);
 void rt_boot_call_no_guest_tls(int reason)
 {
@@ -76,6 +90,13 @@ __asm__(".text\n"
         "  mov $" RT_STR(RT_BC_NO_TLS_PUBLISHED) ", %edi\n" /* selector zero, main's block published */
         "  jmp .Lrtbc_no_tls\n"
         ".Lrtbc_live:\n"
+        /* A nonzero %gs is not evidence of ownership: glibc's TCB is nonzero too, and its offset 0x8
+           is a dtv. Check the identity word before reading any field as a guest block. This runs
+           before the stack switch, so the refusal can use libc and name the offending value. */
+        "  movabs $" RT_STR(RT_TLS_MAGIC) ", %r10\n"
+        "  mov %gs:" RT_STR(RT_TLS_GS_MAGIC_OFF) ", %r11\n"
+        "  cmp %r10, %r11\n"
+        "  jne .Lrtbc_bad_magic\n"
         "  mov %gs:" RT_STR(RT_TLS_GS_GUEST_BLOCK_OFF) ", %r11\n"
         "  test %r11, %r11\n"
         "  jnz .Lrtbc_have_block\n"
@@ -122,4 +143,9 @@ __asm__(".text\n"
         "  mov %rdx, %rdi\n"
         "  and $-16, %rsp\n"
         "  call rt_boot_call_bad_stack\n"
+        "  ud2\n"
+        ".Lrtbc_bad_magic:\n"
+        "  mov %r11, %rdi\n"                             /* the offending word, not the expected one */
+        "  sub $8, %rsp\n"                               /* host rsp is 8 mod 16 after six pushes */
+        "  call rt_boot_call_bad_magic\n"
         "  ud2\n");

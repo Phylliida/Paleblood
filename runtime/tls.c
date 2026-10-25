@@ -47,12 +47,12 @@ typedef struct rt_tls_thread {
     uint64_t magic;              /* RT_TLS_MAGIC; the only field glibc's TCB cannot counterfeit */
 } rt_tls_thread;
 
-#define RT_TLS_MAGIC 0x544c532d73746174ull /* "TLS-stat" */
-
 _Static_assert(offsetof(rt_tls_thread, guest_block) == RT_TLS_GS_GUEST_BLOCK_OFF,
                "the emitted %gs selector reads guest_block at this displacement");
 _Static_assert(offsetof(rt_tls_thread, host_fsbase) == RT_TLS_GS_HOST_FSBASE_OFF,
                "the emitted %gs selector reads host_fsbase at this displacement");
+_Static_assert(offsetof(rt_tls_thread, magic) == RT_TLS_GS_MAGIC_OFF,
+               "the emitted %gs magic check reads magic at this displacement");
 
 static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0, .guest_memsz_default = 0,
                                    .is_main = 1, .magic = RT_TLS_MAGIC};

@@ -48,6 +48,7 @@ static void make_state(unsigned char *state, void *guest_block, uint64_t host_fs
     *(void **)state = state;
     *(uint64_t *)(state + RT_TLS_GS_GUEST_BLOCK_OFF) = (uint64_t)(uintptr_t)guest_block;
     *(uint64_t *)(state + RT_TLS_GS_HOST_FSBASE_OFF) = host_fsbase;
+    *(uint64_t *)(state + RT_TLS_GS_MAGIC_OFF) = RT_TLS_MAGIC;
 }
 
 typedef struct {
@@ -120,6 +121,27 @@ int main(void)
     if (!strstr(r.message, "live %gs names a thread with no guest TLS block") ||
         !strstr(r.message, "refusing to enter guest code with a null TCB")) {
         fprintf(stderr, "boot_call: refusal did not name the live-selector case: %s\n", r.message);
+        return 1;
+    }
+
+    /* 1b. A live %gs that is not this runtime's state. glibc's TCB is also nonzero and also points
+           at itself, so the self-pointer cannot decide this; only the magic can. The message must
+           print the offending word, not the expected constant. */
+    make_state(state, guest_block, host_fs);
+    *(uint64_t *)(state + RT_TLS_GS_MAGIC_OFF) = RT_TLS_MAGIC ^ 1;
+    r = run_boot_child(state, 0, 0, 0, (uint64_t)(uintptr_t)guest_block, 0);
+    if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
+        fprintf(stderr, "boot_call: a foreign %%gs was not refused: status=0x%x message=%s\n",
+                r.status, r.message);
+        return 1;
+    }
+    char want_magic[64];
+    snprintf(want_magic, sizeof want_magic, "magic=0x%llx",
+             (unsigned long long)(RT_TLS_MAGIC ^ 1));
+    if (!strstr(r.message, "does not name this runtime's TLS state") ||
+        !strstr(r.message, want_magic)) {
+        fprintf(stderr, "boot_call: foreign-%%gs refusal did not print the offending word (%s): %s\n",
+                want_magic, r.message);
         return 1;
     }
 

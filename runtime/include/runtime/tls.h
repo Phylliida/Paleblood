@@ -25,6 +25,11 @@ uint64_t rt_tls_guest_base(void);
    runtime/tls.c leaves it unresolved (0), and emitters must then bake the bases instead of reading %gs:
    glibc's TCB also points at itself at offset 0, so a self-pointer check cannot tell the two apart. */
 int rt_tls_thread_ready(void);
+/* The state's identity word. It lives in this header because rt_boot_call's asm checks it before
+   treating a nonzero %gs as this runtime's state; glibc's TCB also points at itself, so the
+   self-pointer cannot make that decision. */
+#define RT_TLS_MAGIC 0x544c532d73746174ull /* "TLS-stat" */
+#define RT_TLS_GS_MAGIC_OFF 0x40
 /* Called from rt_boot_call's asm with %fs already the guest block. Raw write+exit_group; no libc.
    The reason codes are deliberately not 0/1: rt_boot_call's entry refusal uses 0/1/2 on a different
    axis, and its 1 means a live selector while a zero selector here would be the opposite state at the
