@@ -452,3 +452,24 @@ startup silence. `libkernel`/scePthreadCreate now resolves to the refusal in `pt
 EAGAIN model is kept, compiled but unregistered, because **it is not pre-registered anywhere**: measured,
 the only occurrences of "EXPERIMENT A" in the tree are its own comment and its print, and "EXPERIMENT B"
 occurs nowhere at all.
+
+## Carries and scanners: the two classes this campaign keeps rediscovering (2026-10-25)
+
+Both arrived from outside (kimisupport, the companion) and both are worth more than the defects that
+produced them.
+
+**A carry that survives ten mentions has been verified zero times by the eleventh.** The companion carried
+"A and B are pre-registered, B's expected result is a hang" across many summaries; measured, `EXPERIMENT A`
+occurs only in its own comment and print, and **`EXPERIMENT B` occurs nowhere in the tree**. Repetition is not
+corroboration -- it is the cheapest way to make a claim feel like an observation. The repair is mechanical and
+already available: **every carry gets a file:line or it is deleted.** A carry is a pointer, never a fact.
+
+**A scanner built from an example of the thing will always miss the second spelling of it.** Three defects
+in one slice, one shape: `RT_SYSLIB*` could not see `PB_ATTR_NOOP`; `grep -cE` could not anchor and counted
+108 for 107; `startswith` could not match a family name exactly. Each pattern was blind to a member of the
+alphabet it scanned, **and each was blind in the direction that reports a smaller, tidier number** -- a
+truncated match is indistinguishable from a short fact, a missed registration looks like a complete table, and
+a prefix match looks like a family. The repair is never a better pattern to be added to that one: it is a
+**second derivation by a different mechanism** (the preprocessor, `nm`, the linker section, the control that
+fires) -- which is exactly why the `PB_ATTR_NOOP` rows were caught by `nm` counting object symbols rather
+than by another grep.
