@@ -276,3 +276,33 @@ Scope claim, on every percentage this tree prints: `157,757` is a CATALOGUE FLOO
 code now exists with a witness outside it -- `eboot+0x2083ff7` and `eboot+0x20b56d2`, both inside
 `0x02080000-0x020c0000`, where the catalogue holds zero rows. SCOPE is `landed / 157,757` and therefore an
 upper bound on coverage, stated as one.
+
+## The wide-string path, and the width this target actually uses (measured 2026-10-25)
+
+**The data-provider surface is closed for this reach, by measurement:** of eboot's 20 data imports, exactly
+one is read before the current wall. `data_providers[]` stays one row until something reads a second one,
+and the guard names it when that happens. Consequence worth stating: `Need_sceLibc` (`P330P3dFF68`) may
+never need resolving on this path at all -- so "no guessed implementation, ever" stays a RULE rather than a
+blocker, which is a different position from where it sat two slices ago.
+
+`wcslen` (libc, WkkeywLJcgU) landed, and the assumption printed with it **refuted itself inside one run**:
+
+  first version, 4-byte walk:  34,747 code units, first unit 0x00650074
+  second version, 2-byte walk:     28 code units, first unit 0x0074
+
+`0x00650074` is the bytes `74 00 65 00` -- UTF-16LE "te" -- so **this target's `wchar_t` is 2 bytes**, and
+the first version did not return "half a length": it walked ~139 KB past a 28-unit string and terminated by
+luck in adjacent mapped memory (a UTF-16 NUL is only half of a 4-byte unit, so the walk never sees a
+terminator where the string ends). Nothing faulted. The guest used the number.
+
+Then `wmemcpy` (libc, fL3O02ypZFE), the wall that wcslen left behind, and it corroborates the width from a
+second direction: the guest passed **n = 28 units**, exactly the length `wcslen` returned. Two functions
+agreeing on 28 is not two readings of one table -- it is the guest's own call convention confirming the
+unit size.
+
+Next wall, and it is a different shape from every wall so far: **`Q3VBxCXhUHs` = `memcpy` in
+`libSceLibcInternal`, ordinal 9** -- not `libc`. The syslib table is keyed by (library, symbol) and every
+missing wall until now happened to share the library. So the next decision is not an implementation but a
+table question: whether another library's `memcpy` is an explicit alias row with a stated reason, or a
+wildcard, and the answer is the explicit row -- a wildcard across libraries would bind every same-named
+symbol in every library, which is a claim nobody measured.

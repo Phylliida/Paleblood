@@ -229,6 +229,9 @@ RT_SYSLIB("libc", memset, libc_memset);
    the segment table first, the scan is bounded by it, and a string with no NUL inside it stops the
    boot by name instead of returning a number the caller will believe. The return is a size_t from the
    same conversion memset's destination uses. */
+static unsigned wcslen_reported;
+static size_t libc_wcslen(const unsigned short *s);
+
 static size_t libc_strlen(const char *s)
 {
     const uint64_t image = rt_map_image();
@@ -246,6 +249,50 @@ static size_t libc_strlen(const char *s)
 }
 
 RT_SYSLIB("libc", strlen, libc_strlen);
+/* wcslen. Nothing in this tree states this target's `wchar_t` width, so the first version ASSUMED 4 bytes
+   and printed its evidence -- and the evidence refuted the assumption inside one run: the first code unit
+   read 0x00650074, which is the bytes 74 00 65 00, i.e. UTF-16LE "te", not 4-byte "t" (0x00000074).
+   So wchar_t is 2 bytes here. The first version returned 34,747 -- not half of anything, but a walk that
+   ran ~139 KB past a 28-unit string and terminated by luck in adjacent mapped memory (UTF-16's single NUL
+   is only half of a 4-byte unit). Silently: the number was plausible, the guest used it, and nothing faulted. The assumption is now
+   measured; the print stays, because it is the check that caught it. */
+#define RT_WCSLEN_MAX (1u << 20)
+
+static size_t libc_wcslen(const unsigned short *s)
+{
+    size_t n = 0;
+    while (n < RT_WCSLEN_MAX && s[n]) n++;
+    if (n == RT_WCSLEN_MAX) {
+        fprintf(stderr, "pbboot: libc wcslen: no NUL within %u code units\n", RT_WCSLEN_MAX);
+        rt_fatal("libc", "wcslen: the bounded walk found no terminator; a length from a walk that did not "
+                         "terminate would be a number nobody measured");
+    }
+    if (!wcslen_reported++)
+        fprintf(stderr, "pbboot: libc wcslen: %zu code units, first unit 0x%04x (width 2 MEASURED: this "
+                        "line read 0x00650074 when the walk assumed 4)\n", n, n ? s[0] : 0u);
+    return n;
+}
+
+RT_SYSLIB("libc", wcslen, libc_wcslen);
+/* wmemcpy, the wall wcslen left behind (libc 239, NID fL3O02ypZFE). n counts UNITS, not bytes, and the unit
+   is the same 2 bytes wcslen measured -- so the whole body is a byte copy with the multiply made explicit
+   and the overflow refused rather than wrapped. First call prints n once: if the guest ever passes a byte
+   count where a unit count is expected, that print is where it shows. */
+static size_t wmemcpy_reported;
+
+static void *libc_wmemcpy(void *d, const void *s, size_t n)
+{
+    if (n > SIZE_MAX / 2)
+        rt_fatal("libc", "wmemcpy: unit count overflows a byte count; refusing to copy a wrapped size");
+    if (!wmemcpy_reported++)
+        fprintf(stderr, "pbboot: libc wmemcpy: n=%zu units (%zu bytes at width 2)\n", n, n * 2);
+    return memcpy(d, s, n * 2);
+}
+
+RT_SYSLIB("libc", wmemcpy, libc_wmemcpy);
+
+
+
 
 /* `memcmp` (libc bind 56, NID DfivPArhucg, import_names.csv:138) -- the import the boot named once strlen
    was served. Same rule as strlen twice over: BOTH ranges are proved readable for the full n BEFORE the
