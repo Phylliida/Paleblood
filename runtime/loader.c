@@ -5,6 +5,7 @@
 #include "runtime/loader.h"
 #include "runtime/guest.h"
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -119,9 +120,26 @@ rt_elf *rt_elf_open(const char *path, char *error, size_t error_size)
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
     e->file = malloc(size > 0 ? (size_t)size : 1);
-    if (size < 64 || !e->file || fread(e->file, 1, (size_t)size, f) != (size_t)size) {
+    if (size < 64 || !e->file) {
         fail(error, error_size, "%s: cannot read", path);
         goto out;
+    }
+    /* A short read is not EOF. These two facts were one message before: a file shorter than ftell() reported
+       (truncated, another writer) and an I/O error (read failed, this file) are different subjects, and a
+       loader that reports the first when the second happened sends the reader to the wrong place. errno is
+       carried in the strerror text because a bare "read error" is not a measurement. */
+    {
+        const size_t got = fread(e->file, 1, (size_t)size, f);
+        if (got != (size_t)size) {
+            if (ferror(f)) {
+                fail(error, error_size, "%s: read error after %zu of %ld bytes: %s", path, got, size,
+                     strerror(errno));
+            } else {
+                fail(error, error_size, "%s: truncated: read %zu of %ld bytes (nothing failed; the file is "
+                                         "shorter than its own length said)", path, got, size);
+            }
+            goto out;
+        }
     }
     fclose(f);
     f = NULL;

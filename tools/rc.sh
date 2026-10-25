@@ -12,7 +12,8 @@
 # refused with the offending character printed.
 #
 # Code vocabulary (one line per code; a code with no line gets guessed, and 127 was guessed as a verdict twice):
-#   0 clean / returned        1 mismatch / fault       2 timeout          3 precondition (also 126,127 below)
+#   0 clean / returned        1 mismatch / fault       2 timeout (only)  3 precondition (usage, missing input,
+#                                                                           also 126,127 normalised below)
 #   4 unbound import          78 build failed, nothing ran (tools/boot.sh, tools/test.sh)
 #   124 cost exceeded (timeout(1), tools/restamp.py)
 _rc_allowed='A-Za-z0-9 _./:=+,-'
@@ -29,8 +30,8 @@ _rc_refuse() {   # rc_refuse <arg>  -> prints why and returns 1 if the arg holds
 }
 
 run() {
-    [ "$#" -gt 0 ] || { echo "rc.sh: run needs a command" >&2; return 2; }
-    for _a in "$@"; do _rc_refuse "$_a" || return 2; done
+    [ "$#" -gt 0 ] || { echo "rc.sh: run needs a command" >&2; return 3; }
+    for _a in "$@"; do _rc_refuse "$_a" || return 3; done
     _rc_out="${RC_OUT:-/tmp/rc.out}"
     "$@" >"$_rc_out" 2>&1
     _rc=$?

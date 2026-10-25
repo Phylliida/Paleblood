@@ -394,6 +394,10 @@ static void rt_import_pc_report(void)
     unsigned long long boot_called = 0;
     int boot_known = 1;
     for (size_t k = 0; k < object_count; k++) {
+        /* An ELF that never opened is NULL, not "zero imports": this reporter runs from atexit, so a failed
+           load reached here with objects[0].elf == NULL and dereferenced it -- the refusal printed and then
+           the process died of SIGSEGV (rc=139), which is a crash wearing a refusal's clothes. */
+        if (!objects[k].elf) { boot_known = 0; break; }
         const size_t n = rt_elf_import_count(objects[k].elf);
         if (!objects[k].called || !n) { boot_known = 0; break; }
         for (size_t i = 0; i < n; i++) boot_called += objects[k].called[i] ? 1u : 0u;
@@ -704,6 +708,19 @@ int main(int argc, char **argv)
     if (!object_count) {
         fputs(usage, stderr);
         return 2;
+    }
+    /* The subject, from the binary: a direct pbboot invocation attributed only the runtime before this, while
+       tools/boot.sh hashed the ELF. Printed for every object, before any of them is opened, so a refusal still
+       names the file it refused. Two mechanisms (sha256sum in the wrapper, this hash) agreeing on eboot is the
+       only agreement worth quoting; either alone is one instrument. */
+    for (size_t k = 0; k < object_count; k++) {
+        char gh[13];
+        if (rt_identity_file_sha(objects[k].path, gh) != 0) {
+            fprintf(stderr, "pbboot: guest sha256 unreadable for %s: refusing to run (an unattributable subject "
+                            "is a number without a subject)\n", objects[k].path);
+            return 3;
+        }
+        fprintf(stderr, "guest sha256 %s  (%s)\n", gh, objects[k].path);
     }
     char error[512];
     for (size_t k = 0; k < object_count; k++) {

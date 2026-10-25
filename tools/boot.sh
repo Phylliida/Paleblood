@@ -13,8 +13,8 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 build="$root/build-release"
 elf=${1:-}
-[ -n "$elf" ] || { echo "boot.sh: usage: tools/boot.sh <guest elf> [args...]" >&2; exit 2; }
-[ -f "$elf" ] || { echo "boot.sh: no such guest elf: $elf" >&2; exit 2; }
+[ -n "$elf" ] || { echo "boot.sh: usage: tools/boot.sh <guest elf> [args...]" >&2; exit 3; }
+[ -f "$elf" ] || { echo "boot.sh: no such guest elf: $elf" >&2; exit 3; }
 
 build_log=$(mktemp) || exit 1
 trap 'rm -f "$build_log"' EXIT INT TERM
@@ -26,8 +26,8 @@ fi
 
 pp="$build/runtime/pbboot"
 plugin=${BB_PLUGIN:-$build/game/libbbgame.so}
-[ -x "$pp" ]      || { echo "boot.sh: pbboot missing at $pp" >&2; exit 78; }
-[ -f "$plugin" ]  || { echo "boot.sh: plugin missing at $plugin" >&2; exit 78; }
+[ -x "$pp" ]      || { echo "boot.sh: pbboot missing at $pp" >&2; exit 3; }
+[ -f "$plugin" ]  || { echo "boot.sh: plugin missing at $plugin" >&2; exit 3; }
 export BB_PLUGIN="$plugin"
 
 echo "pbboot sha256 $(sha256sum "$pp" | cut -c1-12)  ($pp)" >&2

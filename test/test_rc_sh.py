@@ -42,7 +42,7 @@ class RcSh(unittest.TestCase):
             with self.subTest(arg=arg):
                 quoted = "'" + arg + "'" if "'" not in arg else '"' + arg + '"'
                 r = self.run_sh('run %s' % quoted)
-                self.assertEqual(r.returncode, 2, (arg, r.returncode, r.stdout, r.stderr))
+                self.assertEqual(r.returncode, 3, (arg, r.returncode, r.stdout, r.stderr))
                 self.assertIn('outside the allowed class', r.stderr)
 
     def test_ordinary_argv_is_accepted(self):

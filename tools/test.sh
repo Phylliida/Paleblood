@@ -5,7 +5,7 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 build="$root/build-release"
-[ "$#" -gt 0 ] || { echo "test.sh: usage: tools/test.sh <target> [args...]" >&2; exit 2; }
+[ "$#" -gt 0 ] || { echo "test.sh: usage: tools/test.sh <target> [args...]" >&2; exit 3; }
 target=$1; shift
 build_log=$(mktemp) || exit 1
 trap 'rm -f "$build_log"' EXIT INT TERM
