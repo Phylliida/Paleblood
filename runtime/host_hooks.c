@@ -198,9 +198,19 @@ static int region_is_executable(const void *address, size_t length)
    the installer refuses absent -- the shape symbols/install_mode.csv already uses. Each row carries the sha256
    of the bytes scanned, so an edited body stops matching; the C side cannot recompute that hash, and the test
    that regenerates the table is the instrument that does. */
+/* One definition of capture mode. It used to be two: capture_allowed treated BB_CAPTURE=0 (or an
+   empty value) as off, while `capturing` below treated any non-NULL value as on. A boot with
+   BB_CAPTURE=0 therefore skipped the table checks and emitted the capturing wrapper, so "off"
+   installed capture instrumentation that no table had authorized. */
+static int capture_mode(void)
+{
+    const char *cap = getenv("BB_CAPTURE");
+    return cap && *cap && *cap != '0';
+}
+
 static int capture_allowed(uint64_t offset)
 {
-    if (!getenv("BB_CAPTURE")) return 1;    /* not a capture install: A's proven wrapper, no table needed */
+    if (!capture_mode()) return 1;    /* not a capture install: A's proven wrapper, no table needed */
 
     const char *path = getenv("BB_CAPTURE_OK");
     if (!path || !*path) path = "symbols/capture_ok.csv";
@@ -276,8 +286,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
        unverified bytes at the tail of the first instruction is exactly what a 16 KiB-shifted patch still passes.
        Fail closed in capture mode; the table is a contract, so absence is a refusal and not a default. */
     {
-        const char *cap = getenv("BB_CAPTURE");
-        if (cap && *cap && *cap != '0') {
+        if (capture_mode()) {
             const char *path = getenv("BB_SITE_OK");
             if (!path || !*path) path = "symbols/site_ok.csv";
             FILE *tbl = fopen(path, "r");
@@ -331,7 +340,7 @@ static int install_hook(uint64_t offset, uint64_t size, const void *target)
        agreed about a form neither had been asked about, and a capture install emitted the ordinary stub. */
     unsigned char site_before[ABSOLUTE_JUMP_SIZE];
     memcpy(site_before, guest_image + offset, sizeof site_before);
-    const int capturing = getenv("BB_CAPTURE") != NULL;
+    const int capturing = capture_mode();
     /* The slot is reserved here, before any allocation, and committed only after the jump reads back.
        The capacity check and the pointer derivation are one decision: previously the write was guarded
        by `g_site_count < RT_SITES_MAX` while entered_addr was derived afterwards from
@@ -513,9 +522,8 @@ int rt_host_hooks_initialize(rt_host *host)
     /* One line, always, before any hook can install. Without it "nothing was printed" is indistinguishable
        between off, refused, no row, and not on the path -- three different findings and one silence. */
     {
-        const char *mode = getenv("BB_CAPTURE");
         const char *path = getenv("BB_CAPTURE_OK");
-        const int on = (mode && *mode && *mode != '0');
+        const int on = capture_mode();
         if (!path || !*path) path = "symbols/capture_ok.csv";
         int present = 0;
         if (on) {

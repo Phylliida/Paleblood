@@ -209,6 +209,18 @@ class HostHooks(unittest.TestCase):
         self.assertIn('ok', run.stdout)
         self.assertIn('dest 0x1234567890abcdef tail 90', run.stdout)
 
+    def test_capture_zero_and_empty_are_off(self):
+        """One mode, one definition. capture_allowed read BB_CAPTURE=0 (and an empty value) as off while
+        capturing read any non-NULL as on, so "off" emitted the capture wrapper without the table
+        checks. The report's population is the witness: zero tracked, not one."""
+        for value in ('0', ''):
+            with self.subTest(value=value):
+                run = self.build(env={'BB_CAPTURE': value})
+                self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+                self.assertIn('dest 0x1234567890abcdef tail 90', run.stdout)
+                self.assertIn('capture: mode=off', run.stderr)
+                self.assertIn('sites entered 0 of 0 tracked', run.stderr)
+
     def test_a_live_guest_tls_installs_a_boundary_stub(self):
         run = self.build(LIVE_TLS)
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
