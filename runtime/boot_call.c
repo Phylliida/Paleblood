@@ -54,9 +54,13 @@ __asm__(".text\n"
         "  test %r11, %r11\n"
         "  jz 3f\n"
         "  mov %gs:0x28, %r11\n"
+        "  test %r11, %r11\n"
+        "  jz 5f\n"                                        /* live state, zero host base */
         "  jmp 4f\n"
         "3:\n"
         "  mov rt_tls_host_base_v(%rip), %r11\n"           /* back to the host's TCB on return */
+        "  test %r11, %r11\n"
+        "  jz 5f\n"
         "4:\n"
         "  wrfsbase %r11\n"
         "  mov %r12, %rsp\n"
@@ -65,4 +69,8 @@ __asm__(".text\n"
         "9:\n"
         "  sub $8, %rsp\n"                                  /* host rsp is 8 mod 16 after six pushes */
         "  call rt_boot_call_no_guest_tls\n"
+        "  ud2\n"
+        "5:\n"
+        "  and $-16, %rsp\n"                                /* raw refusal; no return, alignment still matters */
+        "  call rt_tls_host_base_refuse\n"
         "  ud2\n");

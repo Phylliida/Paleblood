@@ -81,6 +81,20 @@ static unsigned long get_gs_base(void)
 /* A refusal that must run while %fs is the guest block, and therefore must not call libc: even fprintf
    reaches glibc's thread state through %fs. Format and exit by raw syscall, so a %gs that names the wrong
    struct still produces a named verdict instead of a second fault. */
+/* The restore path runs with %fs already the guest block. A zero host base writes a legal, silent null
+   %fs, and the next libc call (even free()) dereferences %fs:0 and faults four frames from here. Like
+   tls_state_refuse, this must not touch libc or its stack protector: raw write(2), raw exit_group. */
+__attribute__((noreturn, no_stack_protector)) void rt_tls_host_base_refuse(void)
+{
+    static const char msg[] =
+        "runtime: TLS: host %fs base is zero after guest return; refusing to install a null TCB\n";
+    long ignored;
+    __asm__ volatile("syscall" : "=a"(ignored) : "a"(1L), "D"(2), "S"(msg), "d"((unsigned long)(sizeof msg - 1))
+                     : "rcx", "r11", "memory");
+    __asm__ volatile("syscall" : : "a"((long)SYS_exit_group), "D"(134L) : "rcx", "r11", "memory");
+    __builtin_unreachable();
+}
+
 static _Noreturn void tls_state_refuse(unsigned long gs, unsigned long self)
 {
     char buf[192];

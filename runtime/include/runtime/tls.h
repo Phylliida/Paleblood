@@ -24,6 +24,8 @@ uint64_t rt_tls_guest_base(void);
    runtime/tls.c leaves it unresolved (0), and emitters must then bake the bases instead of reading %gs:
    glibc's TCB also points at itself at offset 0, so a self-pointer check cannot tell the two apart. */
 int rt_tls_thread_ready(void);
+/* Called from rt_boot_call's asm with %fs already the guest block. Raw write+exit_group; no libc. */
+void rt_tls_host_base_refuse(void);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four
    numbers that agree proves nothing; `gs` and `state.self` are the runtime's state, `fs[0]` is what the
