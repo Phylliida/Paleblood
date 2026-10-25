@@ -8,10 +8,26 @@
    so the emitter needs no argument setup, and it learns WHICH site it is from the return address, which lies
    inside a per-site wrapper. A seventh `site` argument would have needed `sub rsp,16; mov [rsp],site` to keep
    the alignment the push-rbx/and-rsp idiom establishes; that form is not in the bytes. */
-void rt_capture_snapshot(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5)
+void rt_capture_snapshot_c(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5);
+static uint64_t g_capture_entry_sp __attribute__((used));
+
+/* Save the stack pointer at the wrapper's `call`, before the C prologue moves it, then jump to the
+   reporting body. Measuring rsp inside a normal C function measured the compiler's push rbp, not the
+   wrapper's call site: it printed MISALIGNED on a correctly aligned call and could never witness the
+   defect it was written for. A naked entry point with a jmp preserves both the return address and the
+   six argument registers. */
+__attribute__((naked)) void rt_capture_snapshot(
+    uint64_t a0 __attribute__((unused)), uint64_t a1 __attribute__((unused)),
+    uint64_t a2 __attribute__((unused)), uint64_t a3 __attribute__((unused)),
+    uint64_t a4 __attribute__((unused)), uint64_t a5 __attribute__((unused)))
 {
-    uintptr_t sp = 0;
-    __asm__ volatile("mov %%rsp, %0" : "=r"(sp));
+    __asm__ volatile("movq %rsp, g_capture_entry_sp(%rip)\n\t"
+                     "jmp rt_capture_snapshot_c\n\t");
+}
+
+void rt_capture_snapshot_c(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5)
+{
+    const uintptr_t sp = (uintptr_t)g_capture_entry_sp;
     const uintptr_t ret = (uintptr_t)__builtin_return_address(0);
     /* The assertion the /3-class defect would have failed in one line: the callee must see rsp == 8 (mod 16). */
     const unsigned align = (unsigned)(sp & 15u);
@@ -141,12 +157,17 @@ size_t rt_write_snapshot_stub(unsigned char *dst, size_t capacity, uint64_t self
         *p++ = 0x5b;                                                   /* pop rbx */
         *p++ = 0x49, *p++ = 0xbb, memcpy(p, &guest_fs, 8), p += 8;     /* movabs r11, guest %fs */
         *p++ = 0xf3, *p++ = 0x49, *p++ = 0x0f, *p++ = 0xae, *p++ = 0xd3; /* wrfsbase r11 */
-        *p++ = 0x5f;                                                   /* pop rdi */
-        *p++ = 0x5e;                                                   /* pop rsi */
-        *p++ = 0x5a;                                                   /* pop rdx */
-        *p++ = 0x59;                                                   /* pop rcx */
-        *p++ = 0x41, *p++ = 0x58;                                      /* pop r8 */
+        /* The pushes above are rdi, rsi, rdx, rcx, r8, r9; the pops must therefore be the reverse.
+           Popping in push order restores r9 into rdi (and so on), which looks symmetrical in review and
+           hands the replacement body a complete rotation of its six arguments. The capture-execution
+           test calls with six distinct byte lanes; with push-order pops it returned 0x112233445566
+           instead of 0x665544332211. */
         *p++ = 0x41, *p++ = 0x59;                                      /* pop r9 */
+        *p++ = 0x41, *p++ = 0x58;                                      /* pop r8 */
+        *p++ = 0x59;                                                   /* pop rcx */
+        *p++ = 0x5a;                                                   /* pop rdx */
+        *p++ = 0x5e;                                                   /* pop rsi */
+        *p++ = 0x5f;                                                   /* pop rdi */
         *p++ = 0xe9;                                                   /* jmp rel32 to the boundary stub */
         memcpy(p, &rel, 4), p += 4;
         return (size_t)(p - dst);

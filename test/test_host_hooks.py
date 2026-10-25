@@ -163,6 +163,88 @@ int main(void)
 }
 '''
 
+CAP_EXEC_DRIVER = r'''
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include "runtime/host_hooks.h"
+
+enum { IMAGE_SIZE = 0x1000, SITE_OFF = 0x20 };
+
+static uint64_t replacement(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e, uint64_t f)
+{
+    /* An identity body over all six argument registers: each value occupies a distinct byte, so
+       any swap or dropped register changes the packed result. A one-argument body cannot see a
+       rotation among rsi, rdx, rcx, r8 and r9. */
+    return a | (b << 8) | (c << 16) | (d << 24) | (e << 32) | (f << 40);
+}
+
+int main(void)
+{
+    char dir[] = "/tmp/pb_capture_exec.XXXXXX";
+    if (!mkdtemp(dir)) { puts("mkdtemp failed"); return 1; }
+    char cap_path[256], site_path[256];
+    snprintf(cap_path, sizeof cap_path, "%s/capture_ok.csv", dir);
+    snprintf(site_path, sizeof site_path, "%s/site_ok.csv", dir);
+    /* 8d 47 01 c3 = lea eax,[rdi+1]; ret, then NOPs to the 14-byte site width. */
+    const char *hex = "8d4701c390909090909090909090";
+    FILE *site = fopen(site_path, "w");
+    FILE *cap = fopen(cap_path, "w");
+    if (!site || !cap) { puts("table write failed"); return 1; }
+    fprintf(site, "0x%08x,%s\n", 0x400000u + SITE_OFF, hex);
+    fprintf(cap, "0x%08x,none,deadbeef,cafe\n", 0x400000u + SITE_OFF);
+    fclose(site);
+    fclose(cap);
+    setenv("BB_CAPTURE", "1", 1);
+    setenv("BB_CAPTURE_OK", cap_path, 1);
+    setenv("BB_SITE_OK", site_path, 1);
+    setenv("BB_CAPTURE_TABLE_ID", "cafe", 1);
+
+    unsigned char *image = mmap(NULL, IMAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
+                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (image == MAP_FAILED) { puts("mmap failed"); return 1; }
+    memset(image, 0x90, IMAGE_SIZE);
+    image[SITE_OFF + 0] = 0x8d;
+    image[SITE_OFF + 1] = 0x47;
+    image[SITE_OFF + 2] = 0x01;
+    image[SITE_OFF + 3] = 0xc3;
+
+    rt_host host = {0};
+    host.version = RT_HOST_API_VERSION;
+    host.image = image;
+    host.image_size = IMAGE_SIZE;
+    if (rt_host_hooks_initialize(&host) != 0) { puts("init refused"); return 2; }
+    if (host.install_hook(SITE_OFF, 0x20, (const void *)replacement) != 0) { puts("install refused"); return 3; }
+
+    uint64_t (*fn)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) =
+        (uint64_t (*)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t))(void *)(image + SITE_OFF);
+    const uint64_t got = fn(0x11, 0x22, 0x33, 0x44, 0x55, 0x66);
+    printf("ret %#llx\n", (unsigned long long)got);
+    if (got != 0x665544332211ULL) { puts("wrong return"); return 4; }
+    puts("ok");
+    return 0;
+}
+'''
+
+REAL_FS = r'''
+/* The capture wrapper swaps to the host %fs before calling the snapshot and restores the guest
+   %fs before jumping to the boundary stub. In this fixture both are the same valid host base, so
+   the snapshot's fprintf runs on a real TCB; the control is about execution and counting, not
+   about two distinct address spaces. */
+#include <stdint.h>
+static uint64_t current_fsbase(void)
+{
+    uint64_t v;
+    __asm__ volatile("rdfsbase %0" : "=r"(v));
+    return v;
+}
+uint64_t rt_tls_host_base(void) { return current_fsbase(); }
+uint64_t rt_tls_guest_base(void) { return current_fsbase(); }
+'''
+
 LIVE_TLS = r'''
 /* Stands in for runtime/tls.c once the boot has a guest block: the weak probes resolve and say the
    guest %fs is live, which is the condition under which the jump must go through a boundary stub. */
@@ -229,6 +311,33 @@ class HostHooks(unittest.TestCase):
         self.assertNotIn('dest 0x1234567890abcdef', run.stdout)
         self.assertIn('stub ', run.stdout)
 
+
+    def test_capture_wrapper_executes_and_counts_its_site(self):
+        """The reporter's non-empty arm: install a capture wrapper over a callable body, call it
+        with six distinct arguments, and require that one tracked site was entered. An assertion
+        that only reads the reporter's own count can be satisfied by zero; this one requires a
+        body to have run and to have received all six registers, not just rdi."""
+        d = tempfile.mkdtemp()
+        src = os.path.join(d, 'capture_exec.c')
+        tls = os.path.join(d, 'real_fs.c')
+        with open(src, 'w') as f:
+            f.write(CAP_EXEC_DRIVER)
+        with open(tls, 'w') as f:
+            f.write(REAL_FS)
+        exe = os.path.join(d, 'capture_exec')
+        cmd = [CC, '-O1', '-Wall', '-Wextra',
+               f'-I{os.path.join(ROOT, "runtime", "include")}', src, tls,
+               os.path.join(ROOT, 'runtime', 'host_hooks.c'),
+               os.path.join(ROOT, 'runtime', 'boundary_stub.c'), '-o', exe]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        run = subprocess.run([exe], capture_output=True, text=True, timeout=30)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('ret 0x665544332211', run.stdout)
+        self.assertIn('rdi=0x11 rsi=0x22 rdx=0x33 rcx=0x44 r8=0x55 r9=0x66', run.stderr)
+        self.assertIn('sites entered 1 of 1 tracked (1 hits)', run.stderr)
+        self.assertIn('capture: site wrapper', run.stderr)
+        self.assertIn('rsp%16=8 (expect 8) aligned', run.stderr)
 
     def test_capture_table_full_refuses_the_65th(self):
         """The stub page cannot hold 64 capture wrappers, so the real cap is unreachable in the shipped
