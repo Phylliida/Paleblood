@@ -30,14 +30,21 @@ plugin=${BB_PLUGIN:-$build/game/libbbgame.so}
 [ -f "$plugin" ]  || { echo "boot.sh: plugin missing at $plugin" >&2; exit 3; }
 export BB_PLUGIN="$plugin"
 
-echo "pbboot sha256 $(sha256sum "$pp" | cut -c1-12)  ($pp)" >&2
-echo "plugin sha256 $(sha256sum "$plugin" | cut -c1-12)  ($plugin)" >&2
-# The subject, not just the runtime: the guest ELF is untracked and 93 MB, so a hash-valid run from before it
-# changed would silently describe a different file. A run without the identity of what it ran is a number
-# without a subject; this is the largest part of the subject.
-echo "eboot sha256 $(sha256sum "$elf" | cut -c1-12)  ($elf)" >&2
+# The identity block is ALSO appended to a file, because four commit-message hashes were typed from memory and
+# one quoted a build that never existed. A hash has a lifetime of one run; the only safe one is copied from
+# output the same session produced, so copying must be cheaper than remembering: paste from this file.
+ident="$(git -C "$root" rev-parse --git-dir 2>/dev/null || echo "$root/.git")/boot-identity"
+{
+    echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ)  $*"
+    echo "pbboot sha256 $(sha256sum "$pp" | cut -c1-12)  ($pp)"
+    echo "plugin sha256 $(sha256sum "$plugin" | cut -c1-12)  ($plugin)"
+    # The subject, not just the runtime: the guest ELF is untracked and 93 MB, so a hash-valid run from before
+    # it changed would silently describe a different file. A run without its subject is a number without one.
+    echo "eboot sha256 $(sha256sum "$elf" | cut -c1-12)  ($elf)"
+} | tee -a "$ident" >&2
 
 rc=0
 "$pp" "$@" || rc=$?
 echo "pbboot rc=$rc" >&2
+echo "pbboot rc=$rc" >>"$ident"
 exit "$rc"
