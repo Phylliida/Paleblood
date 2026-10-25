@@ -491,9 +491,21 @@ appears nowhere in the file as an 8-byte value, so there is no second copy to di
   set bits is a test **equivalent to its smaller subset**, not a test that is always false. Counted:
   `0x0100` appears with set bits in **21** sites (e.g. `test ax,0x144` == `test ax,0x44`) and `0x0200` in
   **14** (e.g. `0x232` == `0x32`). So the guest's classification is decided by bits this table can report,
-  and the unset bits contribute nothing to any branch observed.
+  and the unset bits contribute nothing to any branch observed. The general form, worth having as its own
+  sentence because the error it prevents is a set collapsed into a boolean: **`test ax, imm` is a
+  disjunction -- an unset bit beside set bits contributes nothing, and only a mask whose tested bits are
+  *all* unset is constant-false. "No bit is set that the guest tests alone" is a claim about bits; "the
+  test is decided by nothing" is a claim about a mask, and conflating them is
+  `a count cannot be subtracted from a set` in a new coat.**
 - **Open, scoped:** whether some *other* code path (beyond 12 instructions) tests a mask made only of unset
   bits. Answering it is a search over the 61 classified windows plus the 12 remainders, not over the table.
+
+**A fourth mechanism for a tidy zero, and the worst of the four:** the comparison itself was sound and the
+population was real, but one operand was a variable the previous statement never assigned, so the loop
+compared an int against `None` and matched nothing. **An unset variable in a comparison is indistinguishable
+from a measured zero, and no amount of re-running the same scanner will find it** -- only a number obtained
+by a different derivation can. Hence the rule and its exact scope: **a second run of the same scanner is not
+a control; an earlier, independently derived number is.**
 
 **Scanner note, third instance of the same class:** the first pass over these 73 sites returned **0** because
 the stub-search assigned nothing and compared an int against an unset variable -- a zero about the scanner,
