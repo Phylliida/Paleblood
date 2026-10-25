@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define PT_LOAD 1
 #define PT_DYNAMIC 2
@@ -121,9 +123,30 @@ static rt_elf *elf_open_stream(FILE *f, const char *path, char sha[13], char *er
         fail(error, error_size, "%s: cannot open", path);
         goto out;
     }
-    fseek(f, 0, SEEK_END);
+    /* A directory is a state, not a failed check: ftell() reports LONG_MAX for it and the old path said
+       "cannot read", which is the sentence for a file that would not give up its bytes. Name EISDIR where the
+       stream has an fd; a fopencookie stream has none and falls through to the seek arms. */
+    const int fd = fileno(f);
+    if (fd >= 0) {
+        struct stat st;
+        if (fstat(fd, &st) == 0 && S_ISDIR(st.st_mode)) {
+            fail(error, error_size, "%s: is a directory (EISDIR)", path);
+            goto out;
+        }
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fail(error, error_size, "%s: cannot seek: %s", path, strerror(errno));
+        goto out;
+    }
     long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    if (size < 0) {
+        fail(error, error_size, "%s: cannot tell length: %s", path, strerror(errno));
+        goto out;
+    }
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fail(error, error_size, "%s: cannot rewind: %s", path, strerror(errno));
+        goto out;
+    }
     e->file = malloc(size > 0 ? (size_t)size : 1);
     if (size < 64 || !e->file) {
         fail(error, error_size, "%s: cannot read", path);

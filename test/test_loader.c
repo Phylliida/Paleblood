@@ -136,6 +136,15 @@ int main(void)
         }
     }
 
+    /* A directory is EISDIR, not "cannot read": the old path named the failed check, not the state. */
+    {
+        e = rt_elf_open("/tmp", err, sizeof err);
+        CHECK(e == NULL);
+        CHECK(strstr(err, "is a directory (EISDIR)") != NULL);
+        if (!strstr(err, "is a directory (EISDIR)"))
+            fprintf(stderr, "directory sentence: %s\n", err);
+    }
+
     if (failures) { fprintf(stderr, "loader: %d failure(s)\n", failures); return 1; }
     fprintf(stderr, "loader: ok\n");
     return 0;
