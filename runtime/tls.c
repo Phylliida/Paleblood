@@ -60,10 +60,9 @@ static rt_tls_thread main_state = {.self = &main_state, .guest_memsz = 0, .guest
 /* Off unless the environment asks: a mirror is an experiment, not a design. */
 static int rt_mirror_host_tls;
 
-/* Main's record, for reports. The emitted stubs read the current thread's state through %gs, so these
-   are not the selector any more; keeping them as the selector was todo/047. */
+/* Main's record, for reports only. The emitted stubs and rt_boot_call read the current thread's state
+   through %gs, so this is not a selector and not a fallback; using it as either was todo/047. */
 uint64_t rt_tls_guest_base_v;
-uint64_t rt_tls_host_base_v;
 static int have_wrfsbase;
 static int have_wrgsbase;
 
@@ -85,12 +84,18 @@ static unsigned long get_gs_base(void)
 /* The restore path runs with %fs already the guest block. A zero host base writes a legal, silent null
    %fs, and the next libc call (even free()) dereferences %fs:0 and faults four frames from here. Like
    tls_state_refuse, this must not touch libc or its stack protector: raw write(2), raw exit_group. */
-__attribute__((noreturn, no_stack_protector)) void rt_tls_host_base_refuse(void)
+__attribute__((noreturn, no_stack_protector)) void rt_tls_host_base_refuse(int reason)
 {
-    static const char msg[] =
+    static const char msg_zero[] =
         "runtime: TLS: host %fs base is zero after guest return; refusing to install a null TCB\n";
+    static const char msg_selector[] =
+        "runtime: TLS: guest returned with %gs selector zero; this thread's host %fs base is unknown, "
+        "refusing to install main's host base\n";
+    const char *msg = reason ? msg_selector : msg_zero;
+    const unsigned long len = reason ? (unsigned long)(sizeof msg_selector - 1)
+                                     : (unsigned long)(sizeof msg_zero - 1);
     long ignored;
-    __asm__ volatile("syscall" : "=a"(ignored) : "a"(1L), "D"(2), "S"(msg), "d"((unsigned long)(sizeof msg - 1))
+    __asm__ volatile("syscall" : "=a"(ignored) : "a"(1L), "D"(2), "S"(msg), "d"(len)
                      : "rcx", "r11", "memory");
     __asm__ volatile("syscall" : : "a"((long)SYS_exit_group), "D"(134L) : "rcx", "r11", "memory");
     __builtin_unreachable();
@@ -222,7 +227,6 @@ void rt_tls_init(void)
     __asm__ volatile("rdfsbase %0" : "=r"(main_state.host_fsbase));
     main_state.host_gsbase = get_gs_base();
     set_gs_base(&main_state);
-    rt_tls_host_base_v = (uint64_t)main_state.host_fsbase;
     rt_mirror_host_tls = getenv("BB_TLS_MIRROR") != NULL;
 
     /* EXPERIMENT, one build: seed the guest block with the process's own TCB so the guest sees byte-for-byte
@@ -291,10 +295,10 @@ void rt_tls_thread_end(void)
     set_gs_base((const void *)restore_gs);
     if (is_main) {
         /* The published base pointed at the block just freed, and %gs is restored to the host base.
-           rt_boot_call refuses when both its %gs selector and this published word are zero, rather than
-           entering guest code with a null TCB. A child's state is freed; its %gs is restored first. */
+           rt_boot_call never falls back to this word: a zero %gs selector is a thread with no state,
+           and entering on main's block there is todo/047's defect. A child's state is freed; its %gs is
+           restored first. */
         rt_tls_guest_base_v = 0;
-        rt_tls_host_base_v = 0;
     }
     /* main_state lives in .data; only a child's state came from calloc. Freeing the main state hands
        glibc a pointer into pbboot's data and corrupts its allocator metadata. */
@@ -344,13 +348,11 @@ void rt_tls_layout(const void *image, unsigned filesz, unsigned memsz)
                st->guest_memsz);
     st->guest_block = (unsigned char *)fs;
     *(uint64_t *)st->guest_block = (uint64_t)fs;
-    /* rt_boot_call still reads these as its pre-init/post-end fallback; the emitted stubs read the
-       executing thread's state through %gs (todo/047). Only the main thread publishes them: a child
-       must not overwrite main's record, which is what a report would show after a child ran. */
-    if (st->is_main) {
-        rt_tls_guest_base_v = (uint64_t)fs;
-        rt_tls_host_base_v = (uint64_t)st->host_fsbase;
-    }
+    /* Report data only: rt_boot_call no longer falls back to this word, because a zero %gs selector is
+       a thread with no state and substituting main's block there is todo/047's defect. The emitted
+       stubs read the executing thread's state through %gs. Only the main thread publishes, so a report
+       after a child ran still shows main's record rather than the child's. */
+    if (st->is_main) rt_tls_guest_base_v = (uint64_t)fs;
 }
 
 static unsigned long get_fs_base(void)

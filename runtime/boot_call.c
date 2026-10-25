@@ -33,6 +33,10 @@ void rt_boot_call_bad_stack(uintptr_t stack_top)
 __attribute__((noreturn, used)) void rt_boot_call_no_guest_tls(int reason);
 void rt_boot_call_no_guest_tls(int reason)
 {
+    if (reason == 2)
+        rt_fatal("boot", "rt_boot_call: no per-thread guest TLS state (%gs selector is zero) but a "
+                         "published block exists; refusing to run on main's block from a thread that "
+                         "has no state");
     if (reason)
         rt_fatal("boot", "rt_boot_call: a live %gs names a thread with no guest TLS block; refusing to "
                          "enter guest code with a null TCB (the published word belongs to main, not to "
@@ -48,60 +52,66 @@ __asm__(".text\n"
         "  mov %rdi, %rax\n"
         "  mov %rsi, %rdi\n"
         "  mov %rcx, %rsi\n"
-        /* Selector: the current thread's state through %gs, never main's published word. A zero %gs is
-           the pre-init or post-end case; fall back to the published word only so that a zero there is
-           named by rt_boot_call_no_guest_tls instead of becoming a legal null %fs.
-
-           A live %gs with no guest block is NOT that case: it is a thread whose state exists and whose
-           block does not. Falling through to main's published word here was todo/047's defect surviving
-           in the arm added to prevent it, so this branch refuses and names which zero it saw. */
+        /* Selector: the current thread's state through %gs, never main's published word. A zero %gs
+           is a thread with no state. It is NOT a reason to substitute the published word: that word is
+           main's, and a child thread running on it is todo/047's defect. Refuse, and name which zero
+           was seen: reason 0 = nothing published either, reason 2 = a published block exists but
+           belongs to another thread. */
         "  rdgsbase %r11\n"
         "  test %r11, %r11\n"
-        "  jz 1f\n"
-        "  mov %gs:" RT_STR(RT_TLS_GS_GUEST_BLOCK_OFF) ", %r11\n"
-        "  test %r11, %r11\n"
-        "  jnz 2f\n"
-        "  mov $1, %edi\n"                                  /* live selector, no block */
-        "  jmp 9f\n"
-        "1:\n"
-        "  xor %edi, %edi\n"                                /* no selector and no published block */
+        "  jnz .Lrtbc_live\n"
         "  mov rt_tls_guest_base_v(%rip), %r11\n"
         "  test %r11, %r11\n"
-        "  jz 9f\n"
-        "2:\n"
+        "  jnz .Lrtbc_no_selector_published\n"
+        "  xor %edi, %edi\n"                              /* no selector and no published block */
+        "  jmp .Lrtbc_no_tls\n"
+        ".Lrtbc_no_selector_published:\n"
+        "  mov $2, %edi\n"                                /* selector zero, main's block published */
+        "  jmp .Lrtbc_no_tls\n"
+        ".Lrtbc_live:\n"
+        "  mov %gs:" RT_STR(RT_TLS_GS_GUEST_BLOCK_OFF) ", %r11\n"
+        "  test %r11, %r11\n"
+        "  jnz .Lrtbc_have_block\n"
+        "  mov $1, %edi\n"                                /* live selector, no block */
+        "  jmp .Lrtbc_no_tls\n"
+        ".Lrtbc_have_block:\n"
         "  test %rdx, %rdx\n"
-        "  jz 6f\n"
+        "  jz .Lrtbc_bad_stack\n"
         "  test $15, %dl\n"
-        "  jnz 6f\n"                                       /* SysV: callee entry rsp is 8 mod 16 */
-        "  mov %rdx, %rsp\n"                                /* switch to the guest stack after the check */
+        "  jnz .Lrtbc_bad_stack\n"                        /* SysV: callee entry rsp is 8 mod 16 */
+        "  mov %rdx, %rsp\n"                              /* switch to the guest stack after the check */
         "  mov %r8, %rdx\n"
         "  wrfsbase %r11\n"
         "  call *%rax\n"
+        /* The guest may clear %gs (a WRGSBASE the guest is not entitled to use). If it does, this
+           thread's host base is unknown; installing main's published host base would give glibc
+           another thread's TCB. Refuse instead. */
         "  rdgsbase %r11\n"
         "  test %r11, %r11\n"
-        "  jz 3f\n"
+        "  jz .Lrtbc_no_selector_after\n"
         "  mov %gs:" RT_STR(RT_TLS_GS_HOST_FSBASE_OFF) ", %r11\n"
         "  test %r11, %r11\n"
-        "  jz 5f\n"                                        /* live state, zero host base */
-        "  jmp 4f\n"
-        "3:\n"
-        "  mov rt_tls_host_base_v(%rip), %r11\n"           /* back to the host's TCB on return */
-        "  test %r11, %r11\n"
-        "  jz 5f\n"
-        "4:\n"
+        "  jz .Lrtbc_zero_host\n"
+        "  jmp .Lrtbc_restore\n"
+        ".Lrtbc_no_selector_after:\n"
+        "  mov $1, %edi\n"                                /* raw refusal: selector zero */
+        "  jmp .Lrtbc_host_refuse\n"
+        ".Lrtbc_zero_host:\n"
+        "  xor %edi, %edi\n"                              /* raw refusal: host base zero */
+        ".Lrtbc_host_refuse:\n"
+        "  and $-16, %rsp\n"                              /* raw refusal; no return, alignment still matters */
+        "  call rt_tls_host_base_refuse\n"
+        "  ud2\n"
+        ".Lrtbc_restore:\n"
         "  wrfsbase %r11\n"
         "  mov %r12, %rsp\n"
         "  pop %r15\n  pop %r14\n  pop %r13\n  pop %r12\n  pop %rbx\n  pop %rbp\n"
         "  ret\n"
-        "9:\n"
-        "  sub $8, %rsp\n"                                  /* host rsp is 8 mod 16 after six pushes */
+        ".Lrtbc_no_tls:\n"
+        "  sub $8, %rsp\n"                                /* host rsp is 8 mod 16 after six pushes */
         "  call rt_boot_call_no_guest_tls\n"
         "  ud2\n"
-        "5:\n"
-        "  and $-16, %rsp\n"                                /* raw refusal; no return, alignment still matters */
-        "  call rt_tls_host_base_refuse\n"
-        "  ud2\n"
-        "6:\n"
+        ".Lrtbc_bad_stack:\n"
         "  mov %rdx, %rdi\n"
         "  and $-16, %rsp\n"
         "  call rt_boot_call_bad_stack\n"

@@ -18,7 +18,6 @@ int rt_tls_have_wrfsbase(void);
 void rt_tls_enter_guest(void);
 void rt_tls_enter_host(void);
 extern uint64_t rt_tls_guest_base_v;
-extern uint64_t rt_tls_host_base_v;
 int rt_tls_uses_wrfsbase(void);
 uint64_t rt_tls_host_base(void);
 uint64_t rt_tls_guest_base(void);
@@ -26,8 +25,10 @@ uint64_t rt_tls_guest_base(void);
    runtime/tls.c leaves it unresolved (0), and emitters must then bake the bases instead of reading %gs:
    glibc's TCB also points at itself at offset 0, so a self-pointer check cannot tell the two apart. */
 int rt_tls_thread_ready(void);
-/* Called from rt_boot_call's asm with %fs already the guest block. Raw write+exit_group; no libc. */
-void rt_tls_host_base_refuse(void);
+/* Called from rt_boot_call's asm with %fs already the guest block. Raw write+exit_group; no libc.
+   reason 0: the thread's host base is zero. reason 1: guest returned with a zero %gs selector, so this
+   thread's host base is unknown and main's published base must not be substituted. */
+void rt_tls_host_base_refuse(int reason);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four
    numbers that agree proves nothing; `gs` and `state.self` are the runtime's state, `fs[0]` is what the

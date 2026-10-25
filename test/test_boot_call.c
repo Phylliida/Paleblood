@@ -20,6 +20,15 @@ static volatile sig_atomic_t marker_ran;
 
 static void marker(void) { marker_ran = 1; }
 
+/* A guest that exercises WRGSBASE, which guest code is not entitled to use. The call must refuse on
+   return rather than substitute main's host base for the thread's lost one. */
+static void marker_clear_gs(void)
+{
+    marker_ran = 1;
+    unsigned long zero = 0;
+    __asm__ volatile("wrgsbase %0" ::"r"(zero) : "memory");
+}
+
 static uint64_t read_fsbase(void)
 {
     uint64_t v = 0;
@@ -47,7 +56,8 @@ typedef struct {
     char message[1024];
 } child_result;
 
-static child_result run_boot_child(unsigned char *state, void *guest_block, int malloc_after, int stack_mode)
+static child_result run_boot_child(unsigned char *state, int malloc_after, int stack_mode,
+                                   int zero_selector, uint64_t published_guest, int clear_gs)
 {
     child_result r;
     memset(&r, 0, sizeof r);
@@ -63,9 +73,10 @@ static child_result run_boot_child(unsigned char *state, void *guest_block, int 
         unsigned char *stack_top = guest_stack + sizeof guest_stack;
         if (stack_mode == 1) stack_top -= 8;   /* 8 mod 16: callee entry would be 0 mod 16 */
         if (stack_mode == 2) stack_top = NULL;
-        write_gsbase(state);
-        rt_tls_guest_base_v = (uint64_t)(uintptr_t)guest_block;
-        rt_boot_call(marker, NULL, stack_top, NULL, NULL);
+        if (zero_selector) write_gsbase(NULL);
+        else write_gsbase(state);
+        rt_tls_guest_base_v = published_guest;
+        rt_boot_call(clear_gs ? marker_clear_gs : marker, NULL, stack_top, NULL, NULL);
         if (malloc_after) {
             /* The point of the valid control: prove %fs is the host's, not just that the call returned.
                malloc alone did not catch a null %fs in this test; errno does, because the macro reads
@@ -100,7 +111,7 @@ int main(void)
 
     /* 1. Live %gs, zero guest block, nonzero published word: old code ran marker and returned. */
     make_state(state, NULL, host_fs);
-    child_result r = run_boot_child(state, guest_block, 0, 0);
+    child_result r = run_boot_child(state, 0, 0, 0, (uint64_t)(uintptr_t)guest_block, 0);
     if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
         fprintf(stderr, "boot_call: live selector with no block was not refused: status=0x%x marker=%d message=%s\n",
                 r.status, (int)marker_ran, r.message);
@@ -112,10 +123,53 @@ int main(void)
         return 1;
     }
 
-    /* 2. Live %gs, valid guest block, zero host base: the guest runs, then the restore must refuse
+    /* 2. Zero %gs selector with a published block: the published word is main's, and a thread with
+          no state must not run on it. This is the fallback arm todo/047 left behind; it refuses. */
+    make_state(state, guest_block, host_fs);
+    r = run_boot_child(state, 0, 0, 1, (uint64_t)(uintptr_t)guest_block, 0);
+    if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
+        fprintf(stderr, "boot_call: zero selector with a published block was not refused: status=0x%x message=%s\n",
+                r.status, r.message);
+        return 1;
+    }
+    if (!strstr(r.message, "no per-thread guest TLS state") ||
+        !strstr(r.message, "refusing to run on main's block")) {
+        fprintf(stderr, "boot_call: zero-selector refusal did not name main's block: %s\n", r.message);
+        return 1;
+    }
+
+    /* 3. Zero %gs selector and nothing published: the pre-init case. It must refuse by name, not
+          become a legal null TCB. */
+    r = run_boot_child(state, 0, 0, 1, 0, 0);
+    if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
+        fprintf(stderr, "boot_call: zero selector with no published block was not refused: status=0x%x message=%s\n",
+                r.status, r.message);
+        return 1;
+    }
+    if (!strstr(r.message, "no guest TLS block") || !strstr(r.message, "both zero")) {
+        fprintf(stderr, "boot_call: zero-zero refusal did not name both zeros: %s\n", r.message);
+        return 1;
+    }
+
+    /* 4. The guest clears %gs with WRGSBASE. The return path must refuse: this thread's host base is
+          unknown, and main's is another thread's TCB. Raw write+exit_group(134), no libc. */
+    make_state(state, guest_block, host_fs);
+    r = run_boot_child(state, 0, 0, 0, (uint64_t)(uintptr_t)guest_block, 1);
+    if (!WIFEXITED(r.status) || WEXITSTATUS(r.status) != 134) {
+        fprintf(stderr, "boot_call: a guest-cleared selector was not refused: status=0x%x message=%s\n",
+                r.status, r.message);
+        return 1;
+    }
+    if (!strstr(r.message, "guest returned with %gs selector zero") ||
+        !strstr(r.message, "refusing to install main's host base")) {
+        fprintf(stderr, "boot_call: cleared-selector refusal did not name the selector: %s\n", r.message);
+        return 1;
+    }
+
+    /* 5. Live %gs, valid guest block, zero host base: the guest runs, then the restore must refuse
           before wrfsbase 0. Raw write+exit_group(134), and the message must name the host base. */
     make_state(state, guest_block, 0);
-    r = run_boot_child(state, guest_block, 1, 0);
+    r = run_boot_child(state, 1, 0, 0, (uint64_t)(uintptr_t)guest_block, 0);
     if (!WIFEXITED(r.status) || WEXITSTATUS(r.status) != 134) {
         fprintf(stderr, "boot_call: zero host base was not refused: status=0x%x marker=%d message=%s\n",
                 r.status, (int)marker_ran, r.message);
@@ -127,21 +181,21 @@ int main(void)
         return 1;
     }
 
-    /* 3. Positive control: same shape, valid host base, and malloc/free after return. This is what
+    /* 6. Positive control: same shape, valid host base, and malloc/free after return. This is what
           distinguishes "refuses the zero" from "refuses everything". */
     make_state(state, guest_block, host_fs);
-    r = run_boot_child(state, guest_block, 1, 0);
+    r = run_boot_child(state, 1, 0, 0, (uint64_t)(uintptr_t)guest_block, 0);
     if (!WIFEXITED(r.status) || WEXITSTATUS(r.status) != 0) {
         fprintf(stderr, "boot_call: valid host base did not survive the round trip: status=0x%x message=%s\n",
                 r.status, r.message);
         return 1;
     }
 
-    /* 4. A valid state, but a stack that violates the SysV contract. The old code switched rsp anyway:
+    /* 7. A valid state, but a stack that violates the SysV contract. The old code switched rsp anyway:
           an 8-mod-16 top faults on the guest's first movaps, and a null top faults on its first push,
           both inside a function nobody suspects. The refusal must come before wrfsbase. */
     for (int mode = 1; mode <= 2; mode++) {
-        r = run_boot_child(state, guest_block, 0, mode);
+        r = run_boot_child(state, 0, mode, 0, (uint64_t)(uintptr_t)guest_block, 0);
         if (!WIFSIGNALED(r.status) || WTERMSIG(r.status) != SIGABRT) {
             fprintf(stderr, "boot_call: stack_top mode %d was not refused: status=0x%x message=%s\n",
                     mode, r.status, r.message);
