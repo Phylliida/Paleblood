@@ -11,6 +11,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -200,10 +201,24 @@ int main(void)
         atomic_fetch_add(&failures, 1);
     }
 
+    /* The main state is static, not calloc'd. Ending the main thread must drop its guest block and
+       restore the host registers without handing &main_state to free(). If it does, glibc aborts on
+       the invalid pointer or corrupts its arena; a malloc/free round trip makes the second case an
+       observation instead of a later mystery. Nothing called thread_end on the main thread before
+       this, which is exactly how the 0x4a0 default survived: an unexercised default is not a default. */
+    rt_tls_thread_end();
+    void *round_trip = malloc(64);
+    if (!round_trip) {
+        fprintf(stderr, "tls_threads: main thread_end corrupted the allocator: malloc failed\n");
+        atomic_fetch_add(&failures, 1);
+    } else {
+        free(round_trip);
+    }
+
     if (atomic_load(&failures) != 0) {
         fprintf(stderr, "tls_threads: FAIL (%d)\n", atomic_load(&failures));
         return 1;
     }
-    printf("tls_threads: OK: %d worker threads + 1 default worker, %d distinct guest TCBs, host FS restored\n", THREADS, THREADS);
+    printf("tls_threads: OK: %d worker threads + 1 default worker, %d distinct guest TCBs, host FS restored, main thread_end left the allocator intact\n", THREADS, THREADS);
     return 0;
 }

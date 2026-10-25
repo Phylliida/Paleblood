@@ -232,12 +232,21 @@ void rt_tls_thread_end(void)
     if (!st) return;
     if (st->guest_block) rt_tls_enter_host();
     const unsigned long restore_gs = st->host_gsbase;
+    const int is_main = st->is_main;
     free(st->guest_alloc_base);
     st->guest_block = NULL;
     st->guest_alloc_base = NULL;
     st->guest_alloc = 0;
     set_gs_base((const void *)restore_gs);
-    free(st);
+    if (is_main) {
+        /* The published base pointed at the block just freed; a later rt_boot_call must fail loudly
+           rather than use a dangling TCB. */
+        rt_tls_guest_base_v = 0;
+        rt_tls_host_base_v = 0;
+    }
+    /* main_state lives in .data; only a child's state came from calloc. Freeing the main state hands
+       glibc a pointer into pbboot's data and corrupts its allocator metadata. */
+    if (!is_main) free(st);
 }
 
 /* Places the image and the TCB inside this thread's region and sets %fs to the TCB. Idempotent: later calls
