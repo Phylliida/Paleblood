@@ -68,16 +68,51 @@ static unsigned long get_gs_base(void)
     return v;
 }
 
+/* A refusal that must run while %fs is the guest block, and therefore must not call libc: even fprintf
+   reaches glibc's thread state through %fs. Format and exit by raw syscall, so a %gs that names the wrong
+   struct still produces a named verdict instead of a second fault. */
+static _Noreturn void tls_state_refuse(unsigned long gs, unsigned long self)
+{
+    char buf[192];
+    char *p = buf;
+    const char prefix[] = "runtime: TLS: state at %gs=0x";
+    const char middle[] = " has self=0x";
+    const char suffix[] = " -- refusing\n";
+    for (unsigned i = 0; i < sizeof prefix - 1; i++) *p++ = prefix[i];
+    for (int shift = 60; shift >= 0; shift -= 4) {
+        unsigned d = (unsigned)((gs >> shift) & 0xfu);
+        *p++ = (char)(d < 10 ? '0' + d : 'a' + d - 10);
+    }
+    for (unsigned i = 0; i < sizeof middle - 1; i++) *p++ = middle[i];
+    for (int shift = 60; shift >= 0; shift -= 4) {
+        unsigned d = (unsigned)((self >> shift) & 0xfu);
+        *p++ = (char)(d < 10 ? '0' + d : 'a' + d - 10);
+    }
+    for (unsigned i = 0; i < sizeof suffix - 1; i++) *p++ = suffix[i];
+    long ignored;
+    __asm__ volatile("syscall" : "=a"(ignored) : "a"(1L), "D"(2), "S"(buf), "d"((unsigned long)(p - buf))
+                     : "rcx", "r11", "memory");
+    __asm__ volatile("syscall" : : "a"((long)SYS_exit_group), "D"(134L) : "rcx", "r11", "memory");
+    __builtin_unreachable();
+}
+
 /* %gs is installed by rt_tls_init on the main thread and by rt_tls_thread_begin on a child; the boot calls
    rt_tls_layout once before init, when the GS base is still the host's (normally zero), and that call must
-   land on the main state rather than dereference 0. */
+   land on the main state rather than dereference 0.
+
+   The state carries its own address at offset 0. Comparing it here turns a wrong %gs into a named refusal
+   at the first per-thread access, rather than a field read at an arbitrary offset and a fault four
+   instructions later. The comparison is one branch on the path every TLS access already takes. */
 static rt_tls_thread *tls_state(void)
 {
     /* Before the CPU probe there is no safe way to read %gs on a machine without FSGSBASE; the one
        pre-init caller is boot.c's main-thread layout, which belongs to main_state by definition. */
     if (!have_wrgsbase) return &main_state;
     const unsigned long gs = get_gs_base();
-    return gs ? (rt_tls_thread *)(uintptr_t)gs : &main_state;
+    if (!gs) return &main_state;
+    rt_tls_thread *st = (rt_tls_thread *)(uintptr_t)gs;
+    if (st->self != st) tls_state_refuse(gs, (unsigned long)(uintptr_t)st->self);
+    return st;
 }
 
 static void set_fs_base(unsigned long v)

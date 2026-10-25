@@ -11,6 +11,9 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 enum { THREADS = 4 };
 
@@ -103,6 +106,49 @@ static void *default_worker(void *arg)
     return NULL;
 }
 
+static void write_gsbase(void *p)
+{
+    __asm__ volatile("wrgsbase %0" ::"r"((unsigned long)p));
+}
+
+/* The runtime must refuse a %gs that points at a struct whose own self-pointer disagrees, and it must do
+   so without calling libc: the refusal can run while %fs is the guest block. Fork so the refusal's
+   exit_group(134) is observable, and read the message through a pipe rather than from a merged log. */
+static int refusal_is_named(void)
+{
+    int fds[2];
+    if (pipe(fds) != 0) return 1;
+    const pid_t pid = fork();
+    if (pid < 0) return 1;
+    if (pid == 0) {
+        close(fds[0]);
+        if (dup2(fds[1], 2) < 0) _exit(2);
+        close(fds[1]);
+        struct { void *self; } fake = {.self = (void *)(uintptr_t)0x111};
+        write_gsbase(&fake);
+        (void)rt_tls_guest_base(); /* must not return */
+        _exit(0);
+    }
+    close(fds[1]);
+    char message[512];
+    const ssize_t n = read(fds[0], message, sizeof message - 1);
+    close(fds[0]);
+    int status = 0;
+    if (waitpid(pid, &status, 0) != pid) return 1;
+    if (n <= 0) return 1;
+    message[n] = '\0';
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 134) {
+        fprintf(stderr, "tls_threads: wrong %%gs was not refused: status=0x%x message=%s\n", status, message);
+        return 1;
+    }
+    if (!strstr(message, "state at %gs=0x") || !strstr(message, "has self=0x") ||
+        !strstr(message, "-- refusing")) {
+        fprintf(stderr, "tls_threads: refusal message did not name the mismatch: %s\n", message);
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     rt_tls_init();
@@ -142,6 +188,11 @@ int main(void)
         return 1;
     }
     pthread_join(default_thread, NULL);
+
+    if (refusal_is_named() != 0) {
+        fprintf(stderr, "tls_threads: self-pointer refusal check failed\n");
+        atomic_fetch_add(&failures, 1);
+    }
 
     if (atomic_load(&failures) != 0) {
         fprintf(stderr, "tls_threads: FAIL (%d)\n", atomic_load(&failures));
