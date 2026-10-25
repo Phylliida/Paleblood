@@ -327,6 +327,9 @@ static rt_elf *elf_open_stream(FILE *f, const char *path, char sha[13], char *er
     e->tls_module_id = 1;
     return e;
 out:
+    /* Every allocation-failure arm reaches here without a sentence of its own; an empty error buffer was
+       quoted as stack garbage by the caller, so the last resort is set here rather than at each goto. */
+    if (error && error_size && !error[0]) fail(error, error_size, "%s: cannot read", path);
     if (f) fclose(f);
     rt_elf_close(e);
     return NULL;

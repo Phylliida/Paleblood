@@ -79,7 +79,7 @@ file(GLOB PB_TEST_SYSLIB CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/runtime/syslib/
 # test_syslib links libc.c, which reads guest memory through loader.c's segment table and the TLS
 # bases in tls.c. Those two units were never in this list, so the guard bodies silently made this
 # target unlinkable -- invisible because the tree is normally built per-target.
-add_executable(test_syslib test/test_syslib.c runtime/guest_mem.c runtime/process.c runtime/loader.c
+add_executable(test_syslib test/test_syslib.c runtime/guest_mem.c runtime/process.c runtime/loader.c runtime/identity.c
                               runtime/tls.c runtime/syslib_flight.c ${PB_TEST_SYSLIB})
 target_include_directories(test_syslib PRIVATE runtime/include)
 # libc.c models _FSin with sinf; pbboot got `m` when that landed and this target did not, so it went

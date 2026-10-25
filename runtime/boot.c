@@ -770,21 +770,22 @@ int main(int argc, char **argv)
     for (size_t k = 0; k < object_count; k++) {
         object *o = &objects[k];
         o->label = k ? base_name(o->path) : "eboot";
+        error[0] = '\0';
         FILE *stream = fopen(o->path, "rb");
         if (!stream) {
             fprintf(stderr, "pbboot: %s: cannot open: %s\n", o->path, strerror(errno));
             return 3;
         }
         /* The hash comes back from the SAME read the loader parses. Printed before the parse verdict, so a
-           refused image still names the bytes that were refused. */
+           refused image still names the bytes that were refused. The loader's reason is printed on EVERY
+           refusal: an empty hash says "no bytes were read", never why, and returning at the hash branch
+           swallowed the truncated:/read error: sentences this seam exists to expose. */
         char gh[13];
         o->elf = rt_elf_open_stream(stream, o->path, gh, error, sizeof error);
-        if (gh[0]) fprintf(stderr, "guest sha256 %s  (%s)\n", gh, o->path);
-        else {
-            fprintf(stderr, "pbboot: guest sha256 unreadable for %s: refusing to run (an unattributable "
-                            "subject is a number without a subject)\n", o->path);
-            return 3;
-        }
+        if (gh[0])
+            fprintf(stderr, "guest sha256 %s  (%s)\n", gh, o->path);
+        else
+            fprintf(stderr, "pbboot: guest sha256 unreadable for %s (no bytes read)\n", o->path);
         if (!o->elf) {
             fprintf(stderr, "pbboot: %s\n", error);
             return 3;
