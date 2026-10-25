@@ -109,7 +109,12 @@ static rt_tls_thread *tls_state(void)
        pre-init caller is boot.c's main-thread layout, which belongs to main_state by definition. */
     if (!have_wrgsbase) return &main_state;
     const unsigned long gs = get_gs_base();
-    if (!gs) return &main_state;
+    if (!gs) {
+        /* Before rt_tls_init this is the boot's pre-init layout call; after it, a zero GS base means
+           the install did not take, and falling back to main_state would hide exactly that. */
+        if (have_wrgsbase) tls_state_refuse(0, 0);
+        return &main_state;
+    }
     rt_tls_thread *st = (rt_tls_thread *)(uintptr_t)gs;
     if (st->self != st) tls_state_refuse(gs, (unsigned long)(uintptr_t)st->self);
     return st;

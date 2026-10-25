@@ -111,10 +111,13 @@ static void write_gsbase(void *p)
     __asm__ volatile("wrgsbase %0" ::"r"((unsigned long)p));
 }
 
-/* The runtime must refuse a %gs that points at a struct whose own self-pointer disagrees, and it must do
-   so without calling libc: the refusal can run while %fs is the guest block. Fork so the refusal's
-   exit_group(134) is observable, and read the message through a pipe rather than from a merged log. */
-static int refusal_is_named(void)
+static struct { void *self; } fake_state = {.self = (void *)(uintptr_t)0x111};
+
+/* The runtime must refuse a %gs that points at a struct whose own self-pointer disagrees, and a %gs of
+   zero after installation, and it must do so without calling libc: the refusal can run while %fs is the
+   guest block. Fork so the refusal's exit_group(134) is observable, and read the message through a pipe
+   rather than from a merged log. */
+static int refusal_is_named(void *bad_gs, const char *label)
 {
     int fds[2];
     if (pipe(fds) != 0) return 1;
@@ -124,8 +127,7 @@ static int refusal_is_named(void)
         close(fds[0]);
         if (dup2(fds[1], 2) < 0) _exit(2);
         close(fds[1]);
-        struct { void *self; } fake = {.self = (void *)(uintptr_t)0x111};
-        write_gsbase(&fake);
+        write_gsbase(bad_gs);
         (void)rt_tls_guest_base(); /* must not return */
         _exit(0);
     }
@@ -138,12 +140,12 @@ static int refusal_is_named(void)
     if (n <= 0) return 1;
     message[n] = '\0';
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 134) {
-        fprintf(stderr, "tls_threads: wrong %%gs was not refused: status=0x%x message=%s\n", status, message);
+        fprintf(stderr, "tls_threads: %s was not refused: status=0x%x message=%s\n", label, status, message);
         return 1;
     }
     if (!strstr(message, "state at %gs=0x") || !strstr(message, "has self=0x") ||
         !strstr(message, "-- refusing")) {
-        fprintf(stderr, "tls_threads: refusal message did not name the mismatch: %s\n", message);
+        fprintf(stderr, "tls_threads: %s refusal did not name the mismatch: %s\n", label, message);
         return 1;
     }
     return 0;
@@ -189,8 +191,12 @@ int main(void)
     }
     pthread_join(default_thread, NULL);
 
-    if (refusal_is_named() != 0) {
+    if (refusal_is_named(&fake_state, "mismatched self") != 0) {
         fprintf(stderr, "tls_threads: self-pointer refusal check failed\n");
+        atomic_fetch_add(&failures, 1);
+    }
+    if (refusal_is_named(NULL, "zero %gs") != 0) {
+        fprintf(stderr, "tls_threads: zero-gs refusal check failed\n");
         atomic_fetch_add(&failures, 1);
     }
 
