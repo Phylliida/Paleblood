@@ -29,6 +29,15 @@ static void marker_clear_gs(void)
     __asm__ volatile("wrgsbase %0" ::"r"(zero) : "memory");
 }
 
+/* A guest that installs a nonzero %gs pointing at something that is not our state. The entry gate
+   already ran on the real state; this is the return path's version of the same question. */
+static unsigned char foreign_state[0x48] __attribute__((aligned(8)));
+static void marker_foreign_gs(void)
+{
+    marker_ran = 1;
+    __asm__ volatile("wrgsbase %0" ::"r"((unsigned long)(uintptr_t)foreign_state) : "memory");
+}
+
 static uint64_t read_fsbase(void)
 {
     uint64_t v = 0;
@@ -77,7 +86,8 @@ static child_result run_boot_child(unsigned char *state, int malloc_after, int s
         if (zero_selector) write_gsbase(NULL);
         else write_gsbase(state);
         rt_tls_guest_base_v = published_guest;
-        rt_boot_call(clear_gs ? marker_clear_gs : marker, NULL, stack_top, NULL, NULL);
+        rt_boot_call(clear_gs == 1 ? marker_clear_gs : clear_gs == 2 ? marker_foreign_gs : marker,
+                     NULL, stack_top, NULL, NULL);
         if (malloc_after) {
             /* The point of the valid control: prove %fs is the host's, not just that the call returned.
                malloc alone did not catch a null %fs in this test; errno does, because the macro reads
@@ -185,6 +195,25 @@ int main(void)
     if (!strstr(r.message, "guest returned with %gs selector zero") ||
         !strstr(r.message, "refusing to install main's host base")) {
         fprintf(stderr, "boot_call: cleared-selector refusal did not name the selector: %s\n", r.message);
+        return 1;
+    }
+
+    /* 4b. The guest installs a nonzero but foreign %gs. The return path must check the magic before
+            reading host_fsbase from it; otherwise a forged state with a plausible host base would be
+            installed and this call would return as if nothing had happened. */
+    make_state(state, guest_block, host_fs);
+    memset(foreign_state, 0, sizeof foreign_state);
+    *(uint64_t *)(foreign_state + RT_TLS_GS_MAGIC_OFF) = RT_TLS_MAGIC ^ 2;
+    *(uint64_t *)(foreign_state + RT_TLS_GS_HOST_FSBASE_OFF) = host_fs;
+    r = run_boot_child(state, 0, 0, 0, (uint64_t)(uintptr_t)guest_block, 2);
+    if (!WIFEXITED(r.status) || WEXITSTATUS(r.status) != 134) {
+        fprintf(stderr, "boot_call: a foreign %%gs after return was not refused: status=0x%x message=%s\n",
+                r.status, r.message);
+        return 1;
+    }
+    if (!strstr(r.message, "foreign TLS state") ||
+        !strstr(r.message, "refusing to install its host base")) {
+        fprintf(stderr, "boot_call: foreign-state refusal did not name the state: %s\n", r.message);
         return 1;
     }
 

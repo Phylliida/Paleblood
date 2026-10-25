@@ -36,6 +36,7 @@ int rt_tls_thread_ready(void);
    same numeral. A reason is a coordinate; give it its own space. */
 #define RT_TLS_REFUSE_HOST_ZERO 0x10      /* the thread's host base is zero */
 #define RT_TLS_REFUSE_SELECTOR_ZERO 0x11  /* guest returned with a zero %gs; host base unknown */
+#define RT_TLS_REFUSE_FOREIGN_STATE 0x12  /* guest returned with a nonzero %gs that is not ours */
 void rt_tls_host_base_refuse(int reason);
 
 /* Four views of the thread pointer, each carrying the mechanism that produced it. A bare set of four

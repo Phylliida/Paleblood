@@ -117,12 +117,21 @@ __asm__(".text\n"
         "  rdgsbase %r11\n"
         "  test %r11, %r11\n"
         "  jz .Lrtbc_no_selector_after\n"
+        /* A guest can install a nonzero %gs that is not this runtime's state (glibc's TCB, or a
+           forged one). Check the identity word before reading host_fsbase from it; the raw refusal
+           path is already the only safe one here because %fs is still the guest block. */
+        "  movabs $" RT_STR(RT_TLS_MAGIC) ", %r10\n"
+        "  cmp %r10, %gs:" RT_STR(RT_TLS_GS_MAGIC_OFF) "\n"
+        "  jne .Lrtbc_foreign_state\n"
         "  mov %gs:" RT_STR(RT_TLS_GS_HOST_FSBASE_OFF) ", %r11\n"
         "  test %r11, %r11\n"
         "  jz .Lrtbc_zero_host\n"
         "  jmp .Lrtbc_restore\n"
         ".Lrtbc_no_selector_after:\n"
         "  mov $" RT_STR(RT_TLS_REFUSE_SELECTOR_ZERO) ", %edi\n" /* raw refusal: selector zero */
+        "  jmp .Lrtbc_host_refuse\n"
+        ".Lrtbc_foreign_state:\n"
+        "  mov $" RT_STR(RT_TLS_REFUSE_FOREIGN_STATE) ", %edi\n" /* raw refusal: foreign state */
         "  jmp .Lrtbc_host_refuse\n"
         ".Lrtbc_zero_host:\n"
         "  mov $" RT_STR(RT_TLS_REFUSE_HOST_ZERO) ", %edi\n"     /* raw refusal: host base zero */
