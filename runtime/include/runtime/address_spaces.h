@@ -21,8 +21,10 @@
 
    WORKED EXAMPLES, both wrong numbers this campaign actually published or nearly published:
 
-   1. `0x53E5B38` was carried as "filesz end" and then retracted as one base short. It is vaddr 0x53e5b38 +
-      nothing; the catalogue value is 0x57e5b38. It was in no space at all -- vaddr plus part of a bias.
+   1. `0x53E5B38` is vaddr + filesz: the image-space end of the RW segment. It was carried as a guest/
+      catalogue address and retracted as one base short; the catalogue value is 0x57e5b38. It is also the
+      INIT_ARRAY address in `readelf -dW`, but that coincidence is not evidence about the boundary. Three
+      frames, three values: image 0x53e5b38, file 0x53e9b38, guest 0x57e5b38.
    2. A disassembler prints a RIP-relative target in VADDR space. `add 0x2da9110(%rip),%rax # 0x53e4328`
       is entry code reaching eboot's TLS init slot: at file 0x53e8328 the eight bytes are 70 f9 ff ff ff ff
       ff ff = -0x690, landing the following store at fs-0x690 inside eboot's 0x750-byte TLS block. Read the
