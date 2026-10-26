@@ -19,6 +19,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -270,9 +271,16 @@ class HostHooks(unittest.TestCase):
             cmd.insert(-2, extra)
         r = subprocess.run(cmd, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
-        run = subprocess.run([os.path.join(d, 'driver')], capture_output=True, text=True,
-                             env={**os.environ, **(env or {})}, timeout=20)
-        return run
+        started = time.monotonic()
+        try:
+            return subprocess.run([os.path.join(d, 'driver')], capture_output=True, text=True,
+                                  env={**os.environ, **(env or {})}, timeout=20)
+        except subprocess.TimeoutExpired as e:
+            # A bare TimeoutExpired says "20 s" and nothing about whether the driver or the
+            # machine was slow; the next reader raises the number and calls it fixed.
+            self.fail(f'driver timed out after {time.monotonic() - started:.1f}s '
+                      f'(limit 20 s, load {os.getloadavg()}); '
+                      f'stdout={e.stdout!r} stderr={e.stderr!r}')
 
     def test_abort_reporter_prints_once_and_terminates(self):
         """The SIGABRT reporter used snprintf; fortify aborted inside the handler and the handler recursed.

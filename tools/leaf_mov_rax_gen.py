@@ -136,10 +136,19 @@ def bodies(batch):
 
 
 def merged(path, additions, fields):
-    """Sorted-unique-ascending: the generator inserts, it never appends."""
-    rows = list(csv.DictReader(open(path)))
+    """Sorted-unique-ascending: the generator inserts, it never appends.
+
+    `seen` has to grow with the rows that are accepted. A set built once over the file and then
+    tested inside a comprehension dedupes against the file only: two additions that collide with
+    each other both enter, under a docstring promising they cannot.
+    """
+    with open(path, newline='') as f:
+        rows = list(csv.DictReader(f))
     seen = {r[fields[0]] for r in rows}
-    rows += [r for r in additions if r[fields[0]] not in seen]
+    for row in additions:
+        if row[fields[0]] not in seen:
+            rows.append(row)
+            seen.add(row[fields[0]])
     rows.sort(key=lambda r: int(r[fields[0]], 16))
     sio = io.StringIO()
     w = csv.DictWriter(sio, fieldnames=fields, lineterminator='\n')
@@ -160,7 +169,10 @@ def write(limit):
         print('nothing to do: every member is already in functions.csv')
         return 0
     staged = tempfile.mkdtemp(prefix='movrax.')
-    dirs = [CASES.row_dir(a, 'table') for a, _, _ in batch]
+    # Map address -> destination. `zip(dirs, sorted(os.listdir(...)))` asserted that batch order
+    # and readdir order coincide; they are two orderings, and a mismatch silently cross-copies
+    # one member's cases into another's directory.
+    dirs = {a: CASES.row_dir(a, 'table') for a, _, _ in batch}
     try:
         os.makedirs(os.path.join(staged, 'cases'))
         for addr, _, K in batch:
@@ -195,8 +207,9 @@ def write(limit):
                                        if existing else header + blocks)
             open(fcsv, 'w').write(fc_text)
             open(or_path, 'w').write(or_text)
-            for d, src in zip(dirs, sorted(os.listdir(os.path.join(staged, 'cases')))):
-                target = os.path.join(staged, 'cases', src)
+            for addr, _, _ in batch:
+                target = os.path.join(staged, 'cases', f'0x{addr:08x}')
+                d = dirs[addr]
                 shutil.rmtree(d, ignore_errors=True)
                 shutil.copytree(target, d)
             # The mode table's one writer: its atomic write needs no entry in `backups`, and a
@@ -205,7 +218,7 @@ def write(limit):
         except BaseException:
             for path, bak in backups.items():
                 shutil.copy2(bak, path)
-            for d in dirs:
+            for d in dirs.values():
                 shutil.rmtree(d, ignore_errors=True)
             raise
         finally:
