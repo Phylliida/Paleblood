@@ -15,6 +15,7 @@
    Sources for the two values that are not parameters: the arena is one page-aligned mapping and
    the default alignment is a page, both taken from the runtime's own page size rather than a
    round number written here. */
+#include "runtime/guest_mem.h"
 #include "runtime/process.h"
 #include "runtime/syslib.h"
 
@@ -57,6 +58,16 @@ static int kernel_allocate_direct_memory(int64_t search_start, int64_t search_en
         if (p == MAP_FAILED) return k_error_nomem;
         arena = p;
         arena_bytes = k_arena_bytes;
+        /* Direct memory is guest memory. Register the whole arena once: a guest pointer into it is not
+           an image pointer, and the checked libc paths ask the registry, not the image. The flexible
+           mapping was registered and this arena was not -- two producers, one registry, and the second
+           producer forgot until a wcscmp in direct memory refused. */
+        if (!rt_guest_register_mapping((uintptr_t)arena, arena_bytes)) {
+            munmap(p, k_arena_bytes);
+            arena = NULL;
+            arena_bytes = 0;
+            return k_error_nomem;
+        }
     }
     size_t step = alignment ? alignment : k_page;
     size_t start = (arena_used + step - 1) / step * step;
