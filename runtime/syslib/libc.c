@@ -374,6 +374,47 @@ static unsigned short *libc_wmemchr(const unsigned short *s, unsigned short c, s
 }
 
 RT_SYSLIB("libc", wmemchr, libc_wmemchr);
+
+/* wcscmp, libc 266 (NID pNtJdE3x49E): fifth in the wide family, same measured 2-byte unit. The guest
+   passed two pointers into its own image (0x8049b800e, 0x8049b7ff2), so the comparison is over code
+   units, not bytes. A NUL is required before the image end: a non-terminated string is refused by name
+   rather than read past the mapping, because the subsequent fault would name an address and not the
+   import that caused it. The first call prints the first difference, so a byte count or a width-4
+   reading would show as a different index or a different unit value in the log. */
+static unsigned wcscmp_reported;
+
+static size_t wide_units_to_image_end(const unsigned short *s)
+{
+    const uintptr_t base = (uintptr_t)rt_process.image;
+    const uintptr_t end = base + (uintptr_t)rt_process.image_size;
+    const uintptr_t a = (uintptr_t)s;
+    if (!base || !end || end < base || a < base || a >= end)
+        return 0;
+    return (end - a) / 2;
+}
+
+static int libc_wcscmp(const unsigned short *a, const unsigned short *b)
+{
+    const size_t na = wide_units_to_image_end(a);
+    const size_t nb = wide_units_to_image_end(b);
+    if (!na || !nb)
+        rt_fatal("libc", "wcscmp: a string pointer is outside the guest image; refusing to compare it");
+    const size_t n = na < nb ? na : nb;
+    for (size_t i = 0; i < n; i++) {
+        if (a[i] != b[i]) {
+            if (!wcscmp_reported++)
+                fprintf(stderr, "pbboot: libc wcscmp: first difference at unit %zu: 0x%04x vs 0x%04x\n",
+                        i, (unsigned)a[i], (unsigned)b[i]);
+            return (int)a[i] - (int)b[i];
+        }
+        if (!a[i])
+            return 0;
+    }
+    rt_fatal("libc", "wcscmp: neither string terminated before the guest image end; refusing to read past it");
+    return 0;
+}
+
+RT_SYSLIB("libc", wcscmp, libc_wcscmp);
 /* wcstol, libc 504 (d3dMyWORw8A): the first wide import the guest reaches that is not a wmem* copy or scan.
    Unit: 2 bytes, MEASURED (wcslen), never sizeof(wchar_t); the host's wcstol expects 4 and is not called.
 
