@@ -176,6 +176,13 @@ def promote_edge(root, family, dry_run):
     """
     sys.path.insert(0, os.path.join(root, 'tools'))
     import verification as V
+    import tier_authority as TA
+    # The door has a decision, and the decision answers False today. Wiring it here is a refusal by
+    # construction: no grant, no flip, no write. A gate that has never answered False is a gate whose
+    # positive arm is the only arm tested.
+    if not TA.grants('1ab'):
+        print(f'promote: {TA.why("1ab")}', file=sys.stderr)
+        return 1
     fpath = os.path.join(root, 'symbols', 'functions.csv')
     text = open(fpath, newline='').read()
     rows = list(csv.reader(io.StringIO(text)))
