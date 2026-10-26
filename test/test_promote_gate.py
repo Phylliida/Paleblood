@@ -55,6 +55,20 @@ class PromoteGate(unittest.TestCase):
             rows = list(catalogue.read_rows(root / 'symbols' / 'functions.csv'))
             self.assertEqual(rows[0]['status'], 'edge-verified')
 
+    def test_a_failed_write_leaves_the_table_byte_identical(self):
+        """The write is beside-then-replace; a producer that raises must not have truncated first."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            fixture(root)
+            before = (root / 'symbols' / 'functions.csv').read_bytes()
+            import verification
+            with mock.patch.object(tier_authority, 'grants', return_value=True), \
+                 mock.patch.object(verification, 'source_hash', return_value='s'), \
+                 mock.patch.object(promote.atomicio, 'atomic_write', side_effect=OSError('disk')):
+                with self.assertRaises(OSError):
+                    promote.promote_edge(str(root), 'leaf_demo', dry_run=False)
+            self.assertEqual((root / 'symbols' / 'functions.csv').read_bytes(), before)
+
 
 if __name__ == '__main__':
     unittest.main()

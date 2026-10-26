@@ -31,6 +31,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomicio  # noqa: E402  -- write beside, fsync, replace; never truncate first
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Not a case: it describes the calling convention the catalog uses to build cases (verify.run_cases
@@ -184,16 +187,18 @@ def promote_edge(root, family, dry_run):
         print(f'promote: {TA.why("1ab")}', file=sys.stderr)
         return 1
     fpath = os.path.join(root, 'symbols', 'functions.csv')
-    text = open(fpath, newline='').read()
+    with open(fpath, newline='') as f:
+        text = f.read()
     rows = list(csv.reader(io.StringIO(text)))
     head = rows[0]
     st, nm, ad = head.index('status'), head.index('name'), head.index('address')
-    led = [r for r in csv.DictReader(open(os.path.join(root, 'symbols', 'verification.csv'), newline=''))
-           if r['cases'] == 'edge']
+    with open(os.path.join(root, 'symbols', 'verification.csv'), newline='') as f:
+        led = [r for r in csv.DictReader(f) if r['cases'] == 'edge']
     retired = set()
     rp = os.path.join(root, 'symbols', 'retired.csv')
     if os.path.exists(rp):
-        retired = {int(r['address'], 16) for r in csv.DictReader(open(rp)) if r.get('reason', '').strip()}
+        with open(rp, newline='') as f:
+            retired = {int(r['address'], 16) for r in csv.DictReader(f) if r.get('reason', '').strip()}
     # THE SELECTOR SHOWS ITS WORK, AND IT SHOWS IT OVER ALL ROWS, NOT OVER THE SURVIVORS OF A STATUS
     # FILTER. Tonight the tree was saved by the ORDER of two predicates -- a name filter that over-selected
     # sat upstream of a status filter (`original` only) that emptied the result. An ordering is not a
@@ -240,8 +245,7 @@ def promote_edge(root, family, dry_run):
     if moved and not dry_run:
         out = io.StringIO()
         csv.writer(out, lineterminator='\n').writerows(rows)
-        with open(fpath, 'w', newline='') as f:
-            f.write(out.getvalue())
+        atomicio.atomic_write(fpath, out.getvalue())
     print(f'promote: {len(moved)} -> edge-verified{" (dry run)" if dry_run else ""}'
           + (f'; {len(refusals)} refused' if refusals else ''))
     return 1 if refusals else 0
