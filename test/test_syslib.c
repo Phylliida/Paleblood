@@ -3,6 +3,7 @@
    RT_SYSLIB registry, by library and symbol. */
 #include "runtime/process.h"
 #include "runtime/syslib.h"
+#include "runtime/tls.h"
 
 #include <signal.h>
 #include <stdint.h>
@@ -323,10 +324,13 @@ int main(void)
     rt_process.image_size = frame_size;
 
     /* a thread variable equals itself and nothing else: the same object pointer is the same thread.
-       The runtime has a single guest thread so far (scePthreadCreate is not implemented), so the
-       unequal cases compare it with a pointer that is not a thread: they exercise pointer inequality
-       only, not two distinct valid thread handles. */
+       The unequal cases compare a thread with a pointer that is not a thread; they exercise pointer
+       inequality only, not two distinct valid thread handles. */
     static unsigned char main_stack[0x100];
+    /* Thread creation enters guest %fs through the trampoline, so the TLS subsystem must be the real
+       one, not the pre-init fallback: without rt_tls_init the child's state is looked up through a
+       %gs probe that has never run, and teardown frees a static object. */
+    rt_tls_init();
     rt_thread_register_main(main_stack, sizeof main_stack);
     void *const self = ((void *(*)(void))fn("libkernel", "scePthreadSelf"))();
     const f_equal equal = (f_equal)fn("libkernel", "scePthreadEqual");
@@ -334,6 +338,37 @@ int main(void)
     CHECK(self && equal(self, self) != 0);
     CHECK(equal(self, &not_a_thread) == 0 && equal(&not_a_thread, self) == 0);
     CHECK(equal(self, NULL) == 0);
+
+    /* The guest's adaptive mutex packs a thread's identity into 40 bits: at 0x20368c0 it masks the
+       owner with 0xffffffffff and compares the truncated word against the full handle. A handle with
+       bits above 39 can never equal its own tag, so the mutex acquires and then waits forever on its
+       own sleep semaphore -- the deadlock the trace showed. The bound asserted here is the guest's
+       own mask, quoted from that instruction, not a ceiling chosen for the test. */
+    CHECK(((uint64_t)(uintptr_t)self & ~0xffffffffffull) == 0);
+
+    /* A created handle comes from the same arena and must satisfy the same property. The entry is a
+       bare `ret`: this asserts the handle's space, not any guest code. */
+    unsigned char *const ret_page = mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
+                                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    CHECK(ret_page != MAP_FAILED);
+    if (ret_page != MAP_FAILED) {
+        memset(ret_page, 0xc3, 4096);
+        uint64_t created = 0;
+        const int cr = rt_thread_create_real((int64_t)(uintptr_t)&created,
+                                             (int64_t)(uintptr_t)ret_page, 0, 0, 0);
+        CHECK(cr == 0);
+        CHECK(created != 0);
+        CHECK((created & ~0xffffffffffull) == 0);
+        CHECK(equal((void *)(uintptr_t)created, self) == 0);
+        CHECK(equal((void *)(uintptr_t)created, (void *)(uintptr_t)created) != 0);
+        CHECK(rt_thread_join_real((int64_t)created) == 0);
+        munmap(ret_page, 4096);
+    }
+    /* A handle outside the arena is refused rather than dereferenced. The old test was
+       `(thread & 1u) == 0`, true of nearly every even number, so a fabricated handle read random
+       memory as a guest_thread. */
+    CHECK(rt_thread_join_real(0x123456) == (int)0x80020016u);
+    CHECK(rt_thread_detach_real(0x123456) == (int)0x80020016u);
 
     /* A thread attribute takes one of the two detach states, joinable (0) or detached (1). Any
        other value, or a variable holding no attribute object, is EINVAL: an SCE code under the SCE

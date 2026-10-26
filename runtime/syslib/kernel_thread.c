@@ -5,10 +5,14 @@
 
    Facts used: a thread or attribute variable holds a pointer to an object the library allocates
    (FreeBSD libthr, which the PS4's thread library is); the SCE names return 0 or 0x80020000 plus a
-   FreeBSD error number, and their POSIX names (libScePosix) return that error number itself. An
-   attribute records only what has been set or copied into it; reading a value the runtime does not
-   know (one the system would supply) is not implemented, so the boot stops there by name instead of
-   guessing. */
+   FreeBSD error number, and their POSIX names (libScePosix) return that error number itself. A
+   thread handle's WIDTH is part of that fact: the guest's adaptive mutex packs an owner into 40
+   bits and compares the truncated word against the full handle (0x20368c0), so a host pointer --
+   which has bits above 39 -- can never equal its own tag, and the mutex acquires and then waits
+   forever on its own sleep semaphore. Thread objects therefore live in guest memory (thread_alloc),
+   not in calloc. An attribute records only what has been set or copied into it; reading a value the
+   runtime does not know (one the system would supply) is not implemented, so the boot stops there
+   by name instead of guessing. */
 #include "runtime/process.h"
 #include "runtime/syslib.h"
 #include "runtime/guest_mem.h"
@@ -21,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 enum { BSD_ENOMEM = 12, BSD_EFAULT = 14, BSD_EINVAL = 22, BSD_EAGAIN = 35 };
@@ -64,14 +69,93 @@ enum { PS4_DEFAULT_AFFINITY = 0x3F };
 
 static int sce(int bsd) { return bsd ? SCE_KERNEL_ERROR(bsd) : 0; }
 
-static guest_thread main_thread;
+/* Thread objects live in GUEST memory, not in calloc.
+
+   The guest's adaptive mutex packs a thread identity into 40 bits and compares the truncated word
+   against the full handle: at 0x20368c0 it does `mov r9,r15; and r9,0xffffffffff`, stores that as the
+   owner, then `cmp rdi,r15` after truncating the stored word. A host pointer (`0x5555...`) has bits
+   above 39, so the truncated owner can never equal the full handle; the mutex acquires, fails to
+   recognise itself, spins out its window, and then waits forever on its own sleep semaphore while
+   still holding the lock. That is the deadlock the trace showed, and the defect is the handle's
+   space, not the guest's lock order: on the original system the identity is a guest pointer and the
+   40-bit tag works.
+
+   A translation table would make `thread_equal` a mapper and turn create-self equality into a
+   property maintained by hand. Allocating the objects in guest memory keeps every comparison a
+   pointer comparison -- the smallest population that requires the change. The arena is a fixed
+   mapping below 2^40, registered with guest_mem.c so a handle is recognisably guest memory. */
+enum { kThreadArenaBase = 0x980000000ull, kThreadArenaBytes = 0x10000 };
+#define THREAD_ARENA_SLOTS (kThreadArenaBytes / sizeof(guest_thread))
+
+static pthread_once_t thread_arena_once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t thread_arena_lock = PTHREAD_MUTEX_INITIALIZER;
+static guest_thread *thread_arena;
+static guest_thread *thread_arena_free_list;
+static size_t thread_arena_used;
+
+static void thread_arena_init(void)
+{
+    void *p = mmap((void *)(uintptr_t)kThreadArenaBase, kThreadArenaBytes, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    if (p == MAP_FAILED || (uintptr_t)p != kThreadArenaBase)
+        rt_fatal("pthread", "cannot map the guest thread arena at 0x980000000");
+    if (!rt_guest_register_mapping((uintptr_t)p, kThreadArenaBytes))
+        rt_fatal("pthread", "the guest mapping table is full; cannot register the thread arena");
+    thread_arena = p;
+}
+
+static guest_thread *thread_alloc(void)
+{
+    pthread_once(&thread_arena_once, thread_arena_init);
+    pthread_mutex_lock(&thread_arena_lock);
+    guest_thread *t;
+    if (thread_arena_free_list) {
+        t = thread_arena_free_list;
+        thread_arena_free_list = (guest_thread *)t->stack;
+    } else if (thread_arena_used < THREAD_ARENA_SLOTS) {
+        t = &thread_arena[thread_arena_used++];
+    } else {
+        t = NULL;
+    }
+    if (t) memset(t, 0, sizeof *t);
+    pthread_mutex_unlock(&thread_arena_lock);
+    return t;
+}
+
+static void thread_release(guest_thread *t)
+{
+    if (!t) return;
+    pthread_mutex_lock(&thread_arena_lock);
+    t->stack = thread_arena_free_list;
+    thread_arena_free_list = t;
+    pthread_mutex_unlock(&thread_arena_lock);
+}
+
+/* A handle is a pointer into the arena. A value outside it is not a thread, so the join, detach and
+   affinity paths refuse it instead of dereferencing guest-supplied garbage: the old test was
+   `(thread & 1u) == 0`, true of nearly every even number, which read a random address. The arena has
+   not been mapped until the first thread exists, and a handle before that is not one. */
+static int thread_handle_ok(const guest_thread *t)
+{
+    const uintptr_t base = (uintptr_t)thread_arena;
+    const uintptr_t h = (uintptr_t)t;
+    return thread_arena && h >= base && h - base < (uintptr_t)kThreadArenaBytes &&
+           (h - base) % sizeof(guest_thread) == 0;
+}
+
+static guest_thread *main_thread;
 static _Thread_local guest_thread *current;
 
 void rt_thread_register_main(void *stack, uint64_t stack_size)
 {
-    main_thread.stack = stack;
-    main_thread.stack_size = stack_size;
-    current = &main_thread;
+    if (!main_thread) {
+        main_thread = thread_alloc();
+        if (!main_thread)
+            rt_fatal("pthread", "cannot allocate the main thread object in guest memory");
+    }
+    main_thread->stack = stack;
+    main_thread->stack_size = stack_size;
+    current = main_thread;
 }
 
 /* No libc after rt_tls_enter_guest: the guest block is %fs, and even fprintf reaches glibc's thread
@@ -99,15 +183,17 @@ static void *thread_trampoline(void *p)
 }
 
 /* A real thread, not a tagged integer: the handle the guest receives is a pointer to this object,
-   because a guest_thread* is what Join, Detach, Equal and Self all dereference. The child gets its
-   own TLS state and its own %fs through rt_tls_thread_begin/enter_guest; those are the two pieces
-   the earlier experiment did not have (it shared main's block). The hypothesis is that the pool's
-   continuation needs workers that actually run; the falsifier is that the boot still stops at
-   CondWait (or faults earlier) with this branch on. */
+   because a guest_thread* is what Join, Detach, Equal and Self all dereference. The object comes from
+   the guest arena above, not calloc, so the handle's value lives in the same space the guest's own
+   thread tags do. The child gets its own TLS state and its own %fs through
+   rt_tls_thread_begin/enter_guest; those are the two pieces the earlier experiment did not have (it
+   shared main's block). The hypothesis is that the pool's continuation needs workers that actually
+   run; the falsifier is that the boot still stops at CondWait (or faults earlier) with this branch
+   on. */
 int rt_thread_create_real(int64_t out, int64_t entry, int64_t arg, uint64_t stack_size, int has_stack)
 {
     if (out == 0) return SCE_KERNEL_ERROR(BSD_EINVAL);
-    guest_thread *t = calloc(1, sizeof *t);
+    guest_thread *t = thread_alloc();
     if (!t) return SCE_KERNEL_ERROR(BSD_ENOMEM);
     t->entry = (void (*)(void *))(uintptr_t)entry;
     t->arg = (void *)(uintptr_t)arg;
@@ -117,7 +203,7 @@ int rt_thread_create_real(int64_t out, int64_t entry, int64_t arg, uint64_t stac
     const int r = pthread_create(&t->host, &a, thread_trampoline, t);
     pthread_attr_destroy(&a);
     if (r) {
-        free(t);
+        thread_release(t);
         return SCE_KERNEL_ERROR(r == EAGAIN ? BSD_EAGAIN : BSD_EINVAL);
     }
     t->has_host = 1;
@@ -136,17 +222,17 @@ int rt_thread_create_real(int64_t out, int64_t entry, int64_t arg, uint64_t stac
 int rt_thread_join_real(int64_t handle)
 {
     guest_thread *t = (guest_thread *)(uintptr_t)handle;
-    if (!t || !t->has_host) return SCE_KERNEL_ERROR(BSD_EINVAL);
+    if (!thread_handle_ok(t) || !t->has_host) return SCE_KERNEL_ERROR(BSD_EINVAL);
     const int r = pthread_join(t->host, NULL);
     if (r) return SCE_KERNEL_ERROR(r == EINVAL ? BSD_EINVAL : r);
-    free(t);
+    thread_release(t);
     return 0;
 }
 
 int rt_thread_detach_real(int64_t handle)
 {
     guest_thread *t = (guest_thread *)(uintptr_t)handle;
-    if (!t || !t->has_host || t->detached) return SCE_KERNEL_ERROR(BSD_EINVAL);
+    if (!thread_handle_ok(t) || !t->has_host || t->detached) return SCE_KERNEL_ERROR(BSD_EINVAL);
     const int r = pthread_detach(t->host);
     if (r) return SCE_KERNEL_ERROR(r == EINVAL ? BSD_EINVAL : r);
     t->detached = 1;
@@ -351,12 +437,9 @@ static int thread_setaffinity(uint64_t thread, int affinity)
        state, and the host has it. A failure is reported, not hidden. */
     fprintf(stderr, "pbboot: scePthreadSetaffinity raw: thread=%#llx affinity=%#x\n",
             (unsigned long long)thread, (unsigned)affinity);
-    if (thread == 0 || (void *)(uintptr_t)thread == (void *)&main_thread ||
-        (thread && (thread & 1u) == 0)) {
-        guest_thread *t = (thread == 0 || (void *)(uintptr_t)thread == (void *)&main_thread)
-                              ? &main_thread
-                              : (guest_thread *)(uintptr_t)thread;
-        if (t->has_host || t == &main_thread) {
+    {
+        guest_thread *t = thread ? (guest_thread *)(uintptr_t)thread : main_thread;
+        if (thread_handle_ok(t) && (t->has_host || t == main_thread)) {
             cpu_set_t set;
             CPU_ZERO(&set);
             const long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
