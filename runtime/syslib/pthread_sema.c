@@ -16,12 +16,14 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define HANDLE_MAGIC 0x53454d41u /* "SEMA" */
 #define HANDLE_ROWS 32
 
-enum { k_err_inval = (int)0x80020016u, k_err_nomem = (int)0x8002000cu };
+enum { k_err_inval = (int)0x80020016u, k_err_nomem = (int)0x8002000cu,
+       k_err_fault = (int)0x8002000eu };
 
 /* THE ASSERTION. Only scePthreadCreate could clear it, and it refuses instead -- so the family below is
    correct *under* it rather than each function assuming it privately. Every entry point checks. */
@@ -162,7 +164,41 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
             (unsigned long long)(uint64_t)out, (unsigned long long)(uint64_t)attr,
             (unsigned long long)(uint64_t)entry, (unsigned long long)(uint64_t)arg,
             (unsigned long long)(uint64_t)name);
-    (void)out; (void)name;
+    (void)name;
+    /* Read the attribute once, before either branch: the refusal wants it for its sentence, and the
+       modelled branch wants the same stack size. A setter whose value nothing reads is decorative;
+       this is the only path that reads one today. */
+    void *const *av = attr ? (void *const *)(uintptr_t)attr : NULL;
+    uint64_t size = 0;
+    int policy = 0;
+    const int has_size = rt_thread_attr_stack_size(av, &size);
+    const int has_policy = rt_thread_attr_sched_policy(av, &policy);
+    fprintf(stderr, "pbboot: scePthreadCreate: attr stack %s0x%llx, policy %s%d\n",
+            has_size < 0 ? "absent " : has_size ? "asked " : "not asked ",
+            has_size > 0 ? (unsigned long long)size : 0ull,
+            has_policy < 0 ? "absent " : has_policy ? "asked " : "not asked ",
+            has_policy > 0 ? policy : 0);
+
+    /* EXPERIMENT A-success. The guest's own failure path panicked; this branch gives it the success it
+       asked for and creates no host thread. The handle is a tagged integer, never a plausible pointer:
+       a real guest_thread* is 8-byte aligned, so bit 0 is a marker the log and any later refusal can
+       name. The registration stays UNRESOLVED because the shipped default is still the refusal below;
+       a declaration true only when a flag is set would be the comment-with-a-macro defect. */
+    if (getenv("BB_THREAD_MODELLED") && *getenv("BB_THREAD_MODELLED") &&
+        strcmp(getenv("BB_THREAD_MODELLED"), "0") != 0) {
+        if (out == 0) return k_err_inval;
+        if (!rt_guest_write_ok((uintptr_t)out, 8, "scePthreadCreate")) return k_err_fault;
+        static uint64_t modelled_serial;
+        const uint64_t handle = ((++modelled_serial) << 1) | 1;
+        *(uint64_t *)(uintptr_t)out = handle;
+        fprintf(stderr, "pbboot: scePthreadCreate: MODELLED handle 0x%llx (tagged, no host thread), "
+                        "entry %p arg %p, stack %s0x%llx; BB_THREAD_MODELLED=1 -- the guest proceeds "
+                        "through fabricated state and must be able to see it\n",
+                (unsigned long long)handle, (void *)(uintptr_t)entry, (void *)(uintptr_t)arg,
+                has_size > 0 ? "" : "not asked ", has_size > 0 ? (unsigned long long)size : 0ull);
+        return 0;
+    }
+
     /* The wall, named and stopped at rather than served past. Returning an error here is what the guest
        did NOT handle: it panicked, and the panic path dereferences the unpopulated __sFILE, so the run
        ended in a stdio-looking fault two layers away from the cause. Stopping here means nothing after this
@@ -174,22 +210,7 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
          eboot.elf  filesz 0x0    memsz 0x750   -- zero-init, no TLS image
          libc.elf   filesz 0x220  memsz 0x4a0   -- an init image that would have to be copied per thread
        What is actually missing is machinery, not agreement. */
-    /* Read what the guest wrote before refusing: a setter whose value nothing reads is a decorative write,
-       and this is the only path that can read one today. The detach reader names a state the guest never
-       set rather than assuming the system's default; stack and policy are printed as asked / not asked. */
-    {
-        void *const *av = attr ? (void *const *)(uintptr_t)attr : NULL;
-        uint64_t size = 0;
-        int policy = 0;
-        const int has_size = rt_thread_attr_stack_size(av, &size);
-        const int has_policy = rt_thread_attr_sched_policy(av, &policy);
-        fprintf(stderr, "pbboot: scePthreadCreate: attr stack %s0x%llx, policy %s%d\n",
-                has_size < 0 ? "absent " : has_size ? "asked " : "not asked ",
-                has_size > 0 ? (unsigned long long)size : 0ull,
-                has_policy < 0 ? "absent " : has_policy ? "asked " : "not asked ",
-                has_policy > 0 ? policy : 0);
-        (void)rt_thread_attr_detach_state(av, "scePthreadCreate");
-    }
+    (void)rt_thread_attr_detach_state(av, "scePthreadCreate");
     const uint64_t call = rt_guest_call_pc();
     if (call)
         snprintf(wall, sizeof wall,
