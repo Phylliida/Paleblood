@@ -10,6 +10,8 @@ is private to it.
 """
 from __future__ import annotations
 
+import csv
+import io
 import os
 import pathlib
 import sys
@@ -62,6 +64,39 @@ def replacement_for(root, name, address):
     return None
 
 
+def _header(path):
+    with open(path, newline='') as f:
+        return next(csv.reader(f), ['address', 'mode'])
+
+
+def _fields(root):
+    got = list(rows(root))
+    path = _path(root)
+    if got:
+        return list(got[0].keys()), got
+    if path.exists():
+        return _header(path), got
+    return ['address', 'mode'], got
+
+
+def _write_rows(path, fields, got):
+    """Every address-keyed write goes through here: canonical address spelling, sort, atomic replace.
+
+    Extra columns are preserved. The old body emitted only `address,mode`, so a third column in
+    the committed table was silently dropped by every append.
+    """
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=fields, lineterminator='\n')
+    w.writeheader()
+    for row in sorted(got, key=lambda r: int(r['address'])):
+        out = dict(row)
+        out['address'] = f'0x{int(out["address"]):08x}'
+        w.writerow(out)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    atomicio.atomic_write(path, buf.getvalue())
+    _cache.clear()
+
+
 def append_host(root, addresses):
     """Add host-mode rows, refusing any address already recorded as something else.
 
@@ -71,23 +106,35 @@ def append_host(root, addresses):
     """
     addrs = sorted({int(a, 16) if isinstance(a, str) else int(a) for a in addresses})
     path = _path(root)
-    have = {row['address']: row['mode'] for row in rows(root)}
-    clash = [a for a in addrs if a in have and have[a] != 'host']
+    fields, base = _fields(root)
+    if 'address' not in fields or 'mode' not in fields:
+        raise SystemExit(f'refused: {path} has no address/mode columns: {fields!r}')
+    have = {row['address']: row for row in base}
+    clash = [a for a in addrs if a in have and have[a].get('mode') != 'host']
     if clash:
         raise SystemExit(f'refused: {path} already records 0x{clash[0]:08x} as '
-                         f'{have[clash[0]]!r}, refusing to write it as host')
+                         f'{have[clash[0]].get("mode")!r}, refusing to write it as host')
     add = [a for a in addrs if a not in have]
     if not add:
         return 0
-    merged = dict(have)
     for a in add:
-        merged[a] = 'host'
-    text = 'address,mode\n' + ''.join(f'0x{a:08x},{merged[a]}\n' for a in sorted(merged))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    atomicio.atomic_write(path, text)
-    _cache.clear()
+        have[a] = {k: '' for k in fields}
+        have[a]['address'], have[a]['mode'] = a, 'host'
+    _write_rows(path, fields, list(have.values()))
     back = {row['address'] for row in rows(root)}
     missing = [a for a in add if a not in back]
     if missing:
         raise SystemExit(f'wrote {path}, re-read, and {len(missing)} rows are absent')
     return len(add)
+
+
+def sort_host(root):
+    """Sort an existing table without changing any row. Returns how many rows it held."""
+    path = _path(root)
+    if not path.exists():
+        return 0
+    fields, base = _fields(root)
+    if not base:
+        return 0
+    _write_rows(path, fields, base)
+    return len(base)

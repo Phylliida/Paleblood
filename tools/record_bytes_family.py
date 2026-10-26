@@ -36,14 +36,17 @@ TRAPS = frozenset({
     'clts', 'swapgs', 'wrfsbase', 'wrgsbase', 'rdmsr', 'wrmsr', 'lgdt', 'lidt', 'lldt', 'ltr',
     'vmcall', 'vmrun',
 })
+import install_mode
 import progress as P
 import verification as V
 
-TABLES = ('functions.csv', 'install_mode.csv', 'replacement_origins.csv', 'verification.csv')
+TABLES = ('functions.csv', 'replacement_origins.csv', 'verification.csv')
 
 
 def sort_address_keyed(root):
-    for name in TABLES[:3]:
+    # The mode table has one writer, and it sorts; the other two are still sorted here because
+    # their writers are this file's own.
+    for name in ('functions.csv', 'replacement_origins.csv'):
         path = os.path.join(root, 'symbols', name)
         rows = list(csv.DictReader(open(path)))
         fields = list(rows[0].keys())
@@ -52,6 +55,7 @@ def sort_address_keyed(root):
             w = csv.DictWriter(f, fieldnames=fields, lineterminator='\n')
             w.writeheader()
             w.writerows(rows)
+    install_mode.sort_host(root)
 
 
 def digest(root, lib, elf, members):

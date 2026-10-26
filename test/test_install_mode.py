@@ -114,6 +114,30 @@ class TestAppendHost(unittest.TestCase):
             self.assertEqual(install_mode.append_host(d, [0x10, 0x20]), 1)
             self.assertEqual([r['address'] for r in install_mode.rows(d)], [0x10, 0x20])
 
+    def test_extra_columns_survive_an_append(self):
+        # The table is the module's shape, not `address,mode`'s: a third column it did not know
+        # about used to be silently dropped by every writer.
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            symbols.joinpath('install_mode.csv').write_text(
+                'address,mode,origin\n0x00000010,host,generated\n')
+            self.assertEqual(install_mode.append_host(d, [0x20]), 1)
+            text = symbols.joinpath('install_mode.csv').read_text()
+            self.assertIn('address,mode,origin\n', text)
+            self.assertIn('0x00000010,host,generated\n', text)
+            self.assertIn('0x00000020,host,\n', text)
+
+    def test_sort_host_orders_without_changing_columns(self):
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            symbols.joinpath('install_mode.csv').write_text(
+                'address,mode,origin\n0x00000020,host,b\n0x00000010,hook,a\n')
+            self.assertEqual(install_mode.sort_host(d), 2)
+            text = symbols.joinpath('install_mode.csv').read_text()
+            self.assertEqual(text, 'address,mode,origin\n0x00000010,hook,a\n0x00000020,host,b\n')
+
     def test_a_conflicting_mode_refuses_and_leaves_the_file_alone(self):
         with tempfile.TemporaryDirectory() as d:
             symbols = pathlib.Path(d) / 'symbols'
