@@ -107,6 +107,27 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
             self.assertIn('nothing written', out.getvalue())
         self.assertEqual(open(tu, 'rb').read(), before, 'neither invocation may touch the TU')
 
+    def test_a_clashing_address_refuses_before_the_write(self):
+        """The clash arm has been present but never executed.
+
+        Mock one already-landed member back into the unlanded population, so the table precheck
+        must see its address in functions.csv. `--write` is passed on purpose: the refusal has to
+        win over the flag, and the translation unit has to be the same bytes afterwards.
+        """
+        member = E.members('movsx_deref', landed=True)[0]
+        tu = os.path.join(E.ROOT, 'game', 'leaf', 'movsx_deref_family.cpp')
+        before = open(tu, 'rb').read()
+        with mock.patch.object(E, 'members', lambda *a, **k: [member]):
+            err = io.StringIO()
+            with redirect_stderr(err):
+                rc = E.main(['movsx_deref', '--write'])
+            msg = err.getvalue()
+            self.assertEqual(rc, 1, msg)
+            self.assertIn('REFUSED --', msg)
+            self.assertIn('already present', msg)
+            self.assertIn('Nothing was written', msg)
+        self.assertEqual(open(tu, 'rb').read(), before, 'the clash refusal may not touch the TU')
+
     def test_the_sext8_branch_plants_what_the_mutants_were_proved_against(self):
         """case_docs for a table family must plant the pointer, the byte and the ruler.
 
