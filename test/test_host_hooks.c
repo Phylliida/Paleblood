@@ -126,6 +126,38 @@ static int check(int condition, const char *message)
     return 1;
 }
 
+/* A refusal whose sentence is not asserted can regress to a different refusal without any test going red.
+   The installer writes its reason to stderr; capture it around one call so the diagnosis, not just the
+   return code, is the pin. */
+static rt_host *g_capture_host;
+static const void *g_capture_body;
+static int call_capture_install(void)
+{
+    return g_capture_host->install_hook(0, GUEST_CODE_SIZE, g_capture_body);
+}
+
+static int stderr_of(int (*call)(void), char *out, size_t cap)
+{
+    int saved = dup(fileno(stderr));
+    FILE *tmp = tmpfile();
+    if (saved < 0 || !tmp) {
+        if (saved >= 0) close(saved);
+        if (tmp) fclose(tmp);
+        return -1;
+    }
+    fflush(stderr);
+    dup2(fileno(tmp), fileno(stderr));
+    int rc = call();
+    fflush(stderr);
+    dup2(saved, fileno(stderr));
+    close(saved);
+    rewind(tmp);
+    size_t n = fread(out, 1, cap - 1, tmp);
+    out[n] = '\0';
+    fclose(tmp);
+    return rc;
+}
+
 int main(void)
 {
     const long page_size = sysconf(_SC_PAGESIZE);
@@ -331,6 +363,24 @@ int main(void)
                         "capture mode must refuse an address with no row");
         failed |= check(memcmp(image, before, sizeof before) == 0,
                         "a missing-row refusal must leave the site byte-identical");
+
+        /* A table with no identity column cannot bind to a library. The parser currently skips such rows and
+           ends with `seen == 0`; that must stay a refusal, and the sentence now names the schema rather than
+           blaming the address. This case exists because "move the .so column to install" is a proposed change:
+           if it lands without a replacement expected value, capture mode must fail closed, not silently pass. */
+        memcpy(image, before, sizeof before);
+        f = fopen(path, "w");
+        fprintf(f, "address,xmm_used,scanned_sha256\n0x400000,none,00\n");
+        fclose(f);
+        char said[512] = {0};
+        g_capture_host = &host;
+        g_capture_body = (const void *)boundary_body;
+        failed |= check(stderr_of(call_capture_install, said, sizeof said) != 0,
+                        "capture mode must refuse a table with no so_sha256 column");
+        failed |= check(strstr(said, "no parseable rows") != NULL,
+                        "a schema-mismatch refusal must name the schema, not the address");
+        failed |= check(memcmp(image, before, sizeof before) == 0,
+                        "a schema-mismatch refusal must leave the site byte-identical");
 
         memcpy(image, pristine, sizeof pristine);
         sf = fopen("site_ok_test.csv", "w");

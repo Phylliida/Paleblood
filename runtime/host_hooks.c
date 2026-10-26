@@ -290,12 +290,14 @@ static int capture_allowed(uint64_t offset)
     }
     char line[512];
     int seen = 0;
+    int parsed = 0;
     while (fgets(line, sizeof line, table)) {
         unsigned long long addr = 0;
         char verdict[64] = {0};
         char body_sha[80] = {0};
         char so_sha[80] = {0};
         if (sscanf(line, "0x%llx,%63[^,],%79[^,],%79[^,\n]", &addr, verdict, body_sha, so_sha) != 4) continue;
+        parsed++;
         if (strcmp(so_sha, want) != 0) {
             fprintf(stderr, "capture: table was derived from libbbgame.so %s but the run says %s: refusing; "
                             "regenerate with `capture_precheck.py --table`\n", so_sha, want);
@@ -313,6 +315,15 @@ static int capture_allowed(uint64_t offset)
     }
     fclose(table);
     if (!seen) {
+        if (!parsed) {
+            /* A table whose rows cannot be parsed at all is not a table with a missing row. The old message
+               blamed the address for a schema mismatch -- the same wrong-key defect the guest/offset lookup
+               already paid for. If the identity column is ever moved out of this file, the sentence must say
+               so, not send the reader to the candidate list. */
+            fprintf(stderr, "capture: no parseable rows in %s: expected "
+                            "address,xmm_used,scanned_sha256,so_sha256; refusing; nothing is recorded\n", path);
+            return 0;
+        }
         fprintf(stderr, "capture: no row for guest 0x%llx in %s: refusing; nothing is recorded\n",
                 (unsigned long long)rt_guest_address(offset), path);
         return 0;
