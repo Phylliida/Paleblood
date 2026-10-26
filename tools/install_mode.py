@@ -79,12 +79,7 @@ def _fields(root):
     return ['address', 'mode'], got
 
 
-def _write_rows(path, fields, got):
-    """Every address-keyed write goes through here: canonical address spelling, sort, atomic replace.
-
-    Extra columns are preserved. The old body emitted only `address,mode`, so a third column in
-    the committed table was silently dropped by every append.
-    """
+def _render_rows(fields, got):
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=fields, lineterminator='\n')
     w.writeheader()
@@ -92,8 +87,17 @@ def _write_rows(path, fields, got):
         out = dict(row)
         out['address'] = f'0x{int(out["address"]):08x}'
         w.writerow(out)
+    return buf.getvalue()
+
+
+def _write_rows(path, fields, got):
+    """Every address-keyed write goes through here: canonical address spelling, sort, atomic replace.
+
+    Extra columns are preserved. The old body emitted only `address,mode`, so a third column in
+    the committed table was silently dropped by every append.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    atomicio.atomic_write(path, buf.getvalue())
+    atomicio.atomic_write(path, _render_rows(fields, got))
     _cache.clear()
 
 
@@ -128,6 +132,11 @@ def append_host(root, addresses):
     return len(add)
 
 
+def require_absent(root, addresses):
+    """Refuse if any address is already recorded. The table's path stays private."""
+    catalogue.require_absent(_path(root), addresses)
+
+
 def sort_host(root):
     """Sort an existing table without changing any row. Returns how many rows it held."""
     path = _path(root)
@@ -136,5 +145,7 @@ def sort_host(root):
     fields, base = _fields(root)
     if not base:
         return 0
+    if path.read_text() == _render_rows(fields, base):
+        return len(base)
     _write_rows(path, fields, base)
     return len(base)

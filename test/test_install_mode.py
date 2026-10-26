@@ -17,6 +17,7 @@ import csv
 import pathlib
 import tempfile
 import unittest
+from unittest import mock
 
 import install_mode
 
@@ -143,6 +144,30 @@ class TestAppendHost(unittest.TestCase):
             self.assertEqual(install_mode.sort_host(d), 2)
             text = symbols.joinpath('install_mode.csv').read_text()
             self.assertEqual(text, 'address,mode,origin\n0x00000010,hook,a\n0x00000020,host,b\n')
+
+    def test_require_absent_refuses_a_present_address(self):
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            path = symbols / 'install_mode.csv'
+            before = 'address,mode\n0x00000010,hook\n'
+            path.write_text(before)
+            with self.assertRaises(SystemExit) as e:
+                install_mode.require_absent(d, [0x20, 0x10])
+            self.assertIn('already present', str(e.exception))
+            self.assertIn('0x00000010', str(e.exception))
+            self.assertEqual(path.read_text(), before, 'a presence check writes nothing')
+            install_mode.require_absent(d, [0x20])
+
+    def test_sort_host_does_not_rewrite_a_sorted_table(self):
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            symbols.joinpath('install_mode.csv').write_text(
+                'address,mode\n0x00000010,hook\n0x00000020,host\n')
+            with mock.patch.object(install_mode, '_write_rows') as w:
+                self.assertEqual(install_mode.sort_host(d), 2)
+                w.assert_not_called()
 
     def test_a_conflicting_mode_refuses_and_leaves_the_file_alone(self):
         with tempfile.TemporaryDirectory() as d:

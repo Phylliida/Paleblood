@@ -963,24 +963,26 @@ def main(argv):
             docs = [('case.json', doc) for _, doc in docs]
         for fn, doc in docs:
             pending.append((os.path.join(d, fn), json.dumps(doc, indent=1, sort_keys=True) + '\n'))
-    have = {int(r['address'], 16) for r in rows}
-    mode_clash = have & {r['address'] for r in install_mode.rows(ROOT)}
+    addrs = [m['address'] for m in ms]
+    try:
+        for table in ('functions.csv', 'replacement_origins.csv'):
+            catalogue.require_absent(os.path.join(ROOT, 'symbols', table), addrs)
+        install_mode.require_absent(ROOT, addrs)
+    except SystemExit as e:
+        print(f'{name}: REFUSED -- {e}; writing would duplicate coverage. Nothing was written.',
+              file=sys.stderr)
+        return 1
     tables = (
         ('functions.csv', lambda ex: (ex + rows, list(ex[0].keys()))),
         ('replacement_origins.csv', lambda ex: (ex + [{'address': r['address'], 'origin': 'generated'}
                                                       for r in rows], ['address', 'origin'])),
     )
-    resolved, clashes = [], []
+    resolved = []
     for table, build in tables:
         path = os.path.join(ROOT, 'symbols', table)
         existing = list(csv.DictReader(open(path)))
-        clash = have & {int(r['address'], 16) for r in existing}
-        if clash:
-            clashes.append((table, clash))
         all_rows, fields = build(existing)
         resolved.append((path, fields, all_rows))
-    if mode_clash:
-        clashes.append(('install_mode.csv', mode_clash))
     if not write and '--dry-run' not in argv:
         print(f'{name}: REFUSED -- this invocation would write game/leaf/{name}_family.cpp, '
               f'{len(pending)} case file(s) and {len(resolved)} tracked table(s). Writing requires '
@@ -992,13 +994,6 @@ def main(argv):
         print(f'  dry run: would have written {len(generated)} bytes to game/leaf/{name}_family.cpp, '
               f'{len(pending)} case file(s), {len(resolved)} table(s); nothing written, no file opened')
         return 0
-    if clashes:
-        # A named refusal, not an assertion: an already-present address is a defect in the
-        # selection, and a traceback names the interpreter's line rather than the family and table.
-        table, clash = clashes[0]
-        print(f'{name}: REFUSED -- {table}: {len(clash)} address(es) already present; writing would '
-              f'duplicate coverage. Nothing was written.', file=sys.stderr)
-        return 1
     atomic_write(os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp'), generated)
     for path, text in pending:
         os.makedirs(os.path.dirname(path), exist_ok=True)

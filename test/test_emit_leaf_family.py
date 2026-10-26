@@ -89,7 +89,10 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
         """
         # Derived from the family's own table, not written as a literal: test/ may not carry a
         # tracked address (tools/check_agnostic.py), and the census is the one definition of a member.
-        member = E.members('movsx_deref', landed=True)[0]
+        member = dict(E.members('movsx_deref', landed=True)[0])
+        # Move the mocked member off the committed table: the bare-invocation guard is the subject
+        # here, and a present address would make the presence refusal the subject instead.
+        member['address'] = max(m['address'] for m in E.members('movsx_deref', landed=True)) + 0x1000
         tu = os.path.join(E.ROOT, 'game', 'leaf', 'movsx_deref_family.cpp')
         before = open(tu, 'rb').read()
         with mock.patch.object(E, 'members', lambda *a, **k: [member]):
@@ -127,6 +130,18 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
             self.assertIn('already present', msg)
             self.assertIn('Nothing was written', msg)
         self.assertEqual(open(tu, 'rb').read(), before, 'the clash refusal may not touch the TU')
+
+    def test_a_clashing_address_refuses_a_dry_run_too(self):
+        """`--dry-run` performs every check. A clash is a property of the population, not of the flag."""
+        member = E.members('movsx_deref', landed=True)[0]
+        with mock.patch.object(E, 'members', lambda *a, **k: [member]):
+            err = io.StringIO()
+            with redirect_stderr(err):
+                rc = E.main(['movsx_deref', '--dry-run'])
+            msg = err.getvalue()
+        self.assertEqual(rc, 1, msg)
+        self.assertIn('already present', msg)
+        self.assertIn('Nothing was written', msg)
 
     def test_the_sext8_branch_plants_what_the_mutants_were_proved_against(self):
         """case_docs for a table family must plant the pointer, the byte and the ruler.

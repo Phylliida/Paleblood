@@ -12,6 +12,7 @@ saying `address,size` / `0x00400020,102`.
 """
 import csv
 import gzip
+import os
 
 
 def parse_size(text):
@@ -50,3 +51,18 @@ def read_rows(path):
 def load_extents(path):
     """[(address, size)] -- what the ownership join wants."""
     return [(r["address"], r["size"]) for r in read_rows(path)]
+
+
+def require_absent(path, addresses):
+    """Refuse if any address is already in `path`. The one presence test for an address-keyed table.
+
+    `read_rows` types the address, so a caller that passes ints cannot acquire a radix here. The
+    message names the table and the first collision; the emitter prefixes its own family and keeps
+    the sentence.
+    """
+    wanted = {int(a, 16) if isinstance(a, str) else int(a) for a in addresses}
+    present = wanted & {r['address'] for r in read_rows(path)}
+    if present:
+        first = min(present)
+        raise SystemExit(f'{os.path.basename(str(path))}: {len(present)} address(es) already present '
+                         f'(first 0x{first:08x})')
