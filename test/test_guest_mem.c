@@ -29,6 +29,12 @@ static int site_guard_cases(void)
     check(rt_image_offset(guest) == guest - 0x400000u, "image offset must use RT_EBOOT_BASE");
     check(rt_image_offset(guest) != guest - 0x3fc000u, "the file bias is not the image bias");
     check((guest - 0x3fc000u) - rt_image_offset(guest) == 0x4000u, "they differ by 0x4000, not by 0");
+    /* The inverse exists because every keyed table is guest-keyed and install_hook is offset-keyed.
+       One direction alone is how a correct value gets looked up under a wrong key. */
+    check(rt_guest_address(rt_image_offset(guest)) == guest,
+          "guest -> image -> guest must round trip; the inverse uses RT_EBOOT_BASE");
+    check(rt_image_offset(rt_guest_address(0x1234u)) == 0x1234u,
+          "image -> guest -> image must round trip at a second value");
 
     /* 2. A prologue at image offset 0x4000 passes; probing at the FILE bias lands 16 KiB lower, where the
           bytes are not the function's, and refuses. That is the shift this guard exists to catch. */
