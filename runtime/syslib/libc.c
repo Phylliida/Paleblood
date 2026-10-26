@@ -415,6 +415,29 @@ static int libc_wcscmp(const unsigned short *a, const unsigned short *b)
 }
 
 RT_SYSLIB("libc", wcscmp, libc_wcscmp);
+
+/* ldiv, libc 421 (NID gfP0im5Z3g0): a two-long struct return, so the guest expects quot in RAX and rem
+   in RDX, not a pointer. The measured call has rdi=0x74f4e52dbeef, rsi=0x1f31d and rdx=0x74f434420d20;
+   the third register is not an argument under this ABI, and treating it as a hidden result pointer would
+   divide by a heap address. Division by zero and LONG_MIN/-1 both trap in hardware, which would name a
+   signal and not this import, so both refuse by name first. */
+static unsigned ldiv_reported;
+
+static ldiv_t libc_ldiv(long numer, long denom)
+{
+    ldiv_t r;
+    if (denom == 0)
+        rt_fatal("libc", "ldiv: division by zero; the hardware trap would not name this import");
+    if (numer == LONG_MIN && denom == -1)
+        rt_fatal("libc", "ldiv: LONG_MIN / -1 overflows; the hardware trap would not name this import");
+    r.quot = numer / denom;
+    r.rem = numer % denom;
+    if (!ldiv_reported++)
+        fprintf(stderr, "pbboot: libc ldiv: %ld / %ld = quot %ld rem %ld\n", numer, denom, r.quot, r.rem);
+    return r;
+}
+
+RT_SYSLIB("libc", ldiv, libc_ldiv);
 /* wcstol, libc 504 (d3dMyWORw8A): the first wide import the guest reaches that is not a wmem* copy or scan.
    Unit: 2 bytes, MEASURED (wcslen), never sizeof(wchar_t); the host's wcstol expects 4 and is not called.
 
