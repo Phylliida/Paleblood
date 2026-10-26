@@ -179,6 +179,23 @@ static uint64_t guest_address_of(uint64_t raw, const char *symbol)
     return g;
 }
 
+/* One writable-region decision for libc writers, the mirror of guest_read_bytes: the registry answers
+   for a host pointer a guest handed us (stack, flexible, direct), and the loader segment table answers
+   for a guest-space address. Before this, wcsncpy's destination on the guest stack was rejected by an
+   image-only check. */
+static unsigned char *guest_write_ptr(uint64_t raw, size_t length, const char *symbol);
+
+static unsigned char *guest_write_bytes(const void *raw, size_t length, const char *symbol)
+{
+    const uintptr_t r = (uintptr_t)raw;
+    const uint64_t image = rt_map_image();
+    const uint64_t extent = rt_map_extent();
+    if ((!image || r < image || r >= image + extent) && rt_guest_span(r) >= length &&
+        rt_guest_write_ok(r, length, symbol))
+        return (unsigned char *)raw;
+    return guest_write_ptr((uint64_t)r, length, symbol);
+}
+
 static unsigned char *guest_write_ptr(uint64_t raw, size_t length, const char *symbol)
 {
     const uint64_t image = rt_map_image();
@@ -260,16 +277,31 @@ static __attribute__((unused)) void *libc_memset_unused(void *dst, int c, size_t
 static unsigned wcslen_reported;
 static size_t libc_wcslen(const unsigned short *s);
 
+/* One readable-region decision for libc readers. The registry (image, flexible memory, direct memory,
+   guest stack) answers first; only when it does not contain the pointer does the loader segment table
+   answer for a guest-space address. strlen and memcmp each had their own image-only computation and both
+   refused a registered guest-stack string before this helper existed. */
+static const unsigned char *guest_read_bytes(const void *raw, const char *symbol, size_t *span)
+{
+    *span = rt_guest_span((uintptr_t)raw);
+    if (*span)
+        return raw;
+    const uint64_t image = rt_map_image();
+    const uint64_t g = guest_address_of((uint64_t)(uintptr_t)raw, symbol);
+    *span = image ? rt_guest_readable_span(g) : 0;
+    if (!*span)
+        rt_fatal(symbol, "the pointer is not inside a readable region");
+    return (const unsigned char *)(uintptr_t)(image + (g - RT_EBOOT_BASE));
+}
+
 static size_t libc_strlen(const char *s)
 {
-    const uint64_t image = rt_map_image();
-    const uint64_t g = guest_address_of((uint64_t)(uintptr_t)s, "strlen");
-    const size_t span = image ? rt_guest_readable_span(g) : 0;
-    if (!span) rt_fatal("strlen", "the pointer is not inside a readable load segment");
-    const unsigned char *p = (const unsigned char *)(uintptr_t)(image + (g - RT_EBOOT_BASE));
+    size_t span = 0;
+    const unsigned char *p = guest_read_bytes(s, "strlen", &span);
+    if (!span) rt_fatal("strlen", "the pointer is not inside a readable region");
     const unsigned char *nul = memchr(p, 0, span);
     if (!nul) {
-        fprintf(stderr, "strlen: 0x%llx: no NUL in %zu readable bytes\n", (unsigned long long)g, span);
+        fprintf(stderr, "strlen: 0x%llx: no NUL in %zu readable bytes\n", (unsigned long long)(uintptr_t)s, span);
         rt_fatal("strlen", "the string runs off the end of its mapping -- refusing to report a length");
     }
     fprintf(stderr, "strlen: %zu bytes\n", (size_t)(nul - p));
@@ -277,6 +309,97 @@ static size_t libc_strlen(const char *s)
 }
 
 RT_SYSLIB("libc", strlen, libc_strlen);
+
+/* `strcmp` (libc bind 43, NID Ovb2dSJOAuE) -- the first narrow compare after the guest-stack registry
+   work. Both pointers are proved readable for at least their containing region, the walk is bounded by
+   each region's span, and the first difference is returned as the byte difference. A string with no NUL
+   inside its region is refused by name rather than compared against whatever is adjacent. */
+static unsigned strcmp_reported;
+
+static int libc_strcmp(const char *a, const char *b)
+{
+    size_t sa = 0, sb = 0;
+    const unsigned char *pa = guest_read_bytes(a, "strcmp", &sa);
+    const unsigned char *pb = guest_read_bytes(b, "strcmp", &sb);
+    size_t i = 0;
+    for (; i < sa && i < sb; i++) {
+        if (pa[i] != pb[i]) {
+            if (!strcmp_reported++)
+                fprintf(stderr, "pbboot: libc strcmp: first difference at byte %zu: 0x%02x vs 0x%02x\n", i,
+                        pa[i], pb[i]);
+            return (int)pa[i] - (int)pb[i];
+        }
+        if (pa[i] == 0)
+            return 0;
+    }
+    fprintf(stderr, "pbboot: libc strcmp: no NUL within %zu/%zu readable bytes; refusing\n", sa, sb);
+    rt_fatal("libc", "strcmp: a string has no NUL inside its readable region");
+}
+
+RT_SYSLIB("libc", strcmp, libc_strcmp);
+
+/* `setjmp` (libc bind 97, NID gNQ1V2vfXDE) and `longjmp` (bind 3, NID lKEN2IebgJ0).
+
+   setjmp's contract is to save a context; this runtime cannot save a guest context it does not
+   understand, so the model returns the direct-call value 0 and prints that it saved nothing. That is
+   only honest if the matching longjmp refuses instead of restoring garbage: longjmp is registered as a
+   named fatal, so a guest that takes the error path gets the name of the import rather than a jump into
+   a stale stack. The pair is the model; neither half is useful alone. */
+static unsigned setjmp_reported;
+
+static int libc_setjmp(void *env)
+{
+    if (!setjmp_reported++)
+        fprintf(stderr, "pbboot: libc setjmp: MODELLED direct return 0, no context saved (env=%p); "
+                        "longjmp refuses by name\n", env);
+    return 0;
+}
+
+RT_SYSLIB_MODELLED("libc", setjmp, libc_setjmp);
+
+static void libc_longjmp(void *env, int value)
+{
+    (void)env;
+    fprintf(stderr, "pbboot: libc longjmp: refusing (env=%p value=%d) -- setjmp saved no context, so there "
+                    "is nothing to restore\n", env, value);
+    rt_fatal("libc", "longjmp: no saved context exists in this runtime");
+}
+
+RT_SYSLIB_MODELLED("libc", longjmp, libc_longjmp);
+
+/* `wcsncpy` (libc bind 329, NID 0nV21JjYCH8). Width 2 is measured (wcslen's first unit was 0x00650074
+   where a 4-byte read would give 0x00000074). n counts units; the source is walked only as far as its
+   readable span, the destination is proved writable for all n units before the first write, and the
+   remainder is zero-filled as the C contract requires. */
+static unsigned wcsncpy_reported;
+
+static unsigned short *libc_wcsncpy(unsigned short *dst, const unsigned short *src, size_t n)
+{
+    if (n > SIZE_MAX / 2)
+        rt_fatal("libc", "wcsncpy: unit count overflows a byte count; refusing to copy a wrapped size");
+    size_t sspan = 0;
+    const unsigned char *sp = guest_read_bytes(src, "wcsncpy", &sspan);
+    unsigned char *dp = guest_write_bytes(dst, n * 2, "wcsncpy");
+    size_t i = 0;
+    for (; i < n; i++) {
+        if ((i + 1) * 2 > sspan)
+            rt_fatal("libc", "wcsncpy: source has no NUL within its readable region before n units");
+        const unsigned short unit = ((const unsigned short *)sp)[i];
+        ((unsigned short *)dp)[i] = unit;
+        if (unit == 0) {
+            i++;
+            break;
+        }
+    }
+    for (; i < n; i++)
+        ((unsigned short *)dp)[i] = 0;
+    if (!wcsncpy_reported++)
+        fprintf(stderr, "pbboot: libc wcsncpy: n=%zu units (%zu bytes at width 2), source span=%zu\n", n,
+                n * 2, sspan);
+    return dst;
+}
+
+RT_SYSLIB("libc", wcsncpy, libc_wcsncpy);
 /* wcslen. Nothing in this tree states this target's `wchar_t` width, so the first version ASSUMED 4 bytes
    and printed its evidence -- and the evidence refuted the assumption inside one run: the first code unit
    read 0x00650074, which is the bytes 74 00 65 00, i.e. UTF-16LE "te", not 4-byte "t" (0x00000074).
@@ -318,6 +441,34 @@ static void *libc_wmemcpy(void *d, const void *s, size_t n)
 }
 
 RT_SYSLIB("libc", wmemcpy, libc_wmemcpy);
+
+/* memchr, libc 459 (NID 8u8lPzUEq+U): the byte scan the guest reached after the guest stack was
+   registered. The measured call is rdi=0x80493e08e, esi=0x43 ('C'), rdx=3 -- three bytes, so the result
+   is either the first 'C' or NULL. n==0 returns NULL without dereferencing, per C; a non-empty range is
+   proved readable first, so a bad pointer names memchr instead of faulting in it. */
+static unsigned memchr_reported;
+
+static void *libc_memchr(const void *s, int c, size_t n)
+{
+    if (n == 0)
+        return NULL;
+    if (!rt_guest_ptr_ok((uintptr_t)s, n, "memchr"))
+        return NULL;
+    const unsigned char *p = s;
+    for (size_t i = 0; i < n; i++) {
+        if (p[i] == (unsigned char)c) {
+            if (!memchr_reported++)
+                fprintf(stderr, "pbboot: libc memchr: n=%zu c=0x%02x, first match at +%zu\n", n,
+                        (unsigned)c, i);
+            return (void *)(p + i);
+        }
+    }
+    if (!memchr_reported++)
+        fprintf(stderr, "pbboot: libc memchr: n=%zu c=0x%02x, no match\n", n, (unsigned)c);
+    return NULL;
+}
+
+RT_SYSLIB("libc", memchr, libc_memchr);
 /* wmemmove, libc ordinal 240 (NID Noj9PsJrsa8) -- the wall the modelled thread exposed, in the same
    2-byte unit family and with the same rule: the unit is inherited from wcslen's measurement, never the
    host's sizeof(wchar_t). Overlap is the only difference from wmemcpy, so the whole body is a byte
@@ -723,15 +874,11 @@ RT_SYSLIB("libc", _Getpctype, libc_Getpctype);
    on host memory already proved readable -- re-implementing it would be a second definition of ordering. */
 static int libc_memcmp(const void *a, const void *b, size_t n)
 {
-    const uint64_t image = rt_map_image();
-    const uint64_t ga = guest_address_of((uint64_t)(uintptr_t)a, "memcmp");
-    const uint64_t gb = guest_address_of((uint64_t)(uintptr_t)b, "memcmp");
-    const size_t sa = image ? rt_guest_readable_span(ga) : 0;
-    const size_t sb = image ? rt_guest_readable_span(gb) : 0;
+    size_t sa = 0, sb = 0;
+    const unsigned char *pa = guest_read_bytes(a, "memcmp", &sa);
+    const unsigned char *pb = guest_read_bytes(b, "memcmp", &sb);
     if (!sa || n > sa) rt_fatal("memcmp", "the first range is not readable for the requested length");
     if (!sb || n > sb) rt_fatal("memcmp", "the second range is not readable for the requested length");
-    const unsigned char *pa = (const unsigned char *)(uintptr_t)(image + (ga - RT_EBOOT_BASE));
-    const unsigned char *pb = (const unsigned char *)(uintptr_t)(image + (gb - RT_EBOOT_BASE));
     const int r = memcmp(pa, pb, n);
     fprintf(stderr, "memcmp: %zu bytes -> %d\n", n, r);
     return r;
