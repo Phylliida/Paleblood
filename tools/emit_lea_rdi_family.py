@@ -9,12 +9,14 @@ Pre-registered end state, asserted rather than read:
   members 483 · all unlanded before · every K >= 0xc · distinct K 114 · sizes {5, 8}
 Each of those is an assertion; a mismatch names which one moved.
 """
-import argparse, csv, json, os, re, sys, collections
+import argparse, csv, io, json, os, re, sys, collections
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from case_dir import case_dir
+import atomicio
+import install_mode
 
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 FILE_BIAS = 0x3FC000
@@ -70,53 +72,47 @@ def main():
             return 1
     target = os.path.join(ROOT, 'game', 'leaf', 'lea_rdi_family.cpp')
     if a.apply:
-        # Four tables from one iteration, each written from `ms` itself, so they cannot differ.
-        open(target, 'w').write(body_text(ms))
-        cs_path, mode_path = os.path.join(ROOT, 'symbols', 'functions.csv'), os.path.join(ROOT, 'symbols', 'install_mode.csv')
+        # Every refusal first. The old shape opened `target` before reading the tables, so a clash
+        # truncated the translation unit it was refusing to write; the dead second `if a.apply`
+        # below `return 0` was the only `makedirs`, so the live path also failed on a fresh tree.
+        cs_path = os.path.join(ROOT, 'symbols', 'functions.csv')
         cs = list(csv.DictReader(open(cs_path)))
         known = {int(r['address'], 16) for r in cs}
-        modes = list(csv.DictReader(open(mode_path)))
-        known_mode = {int(r['address'], 16) for r in modes}
+        modes = list(install_mode.rows(ROOT))
+        known_mode = {r['address'] for r in modes}
         cases = case_dir('lea_rdi')
-        cases.ensure()
         new_cs = [{'address': f'{m["address"]:#010x}', 'size': str(m['size']), 'name': f'leaf_lea_rdi_{m["address"]:08x}',
                    'system': 'leaf', 'status': 'edge-verified', 'notes': 'generated: return arg0 + K'} for m in ms]
-        new_mode = [{'address': f'{m["address"]:#010x}', 'mode': 'host'} for m in ms]
         clash = [m for m in ms if m['address'] in known or m['address'] in known_mode]
         if clash:
             print(f'REFUSED: {len(clash)} of {len(ms)} already present, e.g. {clash[0]["address"]:#x}', file=sys.stderr)
             return 1
-        for name, made, want in (('bodies', len(ms), len(ms)), ('functions rows', len(new_cs), len(ms)),
-                                 ('mode rows', len(new_mode), len(ms))):
-            if made != want:
-                print(f'REFUSED: {name} {made} != {want}', file=sys.stderr); return 1
+        if len(new_cs) != len(ms):
+            print(f'REFUSED: functions rows {len(new_cs)} != {len(ms)}', file=sys.stderr); return 1
+        # The mode table is written through its one writer; the callers pass addresses, never a path.
+        added_mode = install_mode.append_host(ROOT, [m['address'] for m in ms])
         allrows = sorted(cs + new_cs, key=lambda r: int(r['address'], 16))
-        with open(cs_path, 'w', newline='') as f:
-            w = csv.DictWriter(f, fieldnames=cs[0].keys(), lineterminator='\n'); w.writeheader(); w.writerows(allrows)
-        allm = sorted(modes + new_mode, key=lambda r: int(r['address'], 16))
-        with open(mode_path, 'w', newline='') as f:
-            w = csv.DictWriter(f, fieldnames=modes[0].keys(), lineterminator='\n'); w.writeheader(); w.writerows(allm)
+        buf = io.StringIO()
+        w = csv.DictWriter(buf, fieldnames=cs[0].keys(), lineterminator='\n')
+        w.writeheader(); w.writerows(allrows)
+        atomicio.atomic_write(cs_path, buf.getvalue())
+        cases.ensure()
         made = 0
         for i, m in enumerate(ms):
-            a0 = int(m['address'])
-            cases = {'small': 0x1000 + (i % 7), 'wrap': 0xFFFFFFFFFFFFFFFF - m['k'] + 1}
+            vals = {'small': 0x1000 + (i % 7), 'wrap': 0xFFFFFFFFFFFFFFFF - m['k'] + 1}
             if i < 3:
-                cases['window'] = 0x800000000 - m['k'] + 0x1000
-            for tag, val in cases.items():
+                vals['window'] = 0x800000000 - m['k'] + 0x1000
+            for tag, val in vals.items():
                 name = f'leaf_lea_rdi_{m["address"]:08x}_{tag}'
-                json.dump({'schema': 1, 'address': f'{m["address"]:#010x}', 'id': name, 'returns': 'i64',
-                           'args': {'rdi': f'{val & 0xFFFFFFFFFFFFFFFF:#x}'}},
-                          open(cases.bare(name + '.json'), 'w'), indent=1)
+                atomicio.atomic_write(cases.bare(name + '.json'), json.dumps(
+                    {'schema': 1, 'address': f'{m["address"]:#010x}', 'id': name, 'returns': 'i64',
+                     'args': {'rdi': f'{val & 0xFFFFFFFFFFFFFFFF:#x}'}}, indent=1))
                 made += 1
+        atomicio.atomic_write(target, body_text(ms))
         print(f'wrote body ({len(ms)} members), functions.csv +{len(new_cs)} (now {len(allrows)}), '
-              f'install_mode.csv +{len(new_mode)} (now {len(allm)}), cases {made}')
+              f'install_mode.csv +{added_mode} (now {len(modes) + added_mode}), cases {made}')
         return 0
-    if a.apply:
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        open(target, 'w').write(body_text(ms))
-        print(f'wrote {os.path.relpath(target, ROOT)} ({len(ms)} members)')
-    else:
-        print('dry run: pass --apply to write the body')
+    print('dry run: pass --apply to write the body')
     return 0
 
 
