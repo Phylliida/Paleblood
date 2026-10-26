@@ -13,8 +13,6 @@ tier to move together (see tools/thunk_census.py); 'addressable' rows pass every
 has and are simply not done yet.
 """
 import argparse
-import csv
-import gzip
 import pathlib
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))  # -P strips the script dir; no PYTHONPATH help
@@ -27,15 +25,14 @@ BAND = pathlib.Path('symbols') / 'branch_band.csv.gz'
 
 def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
     """The four frontier figures. ONE implementation: derive.py calls this, it does not recount."""
-    with gzip.open(band, 'rt', newline='') as f:
-        rows = list(csv.DictReader(f))
+    rows = list(C.read_rows(band))
     ext = J.load_extents(extents_path)
     # RETIRED ROWS ARE NOT CANDIDATES. A retired body is a verdict about the body, not a debt against
     # this instrument: advertising one as a candidate re-offers work already judged done-and-wrong.
     # The exclusion is counted and printed -- a filter that removes rows silently is the same defect as
     # one that removes none.
     retired = {r['address'] for r in C.read_rows(str(pathlib.Path(band).parent / 'retired.csv'))}
-    free_unlanded_all = [(int(r['address'], 16), int(r['size'])) for r in rows
+    free_unlanded_all = [(r['address'], r['size']) for r in rows
                          if r['branch'] == '0' and r['landed'] == 'False']
     free_unlanded = [(a, s) for a, s in free_unlanded_all if a not in retired]
     # A BODY IS NOT A CANDIDATE, whatever its status. The band's `landed` column means "status is not
@@ -47,7 +44,7 @@ def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
     if 'has_body' not in (rows[0] if rows else {}):
         raise SystemExit('frontier: branch_band.csv.gz has no has_body column -- regenerate it with '
                          'tools/branch_census.py; a band without it cannot tell a body from a status')
-    bodies = {int(r['address'], 16) for r in rows if str(r['has_body']) == 'True'}
+    bodies = {r['address'] for r in rows if str(r['has_body']) == 'True'}
     bodied = [(a, s) for a, s in free_unlanded if a in bodies]
     free_unlanded = [(a, s) for a, s in free_unlanded if a not in bodies]
     indep = [(a, s) for a, s in free_unlanded if len(J.owners(ext, a)) == 1]

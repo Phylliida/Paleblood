@@ -4,8 +4,6 @@ Two invariants beyond the diff, because a stale frontier and a wrong frontier lo
 no frontier row may be landed, and no frontier row may contain a branch -- in the artifact that
 defines both facts (symbols/branch_band.csv.gz), not in this file's own opinion.
 """
-import csv
-import gzip
 import os
 import pathlib
 import re
@@ -15,6 +13,8 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+
+import catalogue as C  # noqa: E402 -- PYTHONPATH is the runner's; this file is discovery-shaped
 
 
 class LeafFrontierTest(unittest.TestCase):
@@ -32,8 +32,8 @@ class LeafFrontierTest(unittest.TestCase):
                              "tools/leaf_frontier.py --out symbols/leaf_frontier.csv")
 
     def test_frontier_rows_are_unlanded_and_branch_free(self):
-        with gzip.open(REPO / "symbols" / "branch_band.csv.gz", "rt", newline="") as f:
-            band = {int(r["address"], 16): (r["branch"], r["landed"]) for r in csv.DictReader(f)}
+        band = {r["address"]: (r["branch"], r["landed"])
+                for r in C.read_rows(REPO / "symbols" / "branch_band.csv.gz")}
         lines = [l for l in (REPO / "symbols" / "leaf_frontier.csv").read_text().splitlines() if l]
         self.assertEqual(lines[0], "address,size,class",
                          "the frontier must declare its columns: without a header every DictReader "
@@ -64,21 +64,19 @@ class LeafFrontierTest(unittest.TestCase):
         landing, so a band built before one disagrees with functions.csv by exactly the rows since. The two
         counts also agree with the trio total by a different route, which makes 38,101 double-sourced.
         """
-        import csv as _csv, gzip as _gzip, pathlib as _p, catalogue as C
+        import pathlib as _p
         ROOT = _p.Path(__file__).resolve().parent.parent
-        with _gzip.open(ROOT / 'symbols/branch_band.csv.gz', 'rt', newline='') as f:
-            has_body = sum(1 for r in _csv.DictReader(f) if r['has_body'] == 'True')
+        has_body = sum(1 for r in C.read_rows(ROOT / 'symbols/branch_band.csv.gz')
+                       if r['has_body'] == 'True')
         bodies = len({r['address'] for r in C.read_rows(str(ROOT / 'symbols/functions.csv'))})
         self.assertEqual(has_body, bodies, f'band says {has_body} bodies, the catalogue has {bodies} -- '
                          'regenerate symbols/branch_band.csv.gz with tools/branch_census.py')
 
     def test_no_advertised_row_has_a_body(self):
-        import csv as _csv, gzip as _gzip, pathlib as _p, catalogue as C
+        import pathlib as _p
         ROOT = _p.Path(__file__).resolve().parent.parent
-        with _gzip.open(ROOT / 'symbols/branch_band.csv.gz', 'rt', newline='') as f:
-            marks = {int(r['address'], 16): r['has_body'] for r in _csv.DictReader(f)}
-        with open(ROOT / 'symbols/leaf_frontier.csv', newline='') as f:
-            adv = {int(r['address'], 16) for r in _csv.DictReader(f)}
+        marks = {r['address']: r['has_body'] for r in C.read_rows(ROOT / 'symbols/branch_band.csv.gz')}
+        adv = {r['address'] for r in C.read_rows(ROOT / 'symbols/leaf_frontier.csv')}
         bodies = {r['address'] for r in C.read_rows(str(ROOT / 'symbols/functions.csv'))}
         self.assertEqual(adv & bodies, set(), 'the frontier advertises rows that already have a body')
         self.assertFalse([hex(a) for a in adv if marks.get(a) == 'True'])

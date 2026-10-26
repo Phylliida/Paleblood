@@ -6,7 +6,6 @@ test/test_case_emit.py
 test/test_doc_numbers.py
 test/test_evidence_join.py
 test/test_install_mode.py
-test/test_leaf_frontier.py
 test/test_shape_approval.py
 test/test_symbol_names.py
 test/test_tools.py
@@ -34,7 +33,6 @@ tools/land_bytes_band.py
 tools/landed.py
 tools/leaders.py
 tools/leaf_family_census.py
-tools/leaf_frontier.py
 tools/leaf_mov_rax_gen.py
 tools/make_review_packet.py
 tools/merge_functions.py
