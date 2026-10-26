@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
@@ -589,6 +590,54 @@ static ldiv_t libc_ldiv(long numer, long denom)
         fprintf(stderr, "pbboot: libc ldiv: %ld / %ld = quot %ld rem %ld\n", numer, denom, r.quot, r.rem);
     return r;
 }
+
+/* `time` (libSceLibcInternal 18, NID wLlFkwG9UcQ). One argument: a time_t* the guest may pass as
+   NULL. The value is the host's wall clock, which is the same quantity the guest asks for; the
+   return is a value, not a pointer, so no guest memory is involved unless the argument is non-NULL.
+   rsi/rdx at the call site were 1 and 0x2fd3fbff -- stale registers, not a second and third argument. */
+static int64_t libc_time(int64_t *out)
+{
+    const int64_t now = (int64_t)time(NULL);
+    if (out) {
+        int64_t *p = (int64_t *)guest_write_bytes(out, sizeof *p, "time");
+        *p = now;
+    }
+    fprintf(stderr, "pbboot: libc time: %lld (host wall clock), out %s\n", (long long)now,
+            out ? "written" : "NULL");
+    return now;
+}
+
+/* `clock` (libc 140, NID QZP6I9ZZxpE). No arguments; the guest's clock is the runtime's process
+   clock, which is the same process for the same reason `time` is the same wall clock. */
+static int64_t libc_clock(void)
+{
+    const int64_t ticks = (int64_t)clock();
+    fprintf(stderr, "pbboot: libc clock: %lld (host process clock, CLOCKS_PER_SEC %ld)\n",
+            (long long)ticks, (long)CLOCKS_PER_SEC);
+    return ticks;
+}
+
+/* `strcpy` (libc 69, NID kiZSXIWd9vg). The source is scanned only inside its readable span; a string
+   with no NUL there refuses by name rather than walking into adjacent mapped memory and returning a
+   length that happened to terminate. The destination is proved writable for the terminator too. */
+static char *libc_strcpy(char *dst, const char *src)
+{
+    size_t sspan = 0;
+    const unsigned char *s = guest_read_bytes(src, "strcpy", &sspan);
+    size_t n = 0;
+    while (n < sspan && s[n]) n++;
+    if (n == sspan)
+        rt_fatal("libc", "strcpy: source has no NUL within its readable region; refusing to copy past it");
+    unsigned char *d = guest_write_bytes(dst, n + 1, "strcpy");
+    for (size_t i = 0; i <= n; i++) d[i] = s[i];
+    return dst;
+}
+
+RT_SYSLIB("libc", strcpy, libc_strcpy);
+
+RT_SYSLIB("libc", clock, libc_clock);
+
+RT_SYSLIB("libc", time, libc_time);
 
 RT_SYSLIB("libc", ldiv, libc_ldiv);
 /* wcstol, libc 504 (d3dMyWORw8A): the first wide import the guest reaches that is not a wmem* copy or scan.
