@@ -1331,6 +1331,36 @@ int main(int argc, char **argv)
                (unsigned long long)fault_regs[REG_R10], (unsigned long long)fault_regs[REG_R11],
                (unsigned long long)fault_regs[REG_R12], (unsigned long long)fault_regs[REG_R13],
                (unsigned long long)fault_regs[REG_R14], (unsigned long long)fault_regs[REG_R15]);
+        /* The faulting instruction did not push; [rsp] is its return address. The guest stack is
+           registered, so ask the registry rather than dereferencing a raw address in a signal handler. */
+        {
+            const uintptr_t sp = (uintptr_t)fault_regs[REG_RSP];
+            const uintptr_t bp = (uintptr_t)fault_regs[REG_RBP];
+            uint64_t r0 = 0, r1 = 0, r2 = 0;
+            if (rt_guest_span(sp) >= sizeof r0) memcpy(&r0, (const void *)sp, sizeof r0);
+            if (rt_guest_span(bp) >= 2 * sizeof r1) {
+                memcpy(&r1, (const void *)bp, sizeof r1);
+                memcpy(&r2, (const void *)(bp + 8), sizeof r2);
+            }
+            printf("pbboot: fault stack [rsp] 0x%llx [rbp] 0x%llx [rbp+8] 0x%llx\n",
+                   (unsigned long long)r0, (unsigned long long)r1, (unsigned long long)r2);
+            /* The guest compiles with frame pointers in this image, and the guest stack is the host
+               stack, so the rbp chain is readable through the registry. Five frames is enough to leave
+               the accessor wrapper and reach the object owner; stop on a non-monotonic or unmapped
+               link rather than trusting a chain that has already been corrupted. */
+            {
+                uintptr_t fp = bp;
+                for (int k = 0; k < 5 && rt_guest_span(fp) >= 2 * sizeof(uint64_t); k++) {
+                    uint64_t saved = 0, ret = 0;
+                    memcpy(&saved, (const void *)fp, sizeof saved);
+                    memcpy(&ret, (const void *)(fp + 8), sizeof ret);
+                    printf("pbboot: fault guest frame %d rbp 0x%llx ret 0x%llx\n", k,
+                           (unsigned long long)fp, (unsigned long long)ret);
+                    if (saved <= fp || rt_guest_span(saved) < 2 * sizeof(uint64_t)) break;
+                    fp = (uintptr_t)saved;
+                }
+            }
+        }
     }
     if (outcome == TIMEOUT) printf(" after %d s, at %s", timeout, at);
     if (outcome == EXITED) printf(" with code %d", exit_code);

@@ -1,24 +1,43 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* Network initialization, modelled as a failure on purpose.
+/* Network initialization: refuse at the call, because -1 was a fabricated failure.
 
    The boot reached libSceNet sceNetInit (NID Nlev7Lg8k3A, bind 162) at eboot+0xfd1ffa
-   (catalogue 0x13d1fff). The caller reads the return code and jumps to a common failure arm on any
-   negative value, and that arm skips the rest of the network setup. This runtime has no network state,
-   so success would be the claim that needs evidence; a negative return is the guest's own error path,
-   and the guest is allowed to take it. The print says which path was taken and why. */
+   (catalogue 0x13d1fff).  This file used to return -1 on the argument that the caller tests the
+   return and takes its own error arm.  It does -- and then, much later, it dereferences the network
+   singleton the skipped setup was supposed to publish:
+
+       SIGSEGV at eboot+0x2167870, mov rax,[rdi+0xdc10], rdi == 0
+
+   That is a null global pointer, not a struct field.  Returning -1 did not keep the guest on its
+   error path; it left a pointer null and moved the observable failure hundreds of megabytes of guest
+   code away from the import that caused it.  A fabricated failure is not more honest than a
+   fabricated success: both answer in place of absence, and this one answered a question the guest
+   only asked because a real console would have answered 0.
+
+   The honest default is therefore a refusal at the call, before the guest can store a state it does
+   not have.  BB_NET_ASSUME_OK=1 is a diagnostic probe: it returns success with no network state and
+   exists to find the next named wall, never to be a model.  Measured with it: the 0x2167870 fault
+   disappears and the boot reaches libSceNet dgJBaeJnGpo at eboot+0xfd2014 (catalogue 0x13d2014),
+   unimplemented.  That is the shape of the missing state; it is not implemented here. */
+#include "runtime/process.h"
 #include "runtime/syslib.h"
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static unsigned reported;
 
 static int net_init_refused(const void *params)
 {
-    if (!reported++)
-        fprintf(stderr, "pbboot: libSceNet sceNetInit: MODELLED failure (-1), no network state; params=%p "
-                        "not dereferenced -- the caller's negative-return arm skips network setup\n", params);
-    return -1;
+    if (getenv("BB_NET_ASSUME_OK")) {
+        if (!reported++)
+            fprintf(stderr, "pbboot: libSceNet sceNetInit: PROBE success (0), no network state; params=%p "
+                            "not dereferenced -- BB_NET_ASSUME_OK is a diagnostic, not a model\n", params);
+        return 0;
+    }
+    rt_fatal("libSceNet", "sceNetInit: no network state; refusing at the call instead of returning -1, "
+                          "which leaves the guest's network singleton null and faults far from here");
 }
 
 RT_SYSLIB_MODELLED("libSceNet", sceNetInit, net_init_refused);
