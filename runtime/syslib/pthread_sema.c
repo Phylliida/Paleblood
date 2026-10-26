@@ -1,13 +1,18 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* Single-threadedness, asserted in one place, and the blocking family it makes cheap.
+/* The blocking semaphore family, with real threads in front of it.
 
-   Exactly one call could ever make this runtime multi-threaded: scePthreadCreate. It refuses here, so
-   everything below is correct under the assertion rather than assumed by each function separately. The
-   assertion is a variable, not a comment, because a claim a compiler can check beats one a reader has to.
+   This file used to assert single-threadedness because scePthreadCreate refused.  Real threads now
+   exist, so each row owns a pthread mutex and condvar, and Wait actually sleeps; the ticket in a
+   row is the guest's count, not a host mutex held across a syscall.  A refusal is a return code;
+   a wait that cannot be served is a block, and the one-shot BLOCKING line names the handle, the
+   thread and the count at the decision.  It deliberately does not print guest_pc: rt_guest_call_pc()
+   is one global pair and, under two real threads, named the wrong import for the parked wait.
 
-   A no-op that records when it *would* have blocked is a measurement; a silent one is a wish. So Wait
-   prints the case it could not serve -- count short of the request -- which is exactly the situation that
-   would hang a real kernel and is therefore evidence of guest logic rather than of our stub. */
+   BB_SEMA_TIMER is a probe, not coverage: a declared host supplier that issues one token per pool
+   semaphore in create order.  It exists because the boot parks on a sequence of pool completions
+   that no code in the process produces; with it the guest runs hundreds of thousands of imports
+   and reaches later walls.  Nothing in the product is registered for it, and a normal boot never
+   starts the thread. */
 #include "runtime/address_spaces.h"
 #include "runtime/guest_mem.h"
 #include "runtime/inflight.h"
@@ -104,8 +109,12 @@ static int sema_create(int64_t out, int64_t name, int64_t attr, int64_t init_cou
    Map/Allocate/gettimeofday take pointers. We learned this the expensive way -- rdi held
    0x53454d4100000012 ("SEMA" | 19) and the old body dereferenced it as a pointer to storage.
    Arity is knowable from the import record; a first argument's kind is not, so it is written here. */
+static int sema_signal(int64_t sema_id, int64_t count);
+static void sema_timer_start(void);
+
 static int sema_wait(int64_t sema_id, int64_t need, int64_t timeout)
 {
+    sema_timer_start();
     uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Wait");
@@ -179,6 +188,44 @@ static int sema_signal(int64_t sema_id, int64_t count)
     pthread_cond_broadcast(&rows[i].cond);
     pthread_mutex_unlock(&rows[i].lock);
     return 0;
+}
+
+
+/* MODELLED SUPPLIER (BB_SEMA_TIMER).  The boot parks on a sequence of pool semaphores
+   (0x3, 0x8, ...) whose tokens no code in the process produces; the hand-token experiment
+   showed the guest accepts one token as one completion and advances to the next pool member.
+   This thread stands in for whatever outside event was supposed to deliver those completions:
+   it issues one token per pool semaphore, in create order, at a declared period, and prints
+   each one.  It is a model of a supplier, not of an import; nothing binds to it. */
+static void *sema_timer_main(void *arg)
+{
+    long period_ms = (long)(intptr_t)arg;
+    for (int i = 0; i < 17; i++) {
+        struct timespec ts;
+        ts.tv_sec = period_ms / 1000;
+        ts.tv_nsec = (period_ms % 1000) * 1000000L;
+        nanosleep(&ts, NULL);
+        uint64_t h = 0x53454d4100000000ull | (uint64_t)(i + 1);
+        fprintf(stderr, "pbboot: sema: TIMER (MODELLED) %ld ms -> Signal %016llx\\n",
+                period_ms, (unsigned long long)h);
+        (void)sema_signal((int64_t)h, 1);
+    }
+    return NULL;
+}
+
+static void sema_timer_start(void)
+{
+    static long period_ms;
+    static int started;
+    const char *e = getenv("BB_SEMA_TIMER");
+    if (!e || !*e || started) return;
+    period_ms = strtol(e, NULL, 10);
+    if (period_ms <= 0 || period_ms > 1000) period_ms = 2;
+    pthread_t t;
+    started = 1;
+    fprintf(stderr, "pbboot: sema: TIMER (MODELLED) registered: one token per pool sema, period %ld ms\\n", period_ms);
+    pthread_create(&t, NULL, sema_timer_main, (void *)(intptr_t)period_ms);
+    pthread_detach(t);
 }
 
 static int sema_poll(int64_t sema_id, int64_t need)
