@@ -22,7 +22,7 @@ TOOL_MODULES = {p.stem for p in (ROOT / "tools").glob("*.py")}
 # no exemption set: every tool with a __main__ guard starts bare and does not need the environment. The
 # 40 grandfathered sibling imports were fixed rather than tracked, and the shrink-only list was deleted
 # rather than left empty -- an empty allowlist is a tool waiting to be re-populated.
-GATES = ("check_externs.py", "check_catalogue.py", "check_import_order.py")
+GATES = ("check_externs.py", "check_catalogue.py", "check_import_order.py", "check_table_paths.py")
 
 
 class BareGates(unittest.TestCase):
