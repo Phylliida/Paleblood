@@ -14,20 +14,19 @@
 #include "runtime/process.h"
 #include "runtime/syslib.h"
 
+#include <errno.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define HANDLE_MAGIC 0x53454d41u /* "SEMA" */
-#define HANDLE_ROWS 32
+#define HANDLE_ROWS 256
 
 enum { k_err_inval = (int)0x80020016u, k_err_nomem = (int)0x8002000cu,
        k_err_fault = (int)0x8002000eu };
-
-/* THE ASSERTION. Only scePthreadCreate could clear it, and it refuses instead -- so the family below is
-   correct *under* it rather than each function assuming it privately. Every entry point checks. */
-static int guest_threads = 1;
 
 /* The ladder's first rung, measured rather than remembered: the refusal sets this before it stops, and the
    sites report reads it through a weak symbol. In an artifact that does not link this file the symbol is
@@ -36,12 +35,9 @@ static volatile int thread_wall_reached;
 
 int rt_thread_wall_reached(void) { return thread_wall_reached; }
 
-static void require_single_threaded(const char *call)
-{
-    if (!guest_threads) rt_fatal(call, "the guest is no longer single-threaded and this model is");
-}
-
 static struct {
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
     int count, max, used;
 } rows[HANDLE_ROWS];
 
@@ -78,15 +74,29 @@ static int sema_create(int64_t out, int64_t name, int64_t attr, int64_t init_cou
 {
     (void)name; (void)attr; (void)opt;
     if (out == 0) return k_err_inval;
-    if (max_count <= 0 || init_count < 0 || init_count > max_count) return k_err_inval;
+    if (max_count <= 0 || init_count < 0 || init_count > max_count) {
+        fprintf(stderr, "pbboot: sema: Create refused: name=%#llx init=%lld max=%lld\n",
+                (unsigned long long)name, (long long)init_count, (long long)max_count);
+        return k_err_inval;
+    }
     for (int i = 0; i < HANDLE_ROWS; i++) {
         if (rows[i].used) continue;
+        pthread_mutex_init(&rows[i].lock, NULL);
+        pthread_cond_init(&rows[i].cond, NULL);
         rows[i].used = 1;
         rows[i].count = (int)init_count;
         rows[i].max = (int)max_count;
         *(uint64_t *)(uintptr_t)out = ((uint64_t)HANDLE_MAGIC << 32) | (uint64_t)(i + 1);
+        if (getenv("BB_SEMA_TRACE")) {
+            long tid; __asm__ volatile("syscall" : "=a"(tid) : "a"(186L) : "rcx", "r11", "memory");
+            fprintf(stderr, "pbboot: sema: Create %016llx init=%lld max=%lld tid=%ld\n",
+                    (unsigned long long)*(uint64_t *)(uintptr_t)out, (long long)init_count,
+                    (long long)max_count, tid);
+        }
         return 0;
     }
+    fprintf(stderr, "pbboot: sema: Create table full (%d rows), refusing name=%#llx\n", HANDLE_ROWS,
+            (unsigned long long)name);
     return k_err_nomem;
 }
 
@@ -96,46 +106,96 @@ static int sema_create(int64_t out, int64_t name, int64_t attr, int64_t init_cou
    Arity is knowable from the import record; a first argument's kind is not, so it is written here. */
 static int sema_wait(int64_t sema_id, int64_t need, int64_t timeout)
 {
-    require_single_threaded("Sema wait");
-    (void)timeout;
     uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Wait");
-    if (rows[i].count < (int)need) {
-        /* Correct here, a hang on a real kernel: this is the guest asking to block. */
-        fprintf(stderr, "pbboot: sema: Wait on %016llx asked %lld, count %d -- would have blocked, "
-                        "served as success because the guest is single-threaded\n",
-                (unsigned long long)h, (long long)need, rows[i].count);
-        rows[i].count = 0;
-        return 0;
+    if (need <= 0) return k_err_inval;
+    pthread_mutex_lock(&rows[i].lock);
+    {
+        static int waits_seen;
+        if (getenv("BB_SEMA_TRACE") && waits_seen++ < 64) {
+            long tid; __asm__ volatile("syscall" : "=a"(tid) : "a"(186L) : "rcx", "r11", "memory");
+            fprintf(stderr, "pbboot: sema: Wait %016llx tid=%ld need=%lld count=%d\n",
+                    (unsigned long long)h, tid, (long long)need, rows[i].count);
+        }
+    }
+    while (rows[i].count < (int)need) {
+        /* Timeout 0 is not "poll" in this ABI: the adaptive mutex passes 0 on its blocking slow path
+           and treats ANY error as a logical panic. 0 and -1 both mean wait without a deadline; only a
+           positive value is a usecond deadline. Treating 0 as now+0 returned ETIMEDOUT before the
+           signaller could run, and the guest panicked at CSPlainAdaptiveMutexImp_sce.cpp:169. */
+        if (timeout <= 0) {
+            static int announced[HANDLE_ROWS];
+            if (!announced[i]) {
+                announced[i] = 1;
+                { long tid; __asm__ volatile("syscall" : "=a"(tid) : "a"(186L) : "rcx", "r11", "memory");
+                  /* No guest_pc here: rt_guest_call_pc() reads one global, and a sema wait on the main
+                     thread printed wmemcmp's return address because the worker had run an import since.
+                     Under real threads that number names the last caller, not this thread's. It stays
+                     out of the line until the in-flight record is per-thread. */
+                  fprintf(stderr, "pbboot: sema: Wait %016llx BLOCKING tid=%ld (need %lld count %d)\n",
+                          (unsigned long long)h, tid, (long long)need, rows[i].count); }
+            }
+            pthread_cond_wait(&rows[i].cond, &rows[i].lock);
+        } else {
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            uint64_t ns = (uint64_t)ts.tv_nsec + (uint64_t)(timeout % 1000000) * 1000ull;
+            ts.tv_sec += (time_t)(timeout / 1000000) + (time_t)(ns / 1000000000ull);
+            ts.tv_nsec = (long)(ns % 1000000000ull);
+            int rc = pthread_cond_timedwait(&rows[i].cond, &rows[i].lock, &ts);
+            if (rc == ETIMEDOUT) {
+                pthread_mutex_unlock(&rows[i].lock);
+                fprintf(stderr, "pbboot: sema: Wait on %016llx timed out (need %lld, count %d, timeout %lld us)\n",
+                        (unsigned long long)h, (long long)need, rows[i].count, (long long)timeout);
+                return (int)0x8002003cu; /* ETIMEDOUT is BSD 60, so 0x80020000 | 60 -- the code
+                                             the guest's own switch knows; 0x8002001c was ENOSPC, a
+                                             numeral guessed from position, and the guest printed
+                                             "Unknown Error" because its table had no such row */
+            }
+        }
     }
     rows[i].count -= (int)need;
+    pthread_mutex_unlock(&rows[i].lock);
     return 0;
 }
 
 static int sema_signal(int64_t sema_id, int64_t count)
 {
-    require_single_threaded("Sema signal");
     uint64_t h = (uint64_t)sema_id;
+    static int seen;
+    if (seen < 12) { seen++; fprintf(stderr, "pbboot: sema: Signal entry %016llx count %lld\n",
+                                      (unsigned long long)h, (long long)count); }
     int i = row_of(h);
     if (i < 0) return refuse(h, "Signal");
+    if (count <= 0) return k_err_inval;
+    pthread_mutex_lock(&rows[i].lock);
     rows[i].count += (int)count;
     if (rows[i].count > rows[i].max) {
         fprintf(stderr, "pbboot: sema: Signal over max on %016llx (%d > %d), clamped\n",
                 (unsigned long long)h, rows[i].count, rows[i].max);
         rows[i].count = rows[i].max;
     }
+    pthread_cond_broadcast(&rows[i].cond);
+    pthread_mutex_unlock(&rows[i].lock);
     return 0;
 }
 
 static int sema_poll(int64_t sema_id, int64_t need)
 {
-    require_single_threaded("Sema poll");
     uint64_t h = (uint64_t)sema_id;
     int i = row_of(h);
     if (i < 0) return refuse(h, "Poll");
-    if (rows[i].count < (int)need) return (int)0x8002000eu; /* would block: a poll's honest answer */
+    pthread_mutex_lock(&rows[i].lock);
+    if (rows[i].count < (int)need) {
+        pthread_mutex_unlock(&rows[i].lock);
+        /* A poll that cannot take the count is busy, not faulting: EFAULT (0x8002000e) was a lie
+           about the guest's own storage and the adaptive mutex read it as a logical error. EBUSY is
+           BSD 16, so 0x80020010. */
+        return (int)0x80020010u;
+    }
     rows[i].count -= (int)need;
+    pthread_mutex_unlock(&rows[i].lock);
     return 0;
 }
 
@@ -147,6 +207,8 @@ static int sema_delete(int64_t sema_id)
     /* The id is by value, so there is no guest word to clear: destroying must make the id itself dead,
        and it does, because row_of() checks `used` before anything else. Clearing through a pointer here
        is what the old body did and it was the same defect as dereferencing the id in Wait. */
+    pthread_mutex_destroy(&rows[i].lock);
+    pthread_cond_destroy(&rows[i].cond);
     rows[i].used = 0;
     return 0;
 }
@@ -178,6 +240,12 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
             has_size > 0 ? (unsigned long long)size : 0ull,
             has_policy < 0 ? "absent " : has_policy ? "asked " : "not asked ",
             has_policy > 0 ? policy : 0);
+
+    /* Real threads: a host pthread per guest thread, with its own guest TLS block and %fs. The
+       hypothesis is that the pool's continuation was waiting for workers that never existed; the
+       falsifier is that the boot still stops at CondWait (or faults earlier) with this on. */
+    if (getenv("BB_THREAD_REAL"))
+        return rt_thread_create_real(out, entry, arg, size, has_size > 0);
 
     /* EXPERIMENT A-success. The guest's own failure path panicked; this branch gives it the success it
        asked for and creates no host thread. The handle is a tagged integer, never a plausible pointer:
@@ -237,23 +305,10 @@ RT_SYSLIB_NOOP("libkernel", sceKernelPollSema, sema_poll);
 RT_SYSLIB_NOOP("libkernel", sceKernelDeleteSema, sema_delete);
 RT_SYSLIB_UNRESOLVED("libkernel", scePthreadCreate, thread_create_refused);
 
-/* pthread_cond_init(cond, attr): the FIRST ARGUMENT IS A POINTER to caller-provided storage, unlike the
-   semaphore family whose id is by value. That difference is the ABI class the two runs paid for: arity is
-   knowable from the import record, a first argument's kind is not. Modelled: the object is zeroed through
-   the write check and no host condvar is created, because a condvar here would only ever be signalled by a
-   worker thread, and scePthreadCreate refuses to make one. */
-static int cond_init(int64_t cond, int64_t attr)
-{
-    (void)attr;
-    if (cond == 0) return (int)0x80020016u;
-    if (!rt_guest_write_ok((uintptr_t)cond, 8, "PthreadCondInit")) return (int)0x8002000eu;
-    *(uint64_t *)(uintptr_t)cond = 0;
-    fprintf(stderr, "pbboot: posix: CondInit(%llx) -> 0 (modelled: zeroed storage, no host condvar)\n",
-            (unsigned long long)cond);
-    return 0;
-}
-
-RT_SYSLIB_MODELLED("libScePosix", pthread_cond_init, cond_init);
+/* The cond family moved to kernel_mutex.c, where the mutex object it must lock also lives: a
+   condvar in this file could only wait on a host mutex it cannot name. The old body zeroed guest
+   storage and created no host condvar -- true while scePthreadCreate refused every thread, false
+   the moment a real thread exists. */
 
 /* The pthread attribute family, landed as one declaration instead of eight turns.
 

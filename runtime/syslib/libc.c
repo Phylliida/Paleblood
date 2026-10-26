@@ -907,6 +907,55 @@ static unsigned short *libc_Getpctype(void)
 }
 RT_SYSLIB("libc", _Getpctype, libc_Getpctype);
 
+/* _Getptolower, libc 147: the locale's lowercase table, MEASURED like its pctype sibling.
+
+   Provenance: data/bb/elf/libc.elf `_Getptolower` at 0x13130 is `48 8d 05 6b f6 06 00 c3`
+   (`lea rax,[rip+0x6f66b]; ret`), returning the immutable RX-image table at **0x827a2**;
+   256 x uint16 = 512 bytes, FNV-1a over the raw bytes 0xbc8a4024705ccda5 (verified here, not quoted).
+   The table is identity for 0x00..0x40 and 0x5b..0x7f, and maps 0x41..0x5a to 0x61..0x7a: the measured
+   contents are reproduced by that rule, and the hash refuses a source edit that changes one entry.
+   The return is a table pointer (no second dereference), stride TWO bytes, exactly like _Getpctype. */
+#define PTOLOWER_ENTRIES 256u
+static unsigned short *ptolower_page;
+static int ptolower_ready;
+static unsigned short *libc_Getptolower(void)
+{
+    if (!ptolower_ready) {
+        unsigned short table[PTOLOWER_ENTRIES];
+        unsigned long long h = 0xcbf29ce484222325ull;
+        for (unsigned i = 0; i < PTOLOWER_ENTRIES; i++) {
+            unsigned v = i;
+            if (i >= 0x41u && i <= 0x5au) v = i + 0x20u;
+            table[i] = (unsigned short)v;
+        }
+        for (unsigned i = 0; i < PTOLOWER_ENTRIES; i++) {
+            unsigned lo = table[i] & 0xffu, hi = (table[i] >> 8) & 0xffu;
+            h = (h ^ lo) * 0x100000001b3ull;
+            h = (h ^ hi) * 0x100000001b3ull;
+        }
+        if (h != 0xbc8a4024705ccda5ull)
+            rt_fatal("_Getptolower", "the generated lowercase table does not match the measured bytes "
+                                     "(FNV-1a mismatch); the table is evidence and a source edit may not alter it");
+        long pg = sysconf(_SC_PAGESIZE);
+        if (pg <= 0 || (size_t)pg < sizeof table)
+            rt_fatal("_Getptolower", "page size unusable for the table page");
+        ptolower_page = mmap(NULL, (size_t)pg, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (ptolower_page == MAP_FAILED)
+            rt_fatal("_Getptolower", "the table page could not be mapped");
+        memcpy(ptolower_page, table, sizeof table);
+        if (mprotect(ptolower_page, (size_t)pg, PROT_READ) != 0)
+            rt_fatal("_Getptolower", "the table page could not be made read-only; refusing to hand back a "
+                                     "writable table the original keeps in RX");
+        ptolower_ready = 1;
+        fprintf(stderr, "pbboot: libc _Getptolower: 256 entries at width 2, page %p read-only (the original is "
+                        "RX; a guest write faults here too; this address is host space, match it here)\n",
+                (void *)ptolower_page);
+    }
+    return ptolower_page;
+}
+RT_SYSLIB("libc", _Getptolower, libc_Getptolower);
+
+
 
 
 

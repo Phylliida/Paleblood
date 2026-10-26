@@ -35,6 +35,13 @@ int rt_thread_attr_detach_state(void *const *attr, const char *caller);
    the point: a default substituted for an unasked value is indistinguishable from a request this runtime
    ignored. */
 int rt_thread_attr_stack_size(void *const *attr, uint64_t *size);
+/* Creates a real host thread that runs the guest entry with its own guest TLS block and %fs.
+   Returns 0 on success; writes the guest_thread pointer to `out` through the guest write check.
+   Declared here because the syslib create path is in pthread_sema.c and the object type lives in
+   kernel_thread.c. */
+int rt_thread_create_real(int64_t out, int64_t entry, int64_t arg, uint64_t stack_size, int has_stack);
+int rt_thread_join_real(int64_t handle);
+int rt_thread_detach_real(int64_t handle);
 int rt_thread_attr_sched_policy(void *const *attr, int *policy);
 
 /* Whether the thread-model experiment is on (BB_THREAD_MODELLED unset/0/empty = off). One reader

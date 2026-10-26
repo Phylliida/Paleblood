@@ -1,3 +1,4 @@
+#define _GNU_SOURCE 1
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* System call group: kernel, threads and memory. Threads and thread attributes (libkernel,
    libScePosix).
@@ -10,14 +11,19 @@
    guessing. */
 #include "runtime/process.h"
 #include "runtime/syslib.h"
+#include "runtime/guest_mem.h"
+#include "runtime/tls.h"
 
+#include <errno.h>
+#include <pthread.h>
 #include <sched.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-enum { BSD_ENOMEM = 12, BSD_EINVAL = 22 };
+enum { BSD_ENOMEM = 12, BSD_EFAULT = 14, BSD_EINVAL = 22, BSD_EAGAIN = 35 };
 #define SCE_KERNEL_ERROR(e) ((int)(0x80020000u + (unsigned)(e)))
 
 /* PTHREAD_CREATE_JOINABLE and PTHREAD_CREATE_DETACHED in FreeBSD's <pthread.h>. The OpenOrbis
@@ -29,6 +35,11 @@ enum { DETACH_JOINABLE = 0, DETACH_DETACHED = 1 };
 typedef struct {
     void *stack;
     uint64_t stack_size;
+    pthread_t host;
+    int has_host;
+    int detached;
+    void (*entry)(void *);
+    void *arg;
 } guest_thread;
 
 typedef struct {
@@ -61,6 +72,85 @@ void rt_thread_register_main(void *stack, uint64_t stack_size)
     main_thread.stack = stack;
     main_thread.stack_size = stack_size;
     current = &main_thread;
+}
+
+/* No libc after rt_tls_enter_guest: the guest block is %fs, and even fprintf reaches glibc's thread
+   state through %fs. The first version of this witness called fprintf here and faulted in libc, which
+   looked exactly like a guest fault and was mine. Raw write(2), no TLS, no stack protector. */
+static void raw_write2(const char *s, unsigned long n)
+{
+    long r;
+    __asm__ volatile("syscall" : "=a"(r) : "a"(1L), "D"(2L), "S"(s), "d"(n) : "rcx", "r11", "memory");
+    (void)r;
+}
+
+static void *thread_trampoline(void *p)
+{
+    guest_thread *t = p;
+    fprintf(stderr, "pbboot: thread %p TRAMPOLINE entered host thread\n", (void *)t);
+    current = t;
+    rt_tls_thread_begin();
+    rt_tls_enter_guest();
+    raw_write2("pbboot: thread crossed into guest\n", 35);
+    t->entry(t->arg);
+    raw_write2("pbboot: thread entry RETURNED\n", 30);
+    rt_tls_thread_end();
+    return NULL;
+}
+
+/* A real thread, not a tagged integer: the handle the guest receives is a pointer to this object,
+   because a guest_thread* is what Join, Detach, Equal and Self all dereference. The child gets its
+   own TLS state and its own %fs through rt_tls_thread_begin/enter_guest; those are the two pieces
+   the earlier experiment did not have (it shared main's block). The hypothesis is that the pool's
+   continuation needs workers that actually run; the falsifier is that the boot still stops at
+   CondWait (or faults earlier) with this branch on. */
+int rt_thread_create_real(int64_t out, int64_t entry, int64_t arg, uint64_t stack_size, int has_stack)
+{
+    if (out == 0) return SCE_KERNEL_ERROR(BSD_EINVAL);
+    guest_thread *t = calloc(1, sizeof *t);
+    if (!t) return SCE_KERNEL_ERROR(BSD_ENOMEM);
+    t->entry = (void (*)(void *))(uintptr_t)entry;
+    t->arg = (void *)(uintptr_t)arg;
+    pthread_attr_t a;
+    pthread_attr_init(&a);
+    if (has_stack && stack_size >= 0x4000) pthread_attr_setstacksize(&a, (size_t)stack_size);
+    const int r = pthread_create(&t->host, &a, thread_trampoline, t);
+    pthread_attr_destroy(&a);
+    if (r) {
+        free(t);
+        return SCE_KERNEL_ERROR(r == EAGAIN ? BSD_EAGAIN : BSD_EINVAL);
+    }
+    t->has_host = 1;
+    if (!rt_guest_write_ok((uintptr_t)out, 8, "scePthreadCreate")) {
+        pthread_detach(t->host);
+        return SCE_KERNEL_ERROR(BSD_EFAULT);
+    }
+    *(uint64_t *)(uintptr_t)out = (uint64_t)(uintptr_t)t;
+    fprintf(stderr, "pbboot: scePthreadCreate: REAL handle %p (host thread, own TLS and %%fs), "
+                    "entry %p arg %p, stack %s0x%llx\n",
+            (void *)t, (void *)(uintptr_t)entry, (void *)(uintptr_t)arg,
+            has_stack ? "" : "not asked ", has_stack ? (unsigned long long)stack_size : 0ull);
+    return 0;
+}
+
+int rt_thread_join_real(int64_t handle)
+{
+    guest_thread *t = (guest_thread *)(uintptr_t)handle;
+    if (!t || !t->has_host) return SCE_KERNEL_ERROR(BSD_EINVAL);
+    const int r = pthread_join(t->host, NULL);
+    if (r) return SCE_KERNEL_ERROR(r == EINVAL ? BSD_EINVAL : r);
+    free(t);
+    return 0;
+}
+
+int rt_thread_detach_real(int64_t handle)
+{
+    guest_thread *t = (guest_thread *)(uintptr_t)handle;
+    if (!t || !t->has_host || t->detached) return SCE_KERNEL_ERROR(BSD_EINVAL);
+    const int r = pthread_detach(t->host);
+    if (r) return SCE_KERNEL_ERROR(r == EINVAL ? BSD_EINVAL : r);
+    t->detached = 1;
+    return 0;
 }
 
 static guest_thread *thread_self(void)
@@ -239,6 +329,10 @@ static __attribute__((unused)) int sce_pthread_create_a(void **thread, const cha
     return SCE_KERNEL_ERROR(35);
 }
 
+static int thread_join(int64_t handle) { return rt_thread_join_real(handle); }
+static int thread_detach(int64_t handle) { return rt_thread_detach_real(handle); }
+RT_SYSLIB("libkernel", scePthreadJoin, thread_join);
+RT_SYSLIB("libkernel", scePthreadDetach, thread_detach);
 RT_SYSLIB("libkernel", scePthreadSelf, thread_self);
 /* NOT registered: `libkernel`/scePthreadCreate is bound by pthread_sema.c's refusal. Until this slice both
    rows existed and THIS one won on section order (index 36 against 88), so every boot ran EXPERIMENT A
@@ -252,6 +346,32 @@ RT_SYSLIB("libkernel", scePthreadEqual, thread_equal);
    is gated by the same flag, with its own line. Default is the diagnostic below, not a silent no-op. */
 static int thread_setaffinity(uint64_t thread, int affinity)
 {
+    /* A real guest thread handle is an 8-aligned pointer; a fabricated one is odd. Applying the
+       mask to the host pthread is the only honest implementation: the guest asked for scheduling
+       state, and the host has it. A failure is reported, not hidden. */
+    fprintf(stderr, "pbboot: scePthreadSetaffinity raw: thread=%#llx affinity=%#x\n",
+            (unsigned long long)thread, (unsigned)affinity);
+    if (thread == 0 || (void *)(uintptr_t)thread == (void *)&main_thread ||
+        (thread && (thread & 1u) == 0)) {
+        guest_thread *t = (thread == 0 || (void *)(uintptr_t)thread == (void *)&main_thread)
+                              ? &main_thread
+                              : (guest_thread *)(uintptr_t)thread;
+        if (t->has_host || t == &main_thread) {
+            cpu_set_t set;
+            CPU_ZERO(&set);
+            const long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+            int cpu = 0;
+            while (cpu < 64 && !(affinity & (1 << cpu))) cpu++;
+            if (ncpu > 0) CPU_SET((size_t)(cpu % ncpu), &set);
+            const pthread_t host = t->has_host ? t->host : pthread_self();
+            const int r = pthread_setaffinity_np(host, sizeof set, &set);
+            fprintf(stderr, "pbboot: scePthreadSetaffinity: %s %p affinity %#x -> host cpu %d "
+                            "(%s)\n", t->has_host ? "REAL thread" : "main thread", (void *)t,
+                    (unsigned)affinity, ncpu > 0 ? cpu % (int)ncpu : -1,
+                    r ? "host refused" : "set");
+            return r ? SCE_KERNEL_ERROR(r) : 0;
+        }
+    }
     if (!rt_thread_modelled_enabled())
         rt_fatal("scePthreadSetaffinity",
                  "no per-thread scheduler state exists; set BB_THREAD_MODELLED=1 to model the call");

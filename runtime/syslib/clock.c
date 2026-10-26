@@ -64,3 +64,43 @@ static int gettimeofday_impl(int64_t tv, int64_t tz)
 
 RT_SYSLIB_MODELLED("libkernel", gettimeofday, gettimeofday_impl);
 RT_SYSLIB_MODELLED("libScePosix", gettimeofday, gettimeofday_impl);
+
+/* The guest timespec, declared rather than borrowed: the same rule as the timeval above. The measured
+   caller (game/frame_timing/monotonic_clock.cpp) asks for id 4, which is the id its own code names
+   CLOCK_MONOTONIC. Ids are not guessed past the two the guest's own sources name: 0 realtime, 4 monotonic. */
+typedef struct {
+    int64_t tv_sec;
+    int64_t tv_nsec;
+} guest_timespec;
+
+_Static_assert(sizeof(guest_timespec) == 16, "guest timespec is 16 bytes");
+_Static_assert(offsetof(guest_timespec, tv_nsec) == 8, "guest timespec has nsec at 8");
+
+enum { k_clock_realtime = 0, k_clock_monotonic = 4 };
+
+static int clock_gettime_impl(int64_t clock_id, int64_t ts)
+{
+    if (ts == 0) return k_err_fault;
+    if (!rt_guest_write_ok((uintptr_t)ts, sizeof(guest_timespec), "clock_gettime")) return k_err_fault;
+    const uint64_t ns = elapsed_ns();
+    guest_timespec v;
+    if (clock_id == k_clock_realtime) {
+        v.tv_sec = rt_epoch_seconds + (int64_t)(ns / 1000000000ull);
+        v.tv_nsec = (int64_t)(ns % 1000000000ull);
+    } else if (clock_id == k_clock_monotonic) {
+        v.tv_sec = (int64_t)(ns / 1000000000ull);
+        v.tv_nsec = (int64_t)(ns % 1000000000ull);
+    } else {
+        /* A clock id we cannot honour is named, not rounded to monotonic: the caller can see the
+           refusal and the log names the id, instead of receiving a plausible time from a clock it
+           did not ask for. */
+        fprintf(stderr, "pbboot: clock_gettime: refusing unknown clock id %lld (ts=%#llx)\n",
+                (long long)clock_id, (unsigned long long)(uint64_t)ts);
+        return (int)0x80020016u;
+    }
+    *(guest_timespec *)(uintptr_t)ts = v;
+    return 0;
+}
+
+RT_SYSLIB_MODELLED("libkernel", sceKernelClockGettime, clock_gettime_impl);
+RT_SYSLIB_MODELLED("libkernel", clock_gettime, clock_gettime_impl);

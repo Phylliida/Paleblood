@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /* FreeBSD's numbers for the errors these functions return */
@@ -34,6 +35,12 @@ typedef struct {
     pthread_mutex_t host;
     int type;
 } guest_mutex;
+
+/* A condvar is a host condvar behind a guest-owned pointer, exactly as a mutex is. The guest
+   storage is eight bytes; the value stored there is this object's address, never a guest address. */
+typedef struct {
+    pthread_cond_t host;
+} guest_cond;
 
 static pthread_mutex_t static_init = PTHREAD_MUTEX_INITIALIZER;
 
@@ -106,8 +113,24 @@ static int mutex_get(guest_mutex **mutex, guest_mutex **out)
 static int mutex_lock(guest_mutex **mutex)
 {
     guest_mutex *m;
-    const int r = mutex_get(mutex, &m);
-    return r ? r : bsd_errno(pthread_mutex_lock(&m->host));
+    int r = mutex_get(mutex, &m);
+    if (!r) {
+        if (pthread_mutex_trylock(&m->host) == 0) {
+            /* acquired without blocking; unlock so the real lock below takes the same path */
+            pthread_mutex_unlock(&m->host);
+        } else {
+            static uintptr_t seen[64]; static int nseen;
+            int seen_it = 0;
+            for (int z = 0; z < nseen; z++) if (seen[z] == (uintptr_t)mutex) seen_it = 1;
+            if (!seen_it && nseen < 64) { seen[nseen++] = (uintptr_t)mutex;
+                long tid; __asm__ volatile("syscall" : "=a"(tid) : "a"(186L) : "rcx", "r11", "memory");
+                fprintf(stderr, "pbboot: mutex: Lock BLOCKING tid=%ld on %p\n", tid, (void *)mutex); }
+        }
+        r = bsd_errno(pthread_mutex_lock(&m->host));
+    }
+    if (r) fprintf(stderr, "pbboot: mutex: Lock refused on %p (%s): %d\n", (void *)mutex,
+                   mutex && *mutex == MUTEX_DESTROYED ? "destroyed" : "live/initializer", r);
+    return r;
 }
 
 static int mutex_trylock(guest_mutex **mutex)
@@ -122,9 +145,14 @@ static int mutex_unlock(guest_mutex **mutex)
     if (!mutex) return BSD_EINVAL;
     guest_mutex *m = *mutex;
     /* never locked, so not owned by the caller */
-    if (m == MUTEX_INITIALIZER || m == MUTEX_ADAPTIVE_INITIALIZER) return BSD_EPERM;
-    if (m == MUTEX_DESTROYED) return BSD_EINVAL;
-    return bsd_errno(pthread_mutex_unlock(&m->host));
+    if (m == MUTEX_INITIALIZER || m == MUTEX_ADAPTIVE_INITIALIZER) {
+        fprintf(stderr, "pbboot: mutex: Unlock on untouched initializer %p -> EPERM\n", (void *)mutex);
+        return BSD_EPERM;
+    }
+    if (m == MUTEX_DESTROYED) { fprintf(stderr, "pbboot: mutex: Unlock on destroyed %p\n", (void *)mutex); return BSD_EINVAL; }
+    int r = bsd_errno(pthread_mutex_unlock(&m->host));
+    if (r) fprintf(stderr, "pbboot: mutex: Unlock failed on %p: %d\n", (void *)mutex, r);
+    return r;
 }
 
 static int mutex_destroy(guest_mutex **mutex)
@@ -174,6 +202,79 @@ static int attr_setprotocol(guest_mutexattr **attr, int protocol)
     return 0;
 }
 
+static int cond_create(guest_cond **out)
+{
+    guest_cond *c = malloc(sizeof *c);
+    if (!c) return BSD_ENOMEM;
+    const int r = pthread_cond_init(&c->host, NULL);
+    if (r) {
+        free(c);
+        return bsd_errno(r);
+    }
+    *out = c;
+    return 0;
+}
+
+static int cond_get(guest_cond **cond, guest_cond **out)
+{
+    if (!cond) return BSD_EINVAL;
+    if (!*cond) {
+        const int r = cond_create(cond);
+        if (r) return r;
+    }
+    *out = *cond;
+    return 0;
+}
+
+static int cond_init(guest_cond **cond, void *attr)
+{
+    (void)attr;
+    if (!cond) return BSD_EINVAL;
+    if (*cond) return BSD_EINVAL;
+    return cond_create(cond);
+}
+
+static int cond_destroy(guest_cond **cond)
+{
+    if (!cond || !*cond) return BSD_EINVAL;
+    const int r = pthread_cond_destroy(&(*cond)->host);
+    if (r) return bsd_errno(r);
+    free(*cond);
+    *cond = NULL;
+    return 0;
+}
+
+/* The mutex is a guest variable holding a host mutex; the condvar and the mutex must both be the
+   host objects this runtime made, or pthread_cond_wait would be waiting on an unrelated lock. */
+static int cond_wait(guest_cond **cond, guest_mutex **mutex, int64_t timeout)
+{
+    guest_cond *c;
+    guest_mutex *m;
+    int r = cond_get(cond, &c);
+    if (r) return r;
+    r = mutex_get(mutex, &m);
+    if (r) return r;
+    if (timeout != -1 && timeout != 0xffffffff)
+        fprintf(stderr, "pbboot: cond: CondWait timeout %lld treated as infinite (the timed variant is "
+                        "a separate import and is not modelled)\n", (long long)timeout);
+    r = pthread_cond_wait(&c->host, &m->host);
+    return bsd_errno(r);
+}
+
+static int cond_signal(guest_cond **cond)
+{
+    guest_cond *c;
+    const int r = cond_get(cond, &c);
+    return r ? r : bsd_errno(pthread_cond_signal(&c->host));
+}
+
+static int cond_broadcast(guest_cond **cond)
+{
+    guest_cond *c;
+    const int r = cond_get(cond, &c);
+    return r ? r : bsd_errno(pthread_cond_broadcast(&c->host));
+}
+
 /* libkernel: SCE error codes. scePthreadMutexInit's third argument is a name, used for debugging. */
 static int sce_mutex_init(guest_mutex **m, guest_mutexattr **a, const char *name) { (void)name; return sce(mutex_init(m, a)); }
 static int sce_mutex_destroy(guest_mutex **m) { return sce(mutex_destroy(m)); }
@@ -193,6 +294,30 @@ RT_SYSLIB("libkernel", scePthreadMutexattrInit, sce_attr_init);
 RT_SYSLIB("libkernel", scePthreadMutexattrDestroy, sce_attr_destroy);
 RT_SYSLIB("libkernel", scePthreadMutexattrSettype, sce_attr_settype);
 RT_SYSLIB("libkernel", scePthreadMutexattrSetprotocol, sce_attr_setprotocol);
+
+/* SCE names: the return is 0 or an SCE error code. */
+static int sce_cond_init(guest_cond **c, void *a) { return sce(cond_init(c, a)); }
+static int sce_cond_destroy(guest_cond **c) { return sce(cond_destroy(c)); }
+static int sce_cond_wait(guest_cond **c, guest_mutex **m, int64_t t) { return sce(cond_wait(c, m, t)); }
+static int sce_cond_signal(guest_cond **c) { return sce(cond_signal(c)); }
+static int sce_cond_broadcast(guest_cond **c) { return sce(cond_broadcast(c)); }
+RT_SYSLIB("libkernel", scePthreadCondInit, sce_cond_init);
+RT_SYSLIB("libkernel", scePthreadCondDestroy, sce_cond_destroy);
+RT_SYSLIB("libkernel", scePthreadCondWait, sce_cond_wait);
+RT_SYSLIB("libkernel", scePthreadCondSignal, sce_cond_signal);
+RT_SYSLIB("libkernel", scePthreadCondBroadcast, sce_cond_broadcast);
+
+/* POSIX names: the return is 0 or the FreeBSD errno itself. */
+static int posix_cond_init(guest_cond **c, void *a) { return cond_init(c, a); }
+static int posix_cond_destroy(guest_cond **c) { return cond_destroy(c); }
+static int posix_cond_wait(guest_cond **c, guest_mutex **m, int64_t t) { return cond_wait(c, m, t); }
+static int posix_cond_signal(guest_cond **c) { return cond_signal(c); }
+static int posix_cond_broadcast(guest_cond **c) { return cond_broadcast(c); }
+RT_SYSLIB("libScePosix", pthread_cond_init, posix_cond_init);
+RT_SYSLIB("libScePosix", pthread_cond_destroy, posix_cond_destroy);
+RT_SYSLIB("libScePosix", pthread_cond_wait, posix_cond_wait);
+RT_SYSLIB("libScePosix", pthread_cond_signal, posix_cond_signal);
+RT_SYSLIB("libScePosix", pthread_cond_broadcast, posix_cond_broadcast);
 
 /* libScePosix: errno values */
 static int posix_mutex_init(guest_mutex **m, guest_mutexattr **a) { return mutex_init(m, a); }

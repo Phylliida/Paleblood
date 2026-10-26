@@ -938,6 +938,12 @@ int main(int argc, char **argv)
                 fprintf(stderr, "trampoline %s: %%gs checker %zu bytes at %p (spare slot %zu)\n",
                         o->label, check_n, (void *)check, o->imports);
         }
+        if (getenv("BB_DUMP_IMPORT"))
+            for (size_t i = 0; i < o->imports; i++)
+                if (rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_FUNCTION &&
+                    (size_t)strtoul(getenv("BB_DUMP_IMPORT"), NULL, 0) == i)
+                    fprintf(stderr, "pbboot: import %zu of %s = %s:%s\n", i, o->label,
+                            rt_elf_import_library(o->elf, i), rt_elf_import_name(o->elf, i));
         for (size_t i = 0; i < o->imports; i++)
             if (rt_elf_import_kind(o->elf, i) == RT_ELF_IMPORT_FUNCTION)
                 write_trampoline(o->tramp + i * TRAMPOLINE_SIZE, &o->called[i], (uint32_t)(k << 20 | i),
@@ -945,6 +951,22 @@ int main(int argc, char **argv)
         if (rt_elf_map(o->elf, o->image, bind_import, o, error, sizeof error)) {
             fprintf(stderr, "pbboot: %s\n", error);
             return 3;
+        }
+        if (getenv("BB_DUMP_SLOT")) {
+            const uint64_t va = strtoull(getenv("BB_DUMP_SLOT"), NULL, 0);
+            if (va < o->size) {
+                const uint64_t v = *(const uint64_t *)(o->image + va);
+                int hit = -1;
+                for (size_t i = 0; i < o->imports; i++)
+                    if ((uint64_t)(uintptr_t)(o->tramp + i * TRAMPOLINE_SIZE) == v) { hit = (int)i; break; }
+                if (hit >= 0)
+                    fprintf(stderr, "pbboot: slot %#llx -> import %d of %s = %s:%s\n", (unsigned long long)va,
+                            hit, o->label, rt_elf_import_library(o->elf, hit),
+                            rt_elf_import_name(o->elf, hit));
+                else
+                    fprintf(stderr, "pbboot: slot %#llx -> %#llx, no trampoline match\n",
+                            (unsigned long long)va, (unsigned long long)v);
+            }
         }
         /* No thread-pointer rewrite here. The guest's %fs is its own TCB; %gs is this runtime's
            per-thread state (rt_tls_thread), whose first word is &main_state, not a guest TCB.
