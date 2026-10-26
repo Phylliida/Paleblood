@@ -395,8 +395,12 @@ static int libc_wcscmp(const unsigned short *a, const unsigned short *b)
 {
     const size_t na = wide_units_to_image_end(a);
     const size_t nb = wide_units_to_image_end(b);
-    if (!na || !nb)
-        rt_fatal("libc", "wcscmp: a string pointer is outside the guest image; refusing to compare it");
+    if (!na || !nb) {
+        char why[192];
+        snprintf(why, sizeof why, "wcscmp: a string pointer is outside every guest region (a=%p span=%zu, b=%p span=%zu, image=%p run=%zu); refusing to compare it",
+                 (const void *)a, na, (const void *)b, nb, rt_process.image, rt_process.image_size);
+        rt_fatal("libc", why);
+    }
     const size_t n = na < nb ? na : nb;
     for (size_t i = 0; i < n; i++) {
         if (a[i] != b[i]) {

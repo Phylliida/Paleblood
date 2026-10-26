@@ -20,6 +20,7 @@
    Names: an import is "NID#library#module"; library names come from the object, symbol names
    from a public NID database (--nids, default $BB_NID_DB), else the NID is shown. */
 #define _GNU_SOURCE
+#include "runtime/guest_mem.h"
 #include "runtime/inflight.h"
 #include "runtime/boundary_stub.h"
 #include "runtime/plugin_load.h"
@@ -989,6 +990,13 @@ int main(int argc, char **argv)
     unsigned char *stack = mmap(NULL, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
     if (stack == MAP_FAILED) {
         fprintf(stderr, "pbboot: cannot map the stack: %s\n", strerror(errno));
+        return 3;
+    }
+    /* The guest stack is a runtime mapping, so it is guest memory like the image and the allocators. The
+       registry was taught about flexible memory and direct memory first; a wcscmp on a guest stack buffer
+       then refused a pointer the guest itself had pushed. Register it where it is mapped, once. */
+    if (!rt_guest_register_mapping((uintptr_t)stack, STACK_SIZE)) {
+        fprintf(stderr, "pbboot: cannot register the guest stack as guest memory\n");
         return 3;
     }
 
