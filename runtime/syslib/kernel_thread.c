@@ -47,6 +47,12 @@ typedef struct {
     void *arg;
 } guest_thread;
 
+/* The arena's handles advance by sizeof(guest_thread), and the boot printed main at 0x980000000 and
+   its child at 0x980000030. Pin that stride: thread_handle_ok's alignment clause divides by it, so a
+   struct that grows silently would start refusing handles it allocated. Measured, not assumed: the
+   fields are 8+8+8+4+4+8+8 = 48 bytes with no padding on this ABI. */
+_Static_assert(sizeof(guest_thread) == 0x30, "thread arena stride must stay 0x30 (see boot handles)");
+
 typedef struct {
     int has_stack;
     void *stack;
