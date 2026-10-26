@@ -318,6 +318,23 @@ static void *libc_wmemcpy(void *d, const void *s, size_t n)
 }
 
 RT_SYSLIB("libc", wmemcpy, libc_wmemcpy);
+/* wmemmove, libc ordinal 240 (NID Noj9PsJrsa8) -- the wall the modelled thread exposed, in the same
+   2-byte unit family and with the same rule: the unit is inherited from wcslen's measurement, never the
+   host's sizeof(wchar_t). Overlap is the only difference from wmemcpy, so the whole body is a byte
+   memmove with the multiply explicit and an overflow refused rather than wrapped. The first call prints
+   n and the byte count, so a byte count passed where a unit count is expected shows in the log. */
+static unsigned wmemmove_reported;
+
+static void *libc_wmemmove(void *d, const void *s, size_t n)
+{
+    if (n > SIZE_MAX / 2)
+        rt_fatal("libc", "wmemmove: unit count overflows a byte count; refusing to move a wrapped size");
+    if (!wmemmove_reported++)
+        fprintf(stderr, "pbboot: libc wmemmove: n=%zu units (%zu bytes at width 2)\n", n, n * 2);
+    return memmove(d, s, n * 2);
+}
+
+RT_SYSLIB("libc", wmemmove, libc_wmemmove);
 /* wmemset, libc ordinal 242 (NID Al8MZJh-4hM) -- the wall wmemset became when the guest got past
    _Getpctype. It inherits the unit wcslen MEASURED (2 bytes), never the host's sizeof(wchar_t): at width 4
    this body would fill half the units the guest asked for, leave the other half untouched, and return a
