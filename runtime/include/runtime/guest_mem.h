@@ -11,4 +11,7 @@ int rt_guest_ptr_ok(uintptr_t addr, size_t len, const char *call);
    checks below accept writes inside a registered mapping; a pointer there is a guest pointer even though
    it is not an image offset. Returns 1 on success, 0 when the table is full. */
 int rt_guest_register_mapping(uintptr_t base, size_t len);
+/* Bytes from addr to the end of the guest region containing it (the image or a registered mapping), or
+   0 when addr is in neither. A caller that walks a guest string needs the span, not just a yes/no. */
+size_t rt_guest_span(uintptr_t addr);
 #endif

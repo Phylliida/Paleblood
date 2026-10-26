@@ -385,12 +385,10 @@ static unsigned wcscmp_reported;
 
 static size_t wide_units_to_image_end(const unsigned short *s)
 {
-    const uintptr_t base = (uintptr_t)rt_process.image;
-    const uintptr_t end = base + (uintptr_t)rt_process.image_size;
-    const uintptr_t a = (uintptr_t)s;
-    if (!base || !end || end < base || a < base || a >= end)
-        return 0;
-    return (end - a) / 2;
+    /* The image is not the only guest region: a string can live in flexible memory, and this function
+       asked only the image until a modelled boot compared two strings in a registered mapping and was
+       refused by the instrument that had just been taught about it. rt_guest_span is the one answer. */
+    return rt_guest_span((uintptr_t)s) / 2;
 }
 
 static int libc_wcscmp(const unsigned short *a, const unsigned short *b)

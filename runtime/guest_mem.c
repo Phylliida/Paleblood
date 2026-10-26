@@ -48,6 +48,19 @@ static int guest_mapping_contains(uintptr_t addr, size_t len)
     }
     return 0;
 }
+size_t rt_guest_span(uintptr_t addr)
+{
+    for (unsigned i = 0; i < g_guest_mapping_count; i++) {
+        const uintptr_t b = g_guest_mappings[i].base, e = g_guest_mappings[i].end;
+        if (addr >= b && addr < e)
+            return (size_t)(e - addr);
+    }
+    const uintptr_t base = (uintptr_t)rt_process.image;
+    const uintptr_t end = base + (uintptr_t)rt_process.image_size;
+    if (base && end > base && addr >= base && addr < end)
+        return (size_t)(end - addr);
+    return 0;
+}
 
 int rt_guest_write_ok(uintptr_t addr, size_t len, const char *call)
 {
