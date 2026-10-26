@@ -33,6 +33,8 @@ import struct
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from case_dir import case_dir  # noqa: E402 - ONE definition of where a family's cases live
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 LEAF = os.environ.get('LEAF_TARGETS_DIR') or os.path.join(ROOT, 'game', 'leaf')
 BASE = 0x400000
@@ -59,6 +61,10 @@ ACCESS = {  # family -> SET of decls; a decl is (kind, source, *names)
     # measured and rejected: 0x1520 is a displacement, a coordinate, and the gate bounded it as an address
     # and refused 78 of 78. A decl names exactly the constants that ARE addresses.
     'chain_deref': (('load', 'seeded', 'kSlot'), ('store', 'argument')),
+    # Same first load as chain_deref -- the pointer slot is in the zero-fill tail, so it is bounded at
+    # memsz and the case must seed it. The second dereference is through the seeded pointer at a
+    # displacement; that displacement is a coordinate, not an address, and is deliberately not named.
+    'movsx_deref': (('load', 'seeded', 'kSlot'),),
     # compute and return, never dereference
     'lea_disp_rdi': (('addr-only', 'static',),), 'lea_rdi': (('addr-only', 'static',),), 'lea_rip': (('addr-only', 'static',),),
     'mov_eax_k': (('addr-only', 'static',),), 'mov_al_imm': (('addr-only', 'static',),), 'mov_rax': (('addr-only', 'static',),),
@@ -94,6 +100,19 @@ def segments():
 def family_of(fname):
     stem = fname[:-len('.cpp')]
     return stem[:-len('_family')] if stem.endswith('_family') else stem
+
+
+def seeded_case_path(family, address):
+    """The case file for a seeded row, through case_dir: chain rows use `<addr8>/case.json`,
+    table families use `0x<addr8>/a.json`. One root, two declared layouts, no third string."""
+    base = case_dir(family)
+    for rel in ('%08x/case.json' % address,
+                '0x%08x/a.json' % address,
+                '0x%08x/case.json' % address):
+        path = os.path.join(base, rel)
+        if os.path.isfile(path):
+            return path
+    return None
 
 
 def main():
@@ -221,8 +240,8 @@ def main():
                                 '-- the association is part of the check, not a convenience')
                 missing, mism, supplied = [], [], 0
                 for a, slot in sorted(body_slot.items()):
-                    cj = os.path.join(ROOT, '..', 'data', 'cases', 'chain', '%08x' % a, 'case.json')
-                    if not os.path.exists(cj):
+                    cj = seeded_case_path(fam, a)
+                    if cj is None:
                         missing.append(a)
                         continue
                     seeds = [int(e['addr'], 16) for e in json.load(open(cj)).get('memory', [])
