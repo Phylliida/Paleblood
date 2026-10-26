@@ -31,7 +31,7 @@ both, which is why one bias works for the whole file.
 file holds: its `filesz` is `0x309b38`, so the file stops backing the image at image `0x53e5b38`
 (vaddr + filesz), file offset `0x53e9b38`, and guest `0x57e5b38`. Everything from there to the end of the
 image (`0x05ad30f4`, guest) is zero-fill:
-`0x2e95bc` bytes (3,052,988, 2.9 MiB) that exist in the guest but not in the file. Nothing is
+`0x2ED5BC` bytes (3,069,372, 2.9 MiB) that exist in the guest but not in the file. Nothing is
 decoded from that range -- the highest function in `symbols/functions.csv` ends at guest
 `0x02f7efde`, `0x286ab5a` bytes (40.4 MiB) below it -- but data the replacements name can live
 there: the static guard at `0x05ac59b8` is inside the zero-fill, while the vtable base
