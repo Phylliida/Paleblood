@@ -64,17 +64,25 @@ int rt_hook_invoke(uint32_t address, const uint64_t *args, size_t nargs, uint64_
     if (case_number >= 0) {
         static const char *const REG[6] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
         char json[1024];
+        /* The case schema tools/case_emit.py writes and verify.py reads: one case per file, keyed
+           by the guest PC, with args under "args" and provenance under "capture". The previous
+           shape here was a comparison document ("cases": [...], "registers", "ret") -- a format
+           verify.py accepts for a differential result, never for an input. A recorder no reader
+           can replay is a writer with a fixture for a client. Scope: scalar arguments only; a
+           pointer argument is emitted as a literal, so a body that dereferences one needs
+           runtime/include/runtime/recorder.hpp, which names buffers and image addresses. */
         int n = snprintf(json, sizeof json,
-                         "{\"schema\": 1, \"address\": \"0x%08x\", \"function\": \"%s\", "
-                         "\"capture\": {\"kind\": \"hook callback\", \"run_id\": \"%s\"}, "
-                         "\"cases\": [{\"id\": \"hook_%d\", \"registers\": {",
-                         address, name, rt_capture_run_id() ? rt_capture_run_id() : "", case_number);
+                         "{\"schema\": 1, \"address\": \"0x%08x\", \"id\": \"hook_%d\", "
+                         "\"returns\": \"i64\", \"args\": {",
+                         address, case_number);
         for (size_t i = 0; n > 0 && (size_t)n < sizeof json && i < nargs; i++)
             n += snprintf(json + n, sizeof json - (size_t)n, "%s\"%s\": %llu", i ? ", " : "", REG[i],
                           (unsigned long long)a[i]);
         if (n > 0 && (size_t)n < sizeof json)
             n += snprintf(json + n, sizeof json - (size_t)n,
-                          "}, \"ret\": {\"rax\": %llu}}]}", (unsigned long long)ret);
+                          "}, \"capture\": {\"kind\": \"hook callback\", \"function\": \"%s\", "
+                          "\"run_id\": \"%s\"}}", name,
+                          rt_capture_run_id() ? rt_capture_run_id() : "");
         /* A truncated case is refused rather than written: a capture that lost a digit replays as a
            mismatch against a body that was right, and the reader would go hunting the body. */
         if (n > 0 && (size_t)n < sizeof json) rt_capture_write(name, case_number, json);

@@ -128,11 +128,13 @@ int main(int argc, char **argv)
     CHECK(out == 42);
     const std::string hook_path = std::string(root) + "/probe_add_hook/deterministic-run_1_0000.json";
     const std::string hook_json = read_file(hook_path);
+    CHECK(hook_json.find("\"schema\": 1") != std::string::npos);
     CHECK(hook_json.find("\"address\": \"0x00001000\"") != std::string::npos);
-    CHECK(hook_json.find("\"rdi\": 7") != std::string::npos);
-    CHECK(hook_json.find("\"rsi\": 35") != std::string::npos);
-    CHECK(hook_json.find("\"rax\": 42") != std::string::npos);
-    CHECK(hook_json.find("\"run_id\": \"deterministic-run_1\"") != std::string::npos);
+    CHECK(hook_json.find("\"id\": \"hook_0\"") != std::string::npos);
+    CHECK(hook_json.find("\"returns\": \"i64\"") != std::string::npos);
+    CHECK(hook_json.find("\"args\": {\"rdi\": 7, \"rsi\": 35}") != std::string::npos);
+    CHECK(hook_json.find("\"capture\": {\"kind\": \"hook callback\", \"function\": \"probe_add_hook\", "
+                         "\"run_id\": \"deterministic-run_1\"}") != std::string::npos);
     /* A miss is refused. Zero is a legal body return, so a miss reported as zero would be
        indistinguishable from a body that ran and returned zero. */
     CHECK(rt_hook_invoke(0x00001004u, args, 2, &out) == -1);
