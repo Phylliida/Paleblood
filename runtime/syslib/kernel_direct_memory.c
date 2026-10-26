@@ -38,7 +38,7 @@ enum { k_error_inval = 0x16, k_error_fault = 0x0e, k_error_nomem = 0x0c };
    the arena's ceiling is address space, not memory. A fixed budget here is a number I invented, and
    the guest asked for 116 MiB against a 64 MiB budget at Ps4RuntimeHeapImpl.cpp(324) -- a refusal
    that the guest reports as a fatal panic, which is how six slices were spent downstream of it. */
-enum { k_page = 0x1000u, k_arena_bytes = 0x40000000u /* 1 GiB reserved, committed on touch */ };
+enum { k_page = 0x1000u, k_arena_bytes = 0x200000000ull /* 8 GiB reserved, committed on touch */ };
 
 static unsigned char *arena;
 static size_t arena_used;
