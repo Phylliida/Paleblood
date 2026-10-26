@@ -134,13 +134,11 @@ static int ran_cleanly(void (*call)(void))
 
 static int died_in_fatal(void (*call)(void))
 {
-    const pid_t child = fork();
-    if (child == 0) {
-        call();
-        _exit(1); /* the call returned, so the answer was not the fatal being proved */
-    }
-    int status = 0;
-    if (waitpid(child, &status, 0) < 0) return 0;
+    /* One child, one measurement. This used to fork twice: a first child ran `call` and its status was
+       waited for and discarded, then died_of_signal forked a second child and that was the only run read.
+       The discarded arm was not merely wasteful -- netctl_shared is MAP_SHARED, so a first child that
+       registered a callback or wrote an id could change the state the measured child then saw. Two runs
+       with one reading is not a control; it is an experiment whose first half is invisible. */
     return died_of_signal(SIGABRT, call);
 }
 
