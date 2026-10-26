@@ -206,7 +206,7 @@ static void *sema_timer_main(void *arg)
         ts.tv_nsec = (period_ms % 1000) * 1000000L;
         nanosleep(&ts, NULL);
         uint64_t h = 0x53454d4100000000ull | (uint64_t)(i + 1);
-        fprintf(stderr, "pbboot: sema: TIMER (MODELLED) %ld ms -> Signal %016llx\\n",
+        fprintf(stderr, "pbboot: sema: TIMER (MODELLED) %ld ms -> Signal %016llx\n",
                 period_ms, (unsigned long long)h);
         (void)sema_signal((int64_t)h, 1);
     }
@@ -223,7 +223,7 @@ static void sema_timer_start(void)
     if (period_ms <= 0 || period_ms > 1000) period_ms = 2;
     pthread_t t;
     started = 1;
-    fprintf(stderr, "pbboot: sema: TIMER (MODELLED) registered: one token per pool sema, period %ld ms\\n", period_ms);
+    fprintf(stderr, "pbboot: sema: TIMER (MODELLED) registered: one token per pool sema, period %ld ms\n", period_ms);
     pthread_create(&t, NULL, sema_timer_main, (void *)(intptr_t)period_ms);
     pthread_detach(t);
 }

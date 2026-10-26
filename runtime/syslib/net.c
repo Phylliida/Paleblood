@@ -15,10 +15,14 @@
    only asked because a real console would have answered 0.
 
    The honest default is therefore a refusal at the call, before the guest can store a state it does
-   not have.  BB_NET_ASSUME_OK=1 is a diagnostic probe: it returns success with no network state and
-   exists to find the next named wall, never to be a model.  Measured with it: the 0x2167870 fault
-   disappears and the boot reaches libSceNet dgJBaeJnGpo at eboot+0xfd2014 (catalogue 0x13d2014),
-   unimplemented.  That is the shape of the missing state; it is not implemented here. */
+   not have.  This is a deliberate LOSS OF REACH: the default boot now stops at sceNetInit instead of
+   running hundreds of thousands of import calls.  Reach was traded for an attribution, not improved.
+
+   BB_NET_ASSUME_OK=1 is a diagnostic probe: it returns success with no network state and exists to
+   find the next named wall, never to be a model.  Measured with it: the 0x2167870 fault disappears
+   and the boot reaches libSceNet dgJBaeJnGpo (sceNetPoolCreate) at eboot+0xfd2014 (catalogue
+   0x13d2014), unimplemented.  That is not evidence that success published the singleton; it is
+   evidence that an unimplemented call stopped the boot before the singleton was used again. */
 #include "runtime/process.h"
 #include "runtime/syslib.h"
 
@@ -41,6 +45,31 @@ static int net_init_refused(const void *params)
 }
 
 RT_SYSLIB_MODELLED("libSceNet", sceNetInit, net_init_refused);
+
+/* libSceNet sceNetPoolCreate (NID dgJBaeJnGpo, bind 516), reached at eboot+0xfd200f
+   (catalogue 0x13d200f) only when sceNetInit returned success.  Its caller tests eax and stores
+   eax in a 32-bit field (eboot+0xfd2014..0xfd2018), so the return is a HANDLE, not a guest
+   pointer: modelling it as an anonymous mapping would hand the guest a pointer in a space it
+   does not use.  BB_NET_PROBE_POOL=1 returns a fixed handle with no pool behind it, purely to
+   find the next wall; without the probe the call is a refusal at the call.  Measured with both
+   probes: the next wall is libSceSsl hdpVEUDFW3s (sceSslInit) at eboot+0xfd2023 (catalogue
+   0x13d2023), args rdi=0x4c000 -- the network setup is a chain of four imports whose success
+   state is a set of integer handles in a guest object, not a single mapping. */
+static unsigned pool_reported;
+
+static int net_pool_create_probe(const char *name, uint64_t size, int flags)
+{
+    if (!getenv("BB_NET_PROBE_POOL"))
+        rt_fatal("libSceNet", "sceNetPoolCreate: no pool state; refusing at the call "
+                              "(set BB_NET_PROBE_POOL=1 only to find the next wall)");
+    if (!pool_reported++)
+        fprintf(stderr, "pbboot: libSceNet sceNetPoolCreate: PROBE handle 0x100, no pool state; "
+                        "name=%p size=0x%llx flags=%d -- diagnostic, not a model\n",
+                (const void *)name, (unsigned long long)size, flags);
+    return 0x100;
+}
+
+RT_SYSLIB_MODELLED("libSceNet", sceNetPoolCreate, net_pool_create_probe);
 
 /* libSceHttp sceHttpCreateTemplate (NID 0gYjPTR-6cY, bind 507). The caller stores the return in a
    handle slot and passes it to the next import immediately, so a zero would be a handle the guest uses.
