@@ -64,7 +64,18 @@ class ReEmitAnswersWhatDidIEmitted(unittest.TestCase):
         out = buf.getvalue()
         self.assertEqual(rc, 1, out)
         self.assertIn('0 unlanded members', out)
-        self.assertIn('--reemit rip_store', out)
+        self.assertIn('rip_store --reemit', out)
+
+    def test_the_zero_member_message_gives_an_invocation_the_parser_accepts(self):
+        # The old message said `--reemit rip_store`; `main()` rejects a leading flag and demands
+        # the family first, so the refusal taught an invocation the parser refuses. Run the string
+        # the message now gives through `main()`, not through `reemit()`.
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = E.main(['rip_store', '--reemit'])
+        out = buf.getvalue()
+        self.assertEqual(rc, 0, out)
+        self.assertIn('byte-for-byte', out)
 
     def test_a_bare_invocation_refuses_by_name_and_writes_nothing(self):
         """Writing requires --write; the control runs in the same method.

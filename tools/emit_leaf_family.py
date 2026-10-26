@@ -880,7 +880,7 @@ def main(argv):
         # an emitter that cannot re-emit cannot repair either, so the message names the door.
         if owned:
             print(f'{name}: 0 unlanded members ({len(owned)} already landed). Nothing to land here; '
-                  f'`--reemit {name}` checks that the committed body is what this emitter produces.')
+                  f'`{name} --reemit` checks that the committed body is what this emitter produces.')
         else:
             print(f'{name}: 0 members -- the census found no unlanded extent matching this shape, '
                   f'so there is nothing to land and nothing to re-emit.')
