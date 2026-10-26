@@ -1,12 +1,16 @@
 """The capture wrapper's float refusal, proved in both directions."""
 import os
 import sys
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 # Discovery puts `test/` on sys.path, not the repo root, and `-P` keeps the cwd off it: import the module the
 # way the rest of the suite does rather than relying on where I happened to run it from.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
 
+import capture_precheck
 from capture_precheck import scan, verdict, write_table, TABLE
 
 
@@ -34,8 +38,8 @@ class CaptureRefusesVolatileXmm(unittest.TestCase):
         committed = TABLE.read_text()
         self.assertEqual(committed, fresh,
                          "symbols/capture_ok.csv is stale: regenerate with "
-                         "`capture_precheck.py --table > symbols/capture_ok.csv` "
-                         "(the tool prints; the shell writes -- the bare command leaves this file alone)")
+                         "`capture_precheck.py --write-table` "
+                         "(one atomic write; `--table` still prints for inspection)")
         rows = [r for r in committed.splitlines()[1:] if r]
         self.assertGreater(len(rows), 0, "the table must carry at least one candidate row")
         for row in rows:                                  # a row must be a verdict plus a key, never one alone
@@ -50,6 +54,18 @@ class CaptureRefusesVolatileXmm(unittest.TestCase):
         ok, why = verdict(b"")
         self.assertFalse(ok)
         self.assertIn("no bytes", why)
+
+    def test_write_table_refuses_a_refused_row_and_leaves_the_old_file(self):
+        """A writer that refuses after truncating is a formatter. The old bytes must survive."""
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "capture_ok.csv"
+            old = "address,xmm_used,scanned_sha256,so_sha256\n0x1,none,aa,bb\n"
+            path.write_text(old)
+            bad = "address,xmm_used,scanned_sha256,so_sha256\n0x1,xmm0,aa,bb\n"
+            with mock.patch.object(capture_precheck, "write_table", return_value=bad):
+                with self.assertRaises(SystemExit):
+                    capture_precheck.write_table_file(path)
+            self.assertEqual(path.read_text(), old)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,8 @@ import hashlib
 import pathlib
 import sys
 
+import atomicio
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CANDIDATES = ROOT / "symbols" / "capture_candidates.txt"
 TABLE = ROOT / "symbols" / "capture_ok.csv"
@@ -102,12 +104,38 @@ def write_table() -> str:
     return "address,xmm_used,scanned_sha256,so_sha256\n" + "".join(",".join(r) + "\n" for r in table_rows())
 
 
+def write_table_file(path: pathlib.Path = TABLE) -> tuple[bool, str]:
+    """Write the table atomically, refusing a row that is not a clean verdict.
+
+    `--table` printed; the shell redirected. That is truncate-at-open one process removed: a
+    producer that fails after `>` has already emptied the artifact. This path builds the whole
+    text first, refuses if any candidate row is not `none`, and replaces the file in one rename.
+    Returns (changed, sentence).
+    """
+    text = write_table()
+    for line in text.splitlines()[1:]:
+        if not line:
+            continue
+        address, verdict_word, _digest, _so = line.split(",")
+        if verdict_word != "none":
+            raise SystemExit(f"{address}: {verdict_word} -- refusing to write a table with a refused row")
+    old = path.read_text() if path.exists() else None
+    if old == text:
+        return False, f"{path}: unchanged"
+    atomicio.atomic_write(path, text)
+    return True, f"{path}: written ({len(text.splitlines()) - 1} row(s))"
+
+
 def main(argv: list[str]) -> int:
     if len(argv) == 2 and argv[1] == "--table":
         sys.stdout.write(write_table())
         return 0
+    if len(argv) == 2 and argv[1] == "--write-table":
+        _changed, sentence = write_table_file()
+        print(sentence, file=sys.stderr)
+        return 0
     if len(argv) != 2:
-        print("usage: capture_precheck.py <hex bytes> | --table", file=sys.stderr)
+        print("usage: capture_precheck.py <hex bytes> | --table | --write-table", file=sys.stderr)
         return 2
     ok, why = verdict(bytes.fromhex(argv[1]))
     print(why, file=sys.stdout if ok else sys.stderr)
