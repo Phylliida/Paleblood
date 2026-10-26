@@ -12,8 +12,12 @@ target_link_options(pbloader PRIVATE -Wl,--no-undefined)
 file(GLOB PB_SYSLIB CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/syslib/*.c)
 # -rdynamic so dladdr can name pbboot's own symbols when it faults; a raw offset is a number
 # without a subject.
+# hooks.c/capture.c: the recorder path. They were in bbrt only, so pbboot could install hooks and
+# never invoke/record one -- a missing definition in a static library is not a link error, it is an
+# `nm` result. The rung line measures this: `recorder-linked no` must flip to `yes` here, and the
+# only way to learn whether they compile against pbboot's translation set is to put them in it.
 add_executable(pbboot boot.c boot_call.c loader.c nid.c identity.c guest_mem.c process.c tls.c syslib_flight.c
-                        boundary_stub.c plugin_load.c host_hooks.c ${PB_SYSLIB})
+                        boundary_stub.c plugin_load.c host_hooks.c hooks.c capture.c ${PB_SYSLIB})
 target_include_directories(pbboot PRIVATE include)
 
 target_link_options(pbboot PRIVATE -rdynamic)
