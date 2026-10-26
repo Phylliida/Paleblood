@@ -32,6 +32,7 @@ from capstone.x86_const import X86_REG_RAX, X86_REG_RDI
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from case_dir import case_dir
+import install_mode
 
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 CATALOG = os.path.join(ROOT, '..', 'data', 'catalog.sqlite3')
@@ -176,12 +177,9 @@ def write(limit):
         or_path = os.path.join(SYMBOLS, 'replacement_origins.csv')
         or_text = merged(or_path, [{'address': f'0x{a:08x}', 'origin': 'generated'}
                                    for a, _, _ in batch], ['address', 'origin'])
-        im_path = os.path.join(SYMBOLS, 'install_mode.csv')
-        im_text = merged(im_path, [{'address': f'0x{a:08x}', 'mode': 'host'}
-                                   for a, _, _ in batch], ['address', 'mode'])
         backups = {}
         try:
-            for path in (fcsv, or_path, im_path, BODY_FILE):
+            for path in (fcsv, or_path, BODY_FILE):
                 if os.path.exists(path):
                     backups[path] = path + '.genbak'
                     shutil.copy2(path, backups[path])
@@ -197,11 +195,13 @@ def write(limit):
                                        if existing else header + blocks)
             open(fcsv, 'w').write(fc_text)
             open(or_path, 'w').write(or_text)
-            open(im_path, 'w').write(im_text)
             for d, src in zip(dirs, sorted(os.listdir(os.path.join(staged, 'cases')))):
                 target = os.path.join(staged, 'cases', src)
                 shutil.rmtree(d, ignore_errors=True)
                 shutil.copytree(target, d)
+            # The mode table's one writer: its atomic write needs no entry in `backups`, and a
+            # clash here refuses rather than silently skipping the row as `merged` did.
+            install_mode.append_host(ROOT, [a for a, _, _ in batch])
         except BaseException:
             for path, bak in backups.items():
                 shutil.copy2(bak, path)
