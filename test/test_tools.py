@@ -458,6 +458,15 @@ class Verify(unittest.TestCase):
 class Loader(unittest.TestCase):
     """runtime/loader.c through libpbloader.so, on a synthetic executable."""
 
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import harness
+        try:
+            harness.loader_library()
+        except harness.BadInput as e:
+            raise RuntimeError(f'loader unavailable: {e}') from None
+
     def test_maps_relocates_and_binds(self):
         sys.path.insert(0, os.path.join(ROOT, 'tools'))
         sys.path.insert(0, os.path.join(ROOT, 'test'))

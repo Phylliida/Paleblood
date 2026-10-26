@@ -173,6 +173,17 @@ CASE = {
 @unittest.skipUnless(sys.platform == 'linux' and shutil.which(os.environ.get('CC', 'cc')),
                      'needs Linux x86-64 and a C compiler')
 class Harness(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # One precondition, not fifty-one instruments each discovering the same absence. `BB_LOADER`
+        # naming a nonexistent file used to redden every test in this class with the same sentence:
+        # 51 independent `loader_library()` calls, each correct and each too late to be the one
+        # refusal that stops the class. The library is only needed once; ask once, here.
+        try:
+            harness.loader_library()
+        except harness.BadInput as e:
+            raise RuntimeError(f'harness loader unavailable: {e}') from None
+
     def test_original_preflight_traces_native_fixture_and_skips_abi_manifest(self):
         directory = Path(self.d) / 'preflight'
         directory.mkdir()
