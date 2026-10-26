@@ -37,11 +37,9 @@ def compute(out=None):
     import catalogue as _CAT
     bodies = {r['address'] for r in _CAT.read_rows('symbols/functions.csv')}
     extents = J.load_extents('symbols/ghidra_functions.csv')
-    cat = [(int(r['address'], 16), int(r['size'])) for r in
-           csv.DictReader(open('symbols/ghidra_functions.csv'))]
     rows = []
     undecoded = 0
-    for a, s in cat:
+    for a, s in extents:
         off = a - C.FILE_BIAS
         ins = list(cs.disasm(md[off:off + s], a)) if 0 <= off and off + s <= len(md) else []
         if not ins:

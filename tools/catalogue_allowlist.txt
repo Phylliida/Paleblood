@@ -14,7 +14,6 @@ test/test_unrecordable_join.py
 tools/automation_pipeline.py
 tools/blocks.py
 tools/boot.py
-tools/branch_census.py
 tools/case_emit.py
 tools/census_band.py
 tools/census_rip_load.py
