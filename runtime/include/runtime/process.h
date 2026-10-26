@@ -37,6 +37,11 @@ int rt_thread_attr_detach_state(void *const *attr, const char *caller);
 int rt_thread_attr_stack_size(void *const *attr, uint64_t *size);
 int rt_thread_attr_sched_policy(void *const *attr, int *policy);
 
+/* Whether the thread-model experiment is on (BB_THREAD_MODELLED unset/0/empty = off). One reader
+   for one switch: the modelled create and every modelled call that exists only to let it proceed
+   consult this, so the log and the branch cannot disagree about the flag. */
+int rt_thread_modelled_enabled(void);
+
 /* Stops the process with a message naming the system function: behaviour the runtime does not
    know is never guessed. */
 _Noreturn void rt_fatal(const char *function, const char *message);

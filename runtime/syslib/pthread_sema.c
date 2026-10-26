@@ -184,8 +184,7 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
        a real guest_thread* is 8-byte aligned, so bit 0 is a marker the log and any later refusal can
        name. The registration stays UNRESOLVED because the shipped default is still the refusal below;
        a declaration true only when a flag is set would be the comment-with-a-macro defect. */
-    if (getenv("BB_THREAD_MODELLED") && *getenv("BB_THREAD_MODELLED") &&
-        strcmp(getenv("BB_THREAD_MODELLED"), "0") != 0) {
+    if (rt_thread_modelled_enabled()) {
         if (out == 0) return k_err_inval;
         if (!rt_guest_write_ok((uintptr_t)out, 8, "scePthreadCreate")) return k_err_fault;
         static uint64_t modelled_serial;

@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum { BSD_ENOMEM = 12, BSD_EINVAL = 22 };
 #define SCE_KERNEL_ERROR(e) ((int)(0x80020000u + (unsigned)(e)))
@@ -70,6 +71,13 @@ static guest_thread *thread_self(void)
 
 /* Two thread variables name the same thread when they hold the same object pointer. Non-zero when
    equal, zero otherwise, with no error return (FreeBSD pthread_equal(3)). */
+/* The experiment switch, read in one place. Empty and "0" mean off; anything else on. */
+int rt_thread_modelled_enabled(void)
+{
+    const char *v = getenv("BB_THREAD_MODELLED");
+    return v && *v && strcmp(v, "0") != 0;
+}
+
 static int thread_equal(guest_thread *a, guest_thread *b)
 {
     return a == b;
@@ -239,6 +247,20 @@ RT_SYSLIB("libkernel", scePthreadSelf, thread_self);
    below. It produced the guest's Dantelion2 panic (the error path dereferences the unpopulated __sFILE),
    which is why the refusal exists at all. Reproduce it by restoring this line. */
 RT_SYSLIB("libkernel", scePthreadEqual, thread_equal);
+/* Called only after a modelled create in this experiment. No scheduler state exists, so a real
+   affinity request cannot be honoured; returning success is the same lie as the modelled create and
+   is gated by the same flag, with its own line. Default is the diagnostic below, not a silent no-op. */
+static int thread_setaffinity(uint64_t thread, int affinity)
+{
+    if (!rt_thread_modelled_enabled())
+        rt_fatal("scePthreadSetaffinity",
+                 "no per-thread scheduler state exists; set BB_THREAD_MODELLED=1 to model the call");
+    fprintf(stderr, "pbboot: scePthreadSetaffinity: MODELLED thread 0x%llx affinity 0x%x -- no "
+                    "scheduler state exists; BB_THREAD_MODELLED=1\n",
+            (unsigned long long)thread, (unsigned)affinity);
+    return 0;
+}
+RT_SYSLIB_UNRESOLVED("libkernel", scePthreadSetaffinity, thread_setaffinity);
 RT_SYSLIB("libkernel", sched_yield, kernel_sched_yield);
 RT_SYSLIB_UNRESOLVED("libkernel", scePthreadYield, thread_yield);
 RT_SYSLIB("libkernel", scePthreadAttrInit, attr_init);
