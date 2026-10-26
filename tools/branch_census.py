@@ -79,7 +79,8 @@ def compute(out=None):
     free_landed = [r for r in free if r[3]]
     land = [(a, s) for a, s, b, l in rows if l]
     unlanded_free = [a for a, s, b, l in free if not l]
-    indep = [a for a in unlanded_free if len(J.owners(extents, a)) == 1]
+    ownership = J.index(extents)
+    indep = [a for a in unlanded_free if len(J.owners_indexed(ownership, a)) == 1]
     return {'total': len(rows), 'undecoded': undecoded, 'branch': len(branch),
             'branch_landed': sum(1 for r in branch if r[3]), 'free': len(free),
             'free_landed': len(free_landed), 'land': len(land),

@@ -47,7 +47,8 @@ def compute(band=BAND, extents_path='symbols/ghidra_functions.csv'):
     bodies = {r['address'] for r in rows if str(r['has_body']) == 'True'}
     bodied = [(a, s) for a, s in free_unlanded if a in bodies]
     free_unlanded = [(a, s) for a, s in free_unlanded if a not in bodies]
-    indep = [(a, s) for a, s in free_unlanded if len(J.owners(ext, a)) == 1]
+    ownership = J.index(ext)
+    indep = [(a, s) for a, s in free_unlanded if len(J.owners_indexed(ownership, a)) == 1]
     out = [(a, s, 'short' if s < 14 else 'addressable') for a, s in indep]
     assert not ({a for a, _, _ in out} & bodies), \
         'a frontier that advertises a body is a menu of work already done'

@@ -11,11 +11,23 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import join_import_pc as J  # noqa: E402
+import thunk_census as T  # noqa: E402
 
 
 class ThunkCensusTest(unittest.TestCase):
+    def test_the_census_builds_the_owner_index_once(self):
+        old = os.getcwd()
+        os.chdir(REPO)
+        self.addCleanup(os.chdir, old)
+        with mock.patch.object(J, "owners", side_effect=AssertionError("per-row owner index")):
+            f = T.compute(13)
+        self.assertEqual(f["rows"], 5805)
+
     def test_committed_thunks_csv_reproduces(self):
         with tempfile.TemporaryDirectory() as td:
             out = os.path.join(td, "thunks.csv")

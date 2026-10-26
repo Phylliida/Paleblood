@@ -44,14 +44,15 @@ def length_floor() -> int:
 def compute(max_b=13, floor=None):
     """The two thunk figures. ONE implementation: derive.py calls this, it does not recount."""
     floor = length_floor() if floor is None else floor
-    md = open(C.ELF, 'rb').read()
+    md = pathlib.Path(C.ELF).read_bytes()
     cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     cs.detail = True
     landed = C.landed_addresses()
     extents = J.load_extents('symbols/ghidra_functions.csv')
     size_of = dict(extents)
+    ownership = J.index(extents)
     pop = sorted(a for a, s in extents
-                 if s <= max_b and a not in landed and len(J.owners(extents, a)) == 1)
+                 if s <= max_b and a not in landed and len(J.owners_indexed(ownership, a)) == 1)
     rows, by_sel, multi, sets = [], collections.Counter(), 0, collections.Counter()
     none_e = []
     for a in pop:

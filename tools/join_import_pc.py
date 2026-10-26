@@ -42,33 +42,54 @@ def load_extents(path=DEFAULT_FUNCTIONS):
     import catalogue
     return catalogue.load_extents(path)
 
-def owners(extents, v):
-    """Every extent containing v. extents must be sorted by address.
-    NOTE: on this catalogue the tie branch cannot fire. Sizes are decimal, extents are disjoint
-    (a + size <= next address at every one of 157,756 adjacent pairs, 0 true overlaps, 0 duplicate
-    starts), so `owners` is 1 for every catalogued address and `ambiguous` is a guard against a
-    catalogue that does not exist here -- not evidence that ownership is usually unique by luck.
+def index(extents):
+    """(extents, starts, widest) -- the half of `owners` that does not depend on v.
+
+    `owners` used to rebuild `starts` and recompute `max` on every call. The thunk census asks it
+    once per short row, so that was 5,805 x 157,757 comparisons: the test took 106 s and a profile
+    put 218 s (under cProfile) inside this function. The population is fixed; build the index once.
     """
-    starts = [a for a, _ in extents]
-    widest = max(s for _, s in extents)
+    return extents, [a for a, _ in extents], max(s for _, s in extents)
+
+
+def owners_indexed(idx, v):
+    """Every extent containing v, against a prepared `index(extents)`."""
+    extents, starts, widest = idx
     lo = bisect.bisect_left(starts, v - widest)
     hi = bisect.bisect_right(starts, v)
     return [(a, s) for a, s in extents[lo:hi] if a <= v < a + s]
 
 
-def resolve(extents, v):
-    """(owner, kind), kind in {owned, ambiguous, stray}.
+def owners(extents, v):
+    """Every extent containing v. extents must be sorted by address.
+
+    This is the one-shot form for a caller with a single address; a loop must call `index` once and
+    `owners_indexed` per address. The NOTE still holds: on this catalogue the tie branch cannot fire
+    (sizes are decimal, extents are disjoint -- a + size <= next address at every one of 157,756
+    adjacent pairs, 0 true overlaps, 0 duplicate starts), so `owners` is 1 for every catalogued
+    address and `ambiguous` is a guard against a catalogue that does not exist here.
+    """
+    return owners_indexed(index(extents), v)
+
+
+def resolve_indexed(idx, v):
+    """(owner, kind), kind in {owned, ambiguous, stray}, against a prepared `index(extents)`.
 
     A TIE IS NOT BROKEN. Two catalogued extents of the same size both containing v contradict each other
     about the binary, and breaking the tie on the lower address would be breaking it on file order -- a
     property of the catalogue's layout, not of the code that ran. So a tie returns (None, "ambiguous") and
     is counted separately: owners=2 printed as though a choice had been made is the defect this refuses.
     """
-    c = owners(extents, v)
+    c = owners_indexed(idx, v)
     if not c:
         return None, "stray"
     smallest = [e for e in c if e[1] == min(s for _, s in c)]
     return (smallest[0], "owned") if len(smallest) == 1 else (None, "ambiguous")
+
+
+def resolve(extents, v):
+    """The one-shot form; a loop must build `index(extents)` once and call `resolve_indexed`."""
+    return resolve_indexed(index(extents), v)
 
 
 def owner(extents, v):
@@ -127,6 +148,7 @@ def main():
         print("refusal: the join cannot own the catalogue's first row -- the rule is broken, not the data",
               file=sys.stderr)
         return 3
+    idx = index(extents)
     if a.boot_err is None:
         # A query and a join are two subjects. Asking about one vaddr must not require boot rows: a
         # refusal that fires on the path that does not need it teaches the reader to ignore refusals.
@@ -136,8 +158,8 @@ def main():
             return 3
         for text in a.vaddr:
             v = int(text, 0)
-            o, kind = resolve(extents, v)
-            c = owners(extents, v)
+            o, kind = resolve_indexed(idx, v)
+            c = owners_indexed(idx, v)
             print(f"vaddr {v:#09x}: {kind} owners {len(c)} smallest "
                   f"{('none' if o is None else f'{o[0]:#09x}+{o[1]}')}"
                   + "".join(f"\n    contains {x[0]:#09x}+{x[1]}" for x in c))
@@ -145,8 +167,8 @@ def main():
 
     for text in a.vaddr:
         v = int(text, 0)
-        o, kind = resolve(extents, v)
-        c = owners(extents, v)
+        o, kind = resolve_indexed(idx, v)
+        c = owners_indexed(idx, v)
         print(f"vaddr {v:#09x}: {kind} owners {len(c)} smallest "
               f"{('none' if o is None else f'{o[0]:#09x}+{o[1]}')}"
               + ("".join(f"\n    contains {x[0]:#09x}+{x[1]}" for x in c) if c else ""))
@@ -160,8 +182,8 @@ def main():
     strays = nested = 0
     for r in rows:
         v = r["pc"] - IMAGE + EBOOT_BASE
-        c = owners(extents, v)
-        o = owner(extents, v)
+        c = owners_indexed(idx, v)
+        o = resolve_indexed(idx, v)[0]
         if not o:
             strays += 1
             print(f"  #{r['index']:>3} pc {r['pc']:#011x} -> {v:#09x} STRAY (count {r['count']})")
