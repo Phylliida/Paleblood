@@ -12,10 +12,12 @@ answer is to save and restore `xmm0-7` and re-prove the capacity with the sentin
 from __future__ import annotations
 
 import hashlib
+import os
 import pathlib
 import sys
 
-import atomicio
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomicio  # noqa: E402  -- write beside, fsync, replace; never truncate first
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CANDIDATES = ROOT / "symbols" / "capture_candidates.txt"
