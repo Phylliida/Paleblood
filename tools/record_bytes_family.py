@@ -16,6 +16,7 @@ be cherry-picked inside a batch.
 import argparse
 import csv
 import datetime
+import io
 import os
 import subprocess
 import sys
@@ -36,25 +37,42 @@ TRAPS = frozenset({
     'clts', 'swapgs', 'wrfsbase', 'wrgsbase', 'rdmsr', 'wrmsr', 'lgdt', 'lidt', 'lldt', 'ltr',
     'vmcall', 'vmrun',
 })
+import atomicio
 import install_mode
 import progress as P
 import verification as V
 
-TABLES = ('functions.csv', 'replacement_origins.csv', 'verification.csv')
+def _write_rows(path, fields, rows):
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=fields, lineterminator='\n')
+    w.writeheader()
+    w.writerows(rows)
+    atomicio.atomic_write(path, buf.getvalue())
+
+
+def _sort_address_keyed_file(path):
+    """Sort one table in place, atomically, and only when the order actually changes.
+
+    `open(path, 'w')` truncates at the open: a sort that raises after the first row has already
+    destroyed the table it was sorting. `TABLES` used to name this population beside this loop and
+    was read by nothing; the loop is the population now.
+    """
+    with open(path, newline='') as f:
+        rd = csv.DictReader(f)
+        rows = list(rd)
+        fields = rd.fieldnames
+    ordered = sorted(rows, key=lambda r: int(r['address'], 16))
+    if ordered == rows:
+        return False
+    _write_rows(path, fields, ordered)
+    return True
 
 
 def sort_address_keyed(root):
-    # The mode table has one writer, and it sorts; the other two are still sorted here because
-    # their writers are this file's own.
+    # The mode table has one writer, and it sorts; these two are sorted here because their
+    # writers are this file's own.
     for name in ('functions.csv', 'replacement_origins.csv'):
-        path = os.path.join(root, 'symbols', name)
-        rows = list(csv.DictReader(open(path)))
-        fields = list(rows[0].keys())
-        rows.sort(key=lambda r: int(r['address'], 16))
-        with open(path, 'w', newline='') as f:
-            w = csv.DictWriter(f, fieldnames=fields, lineterminator='\n')
-            w.writeheader()
-            w.writerows(rows)
+        _sort_address_keyed_file(os.path.join(root, 'symbols', name))
     install_mode.sort_host(root)
 
 
@@ -248,10 +266,7 @@ def main(argv):
     if flipped != len(members):
         raise SystemExit(f'refused: flipped {flipped} but recorded {len(members)}')
     fields = list(all_rows[0].keys())
-    with open(fpath, 'w', newline='') as f:
-        w = csv.DictWriter(f, fieldnames=fields, lineterminator='\n')
-        w.writeheader()
-        w.writerows(all_rows)
+    _write_rows(fpath, fields, all_rows)
     sort_address_keyed(o.root)
     print(f'  functions.csv: {flipped} flipped to edge-verified; tables sorted')
 
