@@ -18,7 +18,10 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import emit_byte_leaves as E
+import install_mode
 import record_bytes_family as R
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FUNCTIONS = 'symbols/functions.csv'
 # THE APPLY OWES THREE TABLES, NOT ONE. The first version wrote functions.csv and left the other two
@@ -28,7 +31,6 @@ FUNCTIONS = 'symbols/functions.csv'
 # writer grows the tables it owes rather than a repair tool growing beside it. Mode is `host`: these
 # bodies are naked asm inside libbbgame, reached through the host patch mechanism, and no guest
 # hook is installed for them (the 14-byte jump belongs to hook rows).
-INSTALL = 'symbols/install_mode.csv'
 ORIGINS = 'symbols/replacement_origins.csv'
 
 
@@ -128,7 +130,8 @@ def main(argv):
                          f'{E.BODY} -- the table and the body disagree, and wiring the missing ones '
                          'would wire a population nobody emitted')
     addrs = [(r['address'], 'host') for r in present]
-    _append_rows(INSTALL, addrs, 'address', 'mode')
+    added = install_mode.append_host(ROOT, [a for a, _ in addrs])
+    print(f'install_mode.csv: +{added} host rows')
     _append_rows(ORIGINS, [(a, 'generated') for a, _ in addrs], 'address', 'origin')
     return 0
 

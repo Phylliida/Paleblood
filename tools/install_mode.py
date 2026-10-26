@@ -15,6 +15,7 @@ import pathlib
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomicio  # noqa: E402  -- write beside, fsync, replace; never truncate first
 import catalogue  # noqa: E402  -- typed reader: address/size are ints, one radix law
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,3 +60,34 @@ def replacement_for(root, name, address):
     if is_host(root, address):
         return 'bb_' + name
     return None
+
+
+def append_host(root, addresses):
+    """Add host-mode rows, refusing any address already recorded as something else.
+
+    Writers used to append this table with their own csv.DictWriter, so each one carried its own
+    duplicate/clash policy. The table's shape is this module's private fact: callers hand over
+    addresses, never a path and never a row.
+    """
+    addrs = sorted({int(a, 16) if isinstance(a, str) else int(a) for a in addresses})
+    path = _path(root)
+    have = {row['address']: row['mode'] for row in rows(root)}
+    clash = [a for a in addrs if a in have and have[a] != 'host']
+    if clash:
+        raise SystemExit(f'refused: {path} already records 0x{clash[0]:08x} as '
+                         f'{have[clash[0]]!r}, refusing to write it as host')
+    add = [a for a in addrs if a not in have]
+    if not add:
+        return 0
+    merged = dict(have)
+    for a in add:
+        merged[a] = 'host'
+    text = 'address,mode\n' + ''.join(f'0x{a:08x},{merged[a]}\n' for a in sorted(merged))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    atomicio.atomic_write(path, text)
+    _cache.clear()
+    back = {row['address'] for row in rows(root)}
+    missing = [a for a in add if a not in back]
+    if missing:
+        raise SystemExit(f'wrote {path}, re-read, and {len(missing)} rows are absent')
+    return len(add)

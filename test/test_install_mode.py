@@ -95,6 +95,38 @@ class TestOneReader(unittest.TestCase):
             self.assertIsNone(install_mode.replacement_for(d, 'x', '0x1'))
 
 
+class TestAppendHost(unittest.TestCase):
+    def test_absent_table_is_created_sorted(self):
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            n = install_mode.append_host(d, ['0x20', 0x10])
+            self.assertEqual(n, 2)
+            self.assertEqual(symbols.joinpath('install_mode.csv').read_text(),
+                             'address,mode\n0x00000010,host\n0x00000020,host\n')
+
+    def test_existing_host_rows_are_skipped_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            symbols.joinpath('install_mode.csv').write_text(
+                'address,mode\n0x00000010,host\n')
+            self.assertEqual(install_mode.append_host(d, [0x10, 0x20]), 1)
+            self.assertEqual([r['address'] for r in install_mode.rows(d)], [0x10, 0x20])
+
+    def test_a_conflicting_mode_refuses_and_leaves_the_file_alone(self):
+        with tempfile.TemporaryDirectory() as d:
+            symbols = pathlib.Path(d) / 'symbols'
+            symbols.mkdir()
+            path = symbols / 'install_mode.csv'
+            before = 'address,mode\n0x00000010,hook\n'
+            path.write_text(before)
+            with self.assertRaises(SystemExit) as e:
+                install_mode.append_host(d, [0x10])
+            self.assertIn('refusing to write it as host', str(e.exception))
+            self.assertEqual(path.read_text(), before)
+
+
 class TestInstallMode(unittest.TestCase):
     def test_tree_is_consistent(self):
         self.assertEqual(violations(_rows(FUNCTIONS), _rows(HOOKS), _rows(INSTALL_MODE)), [])
