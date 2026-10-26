@@ -18,7 +18,8 @@ import os
 import sys
 
 TARGET = 'install_mode.csv'
-READ_CALLS = {'open', 'read_rows', 'DictReader', 'DictWriter', 'write_table', 'atomic_write'}
+PATH_CALLS = {'open', 'read_rows', 'DictReader', 'DictWriter', 'write_table', 'atomic_write',
+              'write_text', 'write_bytes'}
 
 
 def _names(node):
@@ -78,16 +79,17 @@ def scan_text(source, filename='<text>'):
             continue
         name = node.func.id if isinstance(node.func, ast.Name) else (
             node.func.attr if isinstance(node.func, ast.Attribute) else '')
-        if name not in READ_CALLS:
+        if name not in PATH_CALLS:
             continue
         # `csv.DictReader(open(path))` is one read; the inner `open` is the call that holds the path.
         if name in ('DictReader', 'DictWriter') and any(
                 isinstance(arg, ast.Call) and
                 (arg.func.id if isinstance(arg.func, ast.Name) else
-                 arg.func.attr if isinstance(arg.func, ast.Attribute) else '') in READ_CALLS
+                 arg.func.attr if isinstance(arg.func, ast.Attribute) else '') in PATH_CALLS
                 for arg in node.args):
             continue
-        if any(_tainted(arg, tainted) for arg in node.args):
+        subject = [node.func.value] if isinstance(node.func, ast.Attribute) else []
+        if any(_tainted(arg, tainted) for arg in subject + list(node.args)):
             out.append((node.lineno, _function_name(parents, node), name))
     return out
 

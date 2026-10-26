@@ -26,6 +26,16 @@ class TablePaths(unittest.TestCase):
     def test_a_message_is_not_a_reader(self):
         self.assertEqual(C.scan_text("print('install_mode.csv has one reader')\n"), [])
 
+    def test_a_direct_path_is_a_reader(self):
+        got = C.scan_text("open(os.path.join(ROOT, 'symbols', 'install_mode.csv'))\n")
+        self.assertEqual(len(got), 1, got)
+        self.assertEqual(got[0][2], 'open')
+
+    def test_a_write_text_is_a_writer(self):
+        got = C.scan_text("(Path(root) / 'symbols' / 'install_mode.csv').write_text('')\n")
+        self.assertEqual(len(got), 1, got)
+        self.assertEqual(got[0][2], 'write_text')
+
     def test_the_tree_has_no_second_reader(self):
         bad = []
         for path in sorted((ROOT / 'tools').glob('*.py')):
