@@ -15,7 +15,10 @@ the property that keeps this fail-closed.
 
 import csv
 import pathlib
+import tempfile
 import unittest
+
+import install_mode
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SYMBOLS = ROOT / 'symbols'
@@ -76,6 +79,20 @@ def burndown_lines(functions, hooks, install):
     n_hook = sum(1 for r in replaced if r['address'] in hook_addrs and r['address'] not in host)
     return (f'hook-registered {n_hook:,}   host-only {len(replaced) - n_hook:,}',
             'observed executing in game: unknown (no runtime witness)')
+
+
+class TestOneReader(unittest.TestCase):
+    def test_host_addresses_and_replacement_for_agree(self):
+        rows = install_mode.rows(ROOT)
+        host = next(r for r in rows if r['mode'] == 'host')
+        name = next(r['name'] for r in _rows(FUNCTIONS) if int(r['address'], 16) == host['address'])
+        self.assertIn(host['address'], install_mode.host_addresses(ROOT))
+        self.assertEqual(install_mode.replacement_for(ROOT, name, host['address']), 'bb_' + name)
+
+    def test_absent_table_is_empty_not_an_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(install_mode.host_addresses(d), frozenset())
+            self.assertIsNone(install_mode.replacement_for(d, 'x', '0x1'))
 
 
 class TestInstallMode(unittest.TestCase):

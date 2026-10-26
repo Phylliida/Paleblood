@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # the process that RUNS the gate, so it lives under __main__ and is cancelled on the way out.
 
 import verification
+import install_mode
 
 DEFAULT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ADDR = re.compile(r'^0x[0-9a-f]{8}$')
@@ -35,40 +36,6 @@ HOOK_HEADER = ['address', 'replacement', 'system']
 MAX_NOTE = 200
 
 
-
-_install_mode_cache: dict = {}      # (path, mtime_ns, size) -> frozenset of host addresses
-
-
-def _install_mode_hosts():
-    """Addresses declared installed as host calls rather than by a game hook.
-
-    A pool B body is shorter than the 14-byte absolute jump a hook needs, so the differential
-    verifies it by calling the replacement as a host symbol. Declaring that is the only way past
-    the hooks-entry requirement; an absent declaration still refuses.
-
-    This is a reason, not a policy. `jmp qword ptr [rip+0]` plus its target is 14 bytes; the
-    smallest hookable row in game/hooks.csv is 16 (then 18, 19, 20, 21, 22; largest 3,222), so every
-    declared hook fits — while pool B's shapes do not even fit a 5-byte `jmp rel32` (`xor eax,eax;
-    ret` is 3 bytes, `mov rax,[rdi+K]; ret` is 6 to 8). Patching one would overwrite the next
-    function's first instruction and the run would stay green, which is why no size floor lift is
-    ever coming: the instruction is too short to hold a jump, not merely short of our preference.
-    """
-    import csv as _csv
-    import pathlib as _pathlib
-    path = _pathlib.Path(__file__).resolve().parents[1] / "symbols" / "install_mode.csv"
-    if not path.exists():
-        return frozenset()
-    st = path.stat()
-    key = (str(path), st.st_mtime_ns, st.st_size)
-    hit = _install_mode_cache.get(key)
-    if hit is not None:
-        return hit
-    with open(path, newline="") as handle:
-        hosts = frozenset(row["address"].lower() for row in _csv.DictReader(handle)
-                          if row.get("mode") == "host")
-    _install_mode_cache.clear()             # one entry: the table as it stands on disk
-    _install_mode_cache[key] = hosts
-    return hosts
 
 def load(path: str, header: list[str], errs: list[str]) -> list[dict]:
     rel = os.path.basename(os.path.dirname(path)) + '/' + os.path.basename(path)
@@ -245,10 +212,10 @@ def main() -> int:
             errs.append(f"{where}: {f['name']} is {f['size']} bytes; a hook needs at least 14 (QUIRKS.md)")
         if h['replacement'] != 'bb_' + f['name']:
             errs.append(f"{where}: replacement must be 'bb_{f['name']}'")
-    hosts = _install_mode_hosts()      # read once, not once per functions.csv row
+    hosts = install_mode.host_addresses(root)      # one read, cached on (path, mtime, size)
     for r in funcs:
         if r['status'] in HOOKED and r['address'] not in hooked:
-            if r['address'].lower() not in hosts:
+            if int(r['address'], 16) not in hosts:
                 errs.append(f"symbols/functions.csv:{r['_line']}: {r['name']} is {r['status']} but has no game/hooks.csv entry")
 
     errs += check_reviews(root, funcs)

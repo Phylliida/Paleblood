@@ -56,6 +56,7 @@ import sys
 if os.path.dirname(os.path.abspath(__file__)) not in sys.path:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from atomicio import atomic_write  # noqa: E402 -- sibling; the insert above is what makes this resolve bare
+import install_mode  # noqa: E402 -- the one reader of symbols/install_mode.csv
 
 VERIFICATION_HEADER = ['function', 'cases', 'option', 'total', 'passed', 'failed', 'quarantined', 'source',
                        'cases_sha256', 'date']
@@ -464,13 +465,7 @@ def replacement_symbol(root: str, name: str, address: str) -> str | None:
             for r in csv.DictReader(f):
                 if r['address'] == address:
                     return r['replacement']
-    modes = os.path.join(root, 'symbols', 'install_mode.csv')
-    if os.path.exists(modes):
-        with open(modes, newline='') as f:
-            for r in csv.DictReader(f):
-                if r['address'] == address and r['mode'] == 'host':
-                    return 'bb_' + name
-    return None
+    return install_mode.replacement_for(root, name, address)
 
 
 def _append_rows(root: str, new_rows: list[dict]) -> None:
