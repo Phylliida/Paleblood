@@ -199,6 +199,45 @@ static int fatal_says(void (*call)(void), const char *want)
     return WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT && strstr(buf, want) != NULL;
 }
 
+/* The semaphore contract, called through the registry the way the guest calls it. This is the check the
+   BB_SEMA_SEED12 diagnostic bypassed: it wrote count/max = 1000 AFTER sema_create's validation, so a
+   probe could fabricate a counting mutex out of a max=1 object while the ABI refused the same values.
+   The refusal must happen before any row is touched, and the positive control must still create -- a
+   refusal that refuses everything passes the first half and is not a contract. */
+typedef int (*f_sema_create)(int64_t out, int64_t name, int64_t attr, int64_t init, int64_t max, int64_t opt);
+typedef int (*f_sema_delete)(int64_t sema_id);
+
+static void sema_contract(void)
+{
+    void *create_entry = fn("libkernel", "sceKernelCreateSema");
+    void *delete_entry = fn("libkernel", "sceKernelDeleteSema");
+    if (!create_entry || !delete_entry) return;
+    f_sema_create create = (f_sema_create)create_entry;
+    f_sema_delete delete = (f_sema_delete)delete_entry;
+    const int k_err_inval = (int)0x80020016u;
+
+    /* init > max, max == 0, init < 0: each refused, and the out word untouched. */
+    for (int arm = 0; arm < 3; arm++) {
+        uint64_t h = 0xdeadbeefcafef00dull;
+        const int64_t init = arm == 0 ? 1000 : arm == 1 ? 0 : -1;
+        const int64_t max = arm == 0 ? 1 : arm == 1 ? 0 : 1;
+        const int rc = create((int64_t)(uintptr_t)&h, 0, 0, init, max, 0);
+        CHECK(rc == k_err_inval);
+        CHECK(h == 0xdeadbeefcafef00dull);
+    }
+
+    /* Positive control: the same entry with a legal pair must create, and the handle must carry the
+       magic rather than a plausible neighbour. Delete it so a later test can reuse the row. */
+    uint64_t h = 0;
+    CHECK(create((int64_t)(uintptr_t)&h, 0, 0, 1, 1, 0) == 0);
+    CHECK((uint32_t)(h >> 32) == 0x53454d41u);
+    CHECK((uint32_t)h != 0);
+    CHECK(delete((int64_t)h) == 0);
+    /* And after Delete the id is dead: a Wait through the registry must refuse rather than read a
+       destroyed row's mutex. */
+    CHECK(delete((int64_t)h) == k_err_inval);
+}
+
 int main(void)
 {
     {
@@ -214,6 +253,8 @@ int main(void)
         if (d != 1) { fprintf(stderr, "rt_syslib_check_unique: expected 1 duplicate, got %u\n", d); return 1; }
         if (rt_syslib_check_unique(dup, dup + 1) != 0) { fprintf(stderr, "rt_syslib_check_unique: expected 0 on one entry\n"); return 1; }
     }
+    sema_contract();
+
     /* This unit test has no guest image: the syslib handlers write through pointers the test owns on its
        own stack. boot.c is what sets rt_process.image in a real run, so declare a fixture that covers this
        frame -- an unset bound is now a refusal rather than a silent admission of every address, which is

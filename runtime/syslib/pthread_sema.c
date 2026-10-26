@@ -345,11 +345,15 @@ static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64
     rt_fatal("scePthreadCreate", wall);
 }
 
-RT_SYSLIB_NOOP("libkernel", sceKernelCreateSema, sema_create);
-RT_SYSLIB_NOOP("libkernel", sceKernelWaitSema, sema_wait);
-RT_SYSLIB_NOOP("libkernel", sceKernelSignalSema, sema_signal);
-RT_SYSLIB_NOOP("libkernel", sceKernelPollSema, sema_poll);
-RT_SYSLIB_NOOP("libkernel", sceKernelDeleteSema, sema_delete);
+/* REAL, not NOOP: these rows own pthread mutexes and condvars and Wait actually sleeps. NOOP means
+   "correct only because the guest is single-threaded", which was true when scePthreadCreate refused and
+   stopped being true when the real thread landed. The kind is a declaration the next contributor reads,
+   so a stale one is a lie in the boot line rather than a comment. */
+RT_SYSLIB("libkernel", sceKernelCreateSema, sema_create);
+RT_SYSLIB("libkernel", sceKernelWaitSema, sema_wait);
+RT_SYSLIB("libkernel", sceKernelSignalSema, sema_signal);
+RT_SYSLIB("libkernel", sceKernelPollSema, sema_poll);
+RT_SYSLIB("libkernel", sceKernelDeleteSema, sema_delete);
 RT_SYSLIB_UNRESOLVED("libkernel", scePthreadCreate, thread_create_refused);
 
 /* The cond family moved to kernel_mutex.c, where the mutex object it must lock also lives: a

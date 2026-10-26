@@ -248,10 +248,14 @@ static __attribute__((noinline)) void run_guest(void *fn, void *a, void *b, void
 /* Which syslib body is executing, and the three argument words it received. Set by the shared prologue and
    CLEARED before the stub returns, so "the fault happened inside #39" and "the fault happened after #39
    returned" are different readings rather than the same one -- a stale index is a claim, not a measurement. */
-/* Slots 0..2 are the guest's rdi/rsi/rdx; slot 3 is [rsp] at trampoline entry, i.e. the guest return
-   address. ONE global, overwritten per call, read at the reporting site -- so re-entrancy is a known limit:
-   the last call wins, and a nested import would overwrite its caller's record. */
-volatile uint64_t rt_syslib_args[4];
+/* Slots 0..2 are the guest's rdi/rsi/rdx. There is no slot 3: the guest return address is stored per
+   import in rt_import_pc[which][0] below, where the index and the slot are the same word. A fourth
+   slot was declared and never written (the emitter stores exactly three words), so a reader of
+   rt_syslib_args[3] would have read a zero the trampoline never produced -- a name in a table with
+   neither a writer nor a reader. ONE global, overwritten per call, read at the reporting site -- so
+   re-entrancy is a known limit: the last call wins, and a nested import would overwrite its caller's
+   record. */
+volatile uint64_t rt_syslib_args[3];
 
 /* One row per import, not a ring: a ring write needs a second scratch register, and here r11 holds &args while
    rcx/r8/r9 are live arguments -- a ring that eats arguments is worse than a slot that misses one. `which` is a
@@ -293,11 +297,6 @@ static int guest_rx_contains(uint64_t guest)
     }
     return 0;
 }
-
-/* Read back inside the stub, immediately after the host swap: a wrfsbase that does not take is otherwise
-   indistinguishable from one that does. */
-/* The guest stack's alignment at the call site is the guest's business; our C bodies need the ABI's. */
-volatile uint64_t rt_stub_rsp;
 
 static void write_trampoline(unsigned char *t, unsigned char *mark, uint32_t which, uint64_t target,
                              uint64_t check_addr)
@@ -1307,9 +1306,10 @@ int main(int argc, char **argv)
             }
             printf("pbboot: fault import in flight #%u %s:%s (object %u import %u)\n", v, lib ? lib : "?",
                    sym ? sym : "?", k, i);
-            /* THREE captured words, because rt_syslib_args is [4] and the trampoline stores exactly rdi,
+            /* THREE captured words, because rt_syslib_args is [3] and the trampoline stores exactly rdi,
                rsi, rdx. The old line printed indices 4 and 5 -- out of bounds -- under the labels r8/r9, and
-               index 3 (never written) under rcx: three "registers" that were not registers. */
+               index 3 (never written) under rcx: three "registers" that were not registers. Slot 3 is
+               retired rather than filled: the guest return address lives in rt_import_pc[which][0]. */
             {
                 const uint64_t gpc = import_guest_pc(v);
                 char g[128];
