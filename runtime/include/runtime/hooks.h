@@ -29,11 +29,17 @@ size_t rt_hook_count(void);
 
 /* Call the replacement for `address` on the host side, with `nargs` (<= 6) integer arguments in
    the System V positional order, and record a capture case around the call when BB_CAPTURE_DIR is
-   set. Returns 0 and stores the body's return value in *out, or -1 when nothing is hooked there --
-   a miss is refused, never reported as a body returning zero, because a zero is a legal return and
-   the two would be indistinguishable to the caller that has to decide what ran.
-   The capture is written with the entry's `name` as the function key, so a capture lands in the
-   same directory tools/verify.py reads for the ladder row it belongs to. */
+   set AND the capture policy records this call (capture.c: FIRST/EVERY; a function called fewer
+   than FIRST times records nothing). Returns 0 and stores the body's return value in *out, or -1
+   when nothing is hooked there -- a miss is refused, never reported as a body returning zero,
+   because a zero is a legal return and the two would be indistinguishable to the caller that has
+   to decide what ran. The return value says the body ran; it never says a case was written --
+   check the artifact.
+   Scope: arguments are recorded as scalars. A pointer argument is a literal address, so a body
+   that dereferences one needs runtime/include/runtime/recorder.hpp (which names buffers and image
+   addresses); this entry point cannot. The capture is written with the entry's `name` as the
+   function key, so a capture lands in the same directory tools/verify.py reads for the ladder row
+   it belongs to. */
 int rt_hook_invoke(uint32_t address, const uint64_t *args, size_t nargs, uint64_t *out);
 
 /* The generated hook table (tools/gen_hooks.py). Declared here, not in plugin.c: a .c file that
