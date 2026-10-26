@@ -154,7 +154,15 @@ static int sema_delete(int64_t sema_id)
 static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64_t arg, int64_t name)
 {
     thread_wall_reached = 1;
-    (void)out; (void)attr; (void)name;
+    /* Print the five raw arguments before interpreting any of them. The two prototypes in this tree
+       disagree at positions 2 and 5 (name second/attr fifth in sce_pthread_create_a, attr second/name
+       fifth here), and the dead body casts every argument to (void), so it cannot witness the order at
+       all. No dereference here: a name that is not a string must not fault the witness that would say so. */
+    fprintf(stderr, "pbboot: scePthreadCreate raw: out=%#llx attr=%#llx entry=%#llx arg=%#llx name=%#llx\n",
+            (unsigned long long)(uint64_t)out, (unsigned long long)(uint64_t)attr,
+            (unsigned long long)(uint64_t)entry, (unsigned long long)(uint64_t)arg,
+            (unsigned long long)(uint64_t)name);
+    (void)out; (void)name;
     /* The wall, named and stopped at rather than served past. Returning an error here is what the guest
        did NOT handle: it panicked, and the panic path dereferences the unpopulated __sFILE, so the run
        ended in a stdio-looking fault two layers away from the cause. Stopping here means nothing after this
