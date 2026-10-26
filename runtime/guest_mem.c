@@ -20,11 +20,41 @@ int rt_guest_ptr_ok(uintptr_t addr, size_t len, const char *call)
     return rt_guest_write_ok(addr, len, call);
 }
 
+/* Guest mappings created after the image (sceKernelMapFlexibleMemory). The image is not the whole of
+   guest memory: a pointer into a registered mapping is a guest pointer, and the image-range check is the
+   wrong instrument for it. One table, because there is one writer of these mappings. */
+#define RT_GUEST_MAPPINGS 64
+static struct { uintptr_t base, end; } g_guest_mappings[RT_GUEST_MAPPINGS];
+static unsigned g_guest_mapping_count;
+
+int rt_guest_register_mapping(uintptr_t base, size_t len)
+{
+    if (!base || len == 0 || len > UINTPTR_MAX - base)
+        return 0;
+    if (g_guest_mapping_count >= RT_GUEST_MAPPINGS)
+        return 0;
+    g_guest_mappings[g_guest_mapping_count].base = base;
+    g_guest_mappings[g_guest_mapping_count].end = base + len;
+    g_guest_mapping_count++;
+    return 1;
+}
+
+static int guest_mapping_contains(uintptr_t addr, size_t len)
+{
+    for (unsigned i = 0; i < g_guest_mapping_count; i++) {
+        const uintptr_t b = g_guest_mappings[i].base, e = g_guest_mappings[i].end;
+        if (addr >= b && addr < e && len <= e - addr)
+            return 1;
+    }
+    return 0;
+}
+
 int rt_guest_write_ok(uintptr_t addr, size_t len, const char *call)
 {
     uintptr_t base = (uintptr_t)rt_process.image;
     uintptr_t end = base + (uintptr_t)rt_process.image_size;
     if (len == 0) return 1;
+    if (guest_mapping_contains(addr, len)) return 1;
     /* rt_process.image is set in exactly one place, boot.c, so on the plugin path it is NULL and this
        function used to admit EVERY address: with base == end == 0, `end - addr` underflows to a huge
        unsigned value and `len > huge` is false. A bounds check whose subject was never initialised is

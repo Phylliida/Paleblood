@@ -7,4 +7,8 @@
    prints the refusal with both the address and the bounds, and returns 0. */
 int rt_guest_write_ok(uintptr_t addr, size_t len, const char *call);
 int rt_guest_ptr_ok(uintptr_t addr, size_t len, const char *call);
+/* Register a mapping the runtime handed the guest outside the ELF image (flexible memory). The bounds
+   checks below accept writes inside a registered mapping; a pointer there is a guest pointer even though
+   it is not an image offset. Returns 1 on success, 0 when the table is full. */
+int rt_guest_register_mapping(uintptr_t base, size_t len);
 #endif
