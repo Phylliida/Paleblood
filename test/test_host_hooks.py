@@ -292,6 +292,9 @@ class HostHooks(unittest.TestCase):
         # one hook installed, zero tracked. A bare "0 of 0" is the zero-without-a-selector defect.
         self.assertIn('sites entered 0 of 0 tracked', run.stderr)
         self.assertIn('hooks installed 1', run.stderr)
+        # The ladder is printed, not quoted from a summary: this binary links host_hooks.c alone, so the
+        # thread wall and the recorder are absent by construction, and the line must say so.
+        self.assertIn('rungs: thread-wall not-reached, recorder-linked no, captures ', run.stderr)
 
     def test_patch_refusals_and_readback(self):
         run = self.build()

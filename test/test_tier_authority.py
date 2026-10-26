@@ -46,6 +46,20 @@ class TierAuthorityTest(unittest.TestCase):
     def test_an_absent_id_refuses(self):
         self.assertFalse(T.grants("9nope", "### 1a. x -- RATIFIED\n"))
 
+    def test_the_refusal_names_the_state_the_heading_carries(self):
+        """The old sentence said "no status word" beside a heading visibly reading NOT IN FORCE.
+
+        That is dead advice: the reader sees the status word the refusal denies. A refusal's reason must
+        quote the state it found, so the next refusal is believable.
+        """
+        msg = T.why("1ab")
+        self.assertIn("PROPOSED, NOT IN FORCE", msg)
+        self.assertNotIn("carries no status word", msg)
+        # The positive control: a heading with no status token at all still says what is missing.
+        msg = T.why("9z", "### 9z. a rule with no state\n")
+        self.assertIn("no RATIFIED token", msg)
+        self.assertIn("NOT IN FORCE", msg)
+
 
 if __name__ == "__main__":
     unittest.main()

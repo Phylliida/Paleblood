@@ -8,9 +8,12 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/mman.h>
 
 #include "runtime/boundary_stub.h"
+#include "runtime/capture.h"      /* rt_capture_begin: declared here, weak below */
+#include "runtime/hooks.h"        /* rt_hook_invoke: same */
 #include "runtime/site_guard.h"   /* the bias constant, in a header nothing pins */
 
 /* The entry counter's backing store: one cacheline-honest slot per installed site, plus the site address so a
@@ -22,6 +25,30 @@ static volatile uint64_t g_site_entered[RT_SITES_MAX];
 static uint64_t g_site_address[RT_SITES_MAX];
 static unsigned g_site_count;
 static unsigned installed_count;   /* reported by the signal-safe line; defined here so the reporter can see it */
+
+/* The ladder's first four rungs, each read rather than asserted. The recorder/capture units are marked
+   weak at the declaration: an artifact that does not link them reports the absence instead of pretending
+   the path is present, and pbboot flips only when the build graph actually gains them. */
+#pragma weak rt_hook_invoke
+#pragma weak rt_capture_begin
+/* A weak default for the thread wall: an artifact without pthread_sema.c has no wall to have reached.
+   pbboot's strong definition overrides this one; no `extern` is added to the roster for a diagnostic. */
+__attribute__((weak)) int rt_thread_wall_reached(void) { return 0; }
+static unsigned g_captures;
+
+static void count_captures(void)
+{
+    const char *dir = getenv("BB_CAPTURE_DIR");
+    if (!dir || !*dir) dir = "CAPTURES";
+    DIR *d = opendir(dir);
+    if (!d) return;
+    struct dirent *e;
+    while ((e = readdir(d)) != NULL) {
+        const size_t n = strlen(e->d_name);
+        if (n > 5 && strcmp(e->d_name + n - 5, ".json") == 0) g_captures++;
+    }
+    closedir(d);
+}
 
 /* Write-only, bounded, no stdio: this function is called from a SIGABRT handler, and it used to call
    snprintf. Its final call passed the buffer's FULL size at an advanced pointer, glibc's fortify aborted
@@ -66,6 +93,12 @@ static void rt_sites_report(void)
     p = sites_dec(p, end, total);
     p = sites_app(p, end, " hits), hooks installed ");
     p = sites_dec(p, end, installed_count);
+    p = sites_app(p, end, "; rungs: thread-wall ");
+    p = sites_app(p, end, (rt_thread_wall_reached && rt_thread_wall_reached()) ? "reached" : "not-reached");
+    p = sites_app(p, end, ", recorder-linked ");
+    p = sites_app(p, end, (rt_hook_invoke && rt_capture_begin) ? "yes" : "no");
+    p = sites_app(p, end, ", captures ");
+    p = sites_dec(p, end, g_captures);
     for (unsigned i = 0; i < g_site_count && i < RT_SITES_MAX; i++) {
         p = sites_app(p, end, " 0x");
         p = sites_hex16(p, end, g_site_address[i]);
@@ -557,6 +590,7 @@ int rt_host_hooks_initialize(rt_host *host)
     static int report_registered;
     if (!report_registered) {
         report_registered = 1;
+        count_captures();
         atexit(rt_sites_report);
         struct sigaction sa_abort;
         memset(&sa_abort, 0, sizeof sa_abort);

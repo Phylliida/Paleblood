@@ -27,6 +27,13 @@ enum { k_err_inval = (int)0x80020016u, k_err_nomem = (int)0x8002000cu };
    correct *under* it rather than each function assuming it privately. Every entry point checks. */
 static int guest_threads = 1;
 
+/* The ladder's first rung, measured rather than remembered: the refusal sets this before it stops, and the
+   sites report reads it through a weak symbol. In an artifact that does not link this file the symbol is
+   absent and the report says so, which is the same fact one level up. */
+static volatile int thread_wall_reached;
+
+int rt_thread_wall_reached(void) { return thread_wall_reached; }
+
 static void require_single_threaded(const char *call)
 {
     if (!guest_threads) rt_fatal(call, "the guest is no longer single-threaded and this model is");
@@ -146,6 +153,7 @@ static int sema_delete(int64_t sema_id)
    spawning a host thread that runs guest code without a modelled TLS block or a locked arena. */
 static int thread_create_refused(int64_t out, int64_t attr, int64_t entry, int64_t arg, int64_t name)
 {
+    thread_wall_reached = 1;
     (void)out; (void)attr; (void)name;
     /* The wall, named and stopped at rather than served past. Returning an error here is what the guest
        did NOT handle: it panicked, and the panic path dereferences the unpopulated __sFILE, so the run

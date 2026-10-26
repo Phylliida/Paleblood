@@ -52,4 +52,10 @@ def why(decision_id, text=None):
         return f"{decision_id}: no heading in decisions.md -- absence refuses"
     if grants(decision_id, text):
         return f"{decision_id}: granted by its heading"
-    return f"{decision_id}: heading carries no status word -- NOT IN FORCE ({line.strip()[:80]})"
+    # Name the state the heading actually carries. The old sentence said "no status word"
+    # beside a heading reading PROPOSED, NOT IN FORCE: a refusal whose reason contradicts
+    # the text it prints teaches its reader to distrust the next one.
+    head = line.strip()[:80]
+    if "NOT IN FORCE" in line.upper():
+        return f"{decision_id}: PROPOSED, NOT IN FORCE -- heading ({head})"
+    return f"{decision_id}: heading carries no RATIFIED token -- NOT IN FORCE ({head})"
