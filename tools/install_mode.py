@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 
-import catalogue
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import catalogue  # noqa: E402  -- typed reader: address/size are ints, one radix law
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
