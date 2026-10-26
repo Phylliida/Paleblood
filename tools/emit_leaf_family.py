@@ -22,6 +22,7 @@ import csv, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capstone
 import catalogue
+import install_mode
 import leaf_family_census as C
 from atomicio import atomic_write   # after the path insert: bare means bare
 
@@ -963,10 +964,9 @@ def main(argv):
         for fn, doc in docs:
             pending.append((os.path.join(d, fn), json.dumps(doc, indent=1, sort_keys=True) + '\n'))
     have = {int(r['address'], 16) for r in rows}
+    mode_clash = have & {r['address'] for r in install_mode.rows(ROOT)}
     tables = (
         ('functions.csv', lambda ex: (ex + rows, list(ex[0].keys()))),
-        ('install_mode.csv', lambda ex: (ex + [{'address': r['address'], 'mode': 'host'}
-                                              for r in rows], ['address', 'mode'])),
         ('replacement_origins.csv', lambda ex: (ex + [{'address': r['address'], 'origin': 'generated'}
                                                       for r in rows], ['address', 'origin'])),
     )
@@ -979,6 +979,8 @@ def main(argv):
             clashes.append((table, clash))
         all_rows, fields = build(existing)
         resolved.append((path, fields, all_rows))
+    if mode_clash:
+        clashes.append(('install_mode.csv', mode_clash))
     if not write and '--dry-run' not in argv:
         print(f'{name}: REFUSED -- this invocation would write game/leaf/{name}_family.cpp, '
               f'{len(pending)} case file(s) and {len(resolved)} tracked table(s). Writing requires '
@@ -1005,6 +1007,7 @@ def main(argv):
         # One writer for every address-keyed table: sort, dup count, write, re-read. The sort has
         # been omitted by three separate writers; a fourth re-implementation arrives otherwise.
         C.write_table(path, fields, all_rows)
+    install_mode.append_host(ROOT, [m['address'] for m in ms])
     print(f'  body: game/leaf/{name}_family.cpp, {len(ms)} symbols')
     if not TEMPLATES[name]['kind'].startswith('asm'):
         print(f'  cases: {len(ms)} directories under {case_dir(name)!r}')
