@@ -87,3 +87,21 @@ takes a PS4 address, the segment check takes an image offset. Making them "consi
 the bias in one place or removing it in the other -- breaks every scripted access in the cases and
 reports it as an address outside all segments, which points at the case file rather than at the
 translation. The same warning is in `tools/harness.py` next to the constants.
+
+## Row identities used by the accounting comments
+
+`runtime/`, `test/` and `tools/` may not contain a tracked address, even in a comment
+(`tools/check_agnostic.py`). The arithmetic in those comments therefore names only sizes; the
+identities live here.
+
+| Catalogue address | Size | Why it matters |
+| --- | --- | --- |
+| `0x0196f030` | 15 B | the `movsx_deref` member; its bytes are at file offset `0x1573030` (`0x0196f030 - 0x400000 + 0x4000`) and nowhere else |
+| `0x004632d0` | 67 B | no emitted body; excluded from both byte totals |
+| `0x024264d0` | 34 B | the retired `rip_load` row; no emitted body; excluded from both byte totals |
+| `0x00414040` | 1072 B | an `original` row whose body exists; one of the three bodied originals |
+| `0x0111a600` | 8 B | an `original` row whose body exists; one of the three bodied originals |
+
+The two bodiless rows are why `bytes_transcribed` is `67 + 34 = 101` bytes below the file's size
+sum; the three bodied originals are why `has_body - not_original = 3` even though all three carry
+bodies. `symbols/functions.csv` remains the authority for every value above.

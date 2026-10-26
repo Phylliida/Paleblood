@@ -11,8 +11,10 @@
      runtime      an actual pointer at execution = kGuestExecBase + vaddr. What the guest hands us.
      file offset  vaddr + kImageFileBias = catalogue - 0x3FC000.
 
-   Measured, not assumed: the 15 bytes of catalogue row 0x0196f030 were found in eboot.elf at file offset
-   0x1573030 and nowhere else; 0x0196f030 - 0x400000 + 0x4000 = 0x1573030. The entry point reads 0xa0 in the
+   Measured, not assumed: the 15 bytes of the movsx_deref row were found in eboot.elf at file offset
+   0x1573030 and nowhere else; its catalogue address minus 0x400000 plus 0x4000 is 0x1573030. The exact
+   row identity lives in docs/addressing.md, not here: runtime/ may not carry a tracked address, even in
+   a comment (tools/check_agnostic.py). The entry point reads 0xa0 in the
    ELF header and the docs quote it as 0x004000a0. A fix for a cross-space comparison (032) originally
    compared a runtime address against kPs4ImageBase and rejected a true guest address; that is why this header
    exists.

@@ -39,10 +39,14 @@ class ExtentLineTest(unittest.TestCase):
         return d
 
     def _extent(self, d):
-        import os, subprocess, sys, pathlib
-        env = dict(os.environ, PB_SYMBOLS_DIR=str(d / "symbols"), PYTHONPATH="tools")
-        r = subprocess.run([sys.executable, "-P", str(pathlib.Path("tools/progress.py"))],
-                           capture_output=True, text=True, env=env, cwd=".")
+        # Same discipline as run(): the script, its import root and the process cwd are all
+        # absolute. ctest invokes this from build-release/, where a relative "tools/progress.py"
+        # is a test about the author's shell rather than about the tool.
+        import os, subprocess
+        env = dict(os.environ, PB_SYMBOLS_DIR=str(d / "symbols"),
+                   PYTHONPATH=str(REPO / "tools"))
+        r = subprocess.run([PY_, "-P", str(REPO / "tools/progress.py")],
+                           capture_output=True, text=True, env=env, cwd=REPO)
         return r.stdout + r.stderr
 
     def test_tie_in_a_synthetic_catalogue_is_counted(self):

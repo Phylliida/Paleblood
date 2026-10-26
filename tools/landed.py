@@ -92,7 +92,8 @@ def byte_totals(path="symbols/functions.csv"):
     `landed` counts rows with status != 'original': evidence exists. `transcribed` counts every row
     that carries a BODY ON DISK -- which is 38,099 of the 38,101 rows, NOT every row in the file, as
     this docstring asserted until the measurement refuted it. Two rows carry no emitted body and are
-    excluded from BOTH totals: 0x004632d0 (67 B) and 0x024264d0 (34 B), the retired rip_load row. That
+    excluded from BOTH totals: the 67-byte and 34-byte rows (their identities are in docs/addressing.md,
+    because tools/ may not carry a tracked address). That
     is why bytes_transcribed is 101 short of the file's size sum (325,262) -- and 67 + 34 = 101.
 
     Two predicates, one word: the band column `has_body` (symbols/branch_band.csv) means "an address in

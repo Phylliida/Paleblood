@@ -61,8 +61,9 @@ def compute(out=None):
         #   has_body    38,101  present in symbols/functions.csv at ANY status (this column)
         #   body_exists 38,099  a body was actually EMITTED on disk (tools/landed.body_exists)
         #   not_original 38,096 status != 'original': evidence exists (tools/landed.byte_totals)
-        # 38,101 - 38,099 = 2 = the bodiless rows 0x004632d0 (67 B) and 0x024264d0 (34 B).
-        # 38,099 - 38,096 = 3 = the bodied originals 0x00414040 (1072), 0x0111a600 (8), 0x0196f030 (15).
+        # 38,101 - 38,099 = 2 = the bodiless rows (67 B and 34 B).
+        # 38,099 - 38,096 = 3 = the bodied originals (1072 B, 8 B and 15 B). Their identities are in
+        # docs/addressing.md: tools/ may not carry a tracked address, even in a comment.
         # So a reader who computes "bodies" from this column is two rows wrong, and one who computes
         # "not original" from it is five rows wrong. `has_body` is a MEMBERSHIP predicate, not a body
         # predicate; the name is the defect (sixth of its kind: landed/has_body, store_k/store_k2,

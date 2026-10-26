@@ -63,17 +63,19 @@ class PlantedControl(unittest.TestCase):
             def put(name, text):
                 with open(os.path.join(sym, name), 'w') as fh:
                     fh.write(text)
+            # A synthetic address, not a row from today's ledger: this fixture tests the board's
+            # retired-row branch, and a real address would put a game-specific value in test/.
             put('functions.csv', 'address,size,name,system,status,notes\n'
-                                 '0x024264d0,34,x,game,original,\n')
-            put('retired.csv', 'address,reason,date,revisit\n0x024264d0,why,2026-10-23,never\n')
-            put('leaf_frontier.csv', 'address,size,class\n0x024264d0,34,addressable\n')
-            put('ghidra_functions.csv', 'address,size\n0x024264d0,34\n')
+                                 '0x1234,34,x,game,original,\n')
+            put('retired.csv', 'address,reason,date,revisit\n0x1234,why,2026-10-23,never\n')
+            put('leaf_frontier.csv', 'address,size,class\n0x1234,34,addressable\n')
+            put('ghidra_functions.csv', 'address,size\n0x1234,34\n')
             for name, head in (('verification.csv', 'function,cases\n'),
                                ('reviews.csv', 'address,name\n'),
                                ('quarantine.csv', 'function,cases\n')):
                 put(name, head)
             text = board.render(d)
         self.assertIn('OPEN DEFECT', text)
-        self.assertIn('0x24264d0', text)
+        self.assertIn('0x1234', text)
         # and the override is restored: the real tree still renders its real board
         self.assertNotIn('OPEN DEFECT', board.render())

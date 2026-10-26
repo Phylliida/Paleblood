@@ -970,12 +970,13 @@ def main(argv):
         ('replacement_origins.csv', lambda ex: (ex + [{'address': r['address'], 'origin': 'generated'}
                                                       for r in rows], ['address', 'origin'])),
     )
-    resolved = []
+    resolved, clashes = [], []
     for table, build in tables:
         path = os.path.join(ROOT, 'symbols', table)
         existing = list(csv.DictReader(open(path)))
         clash = have & {int(r['address'], 16) for r in existing}
-        assert not clash, f'{table}: {len(clash)} addresses already present'
+        if clash:
+            clashes.append((table, clash))
         all_rows, fields = build(existing)
         resolved.append((path, fields, all_rows))
     if not write and '--dry-run' not in argv:
@@ -989,6 +990,13 @@ def main(argv):
         print(f'  dry run: would have written {len(generated)} bytes to game/leaf/{name}_family.cpp, '
               f'{len(pending)} case file(s), {len(resolved)} table(s); nothing written, no file opened')
         return 0
+    if clashes:
+        # A named refusal, not an assertion: an already-present address is a defect in the
+        # selection, and a traceback names the interpreter's line rather than the family and table.
+        table, clash = clashes[0]
+        print(f'{name}: REFUSED -- {table}: {len(clash)} address(es) already present; writing would '
+              f'duplicate coverage. Nothing was written.', file=sys.stderr)
+        return 1
     atomic_write(os.path.join(ROOT, 'game', 'leaf', f'{name}_family.cpp'), generated)
     for path, text in pending:
         os.makedirs(os.path.dirname(path), exist_ok=True)
