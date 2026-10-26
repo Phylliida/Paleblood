@@ -948,15 +948,15 @@ def main(argv):
         # while this emitter copied `<key>/<key>.json` from the leaf families. Two layouts, one family:
         # the decision that predates the artifact is the spec, and the artifact moved.
         if TEMPLATES[name].get('chain_selector'):
-            d = os.path.join(case_dir(name), f'{m["address"]:08x}')
+            d = case_dir(name).row_dir(m['address'], 'chain')
         elif TEMPLATES[name].get('table'):
             # A TABLE FAMILY IS ALSO ONE DIRECTORY PER ROW, and in the `0x<addr8>` form the 21,138
             # existing directories under cases/leaf already use. `<key>/<key>.json` was inherited from
             # the families whose population is a matcher; here the population is a row, and a row's
             # directory is its address. Writing elsewhere would put the record's cases beside a copy.
-            d = os.path.join(case_dir(name), f'0x{m["address"]:08x}')
+            d = case_dir(name).row_dir(m['address'], 'table')
         else:
-            d = os.path.join(case_dir(name), k)
+            d = case_dir(name).key_dir(k)
         docs = case_docs(name, m)
         if TEMPLATES[name].get('chain_selector'):
             docs = [('case.json', doc) for _, doc in docs]
@@ -1007,7 +1007,7 @@ def main(argv):
         C.write_table(path, fields, all_rows)
     print(f'  body: game/leaf/{name}_family.cpp, {len(ms)} symbols')
     if not TEMPLATES[name]['kind'].startswith('asm'):
-        print(f'  cases: {len(ms)} directories under {case_dir(name)}')
+        print(f'  cases: {len(ms)} directories under {case_dir(name)!r}')
     return 0
 
 

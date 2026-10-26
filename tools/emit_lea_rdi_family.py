@@ -13,6 +13,9 @@ import argparse, csv, json, os, re, sys, collections
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from case_dir import case_dir
+
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 FILE_BIAS = 0x3FC000
 EXPECT_MEMBERS, EXPECT_DISTINCT_K, EXPECT_MIN_K, EXPECT_SIZES = 483, 114, 0xC, {5: 294, 8: 189}
@@ -74,8 +77,8 @@ def main():
         known = {int(r['address'], 16) for r in cs}
         modes = list(csv.DictReader(open(mode_path)))
         known_mode = {int(r['address'], 16) for r in modes}
-        case_dir = os.path.join(ROOT, '..', 'data', 'cases', 'leaf')
-        os.makedirs(case_dir, exist_ok=True)
+        cases = case_dir('lea_rdi')
+        cases.ensure()
         new_cs = [{'address': f'{m["address"]:#010x}', 'size': str(m['size']), 'name': f'leaf_lea_rdi_{m["address"]:08x}',
                    'system': 'leaf', 'status': 'edge-verified', 'notes': 'generated: return arg0 + K'} for m in ms]
         new_mode = [{'address': f'{m["address"]:#010x}', 'mode': 'host'} for m in ms]
@@ -103,7 +106,7 @@ def main():
                 name = f'leaf_lea_rdi_{m["address"]:08x}_{tag}'
                 json.dump({'schema': 1, 'address': f'{m["address"]:#010x}', 'id': name, 'returns': 'i64',
                            'args': {'rdi': f'{val & 0xFFFFFFFFFFFFFFFF:#x}'}},
-                          open(os.path.join(case_dir, name + '.json'), 'w'), indent=1)
+                          open(cases.bare(name + '.json'), 'w'), indent=1)
                 made += 1
         print(f'wrote body ({len(ms)} members), functions.csv +{len(new_cs)} (now {len(allrows)}), '
               f'install_mode.csv +{len(new_mode)} (now {len(allm)}), cases {made}')

@@ -30,9 +30,12 @@ from capstone import CS_ARCH_X86, CS_MODE_64, Cs
 from capstone.x86_const import X86_REG_RAX, X86_REG_RDI
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from case_dir import case_dir
+
 ELF = os.path.join(ROOT, '..', 'data', 'bb', 'elf', 'eboot.elf')
 CATALOG = os.path.join(ROOT, '..', 'data', 'catalog.sqlite3')
-CASES = os.path.join(ROOT, '..', 'data', 'cases', 'leaf')
+CASES = case_dir('mov_rax')
 SYMBOLS = os.path.join(ROOT, 'symbols')
 FILE_BASE = 0x3FC000
 PREFIX = 'leaf_mov_rax_'
@@ -156,7 +159,7 @@ def write(limit):
         print('nothing to do: every member is already in functions.csv')
         return 0
     staged = tempfile.mkdtemp(prefix='movrax.')
-    dirs = [os.path.join(CASES, f'0x{a:08x}') for a, _, _ in batch]
+    dirs = [CASES.row_dir(a, 'table') for a, _, _ in batch]
     try:
         os.makedirs(os.path.join(staged, 'cases'))
         for addr, _, K in batch:

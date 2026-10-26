@@ -30,7 +30,9 @@ import emit_leaf_family as _E
 _chosen, _key, _shared = _E.pilot_choice(_E.members('chain_deref', landed=True))
 ADDRESS = '%#010x' % _chosen['address']
 SYMBOL = 'bb_leaf_chain_deref_%08x' % _chosen['address']
-CASE = os.path.join(case_dir('chain_deref'), '%08x' % _chosen['address'], 'case.json')
+CASE = case_dir('chain_deref').find(_chosen['address'])
+if CASE is None:
+    raise SystemExit(f'pilot_mutants: no case file at either declared layout for {_chosen["address"]:#x}')
 
 # name -> (old text, new text, channel, the sentence the channel must confirm)
 PREREG = {

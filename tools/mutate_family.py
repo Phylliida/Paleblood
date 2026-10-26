@@ -42,7 +42,9 @@ def const(block, name):
 
 
 def run(addr):
-    case = os.path.join(case_dir('chain_deref'), f'{addr:08x}', 'case.json')
+    case = case_dir('chain_deref').find(addr)
+    if case is None:
+        return 3, None, None, f'no case file at either declared layout for {addr:#x}'
     args = [sys.executable, '-P', os.path.join(ROOT, 'tools', 'harness.py'), '--elf', ELF,
             '--case', case, '--address', f'{addr:#010x}', '--replacement', PREFIX + f'{addr:08x}',
             '--lib', LIB]

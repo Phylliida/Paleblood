@@ -103,16 +103,8 @@ def family_of(fname):
 
 
 def seeded_case_path(family, address):
-    """The case file for a seeded row, through case_dir: chain rows use `<addr8>/case.json`,
-    table families use `0x<addr8>/a.json`. One root, two declared layouts, no third string."""
-    base = case_dir(family)
-    for rel in ('%08x/case.json' % address,
-                '0x%08x/a.json' % address,
-                '0x%08x/case.json' % address):
-        path = os.path.join(base, rel)
-        if os.path.isfile(path):
-            return path
-    return None
+    """The case file for a seeded row, through the only object that knows the declared layouts."""
+    return case_dir(family).find(address)
 
 
 def main():

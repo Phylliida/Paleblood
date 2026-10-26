@@ -40,7 +40,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from case_dir import case_dir  # ONE definition of the case root, imported after the prologue
+from case_dir import CaseRoot, case_dir  # ONE definition of the case root, imported after the prologue
 
 import catalogue
 import harness
@@ -136,9 +136,11 @@ def check(row, case, rw, sentinel_byte):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--table', default=TABLE)
-    ap.add_argument('--cases', default=os.path.join(S.ROOT, '..', 'data', 'cases', 'chain'))
+    ap.add_argument('--cases', default=None,
+                    help='case root override; default is case_dir("chain_deref")')
     ap.add_argument('--elf', default=S.ELF)
     a = ap.parse_args(argv)
+    cases = CaseRoot(a.cases) if a.cases else case_dir('chain_deref')
     if not os.path.isfile(a.table):
         print(f'seeding: refusing -- cannot read {a.table}; unread is not zero', file=sys.stderr)
         return 3
@@ -154,17 +156,18 @@ def main(argv=None):
         return 3
     base, memsz = writable[-1][0], writable[-1][2]
     sentinel, used = derive_sentinel(rows)
-    if not os.path.isdir(a.cases):
-        print(f'seeding: refusing -- no case directory {a.cases}; 0 cases is not 0 refusals',
+    if not cases.is_dir():
+        print(f'seeding: refusing -- no case directory {cases!r}; 0 cases is not 0 refusals',
               file=sys.stderr)
         return 3
     print(f"seeding: {len(rows)} rows | writable segment {base:#x}..{base + memsz:#x} | "
           f"sentinel {sentinel:#04x} derived from {len(used)} masked immediate(s)")
     owed = violated = 0   # owed: no case file yet. violated: a case that exists and fails a link.
     for r in rows:
-        p = os.path.join(a.cases, f"{r['address']:08x}", 'case.json')
-        if not os.path.isfile(p):
-            print(f"REFUSED {r['address']:#x}: no case file at {p}", file=sys.stderr)
+        p = cases.find(r['address'])
+        if p is None:
+            print(f"REFUSED {r['address']:#x}: no case file at either declared layout",
+                  file=sys.stderr)
             owed += 1
             continue
         with open(p) as f:

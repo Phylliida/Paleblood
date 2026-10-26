@@ -23,9 +23,9 @@ LIB = os.path.join(ROOT, "build-release", "game", "libbbgame.so")
 
 def one(addr):
     """(rc, shape, detail). `shape` names the channels the run actually carried: r=rax, m=mem."""
-    case = os.path.join(case_dir(FAMILY), "%08x" % addr, "case.json")
-    if not os.path.exists(case):
-        return 3, "-", "no case file (a precondition refusal, not a mismatch)"
+    case = case_dir(FAMILY).find(addr)
+    if case is None:
+        return 3, "-", "no case file at either declared layout (a precondition refusal, not a mismatch)"
     # f"{addr:#010x}", never {addr:#x}: the case carries eight nibbles and the harness compares them.
     args = [sys.executable, "-P", os.path.join(HERE, "harness.py"), "--elf", ELF,
             "--case", case, "--address", "%#010x" % addr,
