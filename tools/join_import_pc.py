@@ -29,9 +29,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 IMAGE = 0x800000000
 EBOOT_BASE = 0x400000
 PC_ROW = re.compile(r"^\s+#(\d+) pc (0x[0-9a-fA-F]+) count (\d+)\s*$")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_FUNCTIONS = os.path.join(ROOT, "symbols", "ghidra_functions.csv")
 
 
-def load_extents(path="symbols/ghidra_functions.csv"):
+def load_extents(path=DEFAULT_FUNCTIONS):
     """[(address, size)] with ints, via catalogue.read_rows -- the size string never arrives here.
 
     This used to be `int(r["size"], 16)` against a decimal column, which inflated every extent and put
@@ -95,7 +97,7 @@ def self_test():
         if got != want or n != want_n or kind != want_kind:
             bad.append(f"{why}: {v:#x} -> {got} kind {kind} owners {n}, "
                        f"expected {want} kind {want_kind} owners {want_n}")
-    real = load_extents("symbols/ghidra_functions.csv")
+    real = load_extents(DEFAULT_FUNCTIONS)
     first = real[0][0]
     if owner(real, first) != (first, real[0][1]):
         bad.append(f"control: the catalogue's own first row {first:#x} is not owned by itself")
@@ -107,7 +109,7 @@ def self_test():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--functions", default="symbols/ghidra_functions.csv")
+    ap.add_argument("--functions", default=DEFAULT_FUNCTIONS)
     ap.add_argument("--boot-err", default=None)
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--vaddr", action="append", default=[], metavar="V",

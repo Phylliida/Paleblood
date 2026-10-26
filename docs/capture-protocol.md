@@ -377,6 +377,10 @@ in the same call:
   re-derive both figures **from the manifest alone, with the corpus absent.** Measured while writing it:
   **`pointer` is a subset of `memory`** — all 4,169 `pointer` cases carry `memory` — so one manifest covers both
   numbers. Rule: `docs/decisions.md` `1s`.
+  **Amendment (five leaf members, `movsx_deref`):** the corpus now holds `23,383 + 5 = 23,388` members,
+  `sha256 fb81b89ca45d297ce0eb567cd23289a0a128214d73c21b854994808eb3515121`; the five are the `a.json`,
+  `a_prime.json` and three case files under `leaf/` for that family. The `23,304 + 78 + 1` arithmetic above is
+  kept as the pre-amendment record, not restated as current.
 
 **How it happened is the part worth keeping:** I wrote the sentence into the heredoc *before* executing the
 command that produces its number, so the number in the document was an expectation formatted as a measurement.
