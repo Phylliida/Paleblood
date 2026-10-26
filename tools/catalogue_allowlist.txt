@@ -46,7 +46,6 @@ tools/session_report.py
 tools/shape_approval.py
 tools/shape_census.py
 tools/simd_census.py
-tools/site_table.py
 tools/slot_copy_gen.py
 tools/static_guard_gen.py
 tools/test_body_ladder_invariant.py

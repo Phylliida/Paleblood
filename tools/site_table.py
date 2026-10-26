@@ -8,7 +8,10 @@ The join to `symbols/install_mode.csv` is asserted with **both totals printed** 
 direction. Two tables keyed on address is how `surplus 101` happened; a join asserted is not the same as two tables
 that merely look consistent.
 """
-import csv, pathlib, sys
+import pathlib, sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import install_mode  # noqa: E402  -- the one reader of symbols/install_mode.csv
 
 try:
     from capstone import CS_ARCH_X86, CS_MODE_64, Cs
@@ -16,7 +19,6 @@ except ImportError:  # the population check is the point; a missing decoder must
     Cs = None
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-MODE = ROOT / "symbols" / "install_mode.csv"
 OUT = ROOT / "symbols" / "site_ok.csv"
 ELF = ROOT.parent / "data" / "bb" / "elf" / "eboot.elf"
 FILE_BIAS = 0x3FC000
@@ -24,11 +26,11 @@ GUARD_BYTES = 14          # ABSOLUTE_JUMP_SIZE
 
 
 def rows():
-    mode = [r for r in csv.DictReader(MODE.open()) if r["mode"] == "hook"]
+    mode = [r for r in install_mode.rows(ROOT) if r["mode"] == "hook"]
     image = ELF.read_bytes()
     out = []
     for r in mode:
-        address = int(r["address"], 16)
+        address = r["address"]
         size = int(r.get("size") or 0)
         if size and size < GUARD_BYTES:
             raise SystemExit(f"0x{address:08x}: site is {size} bytes, shorter than the {GUARD_BYTES}-byte patch")
