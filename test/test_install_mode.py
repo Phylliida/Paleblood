@@ -114,6 +114,12 @@ class TestAppendHost(unittest.TestCase):
             self.assertEqual(install_mode.append_host(d, [0x10, 0x20]), 1)
             self.assertEqual([r['address'] for r in install_mode.rows(d)], [0x10, 0x20])
 
+    def test_the_committed_table_has_the_header_the_writer_owns(self):
+        # The writer's shape is not a fixture's shape. `address,mode` is what the committed file
+        # carries; if a third column is added, this test is where the writer learns about it.
+        with open(INSTALL_MODE, newline='') as f:
+            self.assertEqual(next(csv.reader(f)), ['address', 'mode'])
+
     def test_extra_columns_survive_an_append(self):
         # The table is the module's shape, not `address,mode`'s: a third column it did not know
         # about used to be silently dropped by every writer.
