@@ -288,7 +288,10 @@ void rt_tls_init(void)
        1 the guest does arithmetic on the pointer (variant II) and the block needs a static image before it.
        The copy is a stopgap: it is the host's TCB, whose contents are glibc's business, so it must not survive
        past threads. */
-    if (!main_state.guest_block) rt_tls_layout(NULL, 0, main_state.guest_memsz);
+    /* Pass 0, not the placeholder: a nonzero memsz tells rt_tls_layout this is an ELF-supplied size and
+       clears guest_memsz_default, so the one printer that must say "default" said "modelled" about the
+       placeholder. The flag is set above; the layout call must not overwrite it. */
+    if (!main_state.guest_block) rt_tls_layout(NULL, 0, 0);
     fprintf(stderr, "pbboot: tls: guest block at %p, %s memsz 0x%x, swap via %s\n",
             (void *)main_state.guest_block,
             main_state.guest_memsz_default ? "default" : "modelled",
