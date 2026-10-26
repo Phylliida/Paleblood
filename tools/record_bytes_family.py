@@ -208,7 +208,8 @@ def main(argv):
     o = ap.parse_args(argv)
 
     fpath = os.path.join(o.root, 'symbols', 'functions.csv')
-    all_rows = list(csv.DictReader(open(fpath)))
+    with open(fpath, newline='') as f:
+        all_rows = list(csv.DictReader(f))
     # `startswith('leaf_ret_')` also matches `leaf_ret_xor_...` -- 4,721 rows that already carry
     # differential evidence. A ladder family name ends in exactly eight hex digits, so match that.
     pat = re.compile('^' + re.escape(o.family) + r'[0-9a-f]{8}$')
