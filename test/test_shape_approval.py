@@ -5,7 +5,9 @@ owner's file, a member set that moved since the review, and a member with nothin
 run through the real code paths, not through a copy of them.
 """
 
+import contextlib
 import csv
+import io
 import os
 import pathlib
 import shutil
@@ -85,6 +87,12 @@ class ShapeApprovalCascade(unittest.TestCase):
     def test_dry_run_writes_nothing(self):
         self.assertEqual(self.cascade(apply=False), 0)
         self.assertEqual(len(self.reviews()), 1)
+
+    def test_the_write_message_names_the_path_it_wrote(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.cascade(apply=True), 0)
+        self.assertIn(os.path.join(self.root, "symbols", "reviews.csv"), out.getvalue())
 
     def test_refused_without_the_owners_answer(self):
         self.answer("nothing decided yet")

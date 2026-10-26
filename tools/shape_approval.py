@@ -54,11 +54,12 @@ def cascade(root, apply=False):
     reviews_path = os.path.join(root, REVIEWS)
     rows = read_rows(reviews_path)
     shapes = [r for r in rows if (r['scope'] or 'function') == 'shape' and r['verdict'] == 'approved']
+    answer_path = os.path.join(root, 'docs', 'approval-answers.md')
     if not shapes:
-        print('shape: no approved shape review in symbols/reviews.csv; nothing to cascade')
+        print(f'shape: no approved shape review in {reviews_path}; nothing to cascade')
         return 0
     if not shape_answer(root):
-        print('shape: refused -- docs/approval-answers.md does not say `scope=shape`; a shape review '
+        print(f'shape: refused -- {answer_path} does not say `scope=shape`; a shape review '
               'cannot stand in for the owner\'s decision', file=sys.stderr)
         return 1
     funcs = read_rows(os.path.join(root, FUNCS))
@@ -99,7 +100,7 @@ def cascade(root, apply=False):
         return 1
     print(f'shape: {len(shapes)} shape review(s) would derive {len(made)} function rows')
     if not apply:
-        print('shape: dry run; pass --apply to write symbols/reviews.csv')
+        print(f'shape: dry run; pass --apply to write {reviews_path}')
         return 0
     covered = {r['address'] for r in made}
     keep = [r for r in rows if not (r['address'] in covered and r['reviewer'].startswith('derived from shape'))]
@@ -110,7 +111,7 @@ def cascade(root, apply=False):
         w.writeheader()
         for r in out:
             w.writerow({k: r.get(k, '') for k in REVIEW_HEADER})
-    print(f'shape: wrote {len(made)} derived rows; symbols/reviews.csv now holds {len(out)}')
+    print(f'shape: wrote {len(made)} derived rows; {reviews_path} now holds {len(out)}')
     return 0
 
 
